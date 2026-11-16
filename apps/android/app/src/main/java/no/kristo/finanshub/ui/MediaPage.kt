@@ -200,7 +200,7 @@ internal fun Note43(text: String, red: Boolean = false, onClose: (() -> Unit)? =
 
 @Composable
 internal fun Poster43(vm: AppViewModel, url: String?, color: Long?, title: String, w: Dp, h: Dp, modifier: Modifier = Modifier, img: MImg50? = null) {
-    // Prompt 50: ThumbHash-plassholder, riktig bredde og disk-/minnecache (ui/MediaImages.kt, Img50.kt).
+    // Prompt 50: ThumbHash-plassholder, riktig bredde og disk-/minnecache (ui/MediaImages.kt, Bildelaster.kt).
     Poster50(vm, url, img, color, title, w, h, modifier)
 }
 

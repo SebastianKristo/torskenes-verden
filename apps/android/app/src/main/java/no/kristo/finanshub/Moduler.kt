@@ -93,7 +93,7 @@ object Moduler {
         TabItem("mer", "Mer", "⋯"),
     )
 
-    /** Tegnene fra modullisten som appen har vektorikon for (ui/Paper17.kt glyphVector), i tillegg til TAB_ICONS. */
+    /** Tegnene fra modullisten som appen har vektorikon for (ui/PapirInnstillinger.kt glyphVector), i tillegg til TAB_ICONS. */
     val MODUL_TEGN: Set<String> = setOf("✦", "✧", "☑", "▦", "☼", "▶", "¶", "✎", "✝", "⚒", "⌁", "✶")
 
     /** Fanens tegn før modullisten, brukt når lista har et tegn appen ikke kan tegne. */

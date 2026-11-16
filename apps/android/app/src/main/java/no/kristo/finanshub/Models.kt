@@ -1,5 +1,6 @@
 package no.kristo.finanshub
 
+import java.time.Instant
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -644,3 +645,305 @@ fun parseAnalytics(s: String): Analytics {
         o.optStr("registrar"), o.optJSONArray("nameServers").strings().filter(String::isNotBlank), o.optStr("source"),
     )
 }
+
+/* ---------------- Aksjer (Trading 212) ---------------- */
+
+data class StockPos(
+    val ticker: String, val symbol: String, val name: String, val qty: Double, val avg: Double, val price: Double, val value: Double,
+    val pl: Double, val plPct: Double, val dayPct: Double?, val etf: Boolean, val series: List<Double>,
+) { val ini get() = symbol.filter { it.isLetterOrDigit() }.take(2).uppercase() }
+
+/** kind: Kjøp | Salg | Utbytte · status: Utført | Venter | Avvist */
+data class StockTxn(val id: String, val ticker: String, val symbol: String, val kind: String, val status: String, val qty: Double, val amount: Double, val date: String, val time: String)
+
+data class StocksX(
+    val configured: Boolean, val mock: Boolean, val env: String, val error: String, val syncedAt: Instant?,
+    val total: Double, val value: Double, val invested: Double, val result: Double, val cash: Double,
+    val positions: List<StockPos>, val history: List<Double>, val txns: List<StockTxn>,
+) {
+    val dayChange: Double get() = positions.sumOf { p -> p.dayPct?.let { p.value * it / (100 + it) } ?: 0.0 }
+    val hasDay: Boolean get() = positions.any { it.dayPct != null }
+}
+
+private val ETF_RE = Regex("ETF|UCITS|Vanguard|iShares|Xtrackers|SPDR|Amundi|Invesco|Lyxor|Index", RegexOption.IGNORE_CASE)
+
+fun parseStocksX(s: String): StocksX {
+    val o = JSONObject(s)
+    val sm = o.optJSONObject("summary")
+    val value = sm?.optDoubleOrNull("value") ?: 0.0
+    val invested = sm?.optDoubleOrNull("invested") ?: 0.0
+    val cash = sm?.optDoubleOrNull("cash") ?: 0.0
+    val hist = o.optJSONArray("history")?.map { it } ?: emptyList()
+    fun clock(v: String?) = if (v != null && v.length > 10) fmtTime(anyTime(v), "HH:mm") else ""
+    fun sym(t: String) = t.substringBefore('_')
+    val positions = o.optJSONArray("positions")?.map { p ->
+        val ticker = p.optStr("ticker") ?: p.optStr("symbol") ?: "?"
+        val name = p.optStr("name") ?: sym(ticker)
+        val qty = p.num("quantity"); val avg = p.num("avg"); val px = p.num("price")
+        val v = p.optDoubleOrNull("value") ?: qty * px
+        val pl = p.optDoubleOrNull("pl") ?: (v - qty * avg)
+        val type = (p.optStr("type") ?: p.optStr("kind") ?: "").lowercase()
+        val arr = (p.opt("history") ?: p.opt("spark") ?: p.opt("prices")) as? JSONArray
+        var series = arr?.let { a -> (0 until a.length()).mapNotNull { i -> when (val x = a.opt(i)) { is Number -> x.toDouble(); is JSONObject -> x.optDoubleOrNull("price") ?: x.optDoubleOrNull("value") ?: x.optDoubleOrNull("close"); else -> null } } } ?: emptyList()
+        if (series.isEmpty()) series = hist.mapNotNull { it.optJSONObject("prices")?.optDoubleOrNull(ticker) }
+        StockPos(ticker, p.optStr("symbol") ?: sym(ticker), name, qty, avg, px, v, pl, p.optDoubleOrNull("plPct") ?: if (qty * avg > 0) pl / (qty * avg) * 100 else 0.0,
+            p.optDoubleOrNull("dayPct"), if (type.isEmpty()) ETF_RE.containsMatchIn(name) else "etf" in type || "fund" in type, series)
+    } ?: emptyList()
+    val orders = o.optJSONArray("orders")?.map { x ->
+        val t = x.optStr("ticker") ?: x.optStr("symbol") ?: ""
+        val st = (x.optStr("status") ?: "").uppercase()
+        val date = x.optStr("date") ?: ""
+        StockTxn("o" + (x.optStr("id") ?: "$t$date"), t, x.optStr("symbol") ?: sym(t), if ((x.optStr("side") ?: "").lowercase().startsWith("s")) "Salg" else "Kjøp",
+            if (st.isEmpty() || "FILL" in st || "EXECUT" in st) "Utført" else if ("CANCEL" in st || "REJECT" in st) "Avvist" else "Venter",
+            x.num("quantity"), x.num("value"), date.take(10), clock(x.optStr("time") ?: date))
+    } ?: emptyList()
+    val divs = o.optJSONArray("dividends")?.map { x ->
+        val t = x.optStr("ticker") ?: x.optStr("symbol") ?: ""
+        val date = x.optStr("date") ?: ""
+        StockTxn("d$t$date", t, x.optStr("symbol") ?: sym(t), "Utbytte", "Utført", x.num("quantity"), x.num("amount"), date.take(10), clock(date))
+    } ?: emptyList()
+    return StocksX(
+        o.optBoolOrNull("configured") ?: (sm != null), o.optBoolean("mock"), o.optStr("env") ?: "", o.optStr("error") ?: "", o.timeAt("syncedAt"),
+        sm?.optDoubleOrNull("total") ?: (value + cash), value, invested, sm?.optDoubleOrNull("result") ?: (value - invested), cash,
+        positions, hist.mapNotNull { it.optDoubleOrNull("value") }, (orders + divs).sortedByDescending { it.date + it.time },
+    )
+}
+
+/* ---------------- Subscription OS ---------------- */
+
+data class SubItem(
+    val id: Int, val name: String, val plan: String, val price: Double, val monthly: Double, val cycle: String, val nextDate: String, val chargeDay: Int?,
+    val category: String, val status: String, val active: Boolean, val domain: String?, val aiShort: String?,
+    /** Prompt 14: faktureringsdato som dag + måned (årlige), egen logo og neste trekk fra serveren. */
+    val billDay: Int? = null, val billMonth: Int? = null, val logoUrl: String? = null, val nextCharge: String? = null,
+    /** Prompt 37: delte abonnementer (Starlink) – medlemmer, deling (equal | payer), hvem som betaler og min del per måned. */
+    val members: List<SubMember37> = emptyList(), val split: String? = null, val payerId: String? = null, val myShare: Double? = null,
+    val ownerId: String? = null,
+    /** Eier eller betaler kan endre delingen; «Delt · din del 400 kr/mnd» fra serveren. */
+    val canEdit: Boolean? = null, val shareLabel: String? = null, val sharedFlag: Boolean? = null,
+) {
+    val shared get() = sharedFlag ?: (members.size > 1)
+    val cycleName get() = when (cycle) { "yearly" -> "Årlig"; "biennial" -> "Hvert 2. år"; else -> "Månedlig" }
+    val flagged get() = active && (status == "low_use" || status == "price_up")
+}
+
+data class SubSuggestion(val id: String, val subId: Int?, val name: String, val text: String, val amount: Double, val domain: String?)
+
+data class SubCharge(val id: Int?, val name: String, val date: String, val amount: Double)
+
+data class SubMonth(val month: String, val total: Double, val byCategory: Map<String, Double>)
+
+data class SubCandidate(val merchant: String, val amount: Double, val cycle: String, val count: Int, val lastDate: String, val domain: String?) {
+    val key get() = "$merchant|$amount"
+    fun toJson(): JSONObject = JSONObject().put("merchant", merchant).put("amount", amount).put("cycle", cycle).put("count", count).put("lastDate", lastDate).apply { domain?.let { put("domain", it) } }
+}
+
+data class SubsX(
+    val items: List<SubItem>, val monthly: Double, val yearly: Double, val prevMonthly: Double?, val categories: List<String>, val byMonth: List<SubMonth>,
+    val score: Double?, val healthLabel: String, val healthText: String, val notes: List<String>, val saveMonthly: Double,
+    val suggestions: List<SubSuggestion>, val upcoming: List<SubCharge>, val thisMonth: List<SubCharge>, val monthTotal: Double?,
+) { fun item(id: Int?) = items.firstOrNull { it.id == id } }
+
+fun parseSubsX(s: String): SubsX {
+    val o = JSONObject(s)
+    val items = o.optJSONArray("items")?.map { x ->
+        val price = x.num("price"); val cycle = x.optStr("cycle") ?: "monthly"
+        val next = x.optStr("nextDate") ?: ""
+        // Prompt 14: «state» (active | cancelled) skiller sagt opp fra helsestatusen i «status».
+        val active = x.optStr("state")?.let { it != "cancelled" } ?: x.optBoolean("active", true)
+        SubItem(x.optInt("id"), x.optStr("name") ?: "Abonnement", x.optStr("plan") ?: "", price,
+            x.optDoubleOrNull("monthly") ?: when (cycle) { "yearly" -> price / 12; "biennial" -> price / 24; else -> price }, cycle, next,
+            x.optIntOrNull("chargeDay") ?: next.takeIf { it.length >= 10 }?.substring(8, 10)?.toIntOrNull(), x.optStr("category") ?: "Annet",
+            x.optStr("status") ?: if (!active) "cancelled" else if (x.optBoolean("lowUse")) "low_use" else "active", active, x.optStr("domain"), x.optStr("aiShort"),
+            x.optIntOrNull("billDay") ?: x.optIntOrNull("bill_day"), x.optIntOrNull("billMonth") ?: x.optIntOrNull("bill_month"),
+            x.optStr("logoUrl") ?: x.optStr("logo_url"), x.optJSONObject("nextCharge")?.optStr("label") ?: x.optStr("nextCharge"),
+            subMembers37(x.optJSONArray("members")), x.optStr("split"), x.optStr("payerId"), x.optDoubleOrNull("myShareMonthly") ?: x.optDoubleOrNull("myShare"), x.optStr("ownerId") ?: x.optStr("userId"),
+            if (x.has("canEdit") && !x.isNull("canEdit")) x.optBoolean("canEdit") else null, x.optStr("shareLabel"), if (x.has("shared") && !x.isNull("shared")) x.optBoolean("shared") else null)
+    } ?: emptyList()
+    val act = items.filter { it.active }
+    val h = o.optJSONObject("health")
+    val sv = o.optJSONObject("savings")
+    var sug = sv?.optJSONArray("suggestions")?.map { x -> SubSuggestion((x.optStr("kind") ?: "s") + (x.optStr("id") ?: x.optString("text")), x.optIntOrNull("id"), x.optString("name"), x.optString("text"), x.num("amount"), x.optStr("domain")) } ?: emptyList()
+    if (sug.isEmpty()) sug = act.filter { it.flagged }.map { x ->
+        SubSuggestion("f${x.id}", x.id, x.name, if (x.status == "price_up") "${x.name} har økt prisen. Sjekk om en billigere plan holder." else "Si opp ${x.name}. Lite brukt i det siste.", Math.round(x.monthly).toDouble(), x.domain)
+    }
+    fun charges(k: String) = o.optJSONArray(k)?.map { c ->
+        val id = c.optIntOrNull("id")
+        SubCharge(id, c.optStr("name") ?: items.firstOrNull { it.id == id }?.name ?: "Abonnement", c.optString("date"), c.num("amount"))
+    } ?: emptyList()
+    return SubsX(
+        items, o.optDoubleOrNull("monthly") ?: act.sumOf { it.monthly }, o.optDoubleOrNull("yearly") ?: act.sumOf { it.monthly } * 12, o.optDoubleOrNull("prevMonthly"),
+        o.optJSONArray("categories").strings().filter { it.isNotBlank() },
+        o.optJSONArray("byMonth")?.map { m ->
+            val cats = mutableMapOf<String, Double>()
+            m.optJSONObject("byCategory")?.let { b -> b.keys().forEach { k -> cats[k] = b.optDouble(k, 0.0).takeIf { !it.isNaN() } ?: 0.0 } }
+                ?: m.optJSONArray("byCategory")?.map { it }?.forEach { c -> (c.optStr("category") ?: c.optStr("name"))?.let { cats[it] = c.optDoubleOrNull("amount") ?: c.num("total") } }
+            SubMonth(m.optString("month"), m.optDoubleOrNull("total") ?: cats.values.sum(), cats)
+        } ?: emptyList(),
+        h?.optDoubleOrNull("score"), h?.optStr("label") ?: "", h?.optStr("text") ?: "", h?.optJSONArray("notes").strings(),
+        sv?.optDoubleOrNull("monthly") ?: sug.sumOf { it.amount }, sug, charges("upcoming"), charges("thisMonth"), o.optDoubleOrNull("monthTotal"),
+    )
+}
+
+fun parseSubCandidates(s: String): List<SubCandidate> {
+    val t = s.trim()
+    val arr = if (t.startsWith("[")) JSONArray(t) else JSONObject(t).optJSONArray("items") ?: JSONArray()
+    return arr.map { c -> SubCandidate(c.optStr("merchant") ?: c.optStr("name") ?: "?", kotlin.math.abs(c.num("amount")), c.optStr("cycle") ?: "monthly", c.optInt("count"), c.optString("lastDate"), c.optStr("domain")) }
+}
+
+/* ---------------- Prompt 14: hjelpere for Papir (farger, transportører, Finn og Sporing) ---------------- */
+
+/** Filtrene i Papir → Finn. */
+val FINN_SEGS: List<Pair<String, String>> = listOf("all" to "Alle", "way" to "På vei", "bought" to "Kjøpt", "sold" to "Solgt", "done" to "Fullført")
+
+fun finnSegMatch(seg: String, d: FinnDeal): Boolean = when (seg) {
+    "way" -> d.level in 2..3
+    "bought" -> !d.sold
+    "sold" -> d.sold
+    "done" -> d.finished
+    else -> true
+}
+
+/**
+ * Fanene Økonomi-linja kan ha (opptil 4, «Mer» er alltid sist). Fase 6 (Q3, Q4): samme navn som på web, Transaksjoner (ikke
+ * «Liste»), Glimt (ikke «Søk») og Faste betalinger. Nøklene er de samme som før, så lagrede oppsett virker.
+ */
+val FIN_TABS: List<Pair<String, String>> = listOf(
+    "oversikt" to "Oversikt", "liste" to "Transaksjoner", "budsjett" to "Budsjett", "abo" to "Faste betalinger",
+    "finn" to "Finn", "sok" to "Glimt", "kvitt" to "Kvitteringer", "aksjer" to "Aksjer", "kontoer" to "Kontoer",
+    "boliger" to "Boliger", "chat" to "Chat",
+)
+
+/** Standard: Oversikt, Transaksjoner, Budsjett og Faste betalinger (+ Mer), som på web. */
+val FIN_TABS_DEFAULT = listOf("oversikt", "liste", "budsjett", "abo")
+
+/** Standarden før Fase 6. Et lagret oppsett som er lik den, er ikke valgt av brukeren og følger den nye standarden. */
+val FIN_TABS_GAMMEL = listOf("oversikt", "liste", "finn", "sok")
+
+/** Lagret Økonomi-linje → det som vises: serverens nøkler (abonnementer, kvitteringer) løses opp, og den gamle standarden flyttes. */
+fun normFinTabs(l: List<String>): List<String> {
+    val v = l.map { finKey24(it) }.filter { k -> FIN_TABS.any { it.first == k } }.distinct().take(5)
+    return if (v == FIN_TABS_GAMMEL) FIN_TABS_DEFAULT else v
+}
+
+/* ---------------- Transaksjonsdetaljer (GET /transactions/:id) ---------------- */
+
+data class TxReceipt(val id: String?, val status: String, val fileUrl: String?, val mime: String?, val lines: List<Pair<String, Double>>, val total: Double?, val aiSummary: String?)
+
+data class TxBank(val bookingDate: String?, val valueDate: String?, val description: String?, val message: String?, val amount: Double?, val account: String?, val archiveReference: String?)
+
+data class TxDetail(val tx: Tx, val aiSummary: String?, val receipt: TxReceipt?, val bank: TxBank?)
+
+fun parseTxDetail(s: String): TxDetail {
+    val o = JSONObject(s)
+    val t = parseTx(o.optJSONObject("tx") ?: o)
+    val r = o.optJSONObject("receipt")?.let { r ->
+        val lines = r.optJSONArray("lines")?.map { (it.optStr("name") ?: it.optString("description")) to it.num("price").let { p -> if (p == 0.0) it.num("amount") else p } } ?: emptyList()
+        TxReceipt(r.optStr("id"), r.optStr("status") ?: "attached", r.optStr("fileUrl"), r.optStr("mime"), lines, r.optDoubleOrNull("total"), r.optStr("aiSummary"))
+    }
+    val b = o.optJSONObject("bank")?.let { b ->
+        TxBank(b.optStr("bookingDate"), b.optStr("valueDate"), b.optStr("description"), b.optStr("message"), b.optDoubleOrNull("amount"), b.optStr("account"), b.optStr("archiveReference"))
+    }
+    return TxDetail(t, o.optStr("aiSummary") ?: t.aiLong ?: t.aiShort, r, b)
+}
+
+/** Skjermene Finans-fanene kan åpne. Tilbake fra en av dem går til Homelab (Mer går til Finans → Mer). */
+val PAPER_FIN_SCREENS = setOf(Screen.Home, Screen.List, Screen.Finn, Screen.Budget, Screen.Scan, Screen.Stocks, Screen.Sub, Screen.Accounts, Screen.Folders)
+
+fun finTabScreen(k: String): Screen? = when (k) {
+    "oversikt" -> Screen.Home; "liste" -> Screen.List; "finn" -> Screen.Finn; "budsjett" -> Screen.Budget; "kvitt" -> Screen.Scan
+    "aksjer" -> Screen.Stocks; "abo" -> Screen.Sub; "kontoer" -> Screen.Accounts; "boliger" -> Screen.Folders
+    else -> null
+}
+
+/* ---------- Boliger: kommende forfall og kvitteringer (GET /folders/:id, nyere server) ---------- */
+
+data class FolderUpcoming(val kind: String, val title: String, val sub: String?, val amount: Double?, val date: String?, val days: Int?, val color: Long?)
+
+data class FolderReceipt(val entryId: Int?, val receiptId: Int?, val description: String, val date: String, val amount: Double, val pending: Boolean, val category: String?, val thumbUrl: String?, val fileUrl: String?)
+
+data class FolderExtra(val upcoming: List<FolderUpcoming>, val receipts: List<FolderReceipt>)
+
+fun parseFolderExtra(s: String): FolderExtra {
+    val o = JSONObject(s)
+    val up = o.optJSONArray("upcoming") ?: JSONArray()
+    val rc = o.optJSONArray("receipts") ?: JSONArray()
+    return FolderExtra(
+        (0 until up.length()).mapNotNull { i ->
+            val u = up.optJSONObject(i) ?: return@mapNotNull null
+            FolderUpcoming(u.optStr("kind") ?: "bill", u.optStr("title") ?: "", u.optStr("sub"), u.optDoubleOrNull("amount"), u.optStr("date"), u.optIntOrNull("days"), u.optStr("color")?.let(::color))
+        },
+        (0 until rc.length()).mapNotNull { i ->
+            val r = rc.optJSONObject(i) ?: return@mapNotNull null
+            FolderReceipt(r.optIntOrNull("entryId"), r.optIntOrNull("receiptId"), r.optStr("description") ?: "Kvittering", r.optStr("date") ?: "", r.num("amount"),
+                r.optBoolean("pending", false), r.optStr("category"), r.optStr("thumbUrl"), r.optStr("fileUrl"))
+        },
+    )
+}
+
+/* ---------- Bolig-widget på Hjem ---------- */
+
+data class HomeBolig(val id: String, val name: String, val spent: Double, val budget: Double?, val review: Int, val nextTitle: String?, val nextAmount: Double?, val nextDate: String?)
+
+/* ---------- Finans-flisene: farge per flis og rekkefølge ---------- */
+
+/** Ikonfarge per flis (tonet bakgrunn = samme farge med lav alfa). */
+val FM_COLORS: Map<String, Long> = mapOf(
+    // Prompt 21 (designet, fmtiles): Budsjett, Kvitteringer, Faste, Kontoer, Aksjer, Rapporter, Subscription OS, Boliger,
+    // Import, Finn, Søk og Innstillinger.
+    "budsjett" to 0xFFC0562A, "kvitt" to 0xFFB23A2A, "faste" to 0xFF7A5AD6, "kontoer" to 0xFF2B5D8A,
+    "aksjer" to 0xFF2F7D4F, "rapp" to 0xFFA8661A, "abo" to 0xFFC2417A, "boliger" to 0xFF3F7A6E,
+    "fimport" to 0xFF4A5BBF, "finn" to 0xFF2B6CB0, "sok" to 0xFF7A3B6B, "innst" to 0xFF6B6558, "liste" to 0xFF5A5246,
+    "plan" to 0xFF2F7A4F, // prompt 51 (ANDFEAT51): Planlegging
+)
+
+val FM_DEFAULT_ORDER = listOf("sok", "liste", "finn", "budsjett", "kvitt", "faste", "kontoer", "plan", "aksjer", "rapp", "abo", "boliger", "fimport", "innst")
+
+/** Lagret rekkefølge + nye fliser bakerst; ukjente nøkler fjernes. */
+fun normalizeFmOrder(saved: List<String>): List<String> = saved.filter { it in FM_DEFAULT_ORDER }.distinct() + FM_DEFAULT_ORDER.filter { it !in saved }
+
+/* ---------- Logoregisteret ---------- */
+
+data class LogoRegItem(val id: String, val name: String, val domain: String?, val alias: List<String>, val category: String?, val color: Long?, val hasFile: Boolean)
+
+fun parseLogoRegistry(s: String): List<LogoRegItem> {
+    val o = JSONObject(s)
+    val a = o.optJSONArray("items") ?: JSONArray()
+    return (0 until a.length()).mapNotNull { i ->
+        val x = a.optJSONObject(i) ?: return@mapNotNull null
+        val id = x.optStr("id") ?: return@mapNotNull null
+        LogoRegItem(id, x.optStr("navn") ?: id, x.optStr("domene"), x.optJSONArray("alias").strings().filter { it.isNotBlank() },
+            x.optStr("kategori"), x.optStr("farge")?.let(::color), x.optBoolean("hasFile", false))
+    }
+}
+
+/** Normalisert nøkkel for oppslag på navn: små bokstaver, æøå/ü forenklet, bare bokstaver og tall. */
+fun logoKey(s: String): String = s.lowercase()
+    .replace("æ", "ae").replace("ø", "o").replace("å", "a").replace("ü", "u").replace("ö", "o").replace("ä", "a").replace("é", "e")
+    .replace(Regex("^(vipps\\*|klarna\\*|iz \\*|sumup \\*|paypal \\*|zettle_\\*|varekjop |visa |kortkjop )"), "")
+    .replace(Regex("[^a-z0-9]"), "")
+
+/** Oppslag: domene først, deretter navn/alias (eksakt, så prefiks). */
+class LogoIndex(items: List<LogoRegItem>) {
+    private val byDomain = HashMap<String, LogoRegItem>()
+    private val byKey = HashMap<String, LogoRegItem>()
+    private val keys: List<Pair<String, LogoRegItem>>
+
+    init {
+        for (it in items) {
+            it.domain?.lowercase()?.removePrefix("www.")?.let { d -> byDomain.putIfAbsent(d, it) }
+            (listOf(it.name, it.id) + it.alias).map(::logoKey).filter { k -> k.length >= 2 }.forEach { k -> byKey.putIfAbsent(k, it) }
+        }
+        keys = byKey.entries.map { it.key to it.value }.filter { it.first.length >= 3 }.sortedByDescending { it.first.length }
+    }
+
+    fun find(domain: String?, name: String?): LogoRegItem? {
+        domain?.trim()?.lowercase()?.removePrefix("www.")?.takeIf { it.isNotBlank() }?.let { d -> byDomain[d]?.let { return it } }
+        val k = name?.let(::logoKey)?.takeIf { it.length >= 2 } ?: return null
+        byKey[k]?.let { return it }
+        return keys.firstOrNull { (key, _) -> k.startsWith(key) }?.second
+    }
+}
+
+/** Lokal nøkkel for rekkefølgen på Finans-flisene (samme navn som i PWA-en). */
+const val FM_ORDER_KEY = "papir_fm_order"

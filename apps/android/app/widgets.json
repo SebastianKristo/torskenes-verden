@@ -1,0 +1,127 @@
+{
+  "$beskrivelse": "Én definisjon per widget (Q31). Hver variant (standard, One UI, Samsung, låseskjerm) er en <receiver> i AndroidManifest.xml og en rad i widget/WidgetKatalog.kt. Begge genereres med `npm run widgets`; `npm run widgets:check` feiler når de ikke stemmer. Mottakernavnene endres aldri, ellers forsvinner widgets brukerne har plassert. aktiv=false: av i manifestet. samsungPaa: slås på i appen på Samsung-telefoner (S24.enableProviders). galleri: navnet i Innstillinger → App → Widgets (mangler = vises ikke der).",
+  "widgets": [
+    { "id": "media", "navn": "Media", "gruppe": "Media", "varianter": [
+      { "type": "standard", "mottaker": "MediaSmallReceiver", "etikett": "Media 2×2", "xml": "widget_media43_s", "aktiv": true, "storrelse": "2 × 2", "galleri": "Media" },
+      { "type": "standard", "mottaker": "MediaMediumReceiver", "etikett": "Media 4×2", "xml": "widget_media43_m", "aktiv": true, "storrelse": "4 × 2", "galleri": "Media · Pause alt" },
+      { "type": "standard", "mottaker": "MediaLargeReceiver", "etikett": "Media 4×3", "xml": "widget_media43_l", "aktiv": true, "storrelse": "4 × 3", "galleri": "Media · Kommer denne uka" }
+    ] },
+    { "id": "ruter", "navn": "Ruter", "gruppe": "Avganger", "varianter": [
+      { "type": "standard", "mottaker": "RuterReceiver27S", "etikett": "Ruter", "xml": "widget_ruter27_s", "aktiv": true, "storrelse": "2 × 2", "galleri": "Ruter" },
+      { "type": "standard", "mottaker": "RuterReceiver27M", "etikett": "Ruter 4×2", "xml": "widget_ruter27_m", "aktiv": true, "storrelse": "4 × 2", "galleri": "Ruter" },
+      { "type": "standard", "mottaker": "RuterReceiver27Strip", "etikett": "Ruter 4×1", "xml": "widget_ruter27_strip", "aktiv": true, "storrelse": "4 × 1", "galleri": "Ruter-stripe" },
+      { "type": "samsung", "mottaker": "S27RuterSmallReceiver", "etikett": "Ruter · Samsung", "xml": "widget_s27_ruter_s", "aktiv": false, "storrelse": "2 × 2", "galleri": "Ruter · Samsung", "samsungPaa": true },
+      { "type": "samsung", "mottaker": "S27RuterWideReceiver", "etikett": "Ruter 4×2 · Samsung", "xml": "widget_s27_ruter_w", "aktiv": false, "storrelse": "4 × 2", "galleri": "Ruter · Samsung", "samsungPaa": true },
+      { "type": "samsung", "mottaker": "S27RuterStackReceiver", "etikett": "Ruter stabel · Samsung", "xml": "widget_s27_ruter_stack", "aktiv": false, "storrelse": "4 × 2", "galleri": "Ruter-stabel · Samsung", "samsungPaa": true },
+      { "type": "samsung", "mottaker": "S24DeparturesReceiver", "etikett": "Avganger · Samsung", "xml": "widget_s24_dep", "aktiv": false, "samsungPaa": true },
+      { "type": "samsung", "mottaker": "S24DeparturesWideReceiver", "etikett": "Avganger 4×2 · Samsung", "xml": "widget_s24_dep_wide", "aktiv": false, "samsungPaa": true },
+      { "type": "laaseskjerm", "mottaker": "LockSmallRuter40", "etikett": "Avgang · låseskjerm", "xml": "locksmallruter40", "aktiv": true },
+      { "type": "laaseskjerm", "mottaker": "LockWideRuter40", "etikett": "Avganger · låseskjerm", "xml": "lockwideruter40", "aktiv": true }
+    ] },
+    { "id": "kalender", "navn": "Kalender", "gruppe": "Kalender", "varianter": [
+      { "type": "standard", "mottaker": "KalReceiver26S", "etikett": "Kalender", "xml": "widget_kal26_s", "aktiv": true, "storrelse": "2 × 2", "galleri": "Kalender" },
+      { "type": "standard", "mottaker": "KalReceiver26M", "etikett": "Kalender 4×2", "xml": "widget_kal26_m", "aktiv": true, "storrelse": "4 × 2", "galleri": "Kalender" },
+      { "type": "standard", "mottaker": "KalReceiver26L", "etikett": "Kalender 4×4", "xml": "widget_kal26_l", "aktiv": true, "storrelse": "4 × 4", "galleri": "Kalender" },
+      { "type": "samsung", "mottaker": "S24KalReceiver26S", "etikett": "Kalender · Samsung", "xml": "widget_s26_kal_s", "aktiv": false, "storrelse": "2 × 2", "galleri": "Kalender · Samsung", "samsungPaa": true },
+      { "type": "samsung", "mottaker": "S24KalReceiver26M", "etikett": "Kalender 4×2 · Samsung", "xml": "widget_s26_kal_m", "aktiv": false, "storrelse": "4 × 2", "galleri": "Kalender · Samsung", "samsungPaa": true },
+      { "type": "samsung", "mottaker": "S24KalReceiver26L", "etikett": "Kalender 4×4 · Samsung", "xml": "widget_s26_kal_l", "aktiv": false, "storrelse": "4 × 4", "galleri": "Kalender · Samsung", "samsungPaa": true },
+      { "type": "laaseskjerm", "mottaker": "LockWideKal40", "etikett": "Neste time · låseskjerm", "xml": "lockwidekal40", "aktiv": true }
+    ] },
+    { "id": "proveperioder", "navn": "Prøveperioder", "gruppe": "Prøveperioder", "varianter": [
+      { "type": "standard", "mottaker": "TrialsReceiver32bS", "etikett": "Prøveperioder", "xml": "widget_trials32b_s", "aktiv": true, "storrelse": "2 × 2", "galleri": "Prøveperioder" },
+      { "type": "standard", "mottaker": "TrialsReceiver32bM", "etikett": "Prøveperioder 4×2", "xml": "widget_trials32b_m", "aktiv": true, "storrelse": "4 × 2", "galleri": "Prøveperioder" },
+      { "type": "samsung", "mottaker": "S32bTrialsSmallReceiver", "etikett": "Prøveperioder · Samsung", "xml": "widget_s32b_trials_s", "aktiv": true, "storrelse": "2 × 2", "galleri": "Prøveperioder · Samsung", "samsungPaa": true },
+      { "type": "samsung", "mottaker": "S32bTrialsWideReceiver", "etikett": "Prøveperioder 4×2 · Samsung", "xml": "widget_s32b_trials_w", "aktiv": true, "storrelse": "4 × 2", "galleri": "Prøveperioder · Samsung", "samsungPaa": true },
+      { "type": "laaseskjerm", "mottaker": "LockSmallTrial40", "etikett": "Prøveperiode · låseskjerm", "xml": "locksmalltrial40", "aktiv": true }
+    ] },
+    { "id": "pakker", "navn": "Pakker", "gruppe": "Pakker", "varianter": [
+      { "type": "standard", "mottaker": "PackagesReceiver", "etikett": "Pakker", "xml": "widget_packages", "storrelse": "4 × 2", "galleri": "Pakker" },
+      { "type": "samsung", "mottaker": "S24PackagesReceiver", "etikett": "Sporing · Samsung", "xml": "widget_s24_pk", "aktiv": false, "storrelse": "2 × 2", "galleri": "Sporing · Samsung", "samsungPaa": true },
+      { "type": "oneui", "mottaker": "OneUiPackagesReceiver", "etikett": "Pakker · One UI", "xml": "widget_ui_packages" },
+      { "type": "laaseskjerm", "mottaker": "LockSmallPakke40", "etikett": "Pakker · låseskjerm", "xml": "locksmallpakke40", "aktiv": true },
+      { "type": "laaseskjerm", "mottaker": "LockWidePakke40", "etikett": "Pakker · låseskjerm", "xml": "lockwidepakke40", "aktiv": true }
+    ] },
+    { "id": "brief", "navn": "Glimt-brief", "gruppe": "Glimt-brief", "varianter": [
+      { "type": "standard", "mottaker": "BriefReceiver34", "etikett": "Glimt-brief", "xml": "widget_brief34_m", "aktiv": true, "storrelse": "4 × 2", "galleri": "Glimt-brief" },
+      { "type": "samsung", "mottaker": "S34BriefReceiver", "etikett": "Glimt-brief · Samsung", "xml": "widget_s34_brief", "aktiv": true },
+      { "type": "samsung", "mottaker": "S35Brief22Receiver", "etikett": "Glimt-brief · Samsung 2×2", "xml": "widget_s35_brief22", "aktiv": true, "storrelse": "2 × 2", "galleri": "Glimt-brief · Samsung" },
+      { "type": "samsung", "mottaker": "S35Brief41Receiver", "etikett": "Glimt-brief · Samsung 4×1", "xml": "widget_s35_brief41", "aktiv": true, "storrelse": "4 × 1", "galleri": "Glimt-brief · Samsung" },
+      { "type": "samsung", "mottaker": "S35Brief44Receiver", "etikett": "Glimt-brief · Samsung 4×4", "xml": "widget_s35_brief44", "aktiv": true, "storrelse": "4 × 4", "galleri": "Glimt-brief · Samsung" },
+      { "type": "laaseskjerm", "mottaker": "LockWideBrief40", "etikett": "Glimt brief · låseskjerm", "xml": "lockwidebrief40", "aktiv": true }
+    ] },
+    { "id": "vaer", "navn": "Vær", "gruppe": "Andre", "varianter": [
+      { "type": "standard", "mottaker": "WeatherReceiver", "etikett": "Vær", "xml": "widget_weather", "storrelse": "4 × 2", "galleri": "Vær" },
+      { "type": "oneui", "mottaker": "OneUiWeatherReceiver", "etikett": "Vær · One UI", "xml": "widget_ui_weather" },
+      { "type": "laaseskjerm", "mottaker": "LockSmallVaer40", "etikett": "Vær · låseskjerm", "xml": "locksmallvaer40", "aktiv": true }
+    ] },
+    { "id": "gjoremal", "navn": "Gjøremål", "gruppe": "Andre", "varianter": [
+      { "type": "standard", "mottaker": "TasksReceiver", "etikett": "Gjøremål", "xml": "widget_tasks", "storrelse": "4 × 2", "galleri": "Gjøremål" },
+      { "type": "samsung", "mottaker": "S24TasksReceiver", "etikett": "Gjøremål · Samsung", "xml": "widget_s24_tasks", "aktiv": false, "samsungPaa": true },
+      { "type": "samsung", "mottaker": "S24TasksWideReceiver", "etikett": "Gjøremål 4×2 · Samsung", "xml": "widget_s24_tasks_wide", "aktiv": false, "samsungPaa": true },
+      { "type": "laaseskjerm", "mottaker": "LockSmallHuske40", "etikett": "Gjøremål · låseskjerm", "xml": "locksmallhuske40", "aktiv": true },
+      { "type": "laaseskjerm", "mottaker": "LockWideHuske40", "etikett": "Gjøremål · låseskjerm", "xml": "lockwidehuske40", "aktiv": true }
+    ] },
+    { "id": "bursdager", "navn": "Bursdager", "gruppe": "Andre", "varianter": [
+      { "type": "standard", "mottaker": "BirthdaysReceiver24", "etikett": "Bursdager", "xml": "widget_bd24", "aktiv": true, "storrelse": "4 × 2", "galleri": "Bursdager" },
+      { "type": "samsung", "mottaker": "S24BirthdaysReceiver", "etikett": "Bursdager · Samsung", "xml": "widget_s24_bd", "aktiv": false, "samsungPaa": true }
+    ] },
+    { "id": "budsjett", "navn": "Budsjett", "gruppe": "Andre", "varianter": [
+      { "type": "standard", "mottaker": "BudgetReceiver", "etikett": "Budsjett", "xml": "widget_budget", "storrelse": "4 × 2", "galleri": "Budsjett" },
+      { "type": "oneui", "mottaker": "OneUiBudgetReceiver", "etikett": "Budsjett · One UI", "xml": "widget_ui_budget" },
+      { "type": "laaseskjerm", "mottaker": "LockSmallBud40", "etikett": "Budsjett · låseskjerm", "xml": "locksmallbud40", "aktiv": true }
+    ] },
+    { "id": "okonomi", "navn": "Økonomi", "gruppe": "Andre", "varianter": [
+      { "type": "standard", "mottaker": "FinanceReceiver", "etikett": "Finans", "xml": "widget_finance", "storrelse": "4 × 2", "galleri": "Økonomi" },
+      { "type": "oneui", "mottaker": "OneUiFinanceReceiver", "etikett": "Økonomi · One UI", "xml": "widget_ui_finance" },
+      { "type": "samsung", "mottaker": "S24BalanceReceiver", "etikett": "Saldo · Samsung", "xml": "widget_s24_bal", "aktiv": false, "samsungPaa": true }
+    ] },
+    { "id": "skann", "navn": "Skann", "gruppe": "Andre", "varianter": [
+      { "type": "standard", "mottaker": "ScanReceiver", "etikett": "Skann", "xml": "widget_scan", "storrelse": "1 × 1", "galleri": "Skann" },
+      { "type": "oneui", "mottaker": "OneUiScanReceiver", "etikett": "Skann · One UI", "xml": "widget_ui_scan" },
+      { "type": "samsung", "mottaker": "S24ScanReceiver", "etikett": "Skann · Samsung", "xml": "widget_s24_scan", "aktiv": false, "samsungPaa": true }
+    ] },
+    { "id": "bibel", "navn": "Bibelvers", "gruppe": "Andre", "varianter": [
+      { "type": "standard", "mottaker": "Bible37Receiver", "etikett": "Bibelvers", "xml": "widget_bible37_m", "aktiv": true, "storrelse": "4 × 2", "galleri": "Bibelvers" },
+      { "type": "standard", "mottaker": "Bible37RoundReceiver", "etikett": "Bibelvers rund", "xml": "widget_bible37_round", "aktiv": true },
+      { "type": "samsung", "mottaker": "S37BibleReceiver", "etikett": "Bibelvers · Samsung", "xml": "widget_s37_bible", "aktiv": true },
+      { "type": "laaseskjerm", "mottaker": "LockWideBibel40", "etikett": "Dagens bibelvers · låseskjerm", "xml": "lockwidebibel40", "aktiv": false }
+    ] },
+    { "id": "hjemlys", "navn": "Hjemlys", "gruppe": "Andre", "varianter": [
+      { "type": "standard", "mottaker": "HjemlysStart40Receiver", "etikett": "Hjemlys", "xml": "widget_hjemlys40", "storrelse": "4 × 2", "galleri": "Hjemlys" }
+    ] },
+    { "id": "neste-trekk", "navn": "Neste trekk", "gruppe": "Andre", "varianter": [
+      { "type": "standard", "mottaker": "NextChargeReceiver", "etikett": "Neste trekk", "xml": "widget_next" }
+    ] },
+    { "id": "aksjer", "navn": "Aksjer", "gruppe": "Andre", "varianter": [
+      { "type": "standard", "mottaker": "StocksReceiver", "etikett": "Aksjer", "xml": "widget_stocks" },
+      { "type": "oneui", "mottaker": "OneUiStocksReceiver", "etikett": "Aksjer · One UI", "xml": "widget_ui_stocks" }
+    ] },
+    { "id": "domener", "navn": "Domener", "gruppe": "Andre", "varianter": [
+      { "type": "standard", "mottaker": "DomainsReceiver", "etikett": "Domener", "xml": "widget_domains" },
+      { "type": "oneui", "mottaker": "OneUiDomainsReceiver", "etikett": "Domener · One UI", "xml": "widget_ui_domains" }
+    ] },
+    { "id": "mat", "navn": "Mat", "gruppe": "Andre", "varianter": [
+      { "type": "standard", "mottaker": "MatReceiver", "etikett": "Mat", "xml": "widget_mat" },
+      { "type": "oneui", "mottaker": "OneUiMatReceiver", "etikett": "Mat · One UI", "xml": "widget_ui_mat" }
+    ] },
+    { "id": "finn", "navn": "Finn", "gruppe": "Andre", "varianter": [
+      { "type": "standard", "mottaker": "FinnReceiver", "etikett": "Finn", "xml": "widget_finn" },
+      { "type": "oneui", "mottaker": "OneUiFinnReceiver", "etikett": "Finn · One UI", "xml": "widget_ui_finn" }
+    ] },
+    { "id": "boliger", "navn": "Boliger", "gruppe": "Andre", "varianter": [
+      { "type": "standard", "mottaker": "BoligReceiver", "etikett": "Boliger", "xml": "widget_bolig" }
+    ] },
+    { "id": "sok", "navn": "Søk", "gruppe": "Andre", "varianter": [
+      { "type": "oneui", "mottaker": "OneUiSearchReceiver", "etikett": "Søk · One UI", "xml": "widget_ui_search" }
+    ] },
+    { "id": "klokke", "navn": "Klokke", "gruppe": "Andre", "varianter": [
+      { "type": "oneui", "mottaker": "OneUiClockReceiver", "etikett": "Klokke · One UI", "xml": "widget_ui_clock" }
+    ] },
+    { "id": "planlegging", "navn": "Sparing og planer", "gruppe": "Andre", "varianter": [
+      { "type": "standard", "mottaker": "Plan51SaldoReceiver", "etikett": "Sparing og planer · saldo", "xml": "widget_plan51" }
+    ] },
+    { "id": "sjekk-inn", "navn": "Sjekk inn", "gruppe": "Andre", "varianter": [
+      { "type": "standard", "mottaker": "Checkin51Receiver", "etikett": "Sjekk inn", "xml": "widget_checkin51" }
+    ] }
+  ]
+}

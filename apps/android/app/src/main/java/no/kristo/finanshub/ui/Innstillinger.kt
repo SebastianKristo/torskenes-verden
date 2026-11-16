@@ -406,7 +406,7 @@ internal fun AccountsPage(vm: AppViewModel) = Pages {
         colors = ButtonDefaults.buttonColors(containerColor = PaperPal.current.lab, contentColor = PaperPal.current.onLab)) { Icon(Icons.Filled.PersonAdd, null); Spacer(Modifier.width(8.dp)); Text("Legg til konto", fontWeight = FontWeight.Bold) }
     if (vm.accounts.size > 1) OutlinedButton(onClick = { vm.logoutOthers() }, modifier = Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(26.dp)) { Text("Logg ut andre kontoer") }
     Note("Nye brukere opprettes av admin i Homelab → Innstillinger → Konto og sikkerhet.")
-    // Prompt 44: FAMILIE · LOGG INN SOM og SERVER · EIER – prompt 68: flyttet til Husstand → Brukere og familie (ui/Users68Ui.kt).
+    // Prompt 44: FAMILIE · LOGG INN SOM og SERVER · EIER – prompt 68: flyttet til Husstand → Brukere og familie (ui/Brukere.kt).
     Users68Link(vm, if (vm.userIsAdmin) "Brukerne, Logg inn som og eier av serveren · Familie, helse og posisjon" else "Familie, helse og posisjon")
     // Prompt 38: ENHETER (Logg inn på ny enhet) og ØKT (Lås skjermen, Logg ut, Logg ut av alle enheter) nederst på Konto.
     ServerLink47(vm); Session38(vm) // Prompt 41/47: Konto → SERVER åpner Innstillinger → Server (lokal, ekstern, status, Tilbakestill)
@@ -767,7 +767,7 @@ private fun setIndex24(vm: AppViewModel): List<SetItem24> = buildList {
     if (vm.userIsAdmin) add(SetItem24("logger44", "Logger", "Server", "Docker-logger, feil og feilsøking", null, "logg logger docker feil feilsøking container"))
     add(SetItem24("huske", "Gjøremål", "Tilkoblinger → Kalender og gjøremål", "Synk med Home Assistant", "kal", "gjøremål synk home assistant todo"))
     add(SetItem24("nyheter", "Nyheter", "Moduler", "Kilder, kategorier, For deg og Glimt-sammendrag", "nyheter", "nyheter rss kilder kategori for deg sammendrag favicon")) // prompt 46
-    // Prompt 68: brukerne og Logg inn som ligger under Husstand → Brukere og familie (ui/Users68Ui.kt).
+    // Prompt 68: brukerne og Logg inn som ligger under Husstand → Brukere og familie (ui/Brukere.kt).
     if (vm.userIsAdmin) add(SetItem24("as44", "Logg inn som", "Husstand", "Rediger oppsettet til et familiemedlem · overfør eierskap", USERS68, "logg inn som impersonering eier overfør familie oppsett brukere"))
     if (vm.userIsAdmin) add(SetItem24("char52", "Glimt-figur per bruker", "Husstand", "Standardfiguren hver bruker starter med", USERS68, "brief figur glimt-figur standard per bruker blekksprut"))
     if (vm.userIsAdmin) add(SetItem24("rollback44", "Tidligere versjoner", "System", "Rull tilbake til en tidligere versjon", null, "rull tilbake rollback versjon nedgrader"))
@@ -1404,7 +1404,7 @@ private class Row50(val key: String?, val title: String, val icon: ImageVector, 
 
 private class Group50(val title: String, val rows: List<Row50>)
 
-/** Prompt 67: samme grupper som på telefon og web (menu67 i ui/Set67Ui.kt), uten undertekst. */
+/** Prompt 67: samme grupper som på telefon og web (menu67 i ui/InnstillingerMeny.kt), uten undertekst. */
 private fun groups50(vm: AppViewModel): List<Group50> =
     menu67(vm).map { g -> Group50(g.title, g.rows.map { r -> Row50(r.key, r.title, r.icon, r.value, r.go) }) }
 

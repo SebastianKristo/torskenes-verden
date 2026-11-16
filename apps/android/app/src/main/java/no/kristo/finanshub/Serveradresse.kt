@@ -77,7 +77,12 @@ const val DEFAULT_EXTERNAL47 = "https://os.smarthjemeksperten.no" // prompt 89: 
 // Standard ekstern adresse. Må stå etter DEFAULT_EXTERNAL47: en const val kan ikke vise til en senere const i samme fil.
 const val DEFAULT_SERVER41 = DEFAULT_EXTERNAL47
 
-const val DEFAULT_LOCAL47 = "http://10.69.1.39:3000"
+/**
+ * C-S4/D-B5: ingen fast lokal standardadresse i appen. Den lokale adressen kommer fra serveren etter innlogging
+ * (/api/config/servers og /api/me/server), fra QR-koden eller fra brukeren. Lagrede adresser beholdes som de er.
+ * Dette er bare eksempelteksten i feltet.
+ */
+const val LOCAL_HINT47 = "http://192.168.x.x:3000"
 
 /** Grense for «lokal svarer» (spesifikasjonen: 1,5 s). */
 const val LOCAL_TIMEOUT47 = 1_500
@@ -90,7 +95,7 @@ data class SrvStatus47(val ok: Boolean?, val ms: Long = 0, val note: String? = n
 class P47State {
     /** Standardverdier fra serveren (/api/config/servers), ellers konstantene over. */
     var defExternal by mutableStateOf(DEFAULT_EXTERNAL47)
-    var defLocal by mutableStateOf(DEFAULT_LOCAL47)
+    var defLocal by mutableStateOf("")
     internal var configFor: String? = null
     /** "local" | "external" → status. */
     val status = mutableStateMapOf<String, SrvStatus47>()
@@ -130,7 +135,8 @@ internal suspend fun localIsOurs47(local: String, vararg external: String?): Boo
     // Kontoens eksterne adresse og innloggingsadressen (eldre kontoer kan ha logget inn på et annet domene enn PUBLIC_URL).
     val ours = external.mapNotNull { hostOf47(it) }.toSet()
     if (pub != null) return ours.isEmpty() || hostOf47(pub) in ours
-    return hostOf47(local) != hostOf47(DEFAULT_LOCAL47)
+    // Eldre server uten offentlig adresse: adressen er alltid lagt inn av brukeren eller kommer fra kontoen (ingen fast standard).
+    return hostOf47(local) != null
 }
 
 /** GET /api/config/servers etter innlogging: standardverdiene serveren bruker (PUBLIC_URL/LOCAL_URL). 404 → konstantene. */
@@ -156,7 +162,7 @@ fun AppViewModel.prefill47() {
     if (a.local.isNotBlank()) return
     val ext = a.external.ifBlank { a.server }
     val ours = hostOf47(ext)?.let { it == hostOf47(p47.defExternal) || it == hostOf47(DEFAULT_EXTERNAL47) } == true
-    if (!ours) return
+    if (!ours || p47.defLocal.isBlank()) return
     updateAddresses(p47.defLocal, a.external)
 }
 
@@ -198,8 +204,16 @@ fun AppViewModel.resetServer47() {
     }
 }
 
-/** Innlogging: ekstern først (passordet går over https). Svarer den ikke, og den lokale standardadressen er vår server, brukes den. */
-internal suspend fun loginVia47(srv: String): String? {
-    if (hostOf47(srv) != hostOf47(DEFAULT_EXTERNAL47)) return null
-    return if (localIsOurs47(DEFAULT_LOCAL47, srv)) DEFAULT_LOCAL47 else null
+/**
+ * Innlogging: ekstern først (passordet går over https). Svarer den ikke, prøves den lokale adressen brukeren allerede har
+ * (kontoen eller tannhjulet), men bare hvis den svarer som samme server. Ingen fast standardadresse (C-S4/D-B5).
+ */
+internal suspend fun loginVia47(srv: String, local: String?): String? {
+    val l = local?.trim().orEmpty()
+    if (l.isEmpty() || hostOf47(l) == null || hostOf47(l) == hostOf47(srv)) return null
+    return if (localIsOurs47(l, srv)) l else null
 }
+
+/** Lokal adresse å prøve for [srv]: kontoens lagrede adresse, ellers den som er valgt med tannhjulet før innlogging. */
+internal fun AppViewModel.localFor47(srv: String): String =
+    accounts.firstOrNull { it.server == srv && it.local.isNotBlank() }?.local ?: lastLocal89()

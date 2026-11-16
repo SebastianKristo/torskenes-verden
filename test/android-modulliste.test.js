@@ -46,7 +46,7 @@ test('fanelinja, Mer og modulvelgeren har ingen egen håndskrevet liste over mod
 });
 
 test('ikonene i modullisten kan tegnes av appen (vektorikon, aldri tekst)', () => {
-  const p17 = code(join(APP, 'ui/Paper17.kt'));
+  const p17 = code(join(APP, 'ui/PapirInnstillinger.kt'));
   const glyphs = new Set([...p17.matchAll(/^\s*"([^"]+)" -> (?:Icons|FamIcons46)/gm)].map((x) => x[1]));
   for (const m of ANDROID) assert.ok(glyphs.has(m.ikon.tegn), `${m.id}: tegnet ${m.ikon.tegn} mangler i glyphVector`);
   // Og SF Symbol-navnet som lagres på serveren for de nye tegnene (serveren godtar bare navn).
@@ -60,7 +60,7 @@ test('kalendervisningene følger modullisten i begge Kalender-appene', () => {
 });
 
 test('Faste betalinger og Økonomi-fanene som på web', () => {
-  const m15 = code(join(APP, 'Models15.kt'));
+  const m15 = code(join(APP, 'Models.kt'));
   assert.match(m15, /val FIN_TABS_DEFAULT = listOf\("oversikt", "liste", "budsjett", "abo"\)/);
   assert.match(m15, /"liste" to "Transaksjoner"/);
   assert.match(m15, /"sok" to "Glimt"/);
@@ -72,7 +72,7 @@ test('Faste betalinger og Økonomi-fanene som på web', () => {
 });
 
 test('Innstillinger har sidene og rekkefølgen fra innstillinger[]', () => {
-  const s = code(join(APP, 'ui/Set67Ui.kt'));
+  const s = code(join(APP, 'ui/InnstillingerMeny.kt'));
   const keys = { konto: 'konto', utseende: 'tilpass', varsler: 'notify', husstand: 'USERS68', glimt: '"glimt67"', tilkoblinger: '"integ"', moduler: '"modules"', enheter: '"enheter"', server: '"prog50"' };
   let last = -1;
   for (const i of LISTE.innstillinger) {
@@ -95,7 +95,7 @@ test('gamle lenker går via aliasene, og dype lenker går forbi onboardingen (Q3
 });
 
 test('ingen gamle navn i tekstene brukeren ser (Q1–Q12)', () => {
-  for (const f of ['ui/Mer.kt', 'ui/Paper15.kt', 'ui/Paper.kt', 'ui/Set67Ui.kt', 'ui/Paper17.kt', 'ui/App.kt', 'widget/Widgets.kt']) {
+  for (const f of ['ui/Mer.kt', 'ui/PapirTilpassOgNavigasjon.kt', 'ui/Paper.kt', 'ui/InnstillingerMeny.kt', 'ui/PapirInnstillinger.kt', 'ui/App.kt', 'widget/Widgets.kt']) {
     const c = code(join(APP, f));
     for (const gammel of ['Now Brief', 'Subscription OS', 'Huskeliste', 'Nyhetsleser', '"FinansHub"', 'Familie og kart']) {
       assert.ok(!c.includes(gammel), `${f}: «${gammel}»`);

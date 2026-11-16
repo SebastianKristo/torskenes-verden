@@ -1,7 +1,7 @@
 // Prompt 89 (AND89): Android – riktig standarddomene + migrering (app, Kalender, Wear), tannhjul-ark på innloggingen,
 // og Live Updates for Live Activities-API-et (GET /api/live/aktiviteter, POST /api/live/handling, /api/live/innstillinger).
-// Kildesjekker + de rene reglene i Regel89.kt speilet i JS. Regel89.kt er også kompilert og kjørt med kotlinc 2.0.21 mot samme fasit,
-// og Live89.kt / ui/Srv89Ui.kt / ui/Live89Ui.kt er typesjekket med stubber (ingen Android SDK her – CI er fasit).
+// Kildesjekker + de rene reglene i Regler.kt speilet i JS. Regler.kt er også kompilert og kjørt med kotlinc 2.0.21 mot samme fasit,
+// og LiveAktiviteter.kt / ui/ServerArk.kt / ui/LiveAktiviteter.kt er typesjekket med stubber (ingen Android SDK her – CI er fasit).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
@@ -47,20 +47,20 @@ test('domenet: ingen gammel stavemåte noe sted i apps/android (bare den oppdelt
   assert.deepEqual(hits.map((p) => p.slice(ROOT.length + 1)), []);
   // Migreringen bygger den gamle verdien av to deler, én gang (:felles), og alle tre appene bruker den.
   assert.match(rd(join(FELLES, 'ServerAdresse.kt')), /const val GAMMEL_STANDARD: String = "https:\/\/os\.smarthjem" \+ "experten\.no"/);
-  assert.match(code(APP, 'Regel89.kt'), /fun isOld\(s: String\?\): Boolean = ServerAdresse\.erGammelStandard\(s\)/);
-  assert.match(code(APP, 'Regel89.kt'), /fun migrate\(s: String\?\): String\? = ServerAdresse\.migrer\(s\)/);
+  assert.match(code(APP, 'Regler.kt'), /fun isOld\(s: String\?\): Boolean = ServerAdresse\.erGammelStandard\(s\)/);
+  assert.match(code(APP, 'Regler.kt'), /fun migrate\(s: String\?\): String\? = ServerAdresse\.migrer\(s\)/);
   assert.match(code(KAL, 'Serveradresser.kt'), /fun isOld\(s: String\?\): Boolean = ServerAdresse\.erGammelStandard\(s\)/);
   assert.match(code(WEAR, 'WearApi.kt'), /internal fun migrerGammelStandard\(s: String\?\): String\? = ServerAdresse\.migrer\(s\)/);
 });
 
-test('domenet: standardverdiene er os.smarthjemeksperten.no, lokal uendret http://10.69.1.39:3000', () => {
+test('domenet: standardverdien er os.smarthjemeksperten.no, og lokal adresse har ingen fast standard (C-S4)', () => {
   assert.match(code(APP, 'Serveradresse.kt'), /const val DEFAULT_EXTERNAL47 = "https:\/\/os\.smarthjemeksperten\.no"/);
-  assert.match(code(APP, 'Serveradresse.kt'), /const val DEFAULT_LOCAL47 = "http:\/\/10\.69\.1\.39:3000"/);
+  assert.doesNotMatch(code(APP, 'Serveradresse.kt'), /10\.69\.1\.39/);
   assert.match(code(APP, 'Serveradresse.kt'), /const val DEFAULT_SERVER41 = DEFAULT_EXTERNAL47/);
   assert.match(code(FELLES, 'ServerAdresse.kt'), /const val STANDARD: String = "https:\/\/os\.smarthjemeksperten\.no"/);
-  assert.match(code(APP, 'Regel89.kt'), /const val EXTERNAL = ServerAdresse\.STANDARD/);
+  assert.match(code(APP, 'Regler.kt'), /const val EXTERNAL = ServerAdresse\.STANDARD/);
   assert.match(code(KAL, 'Innlogging.kt'), /const val DEFAULT_BASE = "https:\/\/os\.smarthjemeksperten\.no"/);
-  assert.match(code(KAL, 'Innlogging.kt'), /const val DEFAULT_LOCAL = "http:\/\/10\.69\.1\.39:3000"/);
+  assert.doesNotMatch(code(KAL, 'Innlogging.kt'), /10\.69\.1\.39/);
   assert.match(code(WEAR, 'WearApi.kt'), /const val STANDARD_SERVER = ServerAdresse\.STANDARD/);
   // Klartekst er fortsatt bare for lokalt nett (prompt 86) – ingen ny vert i nettverkskonfigen.
   const nsc = rd(join(AND, 'app/src/main/res/xml/network_security_config.xml'));
@@ -85,7 +85,7 @@ test('migrering: app (kontoer + forrige server), Kalender (oppstart) og Wear skr
 /* ---------------- 2. Tannhjulet ---------------- */
 
 test('tannhjul på innloggingen (Homelab): ikon «settings» 48 dp øverst til høyre, arket «Server» med alle feltene', () => {
-  const ui = code(join(APP, 'ui'), 'Srv89Ui.kt');
+  const ui = code(join(APP, 'ui'), 'ServerArk.kt');
   assert.match(ui, /Icons\.Filled\.Settings/);
   assert.match(ui, /size\(48\.dp\)/);
   for (const t of ['"Server"', '"Ekstern adresse"', '"Lokal adresse"', '"Test tilkobling"', '"Tilbakestill til standard"', '"Lagre"', '"Avbryt"', 'KeyboardType.Uri']) assert.ok(ui.includes(t), t);
@@ -93,9 +93,9 @@ test('tannhjul på innloggingen (Homelab): ikon «settings» 48 dp øverst til h
   assert.match(ui, /"Tilkoblet · \$host"/);
   assert.match(ui, /if \(ok\) p\.pos else p\.lab/); // grønn / rød
   assert.match(ui, /Regel89\.clean\(ext\)/);
-  assert.match(ui, /ext = DEFAULT_EXTERNAL47; loc = DEFAULT_LOCAL47/);
+  assert.match(ui, /ext = DEFAULT_EXTERNAL47; loc = ""/);
   assert.match(ui, /store\?\.rememberServer\(e\); store\?\.rememberLocal\(l\)/);
-  const login = block(code(join(APP, 'ui'), 'Paper14.kt'), 'internal fun PaperLogin(');
+  const login = block(code(join(APP, 'ui'), 'PapirSider.kt'), 'internal fun PaperLogin(');
   assert.match(login, /LoginGear89\(Modifier\.align\(Alignment\.TopEnd\)\.statusBarsPadding\(\)/);
   assert.match(login, /PButton\(if \(vm\.busy\) "Logger inn …" else "Logg inn"[^\n]*\n\s*LoginServerLine89\(server\)/);
   assert.match(ui, /"Server: " \+ Regel89\.hostLabel\(server\)/);
@@ -126,7 +126,7 @@ test('tannhjul på innloggingen (Kalender): samme Server-ark som Innstillinger �
 /* ---------------- 3. Live Updates ---------------- */
 
 test('Live Updates: følger API-et i kontrakten (stier, felt, handlinger, innstillinger)', () => {
-  const k = code(APP, 'Live89.kt');
+  const k = code(APP, 'LiveAktiviteter.kt');
   assert.match(k, /request\("GET", "\/live\/aktiviteter", prefix = Api\.HOMELAB/);
   assert.equal((k.match(/request\("POST", "\/live\/handling", JSONObject\(\)\.put\("id", id\)\.put\("handling", /g) || []).length, 2);
   for (const f of ['id', 'type', 'tittel', 'undertittel', 'verdi', 'meta', 'start', 'slutt', 'status', 'url']) assert.ok(k.includes(`s89("${f}")`), f);
@@ -135,23 +135,23 @@ test('Live Updates: følger API-et i kontrakten (stier, felt, handlinger, innsti
   assert.match(k, /optInt\("ferdig", 0\)/);
   assert.match(k, /optJSONArray\("handlinger"\)/);
   assert.match(k, /optJSONObject\("aktivitet"\)/);
-  const r = code(APP, 'Regel89.kt');
+  const r = code(APP, 'Regler.kt');
   assert.match(r, /val TYPES = listOf\("nedlasting", "backup", "spiller", "avtale", "pakke"\)/);
   assert.match(r, /val ACTIONS = setOf\("pause", "fortsett", "stopp", "rute", "utsett"\)/);
   assert.match(r, /Regex\("\^\[a-z0-9:_-\]\{1,80\}\$"\)/);
-  const ui = code(join(APP, 'ui'), 'Live89Ui.kt');
+  const ui = code(join(APP, 'ui'), 'LiveAktiviteter.kt');
   assert.match(ui, /hlGet\("\/live\/innstillinger"/);
   assert.match(ui, /hlPut\("\/live\/innstillinger", body\)/);
   assert.match(ui, /it != "backup" \|\| vm\.userIsAdmin/);
   // Innstillinger → Varsler.
-  assert.match(code(join(APP, 'ui'), 'Paper17.kt'), /"notify" -> \{ item \{ NotifySub\(vm\) \}; item \{ Live89Section\(vm\) \}/);
+  assert.match(code(join(APP, 'ui'), 'PapirInnstillinger.kt'), /"notify" -> \{ item \{ NotifySub\(vm\) \}; item \{ Live89Section\(vm\) \}/);
   // Ingen Firebase.
   const gradle = walk(AND).filter((p) => /\.gradle(\.kts)?$|\.toml$/.test(p)).map(rd).join('\n');
   assert.ok(!/firebase|google-services/i.test(gradle));
 });
 
 test('Live Updates: Android 16 ProgressStyle + promoted ongoing via refleksjon (compileSdk 35), ellers vanlig progress', () => {
-  const k = code(APP, 'Live89.kt');
+  const k = code(APP, 'LiveAktiviteter.kt');
   const ps = block(k, 'private fun progressStyle36(');
   assert.match(ps, /if \(Build\.VERSION\.SDK_INT < 36\) return false/);
   assert.match(ps, /Class\.forName\("android\.app\.Notification\\\$ProgressStyle"\)/);
@@ -173,7 +173,7 @@ test('Live Updates: Android 16 ProgressStyle + promoted ongoing via refleksjon (
 });
 
 test('Live Updates: knappene går til en ikke-eksportert BroadcastReceiver (uten å åpne appen), «Vis rute» via usynlig aktivitet', () => {
-  const k = code(APP, 'Live89.kt');
+  const k = code(APP, 'LiveAktiviteter.kt');
   const act = block(k, 'private fun action(ctx: Context');
   assert.match(act, /PendingIntent\.getBroadcast\(ctx, code,\s*Intent\(ctx, Live89Receiver::class\.java\)/);
   assert.match(act, /if \(hid == "rute"\) return PendingIntent\.getActivity\(ctx, code,\s*Intent\(ctx, Live89Route::class\.java\)/);
@@ -192,7 +192,7 @@ test('Live Updates: knappene går til en ikke-eksportert BroadcastReceiver (uten
 });
 
 test('Live Updates: polling i forgrunnstjeneste mens noe er aktivt, WorkManager hvert 15. min, stopp ved utlogging', () => {
-  const k = code(APP, 'Live89.kt');
+  const k = code(APP, 'LiveAktiviteter.kt');
   const loop = block(k, 'private suspend fun loop()');
   assert.match(loop, /val iv = Live89\.show\(this, list, this\)/);
   assert.match(loop, /if \(iv == null\) break/);
@@ -207,7 +207,7 @@ test('Live Updates: polling i forgrunnstjeneste mens noe er aktivt, WorkManager 
   assert.match(block(vm, 'fun switchTo(id: String)'), /Live89\.kick\(getApplication\(\)\)/);
 });
 
-/* ---------------- 4. Rene regler (speiler Regel89.kt) ---------------- */
+/* ---------------- 4. Rene regler (speiler Regler.kt) ---------------- */
 
 const isOld = (s) => s != null && s.trim().replace(/\/+$/, '').toLowerCase() === `https://os.${OLD}.no`;
 const migrate = (s) => (isOld(s) ? NEW : s);
@@ -258,7 +258,7 @@ test('rene regler: migrering, validering, segmenter, brikke, intervall og dyplen
   assert.equal(link('homelab://login?c=x', 'pakke'), 'finanshub://tracking');
   assert.equal(link('https://evil.example', 'spiller'), 'finanshub://media');
   // Kotlin-kilden har de samme reglene.
-  const r = code(APP, 'Regel89.kt');
+  const r = code(APP, 'Regler.kt');
   assert.match(r, /if \(act\.any \{ \(it\.first == "nedlasting" \|\| it\.first == "backup"\) && it\.second == "aktiv" \}\) 5_000L else 30_000L/);
   assert.match(r, /if \(status == "pause"\) "Pauset" else verdi\.trim\(\)\)\.take\(12\)/);
   assert.match(r, /if \(type == "pakke"\) 30 \* 60_000L else 15 \* 60_000L/);
@@ -266,7 +266,7 @@ test('rene regler: migrering, validering, segmenter, brikke, intervall og dyplen
 });
 
 test('farger og symboler fra fasiten (Live Activities.dc.html)', () => {
-  const r = code(APP, 'Regel89.kt');
+  const r = code(APP, 'Regler.kt');
   for (const [t, c] of [['nedlasting', '5AC8FA'], ['backup', '30D158'], ['spiller', 'FFB340'], ['avtale', 'FF6A4D'], ['pakke', 'BF8CFF']]) {
     assert.match(r, new RegExp(`"${t}" -> 0xFF${c}\\.toInt\\(\\)`), t);
   }

@@ -17,7 +17,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 /*
- * Avganger (Ruter): kode som lå i blandingsfilene (P41.kt, P45b.kt, P52B.kt, Models16.kt, Models14.kt, Mod27B.kt) og ble flyttet hit uendret i Fase 5.
+ * Avganger (Ruter): kode som lå i blandingsfilene (P41.kt, P45b.kt, P52B.kt, Models.kt, Models.kt, Mod27B.kt) og ble flyttet hit uendret i Fase 5.
  * Navnene er de samme. Fila eies av MODULER-Android.
  */
 

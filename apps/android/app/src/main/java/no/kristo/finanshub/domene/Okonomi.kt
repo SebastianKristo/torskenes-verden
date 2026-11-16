@@ -805,7 +805,7 @@ fun AppViewModel.reread40(txId: Int, receiptId: String, engine: String = "gemini
     Haptics.tap()
     s.rr = s.rr + (txId to Reread40(receiptId, true, emptyList(), null, null, null, null, started50 = System.currentTimeMillis(), small50 = small))
     launch40 {
-        // Prompt 50: tydelige meldinger i stedet for «Feil 502» (GlimtErr50.kt).
+        // Prompt 50: tydelige meldinger i stedet for «Feil 502» (GlimtFeil.kt).
         fun fail(e: GlimtErr50) { s.rr = s.rr + (txId to Reread40(receiptId, false, emptyList(), null, null, null, e.text, kind50 = e.kind, small50 = small)) }
         fun fail(m: String) = fail(GlimtErr50(m, GlimtErrKind50.OTHER))
         try {

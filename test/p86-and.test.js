@@ -2,7 +2,7 @@
 //  A. Signeringsnøkkelen leses fra miljøet (ANDROID_KEYSTORE_*), og Homelab ↔ Kalender sammenligner signeringssertifikater.
 //  B. Klartekst-http bare på lokalt nett (Fase 5: én kopi i :felles, LokaltNett.kt) – håndhevet i koden for alle HTTP-klienter
 //     i :app, :kalender og :wear. JUnit-testene i :felles (ServerAdresseTest) kjører samme fasit på CI.
-//  C. Lenker som utfører handlinger må bekreftes når de kommer utenfra (Link86.kt).
+//  C. Lenker som utfører handlinger må bekreftes når de kommer utenfra (Lenkehandlinger.kt).
 // Kildesjekker + fasit for adresse-sjekken. Regelen er speilet i JS her, og den ekte Kotlin-fila kompileres og kjøres mot
 // samme fasit når Gradles Kotlin-kompilator finnes på maskinen (ellers hoppes den testen over).
 import { test } from 'node:test';
@@ -190,7 +190,7 @@ test('B: brukeren får teksten, og konfigurasjonen har ingen hardkodet adresse',
   assert.match(code('WearApi.kt', WEAR), /catch \(e: UsikretHttp\) \{\s*throw WearApiFeil\(LokaltNett\.MSG\)[\s\S]*?catch \(e: IOException\)/);
   assert.match(code('KalApi.kt', KAL), /catch \(e: IOException\) \{\s*throw KalApiException\(e\.message \?: "Nettverksfeil"\)/, 'Kalender viser meldingen fra unntaket');
   assert.match(code('Serveradresse.kt'), /fun cleartextBlocked47\(u: String\): Boolean = !LokaltNett\.ok\(u\)/, 'innstillingene bruker samme regel');
-  for (const f of ['Serveradresse.kt', 'ui/Serveradresse.kt', 'Ntfy51.kt']) assert.ok(!/tillater bare http/.test(code(f)), `${f}: gammel tekst om én fast adresse`);
+  for (const f of ['Serveradresse.kt', 'ui/Serveradresse.kt', 'Ntfy.kt']) assert.ok(!/tillater bare http/.test(code(f)), `${f}: gammel tekst om én fast adresse`);
 
   for (const m of ['app', 'kalender', 'wear']) {
     const xml = raw(join(AND, m, 'src/main/res/xml/network_security_config.xml')).replace(/<!--[\s\S]*?-->/g, '');
@@ -333,13 +333,13 @@ test('A: docs/android-signering.md har stegene – uten passord i klartekst', ()
 /* ======================= C. Lenker som utfører handlinger ======================= */
 
 test('C: lenker utenfra som endrer noe, spør først – appens egne varsler og widgeter går som før', () => {
-  const l = code('Link86.kt');
+  const l = code('Lenkehandlinger.kt');
   assert.match(l, /SecureRandom\(\)\.nextBytes/, 'markøren er en tilfeldig nøkkel');
   assert.match(l, /getSharedPreferences\(SP, Context\.MODE_PRIVATE\)/, 'lagret privat i appen');
   assert.match(l, /fun internal\(ctx: Context, intent: Intent\?\): Boolean =\s*runCatching \{ intent\?\.getStringExtra\(EXTRA\)\?\.let \{ it == key\(ctx\) \} == true \}\.getOrDefault\(false\)/);
   assert.match(l, /fun Intent\.intern86\(ctx: Context\): Intent = putExtra\(Link86\.EXTRA, Link86\.key\(ctx\)\)/);
 
-  const r = code('LinkRegel86.kt');
+  const r = code('LenkeRegel.kt');
   for (const s of ['"start" -> Ask86("Vil du starte Hjemlys?"', '"home" -> Ask86("Vil du melde «Jeg er hjemme»?"', '"ok" -> Ask86("Vil du melde «Alt bra»?"',
     '"ok" -> Ask86("Vil du svare 👍 på innsjekken?"', '"pickup" -> Ask86("Vil du svare at du kommer og henter?"', '"call" -> Ask86("Vil du svare «Ringer» på innsjekken?"',
     'i handlelisten?"', 'Ask86("Vil du slå på sanntid i Kart?"']) assert.ok(r.includes(s), s);
@@ -359,11 +359,11 @@ test('C: lenker utenfra som endrer noe, spør først – appens egne varsler og 
   // Lenkene som faktisk utfører noe (om en ny kommer til her, må den inn i linkAsk86).
   assert.match(code('HjemlysModel.kt'), /"start" -> \{[\s\S]*?startHjemlys40\(/);
   assert.match(code('FamilyModel.kt'), /"call", "ok", "pickup" -> if \(id != null\) replyCheckin50\(id, act\)/);
-  assert.match(code('Shortcuts51Plat.kt'), /"add" -> addFromLink51\(/);
+  assert.match(code('Snarveier.kt'), /"add" -> addFromLink51\(/);
   assert.match(code('KartModel.kt'), /if \(live && !z\.live\) kartLive46\(z\)/);
 
   // Dialogen: hva som skjer, Avbryt / Utfør.
-  const ui = code('ui/Link86Ui.kt');
+  const ui = code('ui/Lenkehandlinger.kt');
   assert.match(ui, /val l = vm\.link86 \?: return/);
   assert.match(ui, /TextButton\(\{ vm\.link86 = null; vm\.deepLink\(l\.first\) \}\) \{ Text\("Utfør"/);
   assert.match(ui, /TextButton\(\{ vm\.link86 = null \}\) \{ Text\("Avbryt"/);
@@ -373,10 +373,10 @@ test('C: lenker utenfra som endrer noe, spør først – appens egne varsler og 
   assert.match(code('HjemlysModel.kt'), /finanshub:\/\/hjemlys\/start"[\s\S]{0,200}?\.intern86\(ctx\), PendingIntent\.FLAG_IMMUTABLE or PendingIntent\.FLAG_UPDATE_CURRENT\)/, '«Ja, start»');
   assert.match(code('widget/HjemlysWidget.kt'), /finanshub:\/\/hjemlys\$path"[\s\S]{0,200}?\.intern86\(ctx\), PendingIntent\.FLAG_IMMUTABLE or PendingIntent\.FLAG_UPDATE_CURRENT\)/, 'Hjemlys-widgeten');
   assert.match(code('FamilyModel.kt'), /finanshub:\/\/familie\/sjekk\$q"[\s\S]{0,200}?\.intern86\(ctx\)\s*return PendingIntent\.getActivity\(ctx, code, i, PendingIntent\.FLAG_IMMUTABLE or PendingIntent\.FLAG_UPDATE_CURRENT\)/, 'Sjekk inn-varslene');
-  assert.match(code('Shortcuts51Plat.kt'), /finanshub:\/\/act51\/\$path"[\s\S]{0,200}?\.intern86\(ctx\)/, 'dynamisk snarvei');
-  assert.match(code('Live41.kt'), /Uri\.parse\(link\), ctx, MainActivity::class\.java\)[^\n]*\.intern86\(ctx\)/);
+  assert.match(code('Snarveier.kt'), /finanshub:\/\/act51\/\$path"[\s\S]{0,200}?\.intern86\(ctx\)/, 'dynamisk snarvei');
+  assert.match(code('LiveReise.kt'), /Uri\.parse\(link\), ctx, MainActivity::class\.java\)[^\n]*\.intern86\(ctx\)/);
   // ntfy-meldinger kan komme fra andre: de får aldri markøren.
-  assert.ok(!/intern86/.test(code('Ntfy51.kt')));
+  assert.ok(!/intern86/.test(code('Ntfy.kt')));
 });
 
 test('C: Kalender – kalender://ny?text=… som ville laget en hendelse, spør først', () => {

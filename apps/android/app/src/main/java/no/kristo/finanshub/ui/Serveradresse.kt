@@ -30,8 +30,13 @@ internal fun ServerSheet41(vm: AppViewModel, which: String) {
     var v by remember(which) { mutableStateOf(if (which == "local") srv.local else srv.external.ifBlank { DEFAULT_SERVER41 }) }
     Sheet41({ s.srvSheet = null; s.srvTest = null }) {
         PSerif(if (which == "local") "Lokal adresse" else "Ekstern adresse", 24.sp)
-        Text(if (which == "local") "Standard: $DEFAULT_LOCAL47. Brukes når du er hjemme på Wi-Fi." else "Standard: $DEFAULT_EXTERNAL47.", color = p.mut, fontSize = 13.sp)
-        PField("Adresse", v, { v = it.trim() }, placeholder = if (which == "local") DEFAULT_LOCAL47 else DEFAULT_SERVER41,
+        val defLocal = vm.p47.defLocal
+        Text(
+            if (which == "local") (if (defLocal.isNotBlank()) "Fra serveren: $defLocal. " else "Hentes fra serveren eller QR-koden. ") + "Brukes når du er hjemme på Wi-Fi."
+            else "Standard: $DEFAULT_EXTERNAL47.",
+            color = p.mut, fontSize = 13.sp,
+        )
+        PField("Adresse", v, { v = it.trim() }, placeholder = if (which == "local") defLocal.ifBlank { LOCAL_HINT47 } else DEFAULT_SERVER41,
             keyboard = KeyboardOptions(keyboardType = KeyboardType.Uri, autoCorrectEnabled = false))
         s.srvTest?.let { Text(it, color = if (s.srvTestOk) p.pos else p.lab, fontSize = 13.sp, fontWeight = FontWeight.SemiBold) }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -117,7 +122,7 @@ private fun AddrField47(vm: AppViewModel, which: String, label: String, value: S
     val p = PaperPal.current
     val st = vm.p47.status[which]
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        PField(label, value, { onChange(it.trim()) }, placeholder = def, keyboard = KeyboardOptions(keyboardType = KeyboardType.Uri, autoCorrectEnabled = false))
+        PField(label, value, { onChange(it.trim()) }, placeholder = def.ifBlank { LOCAL_HINT47 }, keyboard = KeyboardOptions(keyboardType = KeyboardType.Uri, autoCorrectEnabled = false))
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Box(Modifier.size(8.dp).clip(CircleShape).background(when (st?.ok) { true -> p.pos; false -> p.lab; null -> p.line }))
             Text(

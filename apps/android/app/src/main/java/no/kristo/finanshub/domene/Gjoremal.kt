@@ -19,7 +19,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 /*
- * Gjøremål: kode som lå i blandingsfilene (P32b.kt, P37.kt, P40.kt, P41.kt, P42.kt, P44.kt, P46.kt, Models17.kt, Models22.kt) og ble flyttet hit uendret i Fase 5.
+ * Gjøremål: kode som lå i blandingsfilene (P32b.kt, P37.kt, P40.kt, P41.kt, P42.kt, P44.kt, P46.kt, Models.kt, Models22.kt) og ble flyttet hit uendret i Fase 5.
  * Navnene er de samme. Fila eies av MODULER-Android.
  */
 

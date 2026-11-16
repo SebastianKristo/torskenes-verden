@@ -773,7 +773,7 @@ private fun Ch27Toggle(v: ChatV27, ic: String, label: String, on: Boolean, modif
 
 /** Lydbølgen mens mikrofonen lytter: sju streker som følger lydnivået. */
 @Composable
-private fun Ch27Wave(rms: Float) = WaveBars71(rms, CH27_SKY, "wave") // prompt 71: én Canvas, pulsen leses i tegnefasen (ui/Anim71.kt)
+private fun Ch27Wave(rms: Float) = WaveBars71(rms, CH27_SKY, "wave") // prompt 71: én Canvas, pulsen leses i tegnefasen (ui/Animasjon.kt)
 
 /**
  * Prompt 43 (claude-code-chat-send-knapp-tom.md): Send-knappen. Tom: lys flate (line 70 % + card 30 %), pil i mut, 1,5 dp innvendig

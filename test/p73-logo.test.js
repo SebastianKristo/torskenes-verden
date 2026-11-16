@@ -223,6 +223,6 @@ test('Android: LogoVelger (LogoSheet73) med søk, opplasting (kvadrat 512) og ov
   for (const t of ['Endre logo', 'Søk etter butikk', 'Bruk denne logoen', 'Tilbakestill til automatisk', 'Bruk initialer', '/logos?q=', '/merchants/logo-overrides', '/merchants/logo/upload', '512']) assert.ok(s.includes(t), t);
   assert.match(s, /CancellationException/);
   assert.match(src('apps/android/app/src/main/java/no/kristo/finanshub/ui/Finance.kt'), /LogoOv73/);
-  assert.match(src('apps/android/app/src/main/java/no/kristo/finanshub/ui/And52AUi.kt'), /LogoTap73/);
+  assert.match(src('apps/android/app/src/main/java/no/kristo/finanshub/ui/ChatTenking.kt'), /LogoTap73/);
   assert.match(src('apps/android/app/src/main/java/no/kristo/finanshub/ui/domene/Okonomi.kt'), /LogoOv73/);
 });

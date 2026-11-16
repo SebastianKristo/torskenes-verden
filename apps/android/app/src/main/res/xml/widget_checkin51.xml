@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Prompt 51 (ANDPLAT51): Sjekk inn (2 × 2): «Alt bra» med ett trykk og «Hent meg» (åpner appen for å bekrefte). Glance (Widgets51Plat.kt). -->
+<!-- Prompt 51 (ANDPLAT51): Sjekk inn (2 × 2): «Alt bra» med ett trykk og «Hent meg» (åpner appen for å bekrefte). Glance (PlanleggingWidgets.kt). -->
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
     android:description="@string/widget_checkin51_desc"
     android:initialLayout="@layout/glance_default_loading_layout"

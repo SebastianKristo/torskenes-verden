@@ -856,9 +856,7 @@ fun weatherPlaceOf35(q: String): String? {
 
 data class WxPlaceAns35(val text: String, val geo: String?, val label: String?)
 
-private fun wmo35(c: Int?): String = when (wxKind34(c)) { "sol" -> "klart"; "delvis" -> "lettskyet"; "regn" -> "regn"; "sno" -> "snø"; else -> "skyet" }
-
-/** GET /api/weather/place?q= (serveren), ellers Open-Meteo direkte. */
+/** GET /api/weather/place?q= (serveren). Stedet slås opp på serveren (L12). */
 suspend fun AppViewModel.weatherPlace35(q: String, place: String): WxPlaceAns35 {
     val tomorrow = Regex("(?i)i\\s*morgen|imorgen|tomorrow").containsMatchIn(q)
     val raw = try { api35 { hlGet("/weather/place?q=" + URLEncoder.encode(place, "UTF-8") + (if (tomorrow) "&day=tomorrow" else ""), timeout = 12_000) } } catch (e: ApiException) {
@@ -875,28 +873,8 @@ suspend fun AppViewModel.weatherPlace35(q: String, place: String): WxPlaceAns35 
             else "${cap35(s35(now, "cond") ?: "")} og **${n34(now, "temp")?.let { Math.round(it) }}°** i $label nå, vind ${n34(now, "wind")?.let { Math.round(it) }} m/s. I dag ${n34(td, "lo")?.toInt()}–${n34(td, "hi")?.toInt()}°."
         return WxPlaceAns35(text, if (lat != null && lon != null) "geo:$lat,$lon,${s35(p, "name") ?: place}" else null, label)
     }
-    return openMeteo35(place, tomorrow)
-}
-
-private suspend fun openMeteo35(place: String, tomorrow: Boolean): WxPlaceAns35 = withContext(Dispatchers.IO) {
-    fun get(u: String): String = (URL(u).openSikker()).run {
-        connectTimeout = 8000; readTimeout = 12000
-        try { inputStream.bufferedReader().use { it.readText() } } finally { disconnect() }
-    }
-    val g = runCatching { JSONObject(get("https://geocoding-api.open-meteo.com/v1/search?count=1&language=nb&name=" + URLEncoder.encode(place, "UTF-8"))).optJSONArray("results")?.optJSONObject(0) }.getOrNull()
-        ?: return@withContext WxPlaceAns35("Fant ikke stedet «$place». Prøv en annen stavemåte.", null, null)
-    val name = g.optString("name", place)
-    val norway = g.optString("country_code") == "NO"
-    val label = if (norway) name else name + (g.optString("country").takeIf { it.isNotBlank() }?.let { ", " + (if (it == "USA" || g.optString("country_code") == "US") "USA" else it) } ?: "")
-    val lat = g.optDouble("latitude"); val lon = g.optDouble("longitude")
-    val f = runCatching {
-        JSONObject(get("https://api.open-meteo.com/v1/forecast?latitude=$lat&longitude=$lon&current=temperature_2m,weather_code,wind_speed_10m&daily=temperature_2m_max,temperature_2m_min,weather_code&timezone=auto&forecast_days=2&wind_speed_unit=ms"))
-    }.getOrNull() ?: return@withContext WxPlaceAns35("Fikk ikke hentet været for $label akkurat nå.", "geo:$lat,$lon,$name", label)
-    val cur = f.optJSONObject("current"); val d = f.optJSONObject("daily")
-    fun di(k: String, i: Int) = d?.optJSONArray(k)?.optDouble(i)?.let { Math.round(it).toInt() }
-    val text = if (tomorrow) "I morgen i $label: ${wmo35(d?.optJSONArray("weather_code")?.optInt(1))}, **${di("temperature_2m_min", 1)}–${di("temperature_2m_max", 1)}°**."
-        else "${cap35(wmo35(cur?.optInt("weather_code")))} og **${cur?.optDouble("temperature_2m")?.let { Math.round(it) }}°** i $label nå, vind ${cur?.optDouble("wind_speed_10m")?.let { Math.round(it) }} m/s. I dag ${di("temperature_2m_min", 0)}–${di("temperature_2m_max", 0)}°."
-    WxPlaceAns35(text, "geo:$lat,$lon,$name", label)
+    // L12/Q19: stedet slås opp og været hentes bare via serveren (/api/weather/place), aldri direkte hos Open-Meteo.
+    return WxPlaceAns35("Fikk ikke hentet været for «$place» akkurat nå. Prøv igjen om litt.", null, null)
 }
 
 /** Hjem-søket: svarer på «været i X» selv (før ruteren). true = tatt. */
@@ -1017,15 +995,11 @@ fun sunText36(date: LocalDate, place: String, s: Sun36): String {
     return "$ds i $place: soloppgang ${hhmm36(s.rise)}, solnedgang ${hhmm36(s.set)}, **${s.dayMin / 60} t ${s.dayMin % 60} min** dagslys."
 }
 
-private suspend fun geocode36(place: String): Triple<Double, Double, String>? = withContext(Dispatchers.IO) {
-    runCatching {
-        val c = URL("https://geocoding-api.open-meteo.com/v1/search?count=1&language=nb&name=" + URLEncoder.encode(place, "UTF-8")).openSikker()
-        c.connectTimeout = 6000; c.readTimeout = 8000
-        val raw = try { c.inputStream.bufferedReader().use { it.readText() } } finally { c.disconnect() }
-        val g = JSONObject(raw).optJSONArray("results")?.optJSONObject(0) ?: return@runCatching null
-        Triple(g.getDouble("latitude"), g.getDouble("longitude"), g.optString("name", place))
-    }.getOrNull()
-}
+/** L12: stedet slås opp på serveren (GET /api/weather/places?q=, samme stedssøk som Vær), ikke direkte hos Open-Meteo. */
+private suspend fun AppViewModel.geocode36(place: String): Triple<Double, Double, String>? = try {
+    val raw = api35 { hlGet("/weather/places?q=" + URLEncoder.encode(place, "UTF-8"), timeout = 10_000) }
+    parseWxSearch28(raw)?.firstOrNull()?.let { Triple(it.lat, it.lon, it.name) }
+} catch (e: CancellationException) { throw e } catch (_: Exception) { null }
 
 /** Hjem-søket: dagslys/sol for en dato besvares lokalt i kortet under søkefeltet (med Åpne Vær ›). true = tatt. */
 fun AppViewModel.askSun36(q: String): Boolean {
@@ -1158,7 +1132,10 @@ fun AppViewModel.loadCards37(list: String?) = launch37 {
             GCard37(c.s37("key") ?: return@mapNotNull null, c.s37("kind") ?: "", c.s37("text") ?: "", c.optJSONObject("list")?.s37("id"), strs37(c.optJSONArray("ids")),
                 objs34(c.optJSONArray("actions")).mapNotNull { a -> a.s37("action")?.let { Triple(it, a.s37("label") ?: it, a.s37("eventId")) } })
         }
-    } catch (e: ApiException) { if (e.status == 404 || e.status == 405) s.cards = null } catch (e: CancellationException) { throw e } catch (_: Exception) {}
+    } catch (e: ApiException) {
+        // Q19: serveren har /api/tasks/glimt/cards. 404/405 (for gammel server) gir ingen kort, ikke lokale kort.
+        if (e.status == 404 || e.status == 405) s.cards = emptyList()
+    } catch (e: CancellationException) { throw e } catch (_: Exception) {}
 }
 
 /** Knappene på kortene: «Ikke nå» skjuler kortet for godt (per hendelse); resten kjøres av Glimt (med Angre). */

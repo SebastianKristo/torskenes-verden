@@ -56,6 +56,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontStyle
@@ -330,8 +331,8 @@ private fun PaperApp45(
 
     CompositionLocalProvider(LocalTopRow provides true) {
       Nav23Back(vm, nav, backEnabled, p.bg, preview = !backLocal, onBack = onBack) {
-        Box(Modifier.fillMaxSize().background(p.bg).ansTapOutside70(vm)) { // prompt 70: trykk utenfor Glimt-svaret (ui/Home70.kt)
-            GlassBackdrop50() // prompt 50: fargeskyene bak alt innhold i Liquid Glass (ui/Glass50.kt)
+        Box(Modifier.fillMaxSize().background(p.bg).ansTapOutside70(vm)) { // prompt 70: trykk utenfor Glimt-svaret (ui/HjemRutenett.kt)
+            GlassBackdrop50() // prompt 50: fargeskyene bak alt innhold i Liquid Glass (ui/GlassTema.kt)
             Column(Modifier.fillMaxSize()) {
                 // Prompt 41: Fold 1c – toppbildet skjules på Hjem (bildet ligger i det store Glimt-kortet, ui/Fold41.kt).
                 if (!(homeSplit43 && home)) Hero(vm, home, wide) { vm.photoMenu = !vm.photoMenu; if (vm.photoMenu) vm.loadPhotoThumbs() }
@@ -433,9 +434,9 @@ private fun PaperApp45(
             if (vm.p46.kart.open) PgIn52 { KartPage46(vm) } // Prompt 46: Kart (ui/Kart46Ui.kt)
             if (Skjold76.open) PgIn52 { SkjoldPage76(vm) } // Prompt 76: Skjold Lab (ui/Skjold76Ui.kt)
             if (vm.p46.gpSheet) GphotoSheet46(vm) // Prompt 46: Google Photos-album som bakgrunn (ui/Ui46b.kt)
-            if (vm.p43.galleryOpen) WidgetGallery43(vm) // Prompt 43: Widgets-galleri (ui/WidgetGallery43.kt)
+            if (vm.p43.galleryOpen) WidgetGallery43(vm) // Prompt 43: Widgets-galleri (ui/WidgetGalleri.kt)
             if (vm.compareOpen) CompareScreen(vm)
-            Pages51(vm) // prompt 51 (ANDFEAT51): Planlegging, familiekalender, Media-sidene, felles søk og tema (ui/Feat51Ui.kt)
+            Pages51(vm) // prompt 51 (ANDFEAT51): Planlegging, familiekalender, Media-sidene, felles søk og tema (ui/Funksjonssider.kt)
             // Prompt 23 (MOD): Finn-annonsen i fullskjerm (egen BackHandler, så tilbake lukker den uten forhåndsvisning).
             if (vm.m23.finnAdFor != null) FinnAdScreen23(vm)
             // Prompt 31: System-siden «Nordlys OS» i fullskjerm (uten bakgrunnsbilde, fanelinje og skann).
@@ -506,7 +507,7 @@ private fun Hero(vm: AppViewModel, home: Boolean, wide: Boolean, toggleMenu: () 
     val grad = HERO_FALLBACK
     val statusTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
     // Hjem: 226 dp (250 på Fold), så navnet aldri havner bak søkefeltet.
-    // Prompt 50 (claude-code-lik-bakgrunnshoyde.md): alle faner med toppbilde har samme høyde som Hjem, så kanten står i ro (ui/Hero50.kt).
+    // Prompt 50 (claude-code-lik-bakgrunnshoyde.md): alle faner med toppbilde har samme høyde som Hjem, så kanten står i ro (ui/Topphoyde.kt).
     val h = heroHeight50(wide, statusTop)
     Box(Modifier.fillMaxWidth().height(h).background(Brush.verticalGradient(*grad)).animateContentSize()) {
         // Bilde med blur, demping, scrim, papirtekstur og partikler (prompt 19).
@@ -599,7 +600,7 @@ private fun PhotoMenu(vm: AppViewModel, modifier: Modifier, own: () -> Unit) {
             val failed = k in vm.photoFailed
             Row(
                 Modifier.fillMaxWidth().heightIn(min = 50.dp).clip(RoundedCornerShape(12.dp)).background(if (on) p.popSel else Color.Transparent)
-                    .clickable { if (failed) vm.retryPhoto(k); vm.setPhotoKind(k) }.padding(horizontal = 10.dp, vertical = 6.dp),
+                    .clickable(role = Role.RadioButton, onClickLabel = if (failed) "Prøv igjen" else "Velg") { if (failed) vm.retryPhoto(k); vm.setPhotoKind(k) }.semantics { selected = on }.padding(horizontal = 10.dp, vertical = 6.dp),
                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 Box(Modifier.size(30.dp).clip(RoundedCornerShape(8.dp)).background(Brush.linearGradient(listOf(Color(0xFF4A5A6A), Color(0xFF1D242C))))) {
@@ -710,7 +711,7 @@ private fun PaperScanSheet(vm: AppViewModel, camera: () -> Unit, photos: () -> U
             if (!fin) Row(Modifier.fillMaxWidth().clip(CircleShape).border(1.dp, p.line, CircleShape).padding(3.dp)) {
                 listOf("receipt" to "Kvittering", "recipe" to "Oppskrift").forEach { (k, n) ->
                     val on = vm.scanTarget == k
-                    Box(Modifier.weight(1f).height(38.dp).clip(CircleShape).background(if (on) p.ink else Color.Transparent).clickable { vm.scanTarget = k }, contentAlignment = Alignment.Center) {
+                    Box(Modifier.weight(1f).height(38.dp).clip(CircleShape).background(if (on) p.ink else Color.Transparent).clickable(role = Role.Tab) { vm.scanTarget = k }.semantics { selected = on }, contentAlignment = Alignment.Center) {
                         Text(n, color = if (on) p.bg else p.ink, fontWeight = FontWeight.SemiBold, fontSize = 13.5.sp)
                     }
                 }
@@ -788,7 +789,7 @@ private fun PaperHome(vm: AppViewModel, navBottom: Dp, wide: Boolean, mode43: Fo
 private fun HomeGrid41(vm: AppViewModel, mod: Modifier, grid37: androidx.compose.foundation.lazy.grid.LazyGridState, pad: PaddingValues, cols: Int, secs37: List<PSec>, wide: Boolean, trip: Boolean, navBottom: Dp, g52: Boolean = false) {
     val p = PaperPal.current
     // Prompt 70 (ANDHOME70, claude-code-android-hjem-flishoyde.md + wiggle-flytt-android.md): telefonens 2-kolonners Hjem er et eget
-    // rutenett i én Column(verticalScroll) – flisene får innholdets høyde, ikke LazyVerticalGrid med fast 150 dp (ui/Home70.kt).
+    // rutenett i én Column(verticalScroll) – flisene får innholdets høyde, ikke LazyVerticalGrid med fast 150 dp (ui/HjemRutenett.kt).
     if (g52) { HomeColumn70(vm, mod, pad, secs37, top = { HomeTop70(vm, trip) }, skip = { k -> homeSkip41(vm, k, trip, secs37) }) { k -> HomeBody41(vm, k, wide) }; return }
     LazyVerticalGrid(
         GridCells.Fixed(if (g52) 2 else cols), mod.gridBounds37(vm), state = grid37, contentPadding = pad, // prompt 52 (AND52B): 2 kolonner i 3a
@@ -832,7 +833,7 @@ private fun HomeBody41(vm: AppViewModel, k: String, wide: Boolean) {
         "h12" -> SwipeBrief36(vm) { HomeBrief34(vm) } // Prompt 34: Glimt-brief med figuren (ui/Brief34.kt). Prompt 36: sveip mot høyre skjuler til neste brief
         "h13" -> BibleHome37(vm) // Prompt 37: dagens bibelvers (ui/Bible37.kt)
         "h43" -> HomeMedia43(vm) // Prompt 43: Media (lastes ned + kommer), ui/Media43.kt
-        "h1" -> PaperSearch29(vm) // Prompt 29: søkemotor-meny (Glimt / Google / DuckDuckGo) og timer (ui/Home29Ui.kt)
+        "h1" -> PaperSearch29(vm) // Prompt 29: søkemotor-meny (Glimt / Google / DuckDuckGo) og timer (ui/HjemSok.kt)
         // Prompt 37: «Vis bare når det er pakker» (skjult uten aktive pakker, dempet i wiggle) og 1–3 pakker.
         "h2" -> Packages37(vm, wide) {
             val pk = (vm.homePackages ?: emptyList()).sortedByDescending { it.ready }.firstOrNull()
@@ -866,7 +867,7 @@ private fun HomeBody41(vm: AppViewModel, k: String, wide: Boolean) {
             if (lines.isNotEmpty()) PaperRuter(lines, if (wide) Modifier.height(FOLD_CARD) else Modifier) { vm.openRuter() }
             else PCard(if (wide) Modifier.height(FOLD_CARD) else Modifier, onClick = { vm.openRuter() }) { Text("Ingen avganger ennå. Trykk for å legge til en holdeplass.", color = p.mut, fontSize = 13.sp, modifier = Modifier.padding(16.dp, 14.dp)) }
         }
-        "hm" -> if (vm.homeTiles50()) HomeTiles50(vm) else PaperMinis(vm) // prompt 50: fliser (1d), ui/Tiles50.kt
+        "hm" -> if (vm.homeTiles50()) HomeTiles50(vm) else PaperMinis(vm) // prompt 50: fliser (1d), ui/HjemMinifliser.kt
         // Nye kort: Huskeliste (de tre neste med avkrysning), Posisjon (familien) og Bolig.
         "h8" -> HomeTasksCard(vm)
         "h9" -> HomeBirthdaysCard24(vm)
@@ -881,7 +882,7 @@ private fun HomeBody41(vm: AppViewModel, k: String, wide: Boolean) {
             Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 h?.shortcuts?.forEach { sc ->
                     Row(
-                        Modifier.height(36.dp).clip(CircleShape).border(1.dp, p.line, CircleShape).background(p.card).clickable { openLink(ctx, sc.url) }.padding(horizontal = 14.dp),
+                        Modifier.height(36.dp).clip(CircleShape).border(1.dp, p.line, CircleShape).background(p.card).clickable(role = Role.Button, onClickLabel = "Åpne lenken") { openLink(ctx, sc.url) }.padding(horizontal = 14.dp),
                         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
                         Box(Modifier.size(8.dp).clip(CircleShape).background(if (sc.local) p.pos else p.lab))
@@ -1011,7 +1012,7 @@ private fun PaperNewsCard(vm: AppViewModel) {
             items.take(5).forEach { x ->
                 Row(
                     // Prompt 27: saken åpnes i Nyhetsleser (bilde, ✦ sammendrag og «Les hele saken»).
-                    Modifier.fillMaxWidth().clickable { vm.openNews(); vm.openArticle27(x) }.padding(vertical = 6.dp),
+                    Modifier.fillMaxWidth().clickable(role = Role.Button, onClickLabel = "Åpne artikkelen") { vm.openNews(); vm.openArticle27(x) }.padding(vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
                     Text(feedShort(x.feed), color = p.lab, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = 10.sp, maxLines = 1, modifier = Modifier.width(30.dp))
@@ -1022,7 +1023,7 @@ private fun PaperNewsCard(vm: AppViewModel) {
             }
         }
         Box(Modifier.fillMaxWidth().padding(10.dp, 10.dp, 10.dp, 12.dp), contentAlignment = Alignment.Center) {
-            Box(Modifier.height(36.dp).clip(CircleShape).background(p.ink).clickable { vm.openNews() }.padding(horizontal = 18.dp), contentAlignment = Alignment.Center) {
+            Box(Modifier.height(36.dp).clip(CircleShape).background(p.ink).clickable(role = Role.Button) { vm.openNews() }.padding(horizontal = 18.dp), contentAlignment = Alignment.Center) {
                 Text("Åpne nyhetsleser ›", color = p.bg, fontWeight = FontWeight.Bold, fontSize = 12.sp)
             }
         }
@@ -1063,7 +1064,7 @@ private fun PaperFinance(vm: AppViewModel, navBottom: Dp) {
                     val recent = vm.recent15 ?: sm?.recent ?: emptyList()
                     if (recent.isEmpty()) Text("Ingen transaksjoner ennå.", color = p.mut, fontSize = 13.sp, modifier = Modifier.padding(4.dp))
                     recent.take(15).forEach { t ->
-                        Row(Modifier.fillMaxWidth().clickable { vm.openTx(t.id) }.padding(2.dp, 6.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Row(Modifier.fillMaxWidth().clickable(role = Role.Button, onClickLabel = "Åpne transaksjonen") { vm.openTx(t.id) }.padding(2.dp, 6.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             Logo(vm, t.domain, t.merchant ?: t.description, t.color, 38, RoundedCornerShape(11.dp))
                             Column(Modifier.weight(1f)) {
                                 Text(t.merchant ?: t.description, color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 14.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -1080,7 +1081,7 @@ private fun PaperFinance(vm: AppViewModel, navBottom: Dp) {
                         PHead("Budsjett · ${sm?.month?.let { monthLabel(it).lowercase(nbNo) } ?: ""}", "${n0(sm?.budgetUsed ?: 0.0)} av ${n0(sm?.budgetTotal ?: 0.0)}") { vm.go(Screen.Budget) }
                         buds.take(6).forEach { b ->
                             val pct = if (b.budget > 0) (b.used / b.budget).coerceIn(0.0, 1.0) else 0.0
-                            Row(Modifier.fillMaxWidth().clickable { vm.go(Screen.Budget) }.padding(2.dp, 6.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Row(Modifier.fillMaxWidth().clickable(role = Role.Button, onClickLabel = "Åpne Budsjett") { vm.go(Screen.Budget) }.padding(2.dp, 6.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                                 Text(b.category, color = p.ink, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.width(110.dp))
                                 Box(Modifier.weight(1f).height(8.dp).clip(RoundedCornerShape(4.dp)).background(p.line)) {
                                     Box(Modifier.fillMaxHeight().fillMaxWidth(pct.toFloat()).clip(RoundedCornerShape(4.dp)).background(if (pct > .9) p.lab else p.ink))

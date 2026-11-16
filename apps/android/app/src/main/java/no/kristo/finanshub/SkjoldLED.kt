@@ -1,6 +1,5 @@
 package no.kristo.finanshub
 
-import android.content.Context
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -19,7 +18,7 @@ import java.util.Locale
  * alt går via serveren (/api/skjold, per bruker), som bare når verter i hjemmenettet.
  *  - «💡 Vis i skapet» på detaljsiden og i trefflista (POST /locate {partId} | {partIds:[…]} maks 10, fra prompt 79 maks 20), «Slå av» (POST /locate/off).
  *  - «Lys opp automatisk når jeg åpner et treff» (autoLocateOpen) og «Lys opp når Glimt svarer» (autoLocateGlimt):
- *    GET|PUT /leds/settings, med lokal lagring som reserve (404).
+ *    GET|PUT /leds/settings (Q19: ingen lokal lagring som reserve for eldre servere).
  *  - LED-oppsett per skap (GET|PUT /cabinets/:id/leds): vert, farge, varighet, lysstyrke, blink, skuffgeometri og rader
  *    (start, antall, retning, pitch, offset), «Fyll ut» (serpentine / samme retning), test (alle / rad / indeks).
  *  - Kalibreringsveiviser: én LED lyser (POST /cabinets/:id/leds/calibrate {index}), «trykk på skuffen som lyser»
@@ -88,8 +87,6 @@ object Skjold78 {
     var autoOpen by mutableStateOf(false)
     var autoGlimt by mutableStateOf(false)
     var settingsLoaded by mutableStateOf(false)
-    /** Serveren har ikke /leds/settings (404): lagres på telefonen. */
-    internal var settingsLocal = false
 
     /* Test og kalibrering */
     var testRow by mutableStateOf("1")
@@ -438,22 +435,14 @@ fun AppViewModel.partOpened78(id: String) {
 
 /* ---------- Innstillinger ---------- */
 
-private fun prefs78(ctx: Context) = ctx.getSharedPreferences("skjold78", Context.MODE_PRIVATE)
-
 fun AppViewModel.loadLedSettings78() = launch46 {
     val s = Skjold78
-    val key = account?.id ?: "anon"
     try {
         val o = JSONObject(get78("/leds/settings")).let { it.optJSONObject("settings") ?: it }
-        s.settingsLocal = false
         if (o.has("autoLocateOpen")) s.autoOpen = o.optBoolean("autoLocateOpen", false)
         if (o.has("autoLocateGlimt")) s.autoGlimt = o.optBoolean("autoLocateGlimt", false)
-    } catch (e: CancellationException) { throw e } catch (e: Exception) {
-        if (e is ApiException && e.status == 404) {
-            s.settingsLocal = true
-            val sp = prefs78(appCtx46)
-            s.autoOpen = sp.getBoolean("open-$key", false); s.autoGlimt = sp.getBoolean("glimt-$key", false)
-        }
+    } catch (e: CancellationException) { throw e } catch (_: Exception) {
+        // Q19: ingen lokal reserve. Uten svar (eller for gammel server) står bryterne av til neste henting.
     }
     s.settingsLoaded = true
 }
@@ -463,16 +452,11 @@ fun AppViewModel.putLedSettings78(autoOpen: Boolean? = null, autoGlimt: Boolean?
     val oldO = s.autoOpen; val oldG = s.autoGlimt
     autoOpen?.let { s.autoOpen = it }; autoGlimt?.let { s.autoGlimt = it }
     Haptics.select()
-    val key = account?.id ?: "anon"
     launch46 {
         try {
-            if (s.settingsLocal) throw ApiException("lokal", 404)
             put78("/leds/settings", JSONObject().put("autoLocateOpen", s.autoOpen).put("autoLocateGlimt", s.autoGlimt))
         } catch (e: CancellationException) { throw e } catch (e: Exception) {
-            if (e is ApiException && e.status == 404) {
-                s.settingsLocal = true
-                prefs78(appCtx46).edit().putBoolean("open-$key", s.autoOpen).putBoolean("glimt-$key", s.autoGlimt).apply()
-            } else { s.autoOpen = oldO; s.autoGlimt = oldG; flash("Kunne ikke lagre: " + errText78(e, "feil")) }
+            s.autoOpen = oldO; s.autoGlimt = oldG; flash("Kunne ikke lagre: " + errText78(e, "feil"))
         }
     }
 }

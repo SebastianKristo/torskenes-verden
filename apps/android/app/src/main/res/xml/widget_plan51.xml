@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Prompt 51 (ANDPLAT51): Planlegging · saldo (2 × 2, utvides til 4 × 2 med de neste trekkene). Glance (Widgets51Plat.kt). -->
+<!-- Prompt 51 (ANDPLAT51): Planlegging · saldo (2 × 2, utvides til 4 × 2 med de neste trekkene). Glance (PlanleggingWidgets.kt). -->
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
     android:description="@string/widget_plan51_desc"
     android:initialLayout="@layout/glance_default_loading_layout"

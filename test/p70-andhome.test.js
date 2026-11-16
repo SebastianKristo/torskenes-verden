@@ -15,7 +15,7 @@ const code = (f) => read(f).replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm
 test('flishøyde: Hjem på telefon er et eget rutenett uten fast høyde', () => {
   const p = code('ui/Paper.kt');
   assert.match(p, /if \(g52\) \{ HomeColumn70\(/, 'telefonens 2-kolonners Hjem bruker Home70');
-  const h = code('ui/Home70.kt');
+  const h = code('ui/HjemRutenett.kt');
   assert.doesNotMatch(h, /LazyVerticalGrid|aspectRatio/);
   assert.match(h, /verticalScroll\(scroll, enabled = st\.dragKey == null\)/, 'scroll av mens et kort er løftet');
   assert.match(h, /Arrangement\.spacedBy\(GAP70\)/);
@@ -26,11 +26,11 @@ test('flishøyde: Hjem på telefon er et eget rutenett uten fast høyde', () => 
   assert.match(h, /Tile52\(vm, k, Dp\.Unspecified, body\)/);
   const t = code('ui/HjemFliser.kt');
   assert.match(t, /if \(h == Dp\.Unspecified\) Modifier\.fillMaxWidth\(\)\.fillMaxHeight\(\)/);
-  assert.match(code('ui/Tiles50.kt'), /\.padding\(16\.dp, if \(pad\) 16\.dp else 14\.dp\)/, '16 dp sider, 14 dp topp/bunn');
+  assert.match(code('ui/HjemMinifliser.kt'), /\.padding\(16\.dp, if \(pad\) 16\.dp else 14\.dp\)/, '16 dp sider, 14 dp topp/bunn');
 });
 
 test('wiggle: gesten ligger på beholderen, løft etter 0,3 s, live flytting og lagring ved slipp', () => {
-  const h = code('ui/Home70.kt');
+  const h = code('ui/HjemRutenett.kt');
   assert.match(h, /\.homeGesture70\(vm, st, holdOk\)/);
   assert.match(h, /withTimeoutOrNull\(if \(edit\) 300L else 500L\)/);
   assert.match(h, /positionChangeIgnoreConsumed\(\)/, 'bevegelsen leses før consume');
@@ -51,7 +51,7 @@ test('størrelse ↔: sz lagres i pages.hjem og beholdes ved flytting/skjuling',
   const vm = code('AppViewModel.kt');
   assert.match(vm, /fun setPageSz70\(/);
   assert.equal((vm.match(/pageLayouts\[page\]\?\.sz \?: emptyMap\(\)/g) || []).length >= 5, true, 'flytt/skjul/vis beholder sz');
-  const h = code('ui/Home70.kt');
+  const h = code('ui/HjemRutenett.kt');
   assert.match(h, /private fun fixedFull70\(k: String\) = k == "h1" \|\| k == "h4"/, 'Søk og Snarveier alltid fulle');
   assert.match(h, /if \(!full0\) acc\.getDistance\(\) > lim/, 'halv → full > 40 dp uansett retning');
   assert.match(h, /acc\.x < -lim/, 'full → halv mot venstre');
@@ -66,17 +66,17 @@ test('scroll mens Glimt svarer: ikke noe lag over Hjem, sveip bare fra grepet', 
   const box = u.slice(u.indexOf('fun AnsBox38'));
   assert.doesNotMatch(box.slice(0, box.indexOf('Column {')), /detectVerticalDragGestures/);
   assert.match(box, /gripHit70\(down\.type, down\.position\.y, size\.height, gripPx\)/);
-  const h = code('ui/Home70.kt');
+  const h = code('ui/HjemRutenett.kt');
   assert.match(h, /if \(a\.busy \|\| overlays52\(vm\) > 0\) return@awaitEachGesture/, 'mens Glimt tenker lukkes kortet bare med ✕');
   assert.match(h, /"Glimt svarte ↑"/);
 });
 
 test('mikrofon: nytt ikon og opptakskort, motoren er fortsatt Voice56 (serveren)', () => {
-  const s = code('ui/Home29Ui.kt');
+  const s = code('ui/HjemSok.kt');
   assert.match(s, /SearchMic70\(vm\)/);
   assert.doesNotMatch(s, /SearchMic56\(vm\)/);
   assert.match(s, /if \(mic70\) Box\(Modifier\.searchRect70\(\)\) \{ MicCard70\(vm\) \}/);
-  const m = code('ui/Mic70.kt');
+  const m = code('ui/Mikrofon.kt');
   assert.match(m, /"Snakk nå …"/);
   assert.match(m, /"Skriver ned …"/);
   assert.match(m, /v\.partial\.takeIf \{ v\.onDevice && it\.isNotBlank\(\) \}/, 'live tekst bare med motoren på telefonen');

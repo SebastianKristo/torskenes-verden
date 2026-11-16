@@ -80,14 +80,14 @@ object Kal46Srv {
 
 /*
  * Prompt 47: Innstillinger → Server (claude-code-standard-serveradresser.md).
- * Standard: ekstern https://os.smarthjemeksperten.no, lokal http://10.69.1.39:3000 (Kal41.DEFAULT_BASE / DEFAULT_LOCAL). Serveren kan
- * overstyre via PUBLIC_URL/LOCAL_URL («defaults» i GET /api/me/server). Lagres på enheten (k41_external / k41_local, som Kal41 leser)
+ * Standard: ekstern https://os.smarthjemeksperten.no (Kal41.DEFAULT_BASE). Lokal adresse har ingen fast standard (C-S4/D-B5). Serveren
+ * sender sine via PUBLIC_URL/LOCAL_URL («defaults» i GET /api/me/server). Lagres på enheten (k41_external / k41_local, som Kal41 leser)
  * og synkes til kontoen med PUT /api/me/server {external, local, device}; 404/405 (eldre server) → bare på denne enheten.
  * Klartekst-HTTP er bare tillatt på lokalt nett (prompt 86: LokaltNett.kt håndhever, res/xml/network_security_config.xml tillater).
  */
 object Kal47Srv {
     fun stdExternal(ctx: Context): String = Kal41.plain(ctx).getString("k47_def_ext", "")?.takeIf { it.startsWith("http") } ?: Kal41.DEFAULT_BASE
-    fun stdLocal(ctx: Context): String = Kal41.plain(ctx).getString("k47_def_loc", "")?.takeIf { it.startsWith("http") } ?: Kal41.DEFAULT_LOCAL
+    fun stdLocal(ctx: Context): String = Kal41.plain(ctx).getString("k47_def_loc", "")?.takeIf { it.startsWith("http") } ?: ""
 
     fun localOnly(ctx: Context): Boolean = Kal41.plain(ctx).getBoolean("k47_local_only", false)
     private fun setLocalOnly(ctx: Context, v: Boolean) { Kal41.plain(ctx).edit().putBoolean("k47_local_only", v).apply() }

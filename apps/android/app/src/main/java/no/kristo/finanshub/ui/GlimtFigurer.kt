@@ -205,7 +205,7 @@ internal fun CharAdmin52(vm: AppViewModel) {
 }
 
 object Fig35 {
-    val IDS = listOf("glimt", "halo", "boble", "antenne", "bane", "pastell", "natt", "sky", "drape", "ugle", "stjerne", "spire", "gris", "blekk") // prompt 52: Blekksprut (ui/Blekk52.kt)
+    val IDS = listOf("glimt", "halo", "boble", "antenne", "bane", "pastell", "natt", "sky", "drape", "ugle", "stjerne", "spire", "gris", "blekk") // prompt 52: Blekksprut (ui/GlimtBlekksprut.kt)
     private val NAMES = mapOf(
         "glimt" to "Glimt", "halo" to "Halo", "boble" to "Boble", "antenne" to "Antenne", "bane" to "Bane", "pastell" to "Pastell", "natt" to "Natt",
         "sky" to "Sky", "drape" to "Dråpe", "ugle" to "Ugle", "stjerne" to "Stjerne", "spire" to "Spire", "gris" to "Gris", "blekk" to "Blekksprut",
@@ -520,7 +520,7 @@ internal fun DrawScope.drawFig35(id: String, S: Float, mood: String, t: Float, a
     val ck = rgba(232, 121, 74, .38f)
     withTransform({ translate(0f, dy); scale(sx, sy, Offset(S / 2, S * hf)) }) {
         when (id) {
-            // Prompt 52 (AND52B): Blekksprut – bildet uten ansikt + ansikt per humør (ui/Blekk52.kt), zz når den sover.
+            // Prompt 52 (AND52B): Blekksprut – bildet uten ansikt + ansikt per humør (ui/GlimtBlekksprut.kt), zz når den sover.
             "blekk" -> { drawBlekk52(S, mood, t, anim); zz35(S, mood, Color(0xFFB3303F), a) }
             "halo" -> {
                 val g = a.glow(3.2f)

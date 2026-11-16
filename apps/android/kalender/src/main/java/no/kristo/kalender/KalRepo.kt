@@ -187,17 +187,18 @@ object KalRepo {
         return null
     }
 
-    /** Vær 16 dager frem: serveren (brukerens sted), ellers Open-Meteo for Oslo (59,91 / 10,75) som i fasiten. */
+    /**
+     * Vær 16 dager frem fra serveren (brukerens sted). Q19/L12: ingen reserve direkte mot Open-Meteo for eldre servere;
+     * en for gammel server får «Oppdater serveren» via /api/version, og kalenderen vises da uten vær.
+     */
     private suspend fun weather(api: KalApi, from: LocalDate): Map<LocalDate, KWx> {
         val t = today()
-        try {
-            return parseWeather(api.get("/api/kalender/weather?from=$t&to=${t.plusDays(15)}", timeout = 8_000))
+        return try {
+            parseWeather(api.get("/api/kalender/weather?from=$t&to=${t.plusDays(15)}", timeout = 8_000))
         } catch (e: KalApiException) {
             if (e.status != 404 && e.status != 405) throw e
+            emptyMap()
         }
-        val raw = KalApi("https://api.open-meteo.com", null)
-            .get("/v1/forecast?latitude=59.91&longitude=10.75&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=Europe%2FOslo&forecast_days=16", timeout = 8_000)
-        return parseWeather(raw)
     }
 
     /** Ny hendelse. Optimistisk: vises med en gang, sendes nå eller ved neste synk. Returnerer hendelsen slik den ble lagret. */

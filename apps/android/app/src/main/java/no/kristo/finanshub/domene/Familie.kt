@@ -33,7 +33,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 /*
- * Familie: kode som lå i blandingsfilene (P41.kt, P42.kt, P45.kt, P45b.kt, Models16.kt, Models20.kt, Mod24B.kt) og ble flyttet hit uendret i Fase 5.
+ * Familie: kode som lå i blandingsfilene (P41.kt, P42.kt, P45.kt, P45b.kt, Models.kt, Models.kt, Mod24B.kt) og ble flyttet hit uendret i Fase 5.
  * Navnene er de samme. Fila eies av MODULER-Android.
  */
 
@@ -199,7 +199,7 @@ object Ify42 {
  * Prompt 45 (ANDROID45), kontrakten CONTRACT45.md og design_handoff_homelab/prompts/prompt-45-pakke/:
  *  - Fold/brett: felles LayoutMode (≥ 700 dp), sidelinja med skann, Hjem-animasjon og wiggle-knapper (ui/Fold45.kt),
  *    søkefeltet over tastaturet (ui/Fold41.kt), Familie og Gjøremål på stor skjerm (ui/Family45.kt, ui/Tasks45.kt).
- *  - Wiggle-dra på Android: rotårsaken og fiksen står i ui/Wiggle45.kt.
+ *  - Wiggle-dra på Android: rotårsaken og fiksen står i ui/Wiggle.kt.
  *  - Felles mobilpunkter (Glimt-agent, Ruter antall, sonevarsler, Glimt-svar bare som systemvarsel …) i P45b.kt.
  * Serverformene lages parallelt (SERVER45/GLIMT45); 404 = «finnes ikke på serveren ennå», og appen faller tilbake til det gamle.
  */

@@ -1129,7 +1129,7 @@ internal fun GlimtSettings35(vm: AppViewModel, figures: Boolean) {
             Text("Figuren er verten i briefen, på Hjem-kortet, i widgets og i Glimt-chat. Vennene (Sky, Dråpe, Ugle, Gris …) tar over når temaet passer, om det er slått på under. Er «Glimt» valgt, blir verten Glimt Natt mellom 21 og 06.",
                 color = p.mut, fontSize = 12.5.sp, lineHeight = 17.5.sp, modifier = Modifier.padding(horizontal = 4.dp))
         }
-        // Prompt 52 (AND52B): standardfigur per bruker (admin) – prompt 68: flyttet til Husstand → Brukere og familie (ui/Users68Ui.kt).
+        // Prompt 52 (AND52B): standardfigur per bruker (admin) – prompt 68: flyttet til Husstand → Brukere og familie (ui/Brukere.kt).
         if (figures && vm.userIsAdmin) Users68Link(vm, "Standardfigur per bruker (admin) ligger under Husstand") {
             vm.closeGlimt35(); vm.openPaperPage("set"); vm.settingsPage = USERS68
         }

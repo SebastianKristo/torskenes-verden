@@ -36,7 +36,7 @@ import java.util.Locale
  *  - Folk (/family/people50), I DAG (/family/today50), Steder med flere områder (/family/places…), Helse (/family/health50…),
  *    Sjekk inn (/family/checkin…), Ruter › Min reise (/ruter/school50).
  *  - Geofencing: én region per område fra /family/places/regions (maks 20), registrert som nærhetsvarsler i LocationManager
- *    (samme mekanisme som skolesonene i Live41.kt, uten Play-tjenester) og som sonekanter for delingstjenesten (FamilyPrefs).
+ *    (samme mekanisme som skolesonene i LiveReise.kt, uten Play-tjenester) og som sonekanter for delingstjenesten (FamilyPrefs).
  *    Hentes på nytt ved WebSocket `family {kind:'places'}`.
  *  - Varsler for innsjekk/forespørsel med handlingene 👍 / Ring / Hent; «Hent meg» i egen kanal «sjekkinn-hast».
  * Eldre server (404 på people50): Familie faller tilbake til den gamle siden (Family22Screen).
@@ -586,7 +586,9 @@ object Geofence50 {
         val arr = JSONArray()
         list.forEach { r -> arr.put(JSONObject().put("id", r.id).put("type", r.type).put("name", r.name).put("lat", r.lat).put("lon", r.lon).put("r", r.radius)) }
         val old = runCatching { JSONArray(sp.getString("regions", "[]")) }.getOrDefault(JSONArray())
-        sp.edit().putString("regions", arr.toString()).apply()
+        // P85 L: områdene tilhører kontoen som hentet dem (se useAccount).
+        val owner = runCatching { FamilyPrefs.account(ctx) }.getOrDefault("")
+        sp.edit().putString("regions", arr.toString()).apply { if (owner.isNotEmpty()) putString("acct", owner) }.apply()
         // Skole-områdene som skolesoner (uten egne nærhetsvarsler: de kommer herfra).
         SchoolZones41.saveOnly50(ctx, list.filter { it.type == "skole" }.map { Zone41(it.id, it.name, it.lat, it.lon, it.radius.toInt(), "${it.name} ${it.radius.toInt()} m") })
         val lm = ctx.getSystemService(Context.LOCATION_SERVICE) as? LocationManager ?: return
@@ -611,6 +613,29 @@ object Geofence50 {
             if (lat.isNaN() || lon.isNaN() || rad.isNaN() || rad <= 0) continue
             runCatching { lm.addProximityAlert(lat, lon, rad.toFloat(), -1, pi(ctx, id)) }
         }
+    }
+
+    /**
+     * P85 L: ved bytte av bruker eller utlogging fjernes forrige brukers områder (nærhetsvarsler og skolesoner) med en gang,
+     * i stedet for å stå registrert til den nye kontoen har hentet sine. Lagrede områder fra før eieren ble lagret, regnes som
+     * den aktive kontoens. Sonene i FamilyPrefs er allerede per konto og røres ikke.
+     */
+    fun useAccount(ctx: Context, id: String?) {
+        val sp = ctx.getSharedPreferences(PREF, Context.MODE_PRIVATE)
+        val owner = sp.getString("acct", null)
+        if (id != null && (owner == null || owner == id)) { if (owner == null) sp.edit().putString("acct", id).apply(); return }
+        clear(ctx)
+        sp.edit().apply { if (id != null) putString("acct", id) else remove("acct") }.apply()
+    }
+
+    /** Fjerner alle registrerte områder og skolesonene (uten å røre FamilyPrefs). */
+    private fun clear(ctx: Context) {
+        val sp = ctx.getSharedPreferences(PREF, Context.MODE_PRIVATE)
+        val old = runCatching { JSONArray(sp.getString("regions", "[]")) }.getOrDefault(JSONArray())
+        val lm = ctx.getSystemService(Context.LOCATION_SERVICE) as? LocationManager
+        if (lm != null) for (i in 0 until old.length()) old.optJSONObject(i)?.optString("id")?.let { runCatching { lm.removeProximityAlert(pi(ctx, it)) } }
+        sp.edit().putString("regions", "[]").apply()
+        runCatching { SchoolZones41.saveOnly50(ctx, emptyList()) }
     }
 
     internal fun region(ctx: Context, id: String): JSONObject? {

@@ -1,5 +1,6 @@
 package no.kristo.finanshub.widget
 
+import android.content.BroadcastReceiver
 import android.content.Context
 import androidx.glance.appwidget.updateAll
 import androidx.work.Constraints
@@ -14,6 +15,13 @@ import androidx.work.WorkerParameters
 import no.kristo.finanshub.AccountStore
 import no.kristo.finanshub.Api
 import no.kristo.finanshub.ApiException
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import java.util.concurrent.TimeUnit
 
 /**
@@ -71,7 +79,7 @@ class WidgetWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx
                 runCatching { fetchBible37(ctx, Api(base, acc.token), acc.id, acc.username) }
                 // Prompt 43: Media-widgetene (/api/widgets/media; 404 = eldre server).
                 runCatching { fetchMedia43(ctx, Api(base, acc.token), acc.id); Media43Widgets.redraw(ctx) }
-                // Prompt 51 (ANDPLAT51): Planlegging-saldo og Sjekk inn (Widgets51Plat.kt), og offline-køen sendes når nettet er her.
+                // Prompt 51 (ANDPLAT51): Planlegging-saldo og Sjekk inn (PlanleggingWidgets.kt), og offline-køen sendes når nettet er her.
                 runCatching { fetchPlat51(ctx, Api(base, acc.token), acc.id) }
                 runCatching { if (no.kristo.finanshub.Offline51.count(ctx) > 0) no.kristo.finanshub.Offline51.schedule(ctx) }
                 // Prompt 40: Hjemlys – varsler om husstanden og egen økt også når appen er lukket (404 = eldre server).
@@ -138,5 +146,27 @@ object WidgetSync {
         runCatching { HjemlysWidget40.redraw(ctx) }
         runCatching { Media43Widgets.redraw(ctx) } // prompt 43
         runCatching { Plat51Widgets.redraw(ctx) } // prompt 51 (ANDPLAT51)
+    }
+}
+
+/**
+ * P85 H: tegning og henting for widgetene i bakgrunnen, uten egen tråd og runBlocking. Ett korutineomfang for prosessen
+ * (SupervisorJob, så én feil stopper ikke de andre), på Dispatchers.IO. Fra en BroadcastReceiver brukes [launchAsync], som
+ * holder mottakeren i live med goAsync() til jobben er ferdig. Lengre henting går via WorkManager ([WidgetSync.refresh]).
+ */
+object WidgetJobs {
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    /** Kjører [block] i bakgrunnen. Feil svelges (neste synk retter opp), avbrudd sendes videre. */
+    fun launch(block: suspend () -> Unit): Job = scope.launch {
+        try { block() } catch (e: CancellationException) { throw e } catch (_: Exception) { }
+    }
+
+    /** Fra onReceive: goAsync() + korutine. Jobben får maks 9 s (systemet gir mottakeren 10). */
+    fun launchAsync(receiver: BroadcastReceiver, block: suspend () -> Unit) {
+        val pending: BroadcastReceiver.PendingResult? = receiver.goAsync()
+        scope.launch {
+            try { withTimeoutOrNull(9_000L) { block() } } catch (e: CancellationException) { throw e } catch (_: Exception) { } finally { pending?.finish() }
+        }
     }
 }

@@ -38,6 +38,16 @@ const val PREF_DOCSCAN48 = "docscan48"
 const val SCAN_READ48 = 240_000
 const val SCAN_PATH48 = "/receipts/scan"
 
+/**
+ * P85 G: Idempotency-Key for POST /receipts/scan. Regnes fra bildet (SHA-256 av «image»-delen), så den er den samme når
+ * opplastingen prøves på nytt direkte eller fra køen (PendingUploads), uten at nøkkelen må lagres. null uten bilde.
+ */
+fun receiptIdemKey(parts: List<Api.Part>): String? {
+    val img = parts.firstOrNull { it.name == "image" && it.filename.isNotEmpty() } ?: return null
+    val d = java.security.MessageDigest.getInstance("SHA-256").digest(img.data)
+    return "kv-" + d.take(16).joinToString("") { "%02x".format(it.toInt() and 0xff) }
+}
+
 data class ScanStep48(val step: String, val name: String, val status: String, val ms: Long, val engine: String?, val reason: String?)
 
 /** Svaret fra POST /receipts/scan, det skjemaet trenger. */
@@ -155,7 +165,7 @@ internal class ReceiptRepository48(private val vm: AppViewModel) {
     }
 
     suspend fun upload(parts: List<Api.Part>, sentOcr: Boolean): ScanResult48 =
-        parseScan48(vm.api48 { upload(SCAN_PATH48, parts, read = SCAN_READ48) }, sentOcr)
+        parseScan48(vm.api48 { upload(SCAN_PATH48, parts, read = SCAN_READ48, idempotencyKey = receiptIdemKey(parts)) }, sentOcr)
 
     suspend fun queue(parts: List<Api.Part>, name: String, why: String?) = vm.queue48(SCAN_PATH48, parts, name, why)
 

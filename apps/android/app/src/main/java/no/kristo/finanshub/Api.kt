@@ -20,7 +20,7 @@ import javax.net.ssl.SSLException
 
 /** Feil fra serveren. needsTotp = innloggingen krever en 6-sifret kode (2FA). */
 /** Prompt 28: code og canGemini fra serverens feilsvar ({error, code, canGemini}), f.eks. «Fra skjermbilde». */
-/** Prompt 51: body51 = hele feilsvaret ved 403 (DEVICE_APPROVAL_REQUIRED: approvalId, pollKey, statusUrl, finishUrl – Sec51.kt). */
+/** Prompt 51: body51 = hele feilsvaret ved 403 (DEVICE_APPROVAL_REQUIRED: approvalId, pollKey, statusUrl, finishUrl – Enhetsgodkjenning.kt). */
 class ApiException(message: String, val status: Int = 0, val needsTotp: Boolean = false, val code: String? = null, val canGemini: Boolean = false, val body51: JSONObject? = null) : Exception(message)
 
 /** Resultat av innlogging: token og hvem som er logget inn. */
@@ -134,7 +134,7 @@ class Api(private val baseUrl: String, private val token: String?) {
     }
 
     /** Multipart-opplasting: filer (f.eks. original + nedskalert JPEG + miniatyr) og tekstfelt (Part uten filnavn). */
-    suspend fun upload(path: String, parts: List<Part>, prefix: String = FINANS, read: Int = 60_000): String = withContext(Dispatchers.IO) {
+    suspend fun upload(path: String, parts: List<Part>, prefix: String = FINANS, read: Int = 60_000, idempotencyKey: String? = null): String = withContext(Dispatchers.IO) {
         val boundary = "----FinansHub" + UUID.randomUUID().toString().replace("-", "")
         val conn = url(path, prefix).openSikker()
         var sent48 = false
@@ -145,6 +145,8 @@ class Api(private val baseUrl: String, private val token: String?) {
             conn.readTimeout = read
             conn.setRequestProperty("Content-Type", "multipart/form-data; boundary=$boundary")
             token?.let { conn.setRequestProperty("Authorization", "Bearer $it") }
+            // P85 G: samme nøkkel ved ny opplasting av samme bilde, så serveren ikke lager en kopi (8–128 tegn).
+            idempotencyKey?.let { conn.setRequestProperty("Idempotency-Key", it) }
             val out = ByteArrayOutputStream()
             for (p in parts) {
                 out.write("--$boundary\r\n".toByteArray())
