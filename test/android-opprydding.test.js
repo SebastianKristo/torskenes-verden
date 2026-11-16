@@ -4,7 +4,7 @@
 // Ingen Android SDK her: CI-jobben «Mobilapper» er fasit for at koden kompilerer.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync, readdirSync } from 'node:fs';
+import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { join, dirname, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -258,4 +258,24 @@ test('Logikk på serveren: nedtellingen til prøver og frister er serverens days
   assert.doesNotMatch(km.slice(km.indexOf('fun toJson(): JSONObject'), km.indexOf('companion object')), /daysLeft/);
   assert.match(strip(raw(join(KAL, 'FagOgSted.kt'))), /val days = m\.daysLeft \?: daysBetween\(T, m\.d\)/);
   assert.match(strip(raw(join(KAL, 'KalAsk.kt'))), /val days = m\.daysLeft \?: daysBetween\(T, m\.d\)/);
+});
+
+test('F 12: «Skjul beløp» i appen gjelder widgetdataene (hideAmounts fra serveren og ?hideAmounts=1)', () => {
+  const wd = strip(raw(join(APP, 'widget/WidgetData.kt')));
+  assert.match(wd, /fun skjul\(ctx: Context\): Boolean = AppPrefs\(ctx\)\.bool\(AppPrefs\.HIDE_AMOUNTS\)/);
+  assert.match(wd, /fun sti\(ctx: Context, path: String\): String = if \(!skjul\(ctx\)\) path else path \+ \(if \('\?' in path\) "&" else "\?"\) \+ "hideAmounts=1"/);
+  assert.match(wd, /hideAmounts = o\.optBoolean\("hideAmounts", false\)/);
+  // /api/mobile/widgets og /api/widgets/trials hentes med valget.
+  assert.match(strip(raw(join(APP, 'widget/WidgetSync.kt'))), /hlGet\(WidgetPersonvern\.sti\(ctx, "\/mobile\/widgets"\), timeout = 8_000\)/);
+  const tr = strip(raw(join(APP, 'widget/ProveperiodeWidgets.kt')));
+  assert.match(tr, /hlGet\(WidgetPersonvern\.sti\(ctx, "\/widgets\/trials"\), timeout = 8_000\)/);
+  assert.match(tr, /if \(skjul && t\.price\.isNotBlank\(\)\) t\.copy\(price = "•••"\) else t/, 'prisen skjules også for lister fra appen');
+  // Tallfeltene: valget i appen eller serverens hideAmounts.
+  assert.match(strip(raw(join(APP, 'widget/Widgets.kt'))), /val f = Fmt\(AppPrefs\(ctx\)\.bool\(AppPrefs\.HIDE_AMOUNTS\) \|\| d\.hideAmounts\)/);
+  // Endres valget, hentes widgetdataene på nytt.
+  const vm = strip(raw(join(APP, 'AppViewModel.kt')));
+  assert.match(vm, /if \(k == AppPrefs\.HIDE_AMOUNTS\) \{\s*Privacy\.hidden = v == true\s*runCatching \{ no\.kristo\.finanshub\.widget\.WidgetSync\.refresh\(appCtx\) \}/);
+  // Serveren: rutene godtar ?hideAmounts=1 (server/skjul-belop.js på runde3-web).
+  const sb = join(ROOT, 'server/skjul-belop.js');
+  if (existsSync(sb)) assert.match(raw(sb), /c\.req\.query\('hideAmounts'\) === '1'/);
 });

@@ -312,7 +312,12 @@ class AppViewModel(app: Application, private val lagret: SavedStateHandle) : And
     fun optionInt(k: String, def: Int): Int = if (prefTick >= 0) prefs.int(k, def) else def
     fun setPref(k: String, v: Any) {
         prefs.set(k, v); prefTick++
-        if (k == AppPrefs.HIDE_AMOUNTS) Privacy.hidden = v == true
+        if (k == AppPrefs.HIDE_AMOUNTS) {
+            Privacy.hidden = v == true
+            // F 12: widgetdataene hentes på nytt med eller uten ?hideAmounts=1, så widgetene følger valget med en gang.
+            runCatching { no.kristo.finanshub.widget.WidgetSync.refresh(appCtx) }
+            runCatching { no.kristo.finanshub.widget.Trials32bWidgets.refreshNow(appCtx) }
+        }
         if (k == AppPrefs.START) saveLayout(layout.copy(start = startKey(v.toString())))
     }
 

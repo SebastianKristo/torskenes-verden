@@ -194,7 +194,7 @@ object Trials32bStore {
 
 /** Henter prøvene til widgetene (kompakt endepunkt, ellers FinansHub-listen) og logoene. */
 internal suspend fun fetchTrials32b(ctx: Context, api: Api, acct: String?) {
-    val raw = runCatching { api.hlGet("/widgets/trials", timeout = 8_000) }.getOrNull()
+    val raw = runCatching { api.hlGet(WidgetPersonvern.sti(ctx, "/widgets/trials"), timeout = 8_000) }.getOrNull()
         ?: runCatching { api.get("/subscriptions/trials") }.getOrNull() ?: return
     Trials32bStore.saveRaw(ctx, raw, acct)
     runCatching { Trials32bStore.fetchLogos(ctx, api, Trials32bStore.current(ctx)) }
@@ -238,7 +238,9 @@ abstract class TrialsW32b(private val kind: String) : GlanceAppWidget() {
         val d0 = Trials32bStore.current(context)
         provideContent {
             val d by Trials32bStore.data.collectAsState()
-            val l = Trials32bStore.active(d ?: d0)
+            // «Skjul beløp» (F 12): serveren skjuler prisen med ?hideAmounts=1; lister fra appen eller FinansHub skjules her.
+            val skjul = WidgetPersonvern.skjul(context)
+            val l = Trials32bStore.active(d ?: d0).map { t -> if (skjul && t.price.isNotBlank()) t.copy(price = "•••") else t }
             val logos = l.take(3).associate { it.id to Trials32bStore.logo(context, it.domain) }
             GlanceTheme { Body32b(kind, l, logos) }
         }
