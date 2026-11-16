@@ -74,7 +74,7 @@ export const two = () => matchMedia('(min-width: 600px)').matches;
 export const iosBg = () => { if (paper()) return false; try { return localStorage.getItem('fh_ios_bg') !== '0'; } catch { return true; } };
 const ACTIVE = ['pending', 'processing'];
 export const ACTIVE_JOBS = ACTIVE;
-export const amtC = (v, th) => (v > 0 ? '#9FE3C6' : c3('#F0DFD7'));
+export const amtC = (v, th) => (v > 0 ? 'var(--pp-pos)' : c3('#F0DFD7'));
 
 /* ---------- Skjermer og faner ---------- */
 

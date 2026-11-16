@@ -30,7 +30,18 @@ test('stegprikkene i Mat og fargene i Kvitteringer/Finn er klasser, ikke inline 
   for (const f of ['mobile.js', 'mobile-finn.js']) assert.doesNotMatch(js(f), /style="[^"]*color:#(9FE3C6|FFB08A)/i, f);
 });
 
+test('kategorifargene fra serveren blir papirfarger i JS, ikke med !important mot inline stil', async () => {
+  assert.doesNotMatch(utenKommentarer, /\[style\*="color:/, 'mobile.css skal ikke overstyre inline stil');
+  const { papirTekst } = await import('../public/finans/js/mobile-theme.js');
+  assert.equal(papirTekst('#9FE3C6'), 'var(--pp-pos)'); // Inntekt
+  assert.equal(papirTekst('#FFB08A'), 'var(--pp-lab)'); // Vedlikehold, Maling
+  assert.equal(papirTekst('#B79CFF'), '#B79CFF');
+  assert.match(js('mobile.js'), /export const amtC = \(v, th\) => \(v > 0 \? 'var\(--pp-pos\)'/);
+  assert.match(js('mobile-mods.js'), /color:\$\{esc\(papirTekst\(e\.color/);
+  for (const f of ['mobile.js', 'mobile-pages.js', 'mobile-tx.js', 'mobile-mods.js']) assert.doesNotMatch(js(f), /vc: '#9FE3C6'|> 0 \? '#9FE3C6'/, f);
+});
+
 test('antall !important i mobile.css går bare ned', () => {
   const n = (utenKommentarer.match(/!important/g) || []).length;
-  assert.ok(n <= 802, `${n} !important (maks 802; 861 før oppryddingen)`);
+  assert.ok(n <= 800, `${n} !important (maks 800; 861 før oppryddingen)`);
 });

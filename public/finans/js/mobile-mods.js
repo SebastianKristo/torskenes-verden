@@ -4,6 +4,7 @@ import { api, esc, n0, n2, dd, dWeek, today, icon, aiLine, matApi, domApi, parse
 import { logo } from './mobile-posisjon-og-logoer.js'; // logoregisteret (prompt 20), ellers core.logo
 import { m, draw, flash, avatar, backBtn, pref } from './mobile.js';
 import { subsLoad, subsView, subsBind } from './mobile-subs.js';
+import { papirTekst } from './mobile-theme.js';
 import * as P38 from './mobile-okt-og-qr.js'; // prompt 38: Glimt-oppsummering og alt lastet ved åpning
 
 export const MODS = [
@@ -106,7 +107,7 @@ function folder(th, id) {
       <span class="m-bar" style="height:5px;background:rgba(127,127,127,.18)"><i style="width:${Math.min(100, c.pct ?? 0)}%;background:${esc(c.color)}"></i></span>
       ${(c.subs ?? []).map((x) => `<span class="m-row" style="justify-content:space-between;gap:8px;font-size:12.5px;opacity:.72;padding-left:18px"><span class="m-ell">${esc(x.name)}</span><span class="m-mono">${n0(x.sum)} kr</span></span>`).join('')}</div>`).join(''))}` : ''}
     ${sec('Utgifter')}
-    ${listBox(th, (f.entries ?? []).map((e) => `<div class="item">${logo(e, 40, 12)}<span class="m-grow"><span class="m-ell" style="font-weight:500">${esc(e.description)}</span>${aiLine(e.aiShort, 'm-ell ai')}<span class="m-ell s">${e.pending ? '✦ Kategoriseres … · ' : e.categoryLabel ? `<span style="color:${esc(e.color ?? 'inherit')}">${e.aiCategory ? '✦ ' : ''}${esc(e.categoryLabel)}</span> · ` : ''}${dd(e.date)}${e.paidBy ? ` · betalt av ${esc(e.paidBy)}` : ''}${e.split ? ` · ${esc(e.split)}` : ''}</span></span><span class="m-mono" style="font-weight:600">${n2(e.amount)}</span></div>`).join('') || '<div class="m-empty">Ingen utgifter ennå.</div>')}
+    ${listBox(th, (f.entries ?? []).map((e) => `<div class="item">${logo(e, 40, 12)}<span class="m-grow"><span class="m-ell" style="font-weight:500">${esc(e.description)}</span>${aiLine(e.aiShort, 'm-ell ai')}<span class="m-ell s">${e.pending ? '✦ Kategoriseres … · ' : e.categoryLabel ? `<span style="color:${esc(papirTekst(e.color ?? 'inherit'))}">${e.aiCategory ? '✦ ' : ''}${esc(e.categoryLabel)}</span> · ` : ''}${dd(e.date)}${e.paidBy ? ` · betalt av ${esc(e.paidBy)}` : ''}${e.split ? ` · ${esc(e.split)}` : ''}</span></span><span class="m-mono" style="font-weight:600">${n2(e.amount)}</span></div>`).join('') || '<div class="m-empty">Ingen utgifter ennå.</div>')}
     ${ro && !bolEditable().length ? '<div class="m-empty">Du har lesetilgang. Be en eier om redigeringstilgang for å legge til utgifter.</div>' : addForm(th, f, members)}
     ${sharing(th, f)}`;
 }

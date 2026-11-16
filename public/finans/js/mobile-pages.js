@@ -154,7 +154,7 @@ function rap() {
     groups: [G('', [R.chips('Periode', [{ n: 'Denne måneden', on: !yr, attrs: 'data-pa="rapm" data-v="month"' }, { n: 'Hittil i år', on: yr, attrs: 'data-pa="rapm" data-v="year"' }])]),
       G('Per kategori', (r.byCategory ?? []).map((c) => R.bar(c.category, kr(c.amount), (c.amount / mx) * 100, c.color))),
       (r.merchants ?? []).length ? G('Topp butikker', r.merchants.map((x) => R.item({ logo: { description: x.name }, t: x.name, s: `${x.count} kjøp`, v: `−${n0(x.amount)} kr`, attrs: `data-pd="merch" data-name="${esc(x.name)}"` }))) : '',
-      G('Måned for måned', ms.map((x) => R.item({ ini: cap(monthName(x.month, false)).slice(0, 3), iniStyle: 'font-size:12px', t: cap(monthName(x.month)), s: `Spart ${kr(x.inn - x.ut)}`, v: `+${n0(x.inn)}`, vs: `−${n0(x.ut)}`, vc: '#9FE3C6' }))),
+      G('Måned for måned', ms.map((x) => R.item({ ini: cap(monthName(x.month, false)).slice(0, 3), iniStyle: 'font-size:12px', t: cap(monthName(x.month)), s: `Spart ${kr(x.inn - x.ut)}`, v: `+${n0(x.inn)}`, vs: `−${n0(x.ut)}`, vc: 'var(--pp-pos)' }))),
       G('', [R.link('Eksporter som CSV', `/finans/api/transactions.csv?from=${r.from}&to=${r.to}`, 'var(--m-acc)', 'download'), R.link('Lag PDF-rapport på en større skjerm', '/finans/?desktop=1#/rap')])] });
 }
 
@@ -190,7 +190,7 @@ const allSugg = () => groupsOf().flatMap((g) => g.items);
 function hitRow(h) {
   const ini = h.type === 'line' ? '≡' : h.type === 'receipt' ? '⧉' : (h.description ?? '?').slice(0, 1);
   return R.item({ ini, iniStyle: `background:${(h.color ?? '#A0A0AA')}2e;color:${h.color ?? '#A0A0AA'}`, t: h.description ?? '–', s: [h.date ? dd(h.date) : '', h.source ?? ''].filter(Boolean).join(' · '),
-    ai: h.reason ?? h.why ?? '', v: h.amount != null ? sgn(h.amount) : '', vc: (h.amount ?? 0) > 0 ? '#9FE3C6' : 'inherit',
+    ai: h.reason ?? h.why ?? '', v: h.amount != null ? sgn(h.amount) : '', vc: (h.amount ?? 0) > 0 ? 'var(--pp-pos)' : 'inherit',
     attrs: h.txId ? `data-hit="${h.txId}" data-d="${esc(h.description ?? '')}"` : h.receiptId ? `data-rc="${esc(h.receiptId)}"` : '' });
 }
 function sok() {

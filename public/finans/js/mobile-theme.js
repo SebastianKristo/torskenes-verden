@@ -132,6 +132,9 @@ export function applyM3(on, seedKey = 'sys', mode = 'dark', redraw = () => {}, s
 export const paletteFor = palette; // for tester
 /** var(--m3-XXXXXX,#XXXXXX) for inline-stiler i Android-temaet. */
 export const c3 = (h) => `var(--m3-${h.slice(1).toUpperCase()},${h})`;
+/** Tekstfarge fra serveren (kategorifarger) på papir. Inntekt (#9FE3C6) og Vedlikehold/Maling (#FFB08A) er laget for mørk bakgrunn
+ *  og ble 1,5–1,8:1 på lyst papir; de blir --pp-pos og --pp-lab (som følger lys/mørk). Andre farger brukes som de er. */
+export const papirTekst = (c) => ({ '#9FE3C6': 'var(--pp-pos)', '#FFB08A': 'var(--pp-lab)' }[c] ?? c);
 
 /* ---------- Papir (prompt 13) ---------- */
 // Papir bruker ikke Material You. Hver Android-rolle får en papirfarge, så alle sider (som tegnes med Android-oppsettet)
