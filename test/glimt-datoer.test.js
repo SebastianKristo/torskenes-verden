@@ -4,6 +4,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { parseNorwegianDateTime, parseWindow47, whenOf45, parseDate45, afterChristmas45 } from '../server/glimt/dates.js';
 import { analyzeWeather46, isCompoundWeather46 } from '../server/glimt/weather.js';
+import { osloMs47 } from '../server/glimt/tools-search.js';
 
 const NOW = { today: '2026-10-24', nowMin: 600 };
 const P = (t, now = NOW) => parseNorwegianDateTime(t, now);
@@ -76,4 +77,14 @@ test('vær: «Oslo neste time og New York i morgen» = to delspørsmål med egne
   assert.deepEqual(b.requests.map((r) => [r.place, r.when.from]), [['Oslo', '2026-10-25'], ['New York', '2026-10-25']]);
   const c = analyzeWeather46('Regner det i Bergen om 2 timer?', NOW.today, NOW.nowMin);
   assert.deepEqual([c.requests[0].place, c.requests[0].when.kind, c.requests[0].when.fromMin], ['Bergen', 'hour', 690]);
+});
+
+/* ---------------- Kalendersøkets klokke (tidligere egen fil) ---------------- */
+
+// Prompt 71: kalendersøket bruker motorens klokke (today + nowMin i Europe/Oslo), ikke Date.now().
+test('osloMs47: Oslo-tid til ms med sommer- og vintertid, null uten klokke', () => {
+  assert.equal(new Date(osloMs47('2026-10-24', 600)).toISOString(), '2026-10-24T08:00:00.000Z'); // sommertid (+2)
+  assert.equal(new Date(osloMs47('2026-12-17', 1050)).toISOString(), '2026-12-17T16:30:00.000Z'); // vintertid (+1)
+  assert.equal(osloMs47(null, 600), null);
+  assert.equal(osloMs47('2026-10-24', undefined), null);
 });

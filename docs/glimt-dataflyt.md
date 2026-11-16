@@ -55,8 +55,8 @@ Logg: `GET /api/glimt/agent/log` og serverloggen `[glimt45] modul=… intent=…
 
 ## Tester
 
-- `test/p45-glimt.test.js`: alle eksemplene i prompt 45 (mock-modell i JSON- og tool-modus + lokal plan), månedsskifte, årsskifte, skuddår, ugyldige datoer, tomme resultater, flere treff, verktøyfeil, manglende bekreftelse fra datakilden, gjentatte forespørsler, kontekst («flytt den»), bekreftelse ved sletting, per-bruker-data, personlighet og logg uten personopplysninger. Sjekker lagrede data, ikke bare tekst.
-- `test/p45-glimt-ollama.test.js`: hele veien `ai-run` → `ai-gate` → falsk Ollama (NDJSON) uten `MOCK_DATA`: `tools` sendes for qwen3, `tool_calls` kommer gjennom gaten, gemma3 får JSON-skjema.
+- `test/glimt-motor.test.js`: alle eksemplene i prompt 45 (mock-modell i JSON- og tool-modus + lokal plan), månedsskifte, årsskifte, skuddår, ugyldige datoer, tomme resultater, flere treff, verktøyfeil, manglende bekreftelse fra datakilden, gjentatte forespørsler, kontekst («flytt den»), bekreftelse ved sletting, per-bruker-data, personlighet og logg uten personopplysninger. Sjekker lagrede data, ikke bare tekst.
+- `test/glimt-motor-ollama.test.js`: hele veien `ai-run` → `ai-gate` → falsk Ollama (NDJSON) uten `MOCK_DATA`: `tools` sendes for qwen3, `tool_calls` kommer gjennom gaten, gemma3 får JSON-skjema.
 - Ikke testet mot ekte modell i dette miljøet (ingen Ollama). Se «Gjenstår».
 
 ## Gjenstår / manuelt
@@ -86,4 +86,4 @@ Bygget videre på samme motor (`server/glimt/`), ingen ny motor. Nye filer: `gli
 Ikke byttet modell: det kunne ikke måles i dette miljøet (ingen Ollama). Rett 1 (plukk ut, ikke skriv om) fjerner hovedårsaken uansett modell. For å måle før et bytte: kjør testsettet med brukerens egne gjøremål mot `qwen3:8b`, `gemma3:12b` og en norsk modell (NorMistral/NorwAI som GGUF) på Mac mini, og sammenlign andel titler som er ordrette/uten grammatikkfeil, oppdeling, dato, tid og minne. Velg modellen i AI-kontroll for `glimt`-ruten.
 
 ## Tester
-`test/p46-glimt.test.js` (mock av modell, værtjeneste, stedssøk og film; sjekker lagrede rader i `trials`, `hl_tasks`, `fh_subscriptions`, lokale hendelser). Ikke kjørt mot ekte modell.
+`test/glimt-oppfolging.test.js` (mock av modell, værtjeneste, stedssøk og film; sjekker lagrede rader i `trials`, `hl_tasks`, `fh_subscriptions`, lokale hendelser). Ikke kjørt mot ekte modell.

@@ -28,7 +28,7 @@ const ST = {
 };
 const CST = { green: ['Grønn', 'ok'], red: ['Rød', 'bad'], partial: ['Delvis', 'warn'], env: ['Miljøfeil', 'mut'] };
 
-/* ---------- Hjelpere (rene, testes i test/p64-web.test.js) ---------- */
+/* ---------- Hjelpere (rene, testes i test/glimt-kvalitet-web.test.js) ---------- */
 /** Lenkene fra pushene: «#/innstillinger/kvalitet», «…/run/q…» og «…/uke/2026-W44». null = ikke vår adresse. */
 export function parseRoute64(hash) {
   const m = String(hash ?? '').match(/^#\/innstillinger\/(?:ai\/)?kvalitet(?:\/(run|uke)\/([\w-]+))?\/?$/);

@@ -198,7 +198,7 @@ Prinsipp: motoren beholdes og utvides. De gamle stiene blir verktøy bak motoren
 **2. Datoparser**
 - `glimt/dates.js`: `parseNorwegianDateTime(text, now, tz)` som felles inngang. Legg til «neste time», «om N timer/minutter», «i kveld/natt» som tidsvindu, «etter jul», «neste uke»-vindu, og «på fredag» = i dag hvis klokka ikke er passert.
 - `glimt/weather.js` bruker denne (fjern `TIME_RE`/`whenOf46`-duplikat) og retter null-tid-feilen (`glimt/weather.js:104–111`).
-- Enhetstester i `test/p47-dates.test.js`.
+- Enhetstester i `test/glimt-datoer.test.js`.
 
 **3. Minne**
 - Additiv migrering av `glimt_memory` (`glimt-memory.js`): kolonnene `aliases TEXT(JSON)`, `predicate`, `source`, `embed_model` og `vec BLOB`. Eksisterende rader blir `subject=match, object=type, aliases=[type + synonymer fra TYPE_WORDS]`.
@@ -252,7 +252,7 @@ Filer som endres (hovedsakelig): `server/glimt/{engine,plan,tools,tools46,weathe
 ## 5. Testsuite: `npm run eval`
 
 - **Struktur:** `eval/cases/*.json` (de 14 punktene i oppdraget + vær→kalender 1–10 + media 1–9), `eval/fixtures/` (testkalender, abonnementer med måned/år/uke, transaksjoner for «mat denne måneden», minne, vitnemål-bilde med 15 fag, kvitteringsbilde) og `eval/run.mjs`.
-- **Kjøring:** samme oppsett som `test/p45-glimt-ollama.test.js`. Midlertidig `DATA_DIR`, innlogging, fryst klokke via `_setClock45({today:'2026-10-24', nowMin:600})` + `nowMs`, så `POST /api/glimt/agent` per case. Sjekk **lagrede data** (kalenderrad, minnerad, verktøykall i `actions`/trace), ikke bare tekst.
+- **Kjøring:** samme oppsett som `test/glimt-motor-ollama.test.js`. Midlertidig `DATA_DIR`, innlogging, fryst klokke via `_setClock45({today:'2026-10-24', nowMin:600})` + `nowMs`, så `POST /api/glimt/agent` per case. Sjekk **lagrede data** (kalenderrad, minnerad, verktøykall i `actions`/trace), ikke bare tekst.
 - **Mocket uansett modus:** værtjeneste (`_setWeather46`), nettsøk, Sonarr (`media43-mock.js` utvidet med 9-1-1, 9-1-1: Nashville, Law & Order: SVU), stedssøk og film. Modellen er det eneste som er ekte.
 - **Moduser** (`EVAL_BACKEND`):
   - `mock` (standard, CI): skriptet modell (som `probe.mjs`) + `lokal` (ingen modell). Deterministisk, 1 runde.

@@ -24,7 +24,7 @@ const STATE = { success: 'vellykket', fail: 'feil', pending: 'venter' };
 const SRC = { learned: 'Lært av en vellykket kjøring', correction: 'Lært av en rettelse', edited: 'Redigert av deg' };
 export const VARS61 = ['person', 'person.aliases', 'place', 'when'];
 
-/* ---------- Hjelpere (rene, testes i test/p61-web.test.js) ---------- */
+/* ---------- Hjelpere (rene, testes i test/glimt-oppskrifter-web.test.js) ---------- */
 /** Variabler i en tekst/plan som ikke er lov. '{person}' og '{person.aliases}' er lov; '{x}' er det ikke. */
 export function badVars61(s) {
   const out = [];

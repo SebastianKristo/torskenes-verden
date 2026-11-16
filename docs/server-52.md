@@ -40,5 +40,5 @@ Kort om hva som er nytt på serveren, og hva du må gjøre. API-formene står i 
 
 ## Kommandoer
 ```sh
-node --test test/p52-server.test.js
+node --test test/glimt-sist-besokt-og-kvitteringer-lokalt.test.js
 ```

@@ -28,7 +28,7 @@ const TRIG = { schedule: 'planlagt', catchup: 'tatt igjen etter omstart', 'run-n
 const ZONES = ['NO1', 'NO2', 'NO3', 'NO4', 'NO5'];
 const ZLAB = { NO1: 'Øst', NO2: 'Sør', NO3: 'Midt', NO4: 'Nord', NO5: 'Vest' };
 
-/* ---------- Hjelpere (rene, testes i test/p62-web.test.js) ---------- */
+/* ---------- Hjelpere (rene, testes i test/glimt-faste-oppgaver-web.test.js) ---------- */
 const TZ = 'Europe/Oslo';
 const dayKey = (d) => d.toLocaleDateString('sv-SE', { timeZone: TZ });
 const addDay = (key, n) => new Date(Date.parse(`${key}T12:00:00Z`) + n * 864e5).toISOString().slice(0, 10);

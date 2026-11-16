@@ -31,7 +31,7 @@ const HELP = {
 const SRC = { conversation: 'Glimt-samtale', correction: 'Rettelse', calendar: 'Kalender' };
 const TZ = 'Europe/Oslo';
 
-/* ---------- Hjelpere (rene, testes i test/p63-web.test.js) ---------- */
+/* ---------- Hjelpere (rene, testes i test/glimt-minne-web.test.js) ---------- */
 /** Lenken fra pushen: «#/innstillinger/glimt-husker» (også under ai/). */
 export const isRoute63 = (hash) => /^#\/innstillinger\/(?:ai\/)?glimt-husker\/?$/.test(String(hash ?? ''));
 export const days63 = (n) => `${n} ${n === 1 ? 'dag' : 'dager'}`;
