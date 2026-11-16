@@ -1,5 +1,6 @@
 package no.kristo.finanshub.ui
 
+import androidx.compose.runtime.saveable.rememberSaveable
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -434,7 +435,7 @@ internal fun VelgLogo27(vm: AppViewModel, domain: String?, name: String, receipt
     if (!missing && done == null) return
     val open = s.logoPick?.name == name
     val pick = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri -> if (uri != null) vm.logoUpload27(ctx, LogoPick27(name, domain, receiptId), uri) }
-    var dom by remember(name) { mutableStateOf("") }
+    var dom by rememberSaveable(name) { mutableStateOf("") }
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             if (done != null) {

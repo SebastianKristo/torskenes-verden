@@ -2,6 +2,7 @@
 
 package no.kristo.finanshub.ui
 
+import androidx.compose.runtime.saveable.rememberSaveable
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -1190,9 +1191,9 @@ private fun Form50(vm: AppViewModel, c: FamCheckinTab50) {
     val s = vm.fam50
     var placeIdx by remember { mutableIntStateOf(0) }
     var placeOpen by remember { mutableStateOf(false) }
-    var custom by remember { mutableStateOf("") }
+    var custom by rememberSaveable { mutableStateOf("") }
     var quick by remember { mutableStateOf(c.quick.firstOrNull()?.id) }
-    var own by remember { mutableStateOf("") }
+    var own by rememberSaveable { mutableStateOf("") }
     var ownOn by remember { mutableStateOf(false) }
     val replyFrom = s.replyTo?.let { id -> c.requests.firstOrNull { it.id == id } }
     var to by remember(c.people.size, s.replyTo) {

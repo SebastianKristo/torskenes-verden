@@ -1,5 +1,6 @@
 package no.kristo.kalender.ui
 
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -73,7 +74,7 @@ internal fun KalCal70Card(vm: KalVm, json: JSONObject) {
     var open by remember(key) { mutableStateOf(false) }
     var busy by remember(key) { mutableStateOf(false) }
     var undone by remember(key) { mutableStateOf(false) }
-    var note by remember(key) { mutableStateOf("") }
+    var note by rememberSaveable(key) { mutableStateOf("") }
     var err by remember(key) { mutableStateOf("") }
     val until = remember(key) { System.currentTimeMillis() + first.ttlMs }
     var left by remember(key) { mutableLongStateOf(first.ttlMs / 1000) }

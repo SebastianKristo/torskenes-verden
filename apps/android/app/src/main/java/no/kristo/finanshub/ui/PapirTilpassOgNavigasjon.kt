@@ -1,5 +1,6 @@
 package no.kristo.finanshub.ui
 
+import androidx.compose.runtime.saveable.rememberSaveable
 import android.content.ClipboardManager
 import android.content.Context
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -947,7 +948,7 @@ private fun ReceiptFullscreen(bmp: android.graphics.Bitmap, close: () -> Unit) {
 internal fun NewShipmentSheet(vm: AppViewModel) {
     val p = PaperPal.current
     val ctx = LocalContext.current
-    var no by remember { mutableStateOf("") }
+    var no by rememberSaveable { mutableStateOf("") }
     val focus = remember { FocusRequester() }
     LaunchedEffect(Unit) { delay(250); runCatching { focus.requestFocus() } }
     val clean = no.uppercase().filter { it.isLetterOrDigit() }

@@ -1,5 +1,6 @@
 package no.kristo.finanshub.ui
 
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
@@ -175,7 +176,7 @@ private fun StopPills24(vm: AppViewModel, selId: String?) {
 @Composable
 private fun MyStops24(vm: AppViewModel) {
     val p = HomelabTheme.colors
-    var q by remember { mutableStateOf("") }
+    var q by rememberSaveable { mutableStateOf("") }
     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(p.surfaceRaised).padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             PSerif("Mine stopp", 20.sp, modifier = Modifier.weight(1f))

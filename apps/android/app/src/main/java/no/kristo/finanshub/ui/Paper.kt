@@ -1,5 +1,6 @@
 package no.kristo.finanshub.ui
 
+import androidx.compose.runtime.saveable.rememberSaveable
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
@@ -910,7 +911,7 @@ private fun HomeBody41(vm: AppViewModel, k: String, wide: Boolean) {
 private fun PaperSearch(vm: AppViewModel) {
     val p = PaperPal.current
     val ctx = LocalContext.current
-    var q by remember { mutableStateOf("") }
+    var q by rememberSaveable { mutableStateOf("") }
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Row(
             Modifier.fillMaxWidth().height(46.dp).shadow(12.dp, CircleShape).clip(CircleShape).background(p.card).padding(horizontal = 16.dp),

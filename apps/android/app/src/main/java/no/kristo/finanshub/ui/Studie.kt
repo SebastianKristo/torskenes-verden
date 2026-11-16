@@ -1,5 +1,6 @@
 package no.kristo.finanshub.ui
 
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -128,7 +129,7 @@ private fun gradeColor44(g: String?): Color? {
 @Composable
 private fun DocView44(vm: AppViewModel, d: SDoc44) {
     val p = PaperPal.current
-    var q by remember(d.id) { mutableStateOf("") }
+    var q by rememberSaveable(d.id) { mutableStateOf("") }
     var del by remember(d.id) { mutableStateOf(false) }
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         // Prompt 50: «type · institusjon · dato» står nå som undertekst under topplinja.

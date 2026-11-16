@@ -1,5 +1,6 @@
 package no.kristo.finanshub.ui
 
+import androidx.compose.runtime.saveable.rememberSaveable
 import android.content.ClipboardManager
 import android.content.Context
 import android.graphics.Bitmap
@@ -906,7 +907,7 @@ private fun Prowlarr43(vm: AppViewModel, pad: PaddingValues) {
 private fun IdxAdd43(vm: AppViewModel) {
     val p = HomelabTheme.colors
     val s = vm.p43
-    var q by remember { mutableStateOf("") }
+    var q by rememberSaveable { mutableStateOf("") }
     var f by remember { mutableStateOf("alle") }
     Sheet43({ s.idxAdd = false; s.schemaPick = null }) {
         val pick = s.schemaPick
@@ -968,7 +969,7 @@ private fun IdxAdd43(vm: AppViewModel) {
 private fun MediaGlimt43(vm: AppViewModel) {
     val p = HomelabTheme.colors
     val s = vm.p43
-    var q by remember { mutableStateOf("") }
+    var q by rememberSaveable { mutableStateOf("") }
     Column(Modifier.fillMaxWidth().padding(16.dp, 10.dp, 16.dp, 0.dp).clip(RoundedCornerShape(20.dp)).background(DsPalette.PapirLys.textPrimary).padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             GlimtOrb43(28.dp, busy = s.glimtBusy)

@@ -1,5 +1,6 @@
 package no.kristo.kalender.ui
 
+import androidx.compose.runtime.saveable.rememberSaveable
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
 import androidx.compose.foundation.background
@@ -281,7 +282,7 @@ fun OptRow(n: String, sub: String, on: Boolean, onClick: () -> Unit) {
 @Composable
 fun NewCalendarDialog(vm: KalVm) {
     val k = LocalK.current
-    var name by remember { mutableStateOf("") }
+    var name by rememberSaveable { mutableStateOf("") }
     val pal = listOf(0xFFB23A2A, 0xFF2B5D8A, 0xFF2F7A4F, 0xFFA8661A, 0xFF3D7F8A, 0xFF8A3FA0, 0xFF5C5850, 0xFFC0562A)
     var col by remember { mutableLongStateOf(pal[1]) }
     Dialog(onDismissRequest = { vm.newCal = false }) {

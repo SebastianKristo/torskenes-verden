@@ -4,7 +4,7 @@
 // Ingen Android SDK her: CI-jobben «Mobilapper» er fasit for at koden kompilerer.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -14,6 +14,15 @@ const APP = join(AND, 'app/src/main/java/no/kristo/finanshub');
 const KAL = join(AND, 'kalender/src/main/java/no/kristo/kalender');
 const raw = (p) => readFileSync(p, 'utf8');
 const strip = (s) => s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1');
+function ktFiles(dir) {
+  const out = [];
+  for (const e of readdirSync(dir, { withFileTypes: true })) {
+    const p = join(dir, e.name);
+    if (e.isDirectory()) { if (e.name !== 'build') out.push(...ktFiles(p)); }
+    else if (e.name.endsWith('.kt')) out.push(p);
+  }
+  return out;
+}
 
 test('E-B12/Q34 Kalender-appen: forslaget «Slå sammen kalenderne: N → 4?» vises med ja/nei, og bare ja kjører oppryddingen', () => {
   const kal = strip(raw(join(KAL, 'Kalendere.kt')));
@@ -47,6 +56,20 @@ test('P85 F: AppViewModel lagrer valgt side og søkeutkast i SavedStateHandle, o
   assert.match(vm, /private fun gjenopprettNavigasjon\(\) \{\s*val b = lagret\.get<Bundle>\(NAV_LAGRET\) \?: return\s*if \(!loggedIn\) return/);
   // Bare én måte å lage AppViewModel på: standardfabrikken i aktiviteten (gir Application og SavedStateHandle).
   assert.match(strip(raw(join(APP, 'MainActivity.kt'))), /private val vm: AppViewModel by viewModels\(\)/);
+});
+
+test('P85 F: tekstutkast i skjemaene bruker rememberSaveable; passord, koder og nøkler gjør det aldri', () => {
+  const files = [...ktFiles(join(AND, 'app/src/main')), ...ktFiles(join(AND, 'kalender/src/main'))];
+  let saveable = 0;
+  for (const p of files) {
+    const s = strip(raw(p));
+    const n = (s.match(/\b(?:var|val)\s+\w+\s+(?:by|=)\s+rememberSaveable(?:\([^)]*\))?\s*\{\s*mutableStateOf\(""\)/g) ?? []).length;
+    saveable += n;
+    if (/\brememberSaveable\b/.test(s)) assert.match(s, /import androidx\.compose\.runtime\.saveable\.rememberSaveable/, p);
+    // Hemmeligheter skal ikke ligge i lagret tilstand (Bundle) etter prosessdød.
+    assert.doesNotMatch(s, /\b(?:var|val)\s+(?:pw|password|passord|code|kode|key|token|secret|pin)\s+(?:by|=)\s+rememberSaveable/i, p);
+  }
+  assert.ok(saveable >= 55, `rememberSaveable for utkast: ${saveable}`);
 });
 
 test('E-B12/Q34 Homelab-appen: kalenderen viser forslaget med «Slå sammen» og «Ikke nå», og «Angre» etterpå', () => {

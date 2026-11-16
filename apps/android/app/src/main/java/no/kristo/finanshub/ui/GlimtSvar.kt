@@ -1,5 +1,6 @@
 package no.kristo.finanshub.ui
 
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -347,7 +348,7 @@ private fun G67EntForm(vm: AppViewModel, it: G67Ent?) {
 @Composable
 private fun G67Resolve(vm: AppViewModel) {
     val s = vm.g67.ent
-    var q by remember { mutableStateOf("") }
+    var q by rememberSaveable { mutableStateOf("") }
     G67Lab("Hva betyr …?")
     PCard {
         G67Txt("Hva betyr …?", s.res ?: "Skriv et ord («hytta», «jobben», «Nina») og se hva Glimt tror det betyr.")
@@ -432,7 +433,7 @@ private fun G67RecDetail(vm: AppViewModel, it: G67Recipe) {
     val s = vm.g67.rec
     val p = PaperPal.current
     val d = s.det[it.id]
-    var text by remember(it.id) { mutableStateOf("") }
+    var text by rememberSaveable(it.id) { mutableStateOf("") }
     G67Kv("Eksempel", "«${it.example}»")
     G67Kv("Mal", it.template)
     G67Kv("Plan", it.steps.mapIndexed { i, x -> "${i + 1}. $x" }.joinToString("\n").ifBlank { "–" })

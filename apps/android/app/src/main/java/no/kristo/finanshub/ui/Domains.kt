@@ -1,5 +1,6 @@
 package no.kristo.finanshub.ui
 
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -445,7 +446,7 @@ private fun VisitsMap(vm: AppViewModel, a: Analytics) {
 @Composable
 internal fun DomainManagerSheet(vm: AppViewModel) {
     val farger = HomelabTheme.colors
-    var name by remember { mutableStateOf("") }
+    var name by rememberSaveable { mutableStateOf("") }
     var source by remember { mutableStateOf("cloudflare") }
     ModalBottomSheet(onDismissRequest = { vm.domainManager = false }, containerColor = farger.surfaceRaised) {
         Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(20.dp, 0.dp, 20.dp, 32.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {

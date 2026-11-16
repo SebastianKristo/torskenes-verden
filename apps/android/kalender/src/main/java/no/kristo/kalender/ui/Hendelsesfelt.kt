@@ -1,5 +1,6 @@
 package no.kristo.kalender.ui
 
+import androidx.compose.runtime.saveable.rememberSaveable
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.background
@@ -79,7 +80,7 @@ fun AddrField44(vm: KalVm, f: KNewForm) {
     val k = LocalK.current
     var focused by remember { mutableStateOf(false) }
     var sug by remember { mutableStateOf<List<KAddr44>>(emptyList()) }
-    var q by remember { mutableStateOf("") }
+    var q by rememberSaveable { mutableStateOf("") }
     var picked by remember { mutableStateOf(false) }
     // 280 ms etter siste tastetrykk, fra 3 tegn. Bare siste søk vises (LaunchedEffect avbrytes ved ny tekst).
     LaunchedEffect(q) {

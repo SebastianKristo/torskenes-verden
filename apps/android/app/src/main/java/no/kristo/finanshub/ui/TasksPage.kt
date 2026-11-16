@@ -1,5 +1,6 @@
 package no.kristo.finanshub.ui
 
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -104,7 +105,7 @@ internal fun TasksScreen37(vm: AppViewModel) {
     val now = all.filter { !it.done && it.due != null && it.due <= today }.sortedWith(compareByDescending<TaskItem> { it.prio }.thenBy { it.due }.thenBy { it.time ?: "99" })
     val later = all.filter { !it.done && (it.due == null || it.due > today) }.sortedWith(compareBy<TaskItem> { it.due ?: "9999" }.thenByDescending { it.prio })
     val done = all.filter { it.done }
-    var title by remember { mutableStateOf("") }
+    var title by rememberSaveable { mutableStateOf("") }
     val focus = remember { FocusRequester() }
     LaunchedEffect(vm.taskFocus) { if (vm.taskFocus) { delay(300); runCatching { focus.requestFocus() }; vm.taskFocus = false } }
     val cur = lists.firstOrNull { it.id == vm.taskFilter }
@@ -401,7 +402,7 @@ private fun GlimtSheet37(vm: AppViewModel, lists: List<TaskList>) {
     val s = vm.p37
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
-    var q by remember { mutableStateOf("") }
+    var q by rememberSaveable { mutableStateOf("") }
     val pick = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
         if (uri != null) scope.launch {
             val data = withContext(Dispatchers.IO) { runCatching { ctx.contentResolver.openInputStream(uri)?.use { it.readBytes() } }.getOrNull() }
@@ -486,8 +487,8 @@ private fun DetailSheet37(vm: AppViewModel, t: TaskItem, lists: List<TaskList>, 
     val ctx = LocalContext.current
     var d by remember(t.id) { mutableStateOf(t) }
     var sure by remember(t.id) { mutableStateOf(false) }
-    var newSub by remember(t.id) { mutableStateOf("") }
-    var newTag by remember(t.id) { mutableStateOf("") }
+    var newSub by rememberSaveable(t.id) { mutableStateOf("") }
+    var newTag by rememberSaveable(t.id) { mutableStateOf("") }
     var hideGuess by remember(t.id) { mutableStateOf(false) }
     // Alt lagres med en gang (tekst etter en kort pause).
     LaunchedEffect(d) { delay(450); vm.patchTask37(t.id) { cur -> d.copy(done = cur.done, doneAt = cur.doneAt) } }

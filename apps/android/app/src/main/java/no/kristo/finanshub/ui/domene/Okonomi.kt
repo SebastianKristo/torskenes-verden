@@ -2,6 +2,7 @@
 
 package no.kristo.finanshub.ui
 
+import androidx.compose.runtime.saveable.rememberSaveable
 import android.content.Intent
 import android.graphics.Bitmap
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -202,9 +203,9 @@ private fun AddSubRow28(o: AddOpt28, onClick: () -> Unit) {
 @Composable
 private fun AddSubForm28(vm: AppViewModel) {
     val p = PaperPal.current
-    var name by remember { mutableStateOf("") }
-    var amount by remember { mutableStateOf("") }
-    var day by remember { mutableStateOf("") }
+    var name by rememberSaveable { mutableStateOf("") }
+    var amount by rememberSaveable { mutableStateOf("") }
+    var day by rememberSaveable { mutableStateOf("") }
     var cyc by remember { mutableStateOf("mnd") }
     Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
         Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(p.card).border(1.dp, cardEdge28(p), RoundedCornerShape(20.dp))) {

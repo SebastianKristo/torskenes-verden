@@ -2,6 +2,7 @@
 
 package no.kristo.finanshub.ui
 
+import androidx.compose.runtime.saveable.rememberSaveable
 import android.content.Context
 import android.graphics.Bitmap
 import androidx.activity.compose.BackHandler
@@ -239,7 +240,7 @@ internal fun CatSummary46(vm: AppViewModel, cat: String, items: List<NewsItem>) 
 @Composable
 internal fun NewsCategories46(vm: AppViewModel, p: PaperPal) {
     val n = vm.p46.news
-    var word by remember { mutableStateOf("") }
+    var word by rememberSaveable { mutableStateOf("") }
     PLabel("Kategorier", p.lab)
     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(p.card).padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Text("✦ For deg", color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 14.5.sp)
@@ -276,8 +277,8 @@ internal fun NewsCategories46(vm: AppViewModel, p: PaperPal) {
             }
         }
         if (n.newCatOpen) {
-            var name by remember { mutableStateOf("") }
-            var kw by remember { mutableStateOf("") }
+            var name by rememberSaveable { mutableStateOf("") }
+            var kw by rememberSaveable { mutableStateOf("") }
             PField("Navn", name, { name = it; n.catErr = null }, placeholder = "F.eks. Elbil")
             PField("Nøkkelord (valgfritt, kommaseparert)", kw, { kw = it }, placeholder = "tesla, lading, elbil")
             n.catErr?.let { Text(it, color = p.lab, fontSize = 12.5.sp) }

@@ -1,5 +1,6 @@
 package no.kristo.finanshub.ui
 
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.contentDescription
 import android.graphics.Bitmap
@@ -110,7 +111,7 @@ internal fun SubRows44(vm: AppViewModel, t: TaskItem, color: Color) {
 @Composable
 private fun SubField44(focusNow: Boolean, hint: String = "Ny deloppgave …", onAdd: (String) -> Unit) {
     val p = HomelabTheme.colors
-    var v by remember { mutableStateOf("") }
+    var v by rememberSaveable { mutableStateOf("") }
     val fr = remember { FocusRequester() }
     LaunchedEffect(focusNow) { if (focusNow) { delay(150); runCatching { fr.requestFocus() } } }
     val go = { if (v.isNotBlank()) { onAdd(v); v = "" } }
@@ -315,7 +316,7 @@ private fun Place44(vm: AppViewModel, t: TaskItem) {
     val p = HomelabTheme.colors
     val ctx = LocalContext.current
     val shown = t.place?.takeIf { it.isNotBlank() && it !in listOf("store", "home", "leave", "work", "cabin") }
-    var q by remember(t.id) { mutableStateOf("") }
+    var q by rememberSaveable(t.id) { mutableStateOf("") }
     var edit by remember(t.id) { mutableStateOf(false) }
     var hits by remember { mutableStateOf<List<Geo44>>(emptyList()) }
     LaunchedEffect(q) { delay(350); hits = if (q.length >= 3) vm.geoSearch44(q) else emptyList() }

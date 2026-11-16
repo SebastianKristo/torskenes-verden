@@ -1,5 +1,6 @@
 package no.kristo.finanshub.ui
 
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.activity.compose.BackHandler
@@ -151,7 +152,7 @@ internal fun NewsReader(vm: AppViewModel) {
 internal fun NewsSettingsContent46(vm: AppViewModel, p: PaperPal) {
     val d = vm.news
     val cats = d?.categories ?: NEWS_CATS
-    var nf by remember { mutableStateOf("") }
+    var nf by rememberSaveable { mutableStateOf("") }
     LaunchedEffect(Unit) { if (vm.news == null) vm.loadNews() }
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(14.dp)) {
             Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(p.card)) {

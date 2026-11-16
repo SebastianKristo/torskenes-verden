@@ -1,5 +1,6 @@
 package no.kristo.finanshub.ui
 
+import androidx.compose.runtime.saveable.rememberSaveable
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -201,7 +202,7 @@ internal fun FinnAdScreen23(vm: AppViewModel) {
                 }
                 // Meldinger med motparten (fra e-postvarsler). Svar skjer i Finn (dyplenke).
                 val chatUrl = s.finnChatUrl ?: url
-                var msg by remember(id) { mutableStateOf("") }
+                var msg by rememberSaveable(id) { mutableStateOf("") }
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Row(verticalAlignment = Alignment.Bottom) {
                         PLabel("Meldinger · $other", p.accent, modifier = Modifier.weight(1f))

@@ -1,5 +1,6 @@
 package no.kristo.finanshub.ui
 
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
@@ -483,7 +484,7 @@ internal fun TokensPage(vm: AppViewModel) = Pages {
         }
     } else if (vm.tokenError == null) Note("Ingen tokens ennå.")
     if (vm.tokenError == null) Section("Lag nytt token") {
-        var name by remember { mutableStateOf("") }
+        var name by rememberSaveable { mutableStateOf("") }
         var scopes by remember { mutableStateOf(setOf("receipts:write")) }
         var days by remember { mutableStateOf<Int?>(90) }
         Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(C.surface1).padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {

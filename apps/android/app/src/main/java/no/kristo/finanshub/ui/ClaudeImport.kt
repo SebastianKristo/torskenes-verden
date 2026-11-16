@@ -1,5 +1,6 @@
 package no.kristo.finanshub.ui
 
+import androidx.compose.runtime.saveable.rememberSaveable
 import android.net.Uri
 import android.provider.OpenableColumns
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -50,7 +51,7 @@ internal fun ClaudeImport43(vm: AppViewModel) {
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
     var memory by remember { mutableStateOf("") }
-    var q by remember { mutableStateOf("") }
+    var q by rememberSaveable { mutableStateOf("") }
     var withConvs by remember { mutableStateOf(true) }
     var withMem by remember { mutableStateOf(true) }
     var skipOld by remember { mutableStateOf(true) }

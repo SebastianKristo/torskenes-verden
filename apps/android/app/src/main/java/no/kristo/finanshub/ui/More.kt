@@ -1,5 +1,6 @@
 package no.kristo.finanshub.ui
 
+import androidx.compose.runtime.saveable.rememberSaveable
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.pdf.PdfRenderer
@@ -160,7 +161,7 @@ internal fun MoreScreen(vm: AppViewModel) {
             }
         }
         item {
-            var q by remember { mutableStateOf("") }
+            var q by rememberSaveable { mutableStateOf("") }
             Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp)).background(C.surface2).padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text("✦ Spør AI", fontWeight = FontWeight.SemiBold, color = C.accentLight)
                 Text("Søker i transaksjoner, kvitteringer og varelinjer", color = C.text2, fontSize = 12.sp)
