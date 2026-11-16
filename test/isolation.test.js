@@ -190,3 +190,14 @@ test('/api/files: bare eieren (ISO2)', async () => {
   assert.equal((await A(`/api/files/${bg}`)).status, 404, 'ISO2: heller ikke admin får andres filer');
   assert.equal((await B('/api/files/0123456789abcdef01234567.jpg')).status, 404);
 });
+
+test('/api/grades: rekkefølgen (sort) regnes per bruker, ikke over alle brukeres karakterer (A §6 B6)', async () => {
+  const { db } = await import('../server/db.js');
+  for (const s of ['Norsk', 'Matte', 'Engelsk']) assert.equal((await A('/api/grades', 'POST', { subject: s, grade: 5 })).status, 200);
+  const ola = await B('/api/grades', 'POST', { subject: 'Historie', grade: 4 });
+  assert.equal(ola.status, 200);
+  const sort = db.prepare('SELECT sort FROM grades WHERE id=?').get(ola.body.id).sort;
+  const max = db.prepare('SELECT COALESCE(MAX(sort),0) m FROM grades WHERE user=? AND id<>?').get(olaId, ola.body.id).m;
+  assert.equal(sort, max + 1, 'Olas første karakter står først hos Ola');
+  assert.deepEqual((await B('/api/grades')).body.map((g) => g.subject), ['Historie']);
+});

@@ -332,7 +332,7 @@ function apply(u, r) {
     const row = { kode: e.kode, navn: e.navn, sp: e.sp, karakter: e.karakter, semester: e.semester, docId: r.id, institution: d.institution };
     if (i >= 0) { cur[i] = row; updated++; } else { cur.push(row); added++; }
     // Tallkarakterer (vgs) blir også fag i Karakterer (samme tabell som før).
-    if (/^[1-6]$/.test(e.karakter) && !q('SELECT 1 FROM grades WHERE user=? AND subject=?').get(u, e.navn)) q('INSERT INTO grades(user,subject,grade,tests,sort) VALUES(?,?,?,?,(SELECT COALESCE(MAX(sort),0)+1 FROM grades))').run(u, e.navn.slice(0, 60), +e.karakter, d.kindLabel ?? '');
+    if (/^[1-6]$/.test(e.karakter) && !q('SELECT 1 FROM grades WHERE user=? AND subject=?').get(u, e.navn)) q('INSERT INTO grades(user,subject,grade,tests,sort) VALUES(?,?,?,?,(SELECT COALESCE(MAX(sort),0)+1 FROM grades WHERE user=?))').run(u, e.navn.slice(0, 60), +e.karakter, d.kindLabel ?? '', u);
   }
   kv.set(u, 'study44_courses', cur.slice(0, 400));
   q('UPDATE study44_docs SET applied=? WHERE id=?').run(Date.now(), r.id);
