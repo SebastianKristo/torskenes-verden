@@ -58,7 +58,7 @@ private fun ServerSheet89(onClose: () -> Unit, onSaved: (String) -> Unit) {
     val scope = rememberCoroutineScope()
     val store = remember { runCatching { AccountStore(ctx) }.getOrNull() }
     var ext by remember { mutableStateOf(store?.lastServer()?.takeIf { it.isNotBlank() } ?: DEFAULT_EXTERNAL47) }
-    var loc by remember { mutableStateOf(store?.lastLocal()?.takeIf { it.isNotBlank() } ?: DEFAULT_LOCAL47) }
+    var loc by remember { mutableStateOf(store?.lastLocal().orEmpty()) }
     var test by remember { mutableStateOf<Pair<Boolean, String>?>(null) }
     var busy by remember { mutableStateOf(false) }
     val uri = KeyboardOptions(keyboardType = KeyboardType.Uri, autoCorrectEnabled = false, imeAction = ImeAction.Next)
@@ -67,7 +67,7 @@ private fun ServerSheet89(onClose: () -> Unit, onSaved: (String) -> Unit) {
         Column(Modifier.fillMaxWidth().navigationBarsPadding().imePadding().padding(start = 18.dp, end = 18.dp, bottom = 26.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
             PSerif("Server", 26.sp)
             PField("Ekstern adresse", ext, { ext = it; test = null }, placeholder = DEFAULT_EXTERNAL47, keyboard = uri)
-            PField("Lokal adresse", loc, { loc = it; test = null }, placeholder = DEFAULT_LOCAL47, keyboard = uri.copy(imeAction = ImeAction.Done))
+            PField("Lokal adresse", loc, { loc = it; test = null }, placeholder = LOCAL_HINT47, keyboard = uri.copy(imeAction = ImeAction.Done))
             Text("Lokal brukes når du er hjemme på Wi-Fi, ellers ekstern. Samme verdier som Innstillinger → Enheter og widgets → Server og synk.", color = p.mut, fontSize = 12.5.sp)
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 PButton(if (busy) "Tester …" else "Test tilkobling", height = 44.dp, kind = "line") {
@@ -85,7 +85,7 @@ private fun ServerSheet89(onClose: () -> Unit, onSaved: (String) -> Unit) {
                 }
             }
             Text("Tilbakestill til standard", color = p.lab, fontWeight = FontWeight.SemiBold, fontSize = 14.sp,
-                modifier = Modifier.clip(RoundedCornerShape(8.dp)).clickable(role = Role.Button) { Haptics.select(); ext = DEFAULT_EXTERNAL47; loc = DEFAULT_LOCAL47; test = null }
+                modifier = Modifier.clip(RoundedCornerShape(8.dp)).clickable(role = Role.Button) { Haptics.select(); ext = DEFAULT_EXTERNAL47; loc = ""; test = null }
                     .heightIn(min = 44.dp).wrapContentHeight().padding(vertical = 10.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 PButton("Avbryt", Modifier.weight(1f), kind = "line") { onClose() }

@@ -190,8 +190,8 @@ private fun AppViewModel.pollApproval51() {
             val r = try { http51(base, "GET", w.statusUrl, w.pollKey) } catch (e: CancellationException) { throw e } catch (_: Exception) { null }
             if (r == null) {
                 fails++
-                // Ekstern svarer ikke: prøv den lokale standardadressen hvis den er vår server (samme som innloggingen, P47.kt).
-                if (fails == 2) loginVia47(w.server)?.let { base = it }
+                // Ekstern svarer ikke: prøv den lokale adressen vi kjenner hvis den er vår server (samme som innloggingen, Serveradresse.kt).
+                if (fails == 2) loginVia47(w.server, localFor47(w.server))?.let { base = it }
                 if (sec51.wait?.id == w.id) sec51.wait = w.copy(note = "Får ikke kontakt med serveren – prøver igjen …")
                 delay(if (fails < 5) 3_000L else 10_000L)
                 continue

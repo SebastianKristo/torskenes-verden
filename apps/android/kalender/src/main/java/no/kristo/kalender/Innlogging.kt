@@ -53,9 +53,13 @@ import androidx.compose.ui.graphics.toArgb
  */
 
 object Kal41 {
-    /** Prompt 47 (claude-code-standard-serveradresser.md): standard ekstern og lokal adresse. */
+    /**
+     * Prompt 47 (claude-code-standard-serveradresser.md): standard ekstern adresse. Ingen fast lokal adresse (C-S4/D-B5): den
+     * kommer fra serveren («defaults» i GET /api/me/server), fra Homelab-appen eller fra brukeren. Lagrede adresser beholdes.
+     */
     const val DEFAULT_BASE = "https://os.smarthjemeksperten.no"
-    const val DEFAULT_LOCAL = "http://10.69.1.39:3000"
+    /** Eksempelteksten i feltet for lokal adresse. */
+    const val LOCAL_HINT = "http://192.168.x.x:3000"
     const val CLIENT = "kalender"
     const val REDIRECT = "kalender://auth"
     const val TIMEOUT_MS = 60_000L
@@ -120,9 +124,9 @@ object Kal41 {
 
     fun manual(ctx: Context): String = plain(ctx).getString("k41_manual", "") ?: ""
     fun setManual(ctx: Context, s: String) { plain(ctx).edit().putString("k41_manual", s).apply() }
-    // Prompt 47: uten lagrede adresser (ny installasjon, eldre server) gjelder standardverdiene.
+    // Prompt 47: uten lagrede adresser gjelder serverens standardverdi (tom til serveren har sendt den).
     fun local(ctx: Context): List<String> = (plain(ctx).getString("k41_local", "") ?: "").split('\n').filter { it.startsWith("http") }
-        .ifEmpty { listOf(Kal47Srv.stdLocal(ctx)) }
+        .ifEmpty { listOfNotNull(Kal47Srv.stdLocal(ctx).takeIf { it.startsWith("http") }) }
     fun external(ctx: Context): String = (plain(ctx).getString("k41_external", "") ?: "").ifBlank { Kal47Srv.stdExternal(ctx) }
     fun auto(ctx: Context): Boolean = plain(ctx).getBoolean("k41_auto", true)
     fun now(ctx: Context): String = plain(ctx).getString("k41_now", "") ?: ""
@@ -135,8 +139,6 @@ object Kal41 {
         raw += local(ctx); raw += external(ctx)
         raw += KalAuth.lastServer(ctx)
         raw += DEFAULT_BASE
-        // Prompt 47: standard lokal adresse til slutt (5G: ekstern først; hjemme velger syncServers() lokal).
-        raw += DEFAULT_LOCAL
         return raw.map { it.trim().trimEnd('/') }.filter { it.startsWith("http://") || it.startsWith("https://") }.distinct()
     }
 
@@ -259,7 +261,7 @@ object Kal41 {
         return n
     }
 
-    /** «Lokal: 10.69.1.39:3000 · ekstern: os.smarthjemeksperten.no · nå: Lokal · hentes fra Homelab» */
+    /** «Lokal: 192.168.1.20:3000 · ekstern: os.smarthjemeksperten.no · nå: Lokal · hentes fra Homelab» */
     fun summary(ctx: Context): String {
         val parts = ArrayList<String>()
         local(ctx).firstOrNull()?.let { parts += "Lokal: " + it.substringAfter("://") }

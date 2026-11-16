@@ -78,7 +78,7 @@ fun ServerDialog47(onClose: () -> Unit, login: Boolean = false) {
         ) {
             Tx("Server", news(KType.title3, k.ink))
             SrvField47("EKSTERN ADRESSE", ext, { ext = it }, Kal47Srv.stdExternal(ctx), extMs) { Hap.tick(); test(true) }
-            SrvField47("LOKAL ADRESSE", loc, { loc = it }, Kal47Srv.stdLocal(ctx), locMs) { Hap.tick(); test(false) }
+            SrvField47("LOKAL ADRESSE", loc, { loc = it }, Kal47Srv.stdLocal(ctx).ifBlank { Kal41.LOCAL_HINT }, locMs) { Hap.tick(); test(false) }
             Tx("Hjemme (lokal adresse svarer innen 1,5 s) brukes lokal, ellers ekstern. Endringer synkes til dine andre enheter.",
                 man(KType.footnote, FontWeight.Medium, k.mut), maxLines = 4)
             if (msg.isNotBlank()) Tx(msg, man(KType.footnote, FontWeight.SemiBold, k.ink2), maxLines = 3)

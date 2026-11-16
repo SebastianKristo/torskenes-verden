@@ -366,9 +366,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             if (srv.isBlank()) { message = "Skriv inn serveradressen"; return@launch }
             val r = try {
                 val dev = "${Build.MANUFACTURER} ${Build.MODEL}".trim()
-                // Prompt 47: ekstern (https) først; svarer den ikke, prøves den lokale standardadressen hvis den er vår server.
+                // Prompt 47: ekstern (https) først; svarer den ikke, prøves den lokale adressen vi kjenner hvis den er vår server.
                 try { Api.login(srv, username, password, code, dev) } catch (e0: ApiException) {
-                    val via = if (e0.status == 0) loginVia47(srv) else null
+                    val via = if (e0.status == 0) loginVia47(srv, localFor47(srv)) else null
                     if (via == null) throw e0
                     Api.login(via, username, password, code, dev)
                 }
@@ -396,6 +396,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun cancelTotp() { pending = null }
+
+    /** Lokal adresse valgt med tannhjulet før innlogging (Accounts.kt). */
+    internal fun lastLocal89(): String = store.lastLocal()
 
     fun switchTo(id: String) {
         activeId = id

@@ -10,7 +10,6 @@ import no.kristo.felles.nett.ServerAdresse
  */
 object Regel89 {
     const val EXTERNAL = ServerAdresse.STANDARD
-    const val LOCAL = "http://10.69.1.39:3000"
     /** Den gamle, feilstavede standarden (:felles, ServerAdresse). */
     const val OLD_EXTERNAL = ServerAdresse.GAMMEL_STANDARD
 

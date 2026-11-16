@@ -50,7 +50,7 @@
         <intent><action android:name="android.intent.action.TTS_SERVICE" /></intent>
     </queries>
 
-    <!-- Prompt 47: klartekst bare til den lokale serveren (10.69.1.39), se res/xml/network_security_config.xml. -->
+    <!-- Prompt 47/86: klartekst bare på lokalt nett (LokaltNett.kt), se res/xml/network_security_config.xml. -->
     <!-- Prompt 52 (AND52A): visningsnavnet er «Homelab» (res/values/strings52a.xml). -->
     <application
         android:label="@string/app_name"

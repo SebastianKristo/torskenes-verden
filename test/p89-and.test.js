@@ -53,14 +53,14 @@ test('domenet: ingen gammel stavemåte noe sted i apps/android (bare den oppdelt
   assert.match(code(WEAR, 'WearApi.kt'), /internal fun migrerGammelStandard\(s: String\?\): String\? = ServerAdresse\.migrer\(s\)/);
 });
 
-test('domenet: standardverdiene er os.smarthjemeksperten.no, lokal uendret http://10.69.1.39:3000', () => {
+test('domenet: standardverdien er os.smarthjemeksperten.no, og lokal adresse har ingen fast standard (C-S4)', () => {
   assert.match(code(APP, 'Serveradresse.kt'), /const val DEFAULT_EXTERNAL47 = "https:\/\/os\.smarthjemeksperten\.no"/);
-  assert.match(code(APP, 'Serveradresse.kt'), /const val DEFAULT_LOCAL47 = "http:\/\/10\.69\.1\.39:3000"/);
+  assert.doesNotMatch(code(APP, 'Serveradresse.kt'), /10\.69\.1\.39/);
   assert.match(code(APP, 'Serveradresse.kt'), /const val DEFAULT_SERVER41 = DEFAULT_EXTERNAL47/);
   assert.match(code(FELLES, 'ServerAdresse.kt'), /const val STANDARD: String = "https:\/\/os\.smarthjemeksperten\.no"/);
   assert.match(code(APP, 'Regler.kt'), /const val EXTERNAL = ServerAdresse\.STANDARD/);
   assert.match(code(KAL, 'Innlogging.kt'), /const val DEFAULT_BASE = "https:\/\/os\.smarthjemeksperten\.no"/);
-  assert.match(code(KAL, 'Innlogging.kt'), /const val DEFAULT_LOCAL = "http:\/\/10\.69\.1\.39:3000"/);
+  assert.doesNotMatch(code(KAL, 'Innlogging.kt'), /10\.69\.1\.39/);
   assert.match(code(WEAR, 'WearApi.kt'), /const val STANDARD_SERVER = ServerAdresse\.STANDARD/);
   // Klartekst er fortsatt bare for lokalt nett (prompt 86) – ingen ny vert i nettverkskonfigen.
   const nsc = rd(join(AND, 'app/src/main/res/xml/network_security_config.xml'));
@@ -93,7 +93,7 @@ test('tannhjul på innloggingen (Homelab): ikon «settings» 48 dp øverst til h
   assert.match(ui, /"Tilkoblet · \$host"/);
   assert.match(ui, /if \(ok\) p\.pos else p\.lab/); // grønn / rød
   assert.match(ui, /Regel89\.clean\(ext\)/);
-  assert.match(ui, /ext = DEFAULT_EXTERNAL47; loc = DEFAULT_LOCAL47/);
+  assert.match(ui, /ext = DEFAULT_EXTERNAL47; loc = ""/);
   assert.match(ui, /store\?\.rememberServer\(e\); store\?\.rememberLocal\(l\)/);
   const login = block(code(join(APP, 'ui'), 'PapirSider.kt'), 'internal fun PaperLogin(');
   assert.match(login, /LoginGear89\(Modifier\.align\(Alignment\.TopEnd\)\.statusBarsPadding\(\)/);
