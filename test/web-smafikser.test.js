@@ -1,4 +1,4 @@
-// Prompt 50b: statiske sjekker for to små web-fikser. (Mikrofonens utseende er erstattet i prompt 70, se p70-webhome.test.js.)
+// Prompt 50b: statiske sjekker for to små web-fikser. (Mikrofonens utseende er erstattet i prompt 70, se hjem-web.test.js.)
 //  - claude-code-web-mikrofonknapp.md: mikrofonen i søkefeltet på Dashboard (tale.js) er en 40×40 sirkel med sentrert
 //    18 px strek-ikon, gjennomsiktig i hvile, rød under opptak, 0,18 s overgang – og ligger mellom «✦ AI» og «Søk».
 //    Funksjonen er den samme som før: opptak til /api/voice53/transcribe (NB-Whisper/Voz/Phonon), ikke Web Speech i søket.

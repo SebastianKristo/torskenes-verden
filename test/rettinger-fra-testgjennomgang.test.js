@@ -2,7 +2,7 @@
 //  1. Sporing: en returnert sending med passert forventet levering vises som «Returnert», ikke «Forsinket» (server/sporing/shipments.js).
 //  2. Glimt: planlegger modellen bare prat eller nettsøk for et strømprisspørsmål, svarer strømprisverktøyet (server/glimt/engine.js);
 //     planlagte oppgaver om strømpris røres ikke.
-//  3. Min reise (mock-rutetabellen): hvilke minutter i 30-minutterssyklusen 46 står først – begrunner den låste klokka i p41-testen.
+//  3. Min reise (mock-rutetabellen): hvilke minutter i 30-minutterssyklusen 46 står først – begrunner den låste klokka i testen i felles-api-innlogging-og-hjemlys.
 // Ingen nett: fetch er byttet ut.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -99,7 +99,7 @@ test('Glimt: strømprisspørsmål svares av strømprisverktøyet også når plan
   assert.deepEqual(outside.filter((u) => !/127\.0\.0\.1:9/.test(u)), [], 'ingen kall ut på nettet');
 });
 
-test('Min reise (mock): 45 står først i 23 av 30 minutter, 46 når den er over 3 min raskere – p41-testen låser derfor klokka til minutt 10', async () => {
+test('Min reise (mock): 45 står først i 23 av 30 minutter, 46 når den er over 3 min raskere – testen i felles-api-innlogging-og-hjemlys låser derfor klokka til minutt 10', async () => {
   process.env.MOCK_DATA = '1';
   try {
     const base = Date.parse('2026-11-11T12:00:00Z');
@@ -117,7 +117,7 @@ test('Min reise (mock): 45 står først i 23 av 30 minutter, 46 når den er over
   } finally { delete process.env.MOCK_DATA; }
 });
 
-test('dal53: en treg lasting som ble startet før lasteren ble byttet, skriver ikke over den nye instansen (p54 «Voz parallelt» under last)', async () => {
+test('dal53: en treg lasting som ble startet før lasteren ble byttet, skriver ikke over den nye instansen (tale-nb-whisper «Voz parallelt» under last)', async () => {
   const M = await import('../server/ai/desertant/models.js');
   const slow = { navn: 'gammel' }, mock = { navn: 'ny' };
   M._setLoader53('tongue', () => new Promise((r) => setTimeout(() => r(slow), 60)));

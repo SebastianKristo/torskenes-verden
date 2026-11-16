@@ -1,7 +1,7 @@
 // Prompt 31: Web Push uten avhengigheter (bare node:crypto).
 // - VAPID (RFC 8292): ES256-JWT {aud, exp, sub} signert med serverens P-256-nøkkel. Header «Authorization: vapid t=…, k=…».
 // - Innhold kryptert med «aes128gcm» (RFC 8291 + RFC 8188): ECDH (P-256) mot abonnementets p256dh, HKDF med auth-hemmeligheten,
-//   én post (rs 4096) med skilletegnet 0x02. Testet mot testvektoren i RFC 8291 kap. 5 (test/p31-push.test.js).
+//   én post (rs 4096) med skilletegnet 0x02. Testet mot testvektoren i RFC 8291 kap. 5 (test/web-push.test.js).
 // - Nøklene lages første gang og lagres i kv(OWNER, 'vapid') som JWK (privat) + offentlig nøkkel i base64url.
 import { createECDH, createHmac, createCipheriv, createDecipheriv, createPrivateKey, createPublicKey, randomBytes, sign, generateKeyPairSync } from 'node:crypto';
 import { kv, OWNER } from './db.js';

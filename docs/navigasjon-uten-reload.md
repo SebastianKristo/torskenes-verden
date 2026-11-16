@@ -61,5 +61,5 @@ har samme tema som Homelab, så det ikke blir en hvit ramme. Innenfor hver av ap
 
 ## Test
 
-- `test/p87-nav.test.js` (i `npm test`): scroll-reglene i en liten falsk nettleser og reglene i koden.
+- `test/web-navigasjon.test.js` (i `npm test`): scroll-reglene i en liten falsk nettleser og reglene i koden.
 - `test/e2e51/nav87.e2e.mjs` (`npm run test:e2e`): testlista fra spesifikasjonen i Chromium.

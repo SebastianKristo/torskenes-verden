@@ -1,10 +1,12 @@
 // Komprimering av JSON-svar (server/http/compress.js): br/gzip etter Accept-Encoding, aldri SSE eller binært.
+// Statiske tekstfiler under /assets (server/cache-bust.js): gzip når klienten ber om det, og 304 med svak ETag.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { brotliDecompressSync, gunzipSync } from 'node:zlib';
 import { Hono } from 'hono';
 import { streamSSE } from 'hono/streaming';
 import { compressJson, pickEncoding } from '../server/http/compress.js';
+import { installCacheBust } from '../server/cache-bust.js';
 
 const big = { items: Array.from({ length: 400 }, (_, i) => ({ id: i, text: `Rema 1000 Bislett ${i}` })) };
 const app = new Hono();
@@ -67,4 +69,38 @@ test('ETag blir svak og Set-Cookie beholdes', async () => {
   const c = await get('/cookie', 'br');
   assert.deepEqual(c.headers.getSetCookie(), ['a=1', 'b=2']);
   assert.equal(c.headers.get('content-encoding'), 'br');
+});
+
+/* ---------------- Statiske filer under /assets (tidligere egen fil) ---------------- */
+
+// Prompt 85: tekstfiler under /assets komprimeres med gzip når klienten ber om det, API-svar røres ikke, og 304 virker
+// også med den svake ETag-en et komprimert svar får.
+const assetsApp = new Hono();
+installCacheBust(assetsApp);
+assetsApp.get('/api/x', (c) => c.json({ a: 'x'.repeat(5000) }));
+
+test('JS under /assets: gzip med Accept-Encoding, ellers ukomprimert', async () => {
+  const plain = await assetsApp.request('/assets/js/app.js');
+  assert.equal(plain.status, 200);
+  assert.equal(plain.headers.get('content-encoding'), null);
+  const raw = Buffer.from(await plain.arrayBuffer());
+  const gz = await assetsApp.request('/assets/js/app.js', { headers: { 'Accept-Encoding': 'gzip' } });
+  assert.equal(gz.headers.get('content-encoding'), 'gzip');
+  assert.match(gz.headers.get('vary') || '', /accept-encoding/i);
+  const body = Buffer.from(await gz.arrayBuffer());
+  assert.ok(body.length < raw.length / 2, `komprimert ${body.length} mot ${raw.length}`);
+  assert.deepEqual(gunzipSync(body), raw);
+});
+
+test('304 også når nettleseren sender den svake ETag-en tilbake', async () => {
+  const gz = await assetsApp.request('/assets/js/app.js', { headers: { 'Accept-Encoding': 'gzip' } });
+  const etag = gz.headers.get('etag');
+  assert.match(etag, /^W\//);
+  const again = await assetsApp.request('/assets/js/app.js', { headers: { 'Accept-Encoding': 'gzip', 'If-None-Match': etag } });
+  assert.equal(again.status, 304);
+});
+
+test('API-svar komprimeres ikke av denne mellomvaren', async () => {
+  const r = await assetsApp.request('/api/x', { headers: { 'Accept-Encoding': 'gzip' } });
+  assert.equal(r.headers.get('content-encoding'), null);
 });
