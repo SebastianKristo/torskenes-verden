@@ -82,10 +82,10 @@ enum KalSchool {
 
     /* ---------- Prøver og frister ---------- */
 
-    /// Dager til prøven: serverens daysLeft når den finnes, ellers fra datoen.
-    static func daysLeft(_ e: KalEvent, today: String) -> Int {
-        if let d = e.daysLeft { return d }
-        return KalD.daysBetween(today, e.day)
+    /// Dager til prøven eller fristen: serverens daysLeft (regnet i Oslo-tid, sendes for prove/innl). Appen regner ikke selv;
+    /// mangler feltet, vises ingen nedtelling.
+    static func daysLeft(_ e: KalEvent) -> Int? {
+        e.daysLeft
     }
 
     /// «I dag», «I morgen», «12 dager».
@@ -180,9 +180,9 @@ enum KalSchool {
             }
         }
         if let x = tests.first {
-            let n: Int = daysLeft(x, today: today)
-            let w: String = n <= 0 ? "i dag" : n == 1 ? "i morgen" : "om " + String(n) + " dager"
-            s.next = (s.next.isEmpty ? "" : s.next + " · ") + x.title + " " + w
+            var w: String = ""
+            if let n = daysLeft(x) { w = " " + (n <= 0 ? "i dag" : n == 1 ? "i morgen" : "om " + String(n) + " dager") }
+            s.next = (s.next.isEmpty ? "" : s.next + " · ") + x.title + w
         }
         return s
     }

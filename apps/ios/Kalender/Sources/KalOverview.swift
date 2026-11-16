@@ -391,8 +391,10 @@ struct KalTestRow: View {
     let today: String
 
     var body: some View {
-        let n: Int = KalSchool.daysLeft(e, today: today)
-        let red: Bool = KalSchool.urgent(n)
+        // Nedtellingen kommer fra serveren (daysLeft); uten den vises ingen nedtelling.
+        let n: Int? = KalSchool.daysLeft(e)
+        let red: Bool = n.map { (x: Int) -> Bool in KalSchool.urgent(x) } ?? false
+        let when: String = n.map { (x: Int) -> String in KalSchool.inText(x) } ?? ""
         let d: Date = KalD.date(e.day)
         Button(action: { s.openFromOverview(e.id) }) {
             HStack(spacing: 12) {
@@ -406,16 +408,18 @@ struct KalTestRow: View {
                     Text(KalSchool.testLine(e)).font(KalFont.ui(12.5)).foregroundStyle(t.mut).lineLimit(1)
                 }
                 Spacer(minLength: 4)
-                Text(KalSchool.inText(n)).font(KalFont.ui(11.5, .bold)).foregroundStyle(red ? Color.white : t.ink).lineLimit(1)
-                    .padding(.horizontal, 9).padding(.vertical, 4)
-                    .background(Capsule().fill(red ? t.red : t.chip))
+                if !when.isEmpty {
+                    Text(when).font(KalFont.ui(11.5, .bold)).foregroundStyle(red ? Color.white : t.ink).lineLimit(1)
+                        .padding(.horizontal, 9).padding(.vertical, 4)
+                        .background(Capsule().fill(red ? t.red : t.chip))
+                }
             }
             .padding(.vertical, 8)
             .frame(minHeight: 58)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(e.title + ", " + KalSchool.testLine(e) + ", " + KalSchool.inText(n))
+        .accessibilityLabel(e.title + ", " + KalSchool.testLine(e) + (when.isEmpty ? "" : ", " + when))
     }
 }
 
