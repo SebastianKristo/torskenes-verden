@@ -2,7 +2,7 @@ import SwiftUI
 import UIKit
 
 /* ---------------- Prompt 51 (IOSFEAT51): felles byggeklosser for de nye sidene ----------------
- Planlegging (Plan51*.swift), Familiekalender (FamCal51.swift), «I kveld» (Kveld51*.swift), felles søk (GlobalSearch.swift),
+ Planlegging (Plan51*.swift), Familiekalender (FamilyCalendar.swift), «I kveld» (Kveld51*.swift), felles søk (GlobalSearch.swift),
  tema (ThemeSync.swift) og onboarding (OnboardingInvite.swift). Papir-stil: Top50Bar, kort med 20 pt radius, pilleknapper.
  Bredde: kortene ligger i et adaptivt rutenett (minst 340 pt), så iPad og Fold får to eller tre kolonner og telefonen én.
  Fullskjermene legges på PaperShell via feat51Host (Paper.swift). */

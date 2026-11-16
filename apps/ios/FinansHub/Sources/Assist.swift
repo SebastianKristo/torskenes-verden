@@ -360,7 +360,7 @@ struct Assist31Bubble: View {
                 }
                 .frame(minHeight: 28)
             } else if let a = m.homeAnswer {
-                // Prompt 70: kort A erstatter svarteksten når Glimt har lagt inn en avtale (Cal70Card.swift).
+                // Prompt 70: kort A erstatter svarteksten når Glimt har lagt inn en avtale (GlimtCalendarCard.swift).
                 if let c = Cal70Model.shared.card, Cal70Model.shared.showsCard(a.text) {
                     Cal70CardView(card: c, mode: .home).id(c.eventId)
                 } else {

@@ -22,6 +22,13 @@ test('C-B3: KalNet sender aldri tom kropp stille – ugyldig JSON gir feil', () 
   assert.match(src, /throw KalNetError\(status: 0, message: "Ugyldig forespørsel"\)/);
 });
 
+test('filnavn: ingen Swift-filer med prompt- eller versjonsnummer i navnet', () => {
+  const nummer = swiftFiles().map((f) => relative(IOS, f)).filter((f) => /[A-Za-z]\d+[A-Za-z]*\.swift$/.test(f.split('/').pop()));
+  assert.deepEqual(nummer, []);
+  for (const f of ['FinansHub/Sources/GlimtCalendarCard.swift', 'FinansHub/Sources/FamilyCalendar.swift', 'FinansHub/Sources/MediaPlayback.swift',
+    'Shared/CalendarShared.swift', 'Shared/CalendarWidgetViews.swift']) assert.ok(existsSync(join(IOS, f)), f);
+});
+
 test('C-B5: én ruting for innst-sidene (InnstSide), brukt av både telefon og iPad', () => {
   const paper = code(raw('FinansHub/Sources/Paper.swift'));
   const wide = code(raw('FinansHub/Sources/SettingsWide.swift'));

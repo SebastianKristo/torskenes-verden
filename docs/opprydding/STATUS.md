@@ -45,7 +45,7 @@ Dette dokumentet går gjennom alle funnene i [AUDIT.md](AUDIT.md) og detaljrappo
 | `server/index.js` | 1 017 linjer | 1 017 | **668** | – |
 | `db.prepare(` i serveren | 513 | 513 | **387** | Resten bruker `q(sql)` med cache (`3f27b6f`) |
 | «I dag» i UTC (`toISOString().slice(0, 10)`) | 63 | 71 | **53** | Alle 53 er datoaritmetikk på rene datoer (se H5) |
-| Swift-filer med nummer | 493 av 568 | 493 av 568 | **5 av 532** | `Cal70Card`, `FamCal51`, `Playback44`, `Calendar26WidgetViews`, `Calendar26Shared` |
+| Swift-filer med nummer | 493 av 568 | 493 av 568 | **0 av 533** | rest-ios: `GlimtCalendarCard`, `FamilyCalendar`, `MediaPlayback`, `CalendarWidgetViews`, `CalendarShared` (filene; typenavnene som `Cal70CardView` står foreløpig). `test/ios-opprydding.test.js` |
 | Kotlin-filer med nummer | 298 av 344 | 298 av 344 | **70 av 367** | Bl.a. `Paper14–19.kt`, `Models11–17.kt`, `…51Plat.kt`, `Brief34Widgets.kt` |
 | Filer med nummer utenfor `test/` (server, public, apps) | 892 | 1 202 (alle typer) | **111** | – |
 | Testfiler med nummer | – | – | **195 av 275** | `test/p22.test.js` … ikke omdøpt |

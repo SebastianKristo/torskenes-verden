@@ -293,7 +293,7 @@ struct Glimt67HomeExtras: View {
                     Text(g.note67).font(PF.ui(12, .semibold)).foregroundStyle(light.opacity(0.55))
                 }
                 if let ch = g.choices67 {
-                    // Prompt 70: «Velg dato» viser datovelgeren i kortet (Cal70Card.swift).
+                    // Prompt 70: «Velg dato» viser datovelgeren i kortet (GlimtCalendarCard.swift).
                     Cal70Choices(ch: ch, ink: Color.white, line: Color.white.opacity(0.3), font: PF.ui(13, .semibold), pick: { (it: Choice67Item) in
                         g.pick67(it, store)
                     }, date: { (t: String) in
@@ -376,7 +376,7 @@ struct Glimt67Answer {
 
     /// Kalender- eller gjøremålskort fra treffene (samme form som kortene fra /api/assist, ChatCards.swift).
     static func card(_ tool: String, _ a0: [String: Any]?, _ results: [[String: Any]]) -> [String: Any]? {
-        if let c70 = Cal70Data.chatCard(a0) { return c70 } // prompt 70: kort A (Cal70Card.swift)
+        if let c70 = Cal70Data.chatCard(a0) { return c70 } // prompt 70: kort A (GlimtCalendarCard.swift)
         let evs: [[String: Any]] = results.filter { JS.str($0, "kind") == "event" }
         if !evs.isEmpty || tool.hasPrefix("calendar.") {
             let today: String = JS.fmt(Date(), "yyyy-MM-dd")

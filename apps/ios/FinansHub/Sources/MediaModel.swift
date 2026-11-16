@@ -238,7 +238,7 @@ final class Media43 {
     @ObservationIgnored private var pollTask: Task<Void, Never>? = nil
     @ObservationIgnored private var toastTask: Task<Void, Never>? = nil
 
-    /// Prompt 44: «Avspilling» (Plex/Jellyfin, Playback44.swift) etter Prowlarr. Prompt 87: «NRK» (NrkPage.swift) mellom Prowlarr og Avspilling.
+    /// Prompt 44: «Avspilling» (Plex/Jellyfin, MediaPlayback.swift) etter Prowlarr. Prompt 87: «NRK» (NrkPage.swift) mellom Prowlarr og Avspilling.
     /// Prompt 88: «Musikk» (yubal, MusikkPage.swift) etter NRK.
     static let tabs: [(String, String)] = [("kommer", "Kommer snart"), ("sonarr", "Sonarr"), ("radarr", "Radarr"), ("qbit", "qBittorrent"), ("prowlarr", "Prowlarr"), ("nrk", "NRK"), ("musikk", "Musikk"), ("avspilling", "Avspilling")]
 
