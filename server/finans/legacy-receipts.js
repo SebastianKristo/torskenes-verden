@@ -1,5 +1,5 @@
 // Den gamle kvitteringslista (før FinansHub): /api/receipts på den innloggede routeren, tabellen receipts (beløp i kroner, REAL).
-// Q30: dataene flyttes ikke ennå, bare koden. FinansHub-kvitteringene ligger i fh_receipts (/finans/api/receipts).
+// Q30: dataene flyttes bare når admin ber om det (Økonomi → Innstillinger → Backup og data → «Flytt gamle kvitteringer», receipt-migration.js). FinansHub-kvitteringene ligger i fh_receipts (/finans/api/receipts).
 //   GET    /api/receipts            → [{id, store, date, category, amount, file, thumb, mime}] (brukerens egne, nyeste først)
 //   POST   /api/receipts (multipart: store, date, category, amount, file, thumb) → kvitteringen
 //   PATCH  /api/receipts/:id {store?, date?, category?, amount?} → kvitteringen (404 for andres)

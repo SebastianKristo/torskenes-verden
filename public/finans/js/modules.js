@@ -8,6 +8,7 @@ import { aiStart, aiDone } from '/assets/js/ai-jobs.js';
 import { bolPage, loadB42, bindB42 } from './boliger.js'; // prompt 42: Boliger 2a + 1b
 import { stockLogo, instrSub } from './ui-felles.js';
 import { plan51Page, PLAN51_ICON } from './planlegging.js'; // Sparing og planer (sparemål, skatt, priser, abonnementsjeger) og Planlagte trekk
+import { receiptMigrationBox } from './kvittering-flytting.js'; // Q30: admin flytter den gamle kvitteringslista til Økonomi
 
 Object.assign(ICONS, {
   sub: 'M17 2l4 4-4 4M3 11V9a3 3 0 0 1 3-3h15M7 22l-4-4 4-4M21 13v2a3 3 0 0 1-3 3H3',
@@ -308,6 +309,7 @@ export function backupTab() {
       <div class="sub" style="font-size:13px;line-height:1.5">En ny installasjon spør ved første oppstart: start tom, hent fra SMB-share eller last opp en backupfil. Her kan du gjøre det samme manuelt. Både .json-backup, Excel-databasen og krypterte SMB-backuper (.tar.gz.enc) kan importeres. Du ser antall rader per tabell før noe endres.</div>
       <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center"><label class="btn" style="cursor:pointer">Velg backupfil …<input type="file" accept=".json,.xlsx,.gz,.enc,application/json" data-mbk-file hidden></label><input class="inp" type="password" data-mbk-phrase placeholder="Passfrase (krypterte filer)" style="max-width:260px"></div>
       ${stagePreview()}</div>
+    ${receiptMigrationBox(true)}
     ${!S.boot.hasData ? '<button class="btn" data-act="demo" style="align-self:flex-start">Last inn demodata</button>' : ''}
     <button class="btn danger" data-act="wipe" style="align-self:flex-start">Slett alle økonomidata …</button></div>`;
 }

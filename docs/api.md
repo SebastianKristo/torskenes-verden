@@ -140,7 +140,7 @@ Kalender og e-post, Media, Økonomi, Reise og pakker, AI, Varsler, Nettverk, Gen
 | Finn | `GET/POST /finn`, `PATCH/DELETE /finn/:id` |
 | Tokens | `GET/POST /tokens`, `DELETE /tokens/:id` (`{name,scopes,expires:'30d'\|'90d'\|'1y'\|'never'}`) |
 | Innstillinger | `PUT /settings`, `GET/PUT /prefs`, `GET /users` |
-| Backup | `GET /backup`, `GET /backup/export?format=json\|xlsx\|csv`, `PUT /backup/smb`, `POST /backup/smb/test`, `POST /backup/run`, `GET /backup/list`, `POST /backup/stage`, `POST /backup/restore`, `POST /firstrun` |
+| Backup | `GET /backup`, `GET /backup/export?format=json\|xlsx\|csv`, `PUT /backup/smb`, `POST /backup/smb/test`, `POST /backup/run`, `GET /backup/list`, `POST /backup/stage`, `POST /backup/restore`, `POST /firstrun`. Den gamle kvitteringslista (`/api/receipts`, Q30): `GET /legacy-receipts/migration` (forhåndsvisning: antall per bruker og bildefiler), `POST /legacy-receipts/migration {confirm:true, previewId}` (kopi av databasen i `DATA_DIR/backups` først, så kopieres kvitteringene til Økonomi), `POST /legacy-receipts/migration/:id/undo`, `GET /legacy-receipts/migrations`. Bare admin i nettleseren, i Innstillinger → Backup og data |
 | Diverse | `GET /logo/:domain` (offentlig; 204 uten innhold når logoen ikke finnes, klienten viser bokstavmerket), `GET /export.json`, `POST /demo`, `DELETE /all` |
 
 ## Smarthjem, Matplan og Domener (admin)

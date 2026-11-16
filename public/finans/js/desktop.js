@@ -24,6 +24,7 @@ import { srcTag51, raw51, bind51, learn51 } from './kvittering-kilde.js'; // pro
 import { logoBtn73 } from './endre-logo.js'; // prompt 73: trykk på logoen → «Endre logo»
 import { rcPanel52, rcpBefore52, rcpAfter52, rcpGone52 } from './kvitteringspanel.js'; // prompt 52 (WEB52F): felles kvitteringspanel
 import { catMigrationBox, loadCatMigration } from './kategori-flytting.js'; // Fase 6 (Q11): admin flytter gamle kategoridata
+import { loadReceiptMigration } from './kvittering-flytting.js'; // Q30: admin flytter den gamle kvitteringslista (boksen ligger i Backup og data)
 
 ICONS.ai = 'M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9zM19 16l.8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8z';
 ICONS.filter = 'M4 6h16M7 12h10M10 18h4';
@@ -1066,6 +1067,7 @@ export async function load(page = u.page) {
   try { await Promise.all([loadLayout(), ...LOADERS[page].map((f) => f())]); } catch (e) { toast(e.message); }
   if (page === 'inn' && u.setTab === 'mobil') S.tokens = await api('/tokens').catch(() => []);
   if (page === 'inn' && u.setTab === 'data') await loadBackup().catch((e) => toast(e.message));
+  if (page === 'inn' && u.setTab === 'data' && canSrv()) await loadReceiptMigration();
   if (page === 'inn' && u.setTab === 'aks') await loadStocksSettings().catch((e) => toast(e.message));
   if (page === 'inn' && (u.setTab === 'imp' || u.setTab === 'bank')) await Promise.all([loadImpTpl(), loadHomeRules()]);
   if (page === 'inn' && u.setTab === 'bol') await loadBolSettings().catch((e) => toast(e.message));
