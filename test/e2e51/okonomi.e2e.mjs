@@ -78,3 +78,26 @@ test('mobil: Homelab-sider åpnes i Homelab-skallet, Faste betalinger har filtre
   assert.deepEqual(errors.filter((e) => !/\/api\//.test(e)), []);
   await ctx.close();
 });
+
+// Runde 3: Innstillinger → Nyheter, Media, Ruter og Home Assistant tegnes av moduler som lastes etter oppstart. Startet appen
+// rett på adressen, kastet settingsView «PAGE[page] is not a function» (fanget av hver modul og logget som advarsel) til
+// modulen var lastet.
+test('mobil: direkte start på Innstillinger-sider fra moduler som lastes senere gir ingen feil', async (t) => {
+  if (!E) return t.skip('ingen nettleser');
+  const ctx = await E.browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, serviceWorkers: 'block' });
+  await ctx.route((u) => !u.href.startsWith(BASE), (r) => r.abort());
+  await apiLogin(ctx, 'sebastian', PASSWORD);
+  for (const [hash, tekst] of [['#/set/nyheter', 'Legg til adresse'], ['#/set/widgets', 'Widget'], ['#/set/media', ''], ['#/set/ruter', ''], ['#/set/helseha', '']]) {
+    const page = await ctx.newPage();
+    const feil = [];
+    page.on('pageerror', (e) => feil.push(e.message));
+    page.on('console', (m) => { if (/is not a function/.test(m.text())) feil.push(m.text().split('\n')[0]); });
+    await page.goto(`${BASE}/finans/${hash}`);
+    await page.waitForTimeout(2500);
+    assert.equal(new URL(page.url()).hash, hash);
+    if (tekst) assert.match(await page.locator('.m-scroll').innerText(), new RegExp(tekst, 'i'), hash);
+    assert.deepEqual(feil, [], hash);
+    await page.close();
+  }
+  await ctx.close();
+});

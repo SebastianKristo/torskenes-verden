@@ -80,7 +80,9 @@ export function settingsView(th, sub) {
   const head = paper() ? '' : page
     ? `<div class="m-row">${th === 'ios' ? `<a class="gback" href="#/set" aria-label="Tilbake til Innstillinger">${icon('chev', 20, 'currentColor', 2.6)}</a>` : '<a class="back" href="#/set" aria-label="Tilbake til Innstillinger">←</a>'}</div><div class="title" style="font-size:${th === 'ios' ? 30 : 32}px">${PAGES[page]}</div>`
     : `<div class="title" style="padding:6px 4px 0">Innstillinger</div>`;
-  return `${head}${page ? PAGE[page](th, s1) : main(th)}`;
+  // Nyheter, Widgets m.fl. tegnes av moduler som lastes etter oppstart (mobile.js bind: P45/P46). Startes appen rett på
+  // adressen, vises en spinner til modulen er lastet og tegner siden på nytt.
+  return `${head}${!page ? main(th) : PAGE[page] ? PAGE[page](th, s1) : '<div class="m-spin"></div>'}`;
 }
 
 // Papir: tema, bakgrunn og nyhetsleser øverst (Mobil Papir App → Innstillinger), resten som før.
