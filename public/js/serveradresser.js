@@ -1,14 +1,16 @@
 // Prompt 47 (claude-code-standard-serveradresser.md): standard serveradresser og «Svarer · 34 ms»-test for Innstillinger → Server.
 // Brukes av web (settings-server.js) og PWA (finans/js/mobile-bakgrunn-og-hoytider.js). Ingen imports, så begge kan laste den.
 //
-// Standardverdier: ekstern https://os.smarthjemeksperten.no, lokal http://10.69.1.39:3000. Serveren kan overstyre dem via env
-// (PUBLIC_URL / LOCAL_URL) i GET /api/config/servers ({publicUrl, localUrl?}; localUrl bare etter innlogging). Mangler ruten (404) eller
-// feltene, gjelder standardverdiene.
+// Standardverdier: ekstern https://os.smarthjemeksperten.no, ingen fast lokal adresse (C-S4). Serveren sender sine i
+// GET /api/config/servers ({publicUrl, localUrl?}; localUrl bare etter innlogging, fra LOCAL_URL eller oppdaget LAN-adresse, ellers
+// null). Mangler ruten (404) eller feltene, er den eksterne standarden og den lokale tom. EKSEMPEL_LOKAL er bare en plassholder.
 //
 // Sikkerhet: en side lastet over https prøver aldri en http-adresse (blandet innhold) – da brukes den eksterne. CSP tillater
 // bare fetch til eget opphav, så andre https-adresser testes ved å laste appikonet som bilde (img-src https:).
 
-export const DEF47 = Object.freeze({ external: 'https://os.smarthjemeksperten.no', local: 'http://10.69.1.39:3000' });
+export const DEF47 = Object.freeze({ external: 'https://os.smarthjemeksperten.no', local: '' });
+/** Eksempel i skjemaet for lokal adresse. Aldri en verdi som lagres eller brukes. */
+export const EKSEMPEL_LOKAL = 'http://192.168.1.10:3000';
 
 const clean = (u) => String(u ?? '').trim().replace(/\/+$/, '');
 const okUrl = (u) => /^https?:\/\/[^\s/?#@]+(:\d+)?(\/\S*)?$/i.test(clean(u));

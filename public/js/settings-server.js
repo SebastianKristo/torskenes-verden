@@ -6,7 +6,7 @@
 // /api/config), status «Svarer · 34 ms» / «Svarer ikke» og «Test» under hver adresse, og «Tilbakestill til standard».
 // En https-side prøver aldri en http-adresse.
 import { api, esc, sheetBtn } from './util.js';
-import { defaults47, probe47, tone47 } from './serveradresser.js';
+import { DEF47, EKSEMPEL_LOKAL, defaults47, probe47, tone47 } from './serveradresser.js';
 
 const S = { d: null, loaded: false, missing: false, now: null, sheet: null, test: null, msg: '', busy: false, def: null, st: {} };
 let rerender = () => {};
@@ -19,7 +19,7 @@ export async function loadServer41(r) {
   if (S.loaded) return;
   S.loaded = true;
   const [me, def] = await Promise.allSettled([api('/me/server'), defaults47()]);
-  S.def = def.status === 'fulfilled' ? def.value : { external: 'https://os.smarthjemeksperten.no', local: 'http://10.69.1.39:3000' };
+  S.def = def.status === 'fulfilled' ? def.value : { ...DEF47 };
   useDef(me.status === 'fulfilled' ? me.value : null);
   // Prompt 47: tomme felt fylles med standardadressene (ikke lenger den oppdagede/Docker-adressen).
   if (me.status === 'fulfilled') S.d = { local: me.value.local || S.def.local, external: me.value.external || S.def.external, auto: me.value.auto !== false };
@@ -29,7 +29,8 @@ export async function loadServer41(r) {
   probeAll();
 }
 /** Serveren (prompt 47) sender sine standardverdier i /api/me/server → defaults. */
-function useDef(r) { const x = r?.defaults; if (x?.local && x?.external) S.def = { local: x.local, external: x.external }; }
+// C-S4: den lokale standarden kan være null (ingen LOCAL_URL og ingen oppdaget adresse) – da er den tom.
+function useDef(r) { const x = r?.defaults; if (x?.external) S.def = { local: x.local || '', external: x.external }; }
 /** Tester begge adressene (http fra https hoppes over) og tegner på nytt. */
 async function probeAll() {
   const d = S.d ?? {};
@@ -47,12 +48,13 @@ function isLocalHost(h) { return /^(localhost|127\.|10\.|192\.168\.|172\.(1[6-9]
 /** Rader til Konto-siden. */
 export function serverGroup41(row, group) {
   const d = S.d ?? { local: '', external: '', auto: true }, def = S.def ?? {};
-  const isDef = d.local === def.local && d.external === def.external;
+  // Uten standard lokal adresse er det bare den eksterne som kan avvike (den lokale beholdes ved tilbakestilling).
+  const isDef = (!def.local || d.local === def.local) && d.external === def.external;
   return group('Server', [
     addrRow('external', 'Ekstern adresse', 'Brukes ellers, for eksempel på mobilnett', d.external, 'server adresse ekstern domene'),
     addrRow('local', 'Lokal adresse', 'Brukes når du er hjemme på Wi-Fi', d.local, 'server adresse lokal ip wifi'),
     row({ t: 'Bytt automatisk', s: `Lokal når den svarer innen 1,5 s, ellers ekstern${S.now ? ` · nå: ${S.now}` : ''}`, tog: d.auto !== false, act: 'data-srv41-auto', k: 'server bytt automatisk lokal ekstern' }),
-    row({ t: 'Tilbakestill til standard', s: isDef ? 'Begge adressene er standard' : `${hostOf(def.external)} og ${hostOf(def.local)}`, act: 'data-srv47-reset', btn: 'Tilbakestill', disabled: isDef || S.busy, k: 'server tilbakestill standard adresse' }),
+    row({ t: 'Tilbakestill til standard', s: isDef ? (def.local ? 'Begge adressene er standard' : 'Ekstern adresse er standard') : def.local ? `${hostOf(def.external)} og ${hostOf(def.local)}` : `${hostOf(def.external)} · lokal adresse beholdes`, act: 'data-srv47-reset', btn: 'Tilbakestill', disabled: isDef || S.busy, k: 'server tilbakestill standard adresse' }),
   ], `Appene spør ikke etter serveradresse ved innlogging. Adressene lagres på kontoen din og brukes av mobilappene og Kalender. Nettsiden bruker alltid adressen den er åpnet fra${location.protocol === 'https:' ? ', og prøver aldri en http-adresse fra https' : ''}.${S.missing ? ' Serveren lagrer ikke adressene ennå, så endringer gjelder bare her.' : ''}`);
 }
 const hostOf = (u) => { try { return new URL(u).host; } catch { return u ?? ''; } };
@@ -72,7 +74,7 @@ function sheetHtml() {
   const t = S.test;
   return `<div class="srv41-ov" data-srv41-close><div class="srv41-sh" role="dialog" aria-modal="true" aria-labelledby="srv41-t">
     <div class="srv41-h"><b id="srv41-t">${k === 'local' ? 'Lokal adresse' : 'Ekstern adresse'}</b>${sheetBtn('Lukk', 'data-srv41-close', 'ghost')}</div>
-    <label class="srv41-f"><span>Adresse</span><input type="url" inputmode="url" autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="off" data-srv41-in value="${esc(v)}" placeholder="${esc((S.def ?? {})[k] ?? (k === 'local' ? 'http://10.69.1.39:3000' : 'https://os.smarthjemeksperten.no'))}"></label>
+    <label class="srv41-f"><span>Adresse</span><input type="url" inputmode="url" autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="off" data-srv41-in value="${esc(v)}" placeholder="${esc((S.def ?? {})[k] || (k === 'local' ? EKSEMPEL_LOKAL : DEF47.external))}"></label>
     <span class="srv41-hint">${k === 'local' ? 'Brukes når du er hjemme på Wi-Fi.' : 'Brukes når den lokale adressen ikke svarer.'} Må starte med http:// eller https://.</span>
     ${t ? `<span class="srv41-res ${t.ok ? 'ok' : t.run ? '' : 'err'}" role="status">${esc(t.text)}</span>` : ''}
     ${S.msg ? `<span class="srv41-res err" role="status">${esc(S.msg)}</span>` : ''}
@@ -126,7 +128,8 @@ document.addEventListener('click', async (e) => {
     e.preventDefault(); e.stopPropagation();
     const def = S.def ?? await defaults47();
     S.busy = true; rerender();
-    await save({ local: def.local, external: def.external, reset: true, device: 'Nettleser' }); // reset:true = serverens standard (SERVER47)
+    // reset:true = serverens standard (SERVER47). Uten standard lokal adresse sendes ikke local, så den lagrede beholdes.
+    await save({ ...(def.local ? { local: def.local } : {}), external: def.external, reset: true, device: 'Nettleser' });
     delete S.d.reset; delete S.d.device;
     S.busy = false; S.st = {}; rerender(); probeAll(); return;
   }

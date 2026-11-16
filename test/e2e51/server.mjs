@@ -12,6 +12,9 @@ process.env.NODE_ENV = 'test';
 process.env.MOCK_DATA = '1';
 process.env.OCR_FALLBACK = '0';
 process.env.PORT = process.env.E2E_PORT || '4605';
+// C-S4: serveren har ingen fast lokal adresse lenger. Uten LOCAL_URL ville den oppdage maskinens egen LAN-adresse, og
+// skjermbildene av Innstillinger → Konto ville variert mellom maskiner. Et fast eksempel holder dem like.
+process.env.LOCAL_URL ||= 'http://192.168.1.10:3000';
 delete process.env.OLLAMA_URL;
 delete process.env.GEMINI_API_KEY;
 delete process.env.GLITCHTIP_DSN;

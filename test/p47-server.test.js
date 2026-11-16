@@ -87,15 +87,51 @@ test('GET /api/config/servers: publicUrl uten innlogging (standard os.smarthjeme
   const pub = await req('/api/config/servers');
   assert.equal(pub.status, 200);
   assert.deepEqual(pub.body, { publicUrl: 'https://os.smarthjemeksperten.no', defaults: { external: 'https://os.smarthjemeksperten.no' }, app: 'homelab', api: 47 });
-  assert.ok(!pub.text.includes('10.69.1.39'), 'den lokale IP-en vises aldri uten innlogging');
+  assert.ok(!('localUrl' in pub.body), 'den lokale adressen vises aldri uten innlogging');
   assert.equal(pub.headers.get('cache-control'), 'no-store');
   const me = await A('/api/config/servers');
   assert.equal(me.body.publicUrl, 'https://os.smarthjemeksperten.no');
-  assert.equal(me.body.localUrl, 'http://10.69.1.39:3000');
-  assert.deepEqual(me.body.defaults, { external: 'https://os.smarthjemeksperten.no', local: 'http://10.69.1.39:3000' });
-  assert.deepEqual(me.body.source, { publicUrl: 'default', localUrl: 'default' });
-  assert.equal((await T('/api/config/servers')).body.localUrl, 'http://10.69.1.39:3000', 'også med app-token');
+  // C-S4: ingen fast lokal adresse. Uten LOCAL_URL og uten oppdaget adresse (i container) er den lokale adressen tom.
+  assert.equal(me.body.localUrl, null);
+  assert.deepEqual(me.body.defaults, { external: 'https://os.smarthjemeksperten.no', local: null });
+  assert.deepEqual(me.body.source, { publicUrl: 'default', localUrl: 'none' });
+  assert.ok(!me.text.includes('10.69.1.39'), 'aldri den gamle faste adressen');
+  assert.equal((await T('/api/config/servers')).body.localUrl, null, 'også med app-token');
   assert.equal((await req('/api/config/servers', { headers: { authorization: 'Bearer fh_ugyldig' } })).body.localUrl, undefined, 'ugyldig token = uten innlogging');
+});
+
+test('C-S4: ingen fast lokal adresse i serveren eller web (lokal adresse kommer fra LOCAL_URL, brukeren eller serverens oppdagelse)', () => {
+  const files = ['server/system/server-urls.js', 'server/auth/server-address.js', 'public/js/settings-server.js', 'public/js/serveradresser.js', 'public/finans/js/mobile-bakgrunn-og-hoytider.js'];
+  for (const f of files) assert.ok(!readFileSync(resolve(f), 'utf8').includes('10.69.1.39'), `${f} har fortsatt den faste adressen`);
+  assert.equal(s47.DEFAULT_LOCAL_URL47, undefined, 'standardkonstanten er fjernet');
+});
+
+test('C-S4 web: serveradresser.js har tom lokal standard, og localUrl: null fra serveren gir tom lokal adresse', async () => {
+  const w = await import('../public/js/serveradresser.js');
+  assert.equal(w.DEF47.local, '');
+  assert.equal(w.DEF47.external, 'https://os.smarthjemeksperten.no');
+  assert.match(w.EKSEMPEL_LOKAL, /^http:\/\/192\.168\./, 'plassholderen er bare et eksempel på et vanlig hjemmenett');
+  const prev = globalThis.fetch;
+  try {
+    globalThis.fetch = async () => Response.json({ publicUrl: 'https://home.example.no', localUrl: null });
+    assert.deepEqual(await w.defaults47(true), { external: 'https://home.example.no', local: '' });
+    globalThis.fetch = async () => Response.json({ publicUrl: 'https://home.example.no', localUrl: 'http://192.168.1.40:3000/' });
+    assert.deepEqual(await w.defaults47(true), { external: 'https://home.example.no', local: 'http://192.168.1.40:3000' });
+    globalThis.fetch = async () => new Response('nei', { status: 404 });
+    assert.deepEqual(await w.defaults47(true), { external: 'https://os.smarthjemeksperten.no', local: '' }, 'eldre server: ingen lokal adresse');
+  } finally { globalThis.fetch = prev; }
+});
+
+test('GET /api/config/servers: oppdaget LAN-adresse (utenfor container) brukes når LOCAL_URL mangler', async () => {
+  const { lanUrls46 } = await import('../server/auth/server-address.js');
+  process.env.INSIDE_DOCKER = '0';
+  try {
+    const lan = lanUrls46();
+    const u = s47.serverUrls47();
+    assert.equal(u.localUrl, lan[0] ?? null);
+    assert.equal(u.source.localUrl, lan.length ? 'discovered' : 'none');
+    for (const x of lan) assert.ok(!/\/\/(127\.|172\.(1[6-9]|2\d|3[01])\.)/.test(x), `aldri loopback/Docker: ${x}`);
+  } finally { process.env.INSIDE_DOCKER = '1'; }
 });
 
 test('regresjon: GET /api/config er fortsatt integrasjonslista i Innstillinger (en liste), og krever innlogging', async () => {
@@ -115,16 +151,16 @@ test('GET /api/config/servers: PUBLIC_URL/LOCAL_URL fra env overstyrer; Docker-i
     assert.deepEqual(me.source, { publicUrl: 'env', localUrl: 'env' });
     assert.equal((await K('/api/me/server')).body.local, 'http://192.168.1.40:3000', 'LOCAL_URL går foran oppdagede adresser i /api/me/server');
     process.env.LOCAL_URL = 'http://172.18.0.3:3000';
-    assert.equal(s47.serverUrls47().localUrl, 'http://10.69.1.39:3000');
-    assert.equal((await K('/api/me/server')).body.local, 'http://10.69.1.39:3000', 'aldri Docker-bridge');
+    assert.equal(s47.serverUrls47().localUrl, null, 'Docker-bridge teller ikke, og det finnes ingen fast reserve');
+    assert.equal((await K('/api/me/server')).body.local, null, 'aldri Docker-bridge');
   } finally { delete process.env.PUBLIC_URL; delete process.env.LOCAL_URL; }
 });
 
 test('/api/me/server: standardverdier, synk mellom enheter (samme konto), «Tilbakestill til standard», per bruker', async () => {
   const g = (await A('/api/me/server')).body;
-  assert.equal(g.local, 'http://10.69.1.39:3000');
+  assert.equal(g.local, null, 'C-S4: ingen fast lokal adresse');
   assert.equal(g.external, 'https://os.smarthjemeksperten.no');
-  assert.deepEqual(g.defaults, { local: 'http://10.69.1.39:3000', external: 'https://os.smarthjemeksperten.no' });
+  assert.deepEqual(g.defaults, { local: null, external: 'https://os.smarthjemeksperten.no' });
   assert.equal(g.isDefault, true);
   const p = await A('/api/me/server', 'PUT', { local: 'http://10.69.1.50:3000', external: 'https://annen.example.no', device: 'iPhone 16\u0007' });
   assert.equal(p.status, 200, p.text);
@@ -133,10 +169,19 @@ test('/api/me/server: standardverdier, synk mellom enheter (samme konto), «Tilb
   assert.ok(Date.parse(p.body.updatedAt) > 0);
   const t = (await T('/api/me/server')).body; // en annen enhet på samme konto
   assert.deepEqual([t.local, t.external, t.updatedBy], ['http://10.69.1.50:3000', 'https://annen.example.no', 'iPhone 16']);
-  assert.equal((await K('/api/me/server')).body.local, 'http://10.69.1.39:3000', 'Kari har sine egne (standard)');
+  assert.equal((await K('/api/me/server')).body.local, null, 'Kari har sine egne (ingen lokal adresse)');
+  // Uten standard lokal adresse beholder «Tilbakestill» den lokale adressen brukeren har lagret (som iOS), og bare den eksterne
+  // går tilbake til standard. local i samme kall ignoreres fortsatt.
   const r = await T('/api/me/server', 'PUT', { reset: true, local: 'http://10.0.0.9:1', device: 'Pixel' });
-  assert.deepEqual([r.body.local, r.body.external, r.body.isDefault, r.body.updatedBy], ['http://10.69.1.39:3000', 'https://os.smarthjemeksperten.no', true, 'Pixel']);
+  assert.deepEqual([r.body.local, r.body.external, r.body.isDefault, r.body.updatedBy], ['http://10.69.1.50:3000', 'https://os.smarthjemeksperten.no', true, 'Pixel']);
   assert.equal((await A('/api/me/server')).body.isDefault, true);
+  // Med LOCAL_URL finnes en standard lokal adresse, og da setter «Tilbakestill» den.
+  process.env.LOCAL_URL = 'http://192.168.1.10:3000';
+  try {
+    assert.equal((await A('/api/me/server')).body.isDefault, false, 'lagret lokal adresse er ikke standarden');
+    const r2 = await A('/api/me/server', 'PUT', { reset: true });
+    assert.deepEqual([r2.body.local, r2.body.external, r2.body.isDefault], ['http://192.168.1.10:3000', 'https://os.smarthjemeksperten.no', true]);
+  } finally { delete process.env.LOCAL_URL; }
   assert.equal((await A('/api/me/server', 'PUT', { local: 'http://172.18.0.3:3000' })).status, 400, 'fortsatt ingen Docker-IP');
 });
 

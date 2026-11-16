@@ -35,7 +35,9 @@ test('domenet: ingen «…experten» igjen i server/, public/ eller test/ (bare 
   assert.deepEqual(hits, []);
   assert.match(rd('server/system/server-urls.js'), /DEFAULT_PUBLIC_URL47 = 'https:\/\/os\.smarthjemeksperten\.no'/);
   assert.match(rd('public/js/serveradresser.js'), /external: 'https:\/\/os\.smarthjemeksperten\.no'/);
-  assert.match(rd('public/js/settings-server.js'), /os\.smarthjemeksperten\.no/);
+  // settings-server.js har ingen egen kopi av domenet lenger: den bruker DEF47 fra serveradresser.js (C-S4).
+  assert.match(rd('public/js/settings-server.js'), /DEF47\.external/);
+  assert.doesNotMatch(rd('public/js/settings-server.js'), /https:\/\/os\.smarthjem/);
 });
 
 test('domenet: lagret adresse som er nøyaktig den gamle standarden migreres (per bruker og admin), andre røres ikke', async () => {

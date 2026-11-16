@@ -152,20 +152,26 @@ export function meServer41(u) {
   const s = kvServer89(u, 'server41_me');
   const d = serverAddresses41();
   // Prompt 46: en lagret intern adresse (172.18.0.3 fra eldre versjoner) erstattes av den oppdagede/offentlige.
-  // Prompt 47: uten lagret eller oppdaget adresse gjelder standardverdiene (PUBLIC_URL/LOCAL_URL, ellers os.smarthjemeksperten.no / 10.69.1.39:3000).
-  // Lokal: lagret per bruker → admin-satt (Innstillinger → Server) → LOCAL_URL/standarden. Oppdagede grensesnitt-adresser bare som
-  // siste reserve, og aldri Docker-bridge (dropInternal46).
+  // Prompt 47: uten lagret adresse gjelder standardverdiene (PUBLIC_URL, ellers os.smarthjemeksperten.no).
+  // Lokal: lagret per bruker → admin-satt (Innstillinger → Server) → LOCAL_URL → oppdaget LAN-adresse → null. Aldri Docker-bridge
+  // (dropInternal46), og ingen fast IP (C-S4): uten noen av dem er den lokale adressen tom, og appene bruker den eksterne.
   const def = serverUrls47();
   const adminLocal = dropInternal46((kv.get(OWNER, 'server41', {}) ?? {}).local)[0] ?? null;
   const local = dropInternal46([s.local])[0] ?? adminLocal ?? def.localUrl ?? d.local[0] ?? null, external = dropInternal46([s.external])[0] ?? d.external ?? def.publicUrl;
   return { local, external, auto: s.auto !== false, discovered: d, defaults: { local: def.localUrl, external: def.publicUrl },
-    isDefault: local === def.localUrl && external === def.publicUrl, updatedAt: s.updatedAt ?? null, updatedBy: s.updatedBy ?? null };
+    // Uten standard lokal adresse er det bare den eksterne som kan avvike fra standarden.
+    isDefault: (def.localUrl == null || local === def.localUrl) && external === def.publicUrl, updatedAt: s.updatedAt ?? null, updatedBy: s.updatedBy ?? null };
 }
 export function setMeServer41(u, b = {}) {
   const cur = kvServer89(u, 'server41_me');
   const next = { ...cur };
-  // Prompt 47: {reset:true} = «Tilbakestill til standard» (begge feltene får standardverdiene; local/external i samme kall ignoreres).
-  if (b.reset === true) { const def = serverUrls47(); b = { ...b, local: def.localUrl, external: def.publicUrl }; }
+  // Prompt 47: {reset:true} = «Tilbakestill til standard» (feltene får standardverdiene; local/external i samme kall ignoreres).
+  // C-S4: finnes ingen standard lokal adresse (verken LOCAL_URL eller oppdaget), beholdes den lokale adressen brukeren har lagret.
+  if (b.reset === true) {
+    const def = serverUrls47();
+    b = { ...b, external: def.publicUrl };
+    if (def.localUrl) b.local = def.localUrl; else delete b.local;
+  }
   for (const k of ['local', 'external']) if (k in b) {
     if (b[k] === null || b[k] === '') next[k] = null;
     else {

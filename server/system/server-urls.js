@@ -4,32 +4,36 @@
 //                            (økt eller app-token) → {publicUrl, localUrl, defaults:{external, local}, source:{publicUrl, localUrl}, app, api:47}
 //   (GET /api/config er fortsatt integrasjonslista i Innstillinger – uendret.)
 //     publicUrl = PUBLIC_URL (.env), ellers https://os.smarthjemeksperten.no
-//     localUrl  = første gyldige LOCAL_URL (.env, kommaliste), ellers http://10.69.1.39:3000 – BARE etter innlogging
-//     (den interne IP-en vises aldri til den som ikke er logget inn).
+//     localUrl  = første gyldige LOCAL_URL (.env, kommaliste), ellers LAN-adressen serveren oppdager selv (lanUrls46, aldri inne i
+//     en container), ellers null – BARE etter innlogging (den interne IP-en vises aldri til den som ikke er logget inn).
+//     C-S4: det finnes ingen fast lokal standardadresse. Appene håndterer tom lokal adresse og lærer den av kontoen eller QR.
 //   Aliasene fra instruksene (samme tilgang som /finans/api):
 //     POST /api/finans/kvitteringer/ocr → POST /finans/api/receipts/ocr-text
 //     POST /api/finans/kvitteringer     → POST /finans/api/receipts/parsed
 // Adresseinnstillingene per konto (synk mellom enheter) ligger fortsatt i GET/PUT /api/me/server (auth41.js), som nå også
 // gir defaults og godtar {reset:true} («Tilbakestill til standard»).
 // Passordregelen er uendret: om en forespørsel er «lokal» avgjøres av serveren fra tilkoblingen, aldri av disse verdiene.
-import { cleanUrl46, isInternalIp46 } from '../auth/server-address.js';
+import { cleanUrl46, isInternalIp46, lanUrls46 } from '../auth/server-address.js';
 import { sessionUser, userInfo } from '../auth/session.js';
 import { tokenAccessOf } from '../finans/routes.js';
 
 export const DEFAULT_PUBLIC_URL47 = 'https://os.smarthjemeksperten.no';
-export const DEFAULT_LOCAL_URL47 = 'http://10.69.1.39:3000';
 
 const hostOf = (u) => { try { return new URL(u).host; } catch { return ''; } };
 
-/** Serverens standardadresser: env (PUBLIC_URL/LOCAL_URL) eller de faste standardverdiene. Aldri Docker-/loopback-adresser. */
+/**
+ * Serverens standardadresser. Ekstern: PUBLIC_URL eller standarddomenet. Lokal: LOCAL_URL, ellers den oppdagede LAN-adressen,
+ * ellers null (ingen fast IP). Aldri Docker-/loopback-adresser. source.localUrl: 'env' | 'discovered' | 'none'.
+ */
 export function serverUrls47() {
   const envPub = cleanUrl46(process.env.PUBLIC_URL);
   const pub = envPub && !isInternalIp46(hostOf(envPub)) ? envPub : null;
-  const loc = String(process.env.LOCAL_URL ?? '').split(',').map(cleanUrl46).find((x) => x && !isInternalIp46(hostOf(x))) ?? null;
+  const env = String(process.env.LOCAL_URL ?? '').split(',').map(cleanUrl46).find((x) => x && !isInternalIp46(hostOf(x))) ?? null;
+  const found = env ? null : (lanUrls46()[0] ?? null);
   return {
     publicUrl: pub ?? DEFAULT_PUBLIC_URL47,
-    localUrl: loc ?? DEFAULT_LOCAL_URL47,
-    source: { publicUrl: pub ? 'env' : 'default', localUrl: loc ? 'env' : 'default' },
+    localUrl: env ?? found,
+    source: { publicUrl: pub ? 'env' : 'default', localUrl: env ? 'env' : found ? 'discovered' : 'none' },
   };
 }
 

@@ -22,7 +22,7 @@ import { hlData } from './mobile-hl.js';
 import * as P31 from './mobile-glimt.js';
 import { grp } from './mobile-app-og-sanntid.js';
 import * as B from './mobile-min-reise.js';
-import { DEF47, defaults47, probe47, canTry47 } from '/assets/js/serveradresser.js'; // prompt 47: standard serveradresser
+import { DEF47, EKSEMPEL_LOKAL, defaults47, probe47, canTry47 } from '/assets/js/serveradresser.js'; // prompt 47: standard serveradresser
 import { vw } from '/assets/js/lib/viewport.js'; // vindusstørrelsen uten tvungen layout
 
 const lsGet = (k, d = null) => { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch { return d; } };
@@ -286,7 +286,8 @@ async function srvLoad(force = false) {
   fillDef(); probeNow(); probeAll();
 }
 /** Serveren (prompt 47) sender sine standardverdier i /api/me/server → defaults. */
-function useSrvDef(d) { const x = d?.defaults; if (x?.local && x?.external) SV.def = { local: x.local, external: x.external }; }
+// C-S4: den lokale standarden kan være null (ingen LOCAL_URL og ingen oppdaget adresse) – da er den tom.
+function useSrvDef(d) { const x = d?.defaults; if (x?.external) SV.def = { local: x.local || '', external: x.external }; }
 /** Tomme felt får standardadressene (lagres ikke før brukeren endrer noe). */
 function fillDef() { const D = SV.d ?? {}; SV.d = { ...D, local: D.local || SV.def.local, external: D.external || SV.def.external }; }
 async function ping(url, ms = 1500) { const r = await probe47(url, ms); return { ok: r.state === 'ok', ms: r.ms, skip: r.state === 'skip', text: r.text }; }
@@ -307,21 +308,23 @@ async function probeNow() {
 const stLine = (k) => { const r = SV.st[k]; return r ? `<span class="p47-st ${r.state}">${r.state === 'ok' || r.state === 'err' ? '<i></i>' : ''}${esc(r.text)}</span>` : ''; };
 export function serverGroup() {
   srvLoad();
-  const D = SV.d ?? {}, isDef = D.local === SV.def.local && D.external === SV.def.external;
+  // Uten standard lokal adresse er det bare den eksterne som kan avvike (den lokale beholdes ved tilbakestilling).
+  const D = SV.d ?? {}, isDef = (!SV.def.local || D.local === SV.def.local) && D.external === SV.def.external;
   const rowS = (k, n, v, sub) => `<div class="opt-row p17-row p47-srow"><button type="button" class="m-grow p47-sed" data-p41="srvedit" data-k="${k}"><span class="p17-rt"><b>${n}</b><small>${esc(sub)}</small></span><span class="sval p41-mono">${esc(v || 'Ikke satt')}</span></button>
       <div class="p47-sbar">${stLine(k) || '<span class="p47-st">Ikke testet</span>'}<button type="button" class="p47-test" data-p41="srvt47" data-k="${k}"${SV.st[k]?.state === 'run' ? ' disabled' : ''}>${SV.st[k]?.state === 'run' ? 'Tester …' : 'Test'}</button></div></div>`;
   return `<span class="pp-lab p17-gl" data-hl="server">SERVER</span><div class="list p17-list p41-srv">
     ${rowS('external', 'Ekstern adresse', D.external, 'Utenfor hjemmet')}
     ${rowS('local', 'Lokal adresse', D.local, 'Brukes når du er hjemme på Wi-Fi')}
     <button type="button" class="opt-row p17-row" data-p41="srvauto" role="switch" aria-checked="${D.auto !== false}"><span class="m-grow p17-rt"><b>Bytt automatisk</b><small>Lokal når den svarer innen 1,5 s, ellers ekstern${SV.now ? ` · nå: ${SV.now}` : ''}</small></span>${sw(D.auto !== false)}</button>
-    <button type="button" class="opt-row p17-row p47-rst" data-p41="srvrst"${isDef || SV.rst ? ' disabled' : ''}><span class="m-grow p17-rt"><b>Tilbakestill til standard</b><small>${isDef ? 'Begge adressene er standard' : esc(`${hostOf(SV.def.external)} og ${hostOf(SV.def.local)}`)}</small></span></button></div>
+    <button type="button" class="opt-row p17-row p47-rst" data-p41="srvrst"${isDef || SV.rst ? ' disabled' : ''}><span class="m-grow p17-rt"><b>Tilbakestill til standard</b><small>${isDef ? (SV.def.local ? 'Begge adressene er standard' : 'Ekstern adresse er standard') : esc(SV.def.local ? `${hostOf(SV.def.external)} og ${hostOf(SV.def.local)}` : `${hostOf(SV.def.external)} · lokal adresse beholdes`)}</small></span></button></div>
     <div class="snote">Adressene lagres på kontoen din og brukes av Homelab og Kalender på alle enheter. Du trenger ikke skrive dem når du logger inn.${location.protocol === 'https:' ? ' Denne siden er åpnet over https og prøver aldri http-adressen.' : ''}</div>`;
 }
 const hostOf = (u) => { try { return new URL(u).host; } catch { return String(u ?? ''); } };
 async function srvReset() {
   const def = SV.def ?? DEF47;
   SV.rst = true; haptic('ok'); draw();
-  const next = { local: def.local, external: def.external, auto: (SV.d ?? {}).auto !== false };
+  // Uten standard lokal adresse beholdes den lagrede (C-S4); serveren ignorerer local når reset:true.
+  const next = { local: def.local || (SV.d ?? {}).local || '', external: def.external, auto: (SV.d ?? {}).auto !== false };
   // reset:true (SERVER47) setter serverens standardverdier; eldre server bruker local/external i samme kall.
   try { SV.d = await hlApi('/me/server', { method: 'PUT', json: { ...next, reset: true, device: 'Nettapp (mobil)' } }); useSrvDef(SV.d); } catch (e) { if (e.status !== 404) { SV.rst = false; flash(e.message); draw(); return; } SV.d = next; lsSet('p41_server', SV.d); }
   fillDef(); SV.rst = false; SV.st = {}; flash('Standardadressene er satt'); probeNow(); probeAll(); draw();
@@ -331,7 +334,7 @@ function srvSheet() {
   const k = SV.sheet, n = k === 'local' ? 'Lokal adresse' : 'Ekstern adresse';
   return `<div class="sheet-bg" data-p41="srvx"></div><form class="pp-sheet p41-srvsh" data-p41f="srv" role="dialog" aria-modal="true" aria-label="${n}"><span class="pp-grab"></span>
     <div class="pp-row"><div class="pp-sh">${n}</div><button type="button" class="w32-x" data-p41="srvx" aria-label="Lukk">✕</button></div>
-    <input id="p41-srvin" class="p24-in mono" type="url" inputmode="url" autocapitalize="off" autocorrect="off" spellcheck="false" value="${esc(SV.f[k])}" placeholder="${esc(SV.def[k])}" data-p41in="srv">
+    <input id="p41-srvin" class="p24-in mono" type="url" inputmode="url" autocapitalize="off" autocorrect="off" spellcheck="false" value="${esc(SV.f[k])}" placeholder="${esc(SV.def[k] || (k === 'local' ? EKSEMPEL_LOKAL : DEF47.external))}" data-p41in="srv">
     ${SV.test ? `<span class="p41-srvt${/^✓/.test(SV.test) ? ' ok' : ''}">${esc(SV.test)}</span>` : ''}
     <div class="p24-two"><button type="button" class="p24-b" data-p41="srvtest">${SV.busy ? 'Tester …' : 'Test'}</button><button type="submit" class="p24-b ink">Lagre</button></div></form>`;
 }
