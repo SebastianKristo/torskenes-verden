@@ -183,7 +183,7 @@ export function home52Html() {
   ensure();
   const hid = hiddenList();
   return `<div class="h52${H.edit ? ' edit' : ''}" data-h52-root>${visible().map(item).join('')}</div>
-    ${H.edit ? `<div class="h52-bar" role="toolbar" aria-label="Rediger Hjem"><button type="button" class="h52-b" data-h52-add${hid.length ? '' : ' disabled'}>+ Legg til${hid.length ? ` (${hid.length})` : ''}</button><button type="button" class="h52-b ink" data-h52-done>Ferdig</button></div>
+    ${H.edit ? `<div class="h52-bar" role="toolbar" aria-label="Rediger Oversikt"><button type="button" class="h52-b" data-h52-add${hid.length ? '' : ' disabled'}>+ Legg til${hid.length ? ` (${hid.length})` : ''}</button><button type="button" class="h52-b ink" data-h52-done>Ferdig</button></div>
     ${H.addOpen && hid.length ? `<div class="h52-add" role="dialog" aria-label="Skjulte kort"><b>Skjulte kort</b>${hid.map((id) => `<button type="button" data-h52-show="${id}"><span>${esc(T[id][0])}</span><span>Vis</span></button>`).join('')}</div>` : ''}` : ''}`;
 }
 
@@ -214,7 +214,7 @@ function enterEdit() {
   r.querySelectorAll(':scope > [data-h52]').forEach((el) => { if (!el.querySelector(':scope > .h52-x')) el.insertAdjacentHTML('afterbegin', `<button type="button" class="h52-x" data-h52-hide="${el.dataset.h52}" aria-label="Skjul ${esc(T[el.dataset.h52][0])}">−</button>${rzHtml(el.dataset.h52)}`); });
   const hid = hiddenList().length;
   document.querySelectorAll('.h52-bar,.h52-add').forEach((x) => x.remove());
-  r.insertAdjacentHTML('afterend', `<div class="h52-bar" role="toolbar" aria-label="Rediger Hjem"><button type="button" class="h52-b" data-h52-add${hid ? '' : ' disabled'}>+ Legg til${hid ? ` (${hid})` : ''}</button><button type="button" class="h52-b ink" data-h52-done>Ferdig</button></div>`);
+  r.insertAdjacentHTML('afterend', `<div class="h52-bar" role="toolbar" aria-label="Rediger Oversikt"><button type="button" class="h52-b" data-h52-add${hid ? '' : ' disabled'}>+ Legg til${hid ? ` (${hid})` : ''}</button><button type="button" class="h52-b ink" data-h52-done>Ferdig</button></div>`);
   portal();
 }
 /** Verktøylinjen og listen over skjulte kort flyttes til <body> (papiret er egen stablingskontekst under bunnmenyen). */

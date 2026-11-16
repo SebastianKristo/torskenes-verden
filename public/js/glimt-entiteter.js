@@ -13,7 +13,7 @@ const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', 
 export const TYPES60 = ['person', 'place', 'store', 'subscription', 'event'];
 const LABELS = { person: 'Personer', place: 'Steder', store: 'Butikker', subscription: 'Abonnementer', event: 'Faste hendelser' };
 const ONE = { person: 'Person', place: 'Sted', store: 'Butikk', subscription: 'Abonnement', event: 'Fast hendelse' };
-const WHERE = { family: 'Familie → Steder', subscriptions: 'Subscription OS', weather: 'Vær', profile: 'Profil' };
+const WHERE = { family: 'Familie → Steder', subscriptions: 'Faste betalinger', weather: 'Vær', profile: 'Profil' };
 const S = { d: null, at: 0, loading: null, missing: false, err: '', msg: '', filter: '', edit: null, add: false, arm: null, busy: false, res: null };
 
 /** «hytta, Hytta , jobben» → ['hytta', 'jobben'] (unike, uten tomme, maks 20). */

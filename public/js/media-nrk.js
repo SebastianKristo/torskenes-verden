@@ -372,7 +372,7 @@ function kort() {
   const d = S.d;
   if (S.err && !d) return [['feil', 'full tomt', `<b class="nrk-h">Fikk ikke kontakt med NRK-nedlasteren</b><p>${esc(S.err)}</p><button type="button" class="nrk-b ink stor" data-nrk-a="last">Prøv igjen</button>`]];
   if (!d) return [['venter', 'full tomt', '<p>Laster …</p>']];
-  if (d.configured === false) return [['tomt', 'full tomt', '<b class="nrk-h stor">NRK-nedlasteren er ikke satt opp</b><p>Legg inn adressen og tokenet til nrk-dl under Integrasjoner. Tjenesten kjører bak en egen VPN-tunnel til Norge.</p><button type="button" class="nrk-b ink stor" data-m43="integ">Åpne Integrasjoner</button>']];
+  if (d.configured === false) return [['tomt', 'full tomt', '<b class="nrk-h stor">NRK-nedlasteren er ikke satt opp</b><p>Legg inn adressen og tokenet til nrk-dl under Tilkoblinger. Tjenesten kjører bak en egen VPN-tunnel til Norge.</p><button type="button" class="nrk-b ink stor" data-m43="integ">Åpne Integrasjoner</button>']];
   return [['form', 'full form', [toppHtml(), kroppHtml()]], ['ko', 'ko', koHtml()], ['folg', 'folg', folgerHtml()], ['lib', 'full lib', libHtml()], ['bunn', 'full bunn', bunnHtml()]];
 }
 

@@ -148,7 +148,7 @@ function paint() {
     h = `<span class="gate-lab">LOGG INN MED QR-KODE</span><b class="gate-h">Logg inn på ${esc(Q.hooks?.app?.() || 'Homelab')}</b>
       <div class="gq-main">${qrBox()}
         <span class="gq-ttl" data-qr-ttl>Koden fornyes om ${Q.left} s</span>
-        <span class="gq-help">Åpne Homelab på mobilen → <b>Innstillinger → Konto → Logg inn på ny enhet</b>, eller skann med kameraet.</span>
+        <span class="gq-help">Åpne Homelab på mobilen → <b>Innstillinger → Enheter og widgets → Logg inn på annen enhet</b>, eller skann med kameraet.</span>
         <button type="button" class="gate-link gq-pw" data-qr-pw>Logg inn med passord i stedet</button></div>`;
   } else if (Q.st === 'otp') {
     const cells = Array.from({ length: 6 }, (_, i) => `<span class="${Q.err ? 'bad' : Q.code.length === i ? 'on' : ''}">${esc(Q.code[i] ?? '')}</span>`).join('');

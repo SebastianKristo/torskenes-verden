@@ -14,7 +14,7 @@ const LC = { ERROR: 'e', WARN: 'w', INFO: 'i', DEBUG: 'd' };
 // Kjente mønstre (samme som serveren bør svare uten LLM). Brukes når /explain mangler.
 const WHY = [
   [/connection refused/i, 'Tjenesten får ikke kontakt med en annen container.', 'Den peker på en IP eller port som ikke svarer (ofte ny IP etter omstart). Bruk tjenestenavnet i stedet for IP (f.eks. http://homelab-web:8080), og sjekk at begge er på samme Docker-nettverk.'],
-  [/\b401\b|unauthori[sz]ed/i, 'Innloggingen ble avvist.', 'API-nøkkelen eller passordet er feil eller utløpt. Sjekk nøkkelen under Innstillinger → Integrasjoner.'],
+  [/\b401\b|unauthori[sz]ed/i, 'Innloggingen ble avvist.', 'API-nøkkelen eller passordet er feil eller utløpt. Sjekk nøkkelen under Innstillinger → Tilkoblinger.'],
   [/\b403\b|insufficientPermissions|forbidden/i, 'Tilgangen mangler rettigheter.', 'Kontoen eller tokenet mangler tilgang. Koble til på nytt og godta tilgangene som trengs.'],
   [/ETIMEDOUT|timed out|timeout/i, 'Tjenesten svarte ikke innen tidsgrensen.', 'Ofte midlertidig. Skjer det ofte, sjekk nettverket, DNS og om tjenesten er overbelastet.'],
   [/OOMKilled|out of memory|exit code 137/i, 'Containeren gikk tom for minne og ble stoppet.', 'Øk minnegrensen (mem_limit) i docker-compose, eller bruk en mindre modell / færre samtidige jobber.'],

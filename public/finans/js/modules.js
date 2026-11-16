@@ -60,7 +60,7 @@ export function bolSettings() {
   }).join('') || '<div class="bol-home note">Ingen boliger ennå.</div>';
   const create = `<form class="dir-new" data-mform="folder" style="border-style:solid"><b>Ny bolig</b><input class="inp" name="name" placeholder="Navn, f.eks. Hytta Geilo" required>
     <input class="inp" name="address" placeholder="Adresse (valgfritt)"><select class="inp" name="type">${optList(TYPES.map((t) => [t, t]), 'Enebolig')}</select>
-    ${users.length ? `<span class="note" style="font-size:12px">Del med</span><div class="pick">${users.map((x) => `<button type="button" class="pick-u${pick.includes(x.id) ? ' on' : ''}" data-mpick="${esc(x.id)}">${esc(x.name)}</button>`).join('')}</div>` : '<span class="note" style="font-size:12px">Nye brukere legges til av admin under Innstillinger → Innlogging i Homelab.</span>'}
+    ${users.length ? `<span class="note" style="font-size:12px">Del med</span><div class="pick">${users.map((x) => `<button type="button" class="pick-u${pick.includes(x.id) ? ' on' : ''}" data-mpick="${esc(x.id)}">${esc(x.name)}</button>`).join('')}</div>` : '<span class="note" style="font-size:12px">Nye brukere legges til av admin under Innstillinger → Konto og sikkerhet.</span>'}
     <div><button class="btn pri">Opprett</button></div></form>`;
   // Kategorier for boliger.
   const man = cats.canManage;
@@ -88,7 +88,7 @@ function shareBox(f) {
   }).join('');
   const inv = (S.users ?? []).filter((x) => !f.members.some((m) => m.userId === x.id));
   return `<div class="share-box"><div class="card-h" style="align-items:baseline;flex-wrap:wrap;gap:8px"><b style="font-size:14px">Deling · ${esc(f.name)}</b><span class="note" style="font-size:12px">${isOwner ? 'Eiere kan dele, endre tilgang og fjerne medlemmer' : 'Bare eiere kan endre deling'}</span></div>${acl}
-    ${isOwner ? (inv.length ? `<form class="share-add" data-mform="bshare" data-fid="${f.id}"><select class="inp" name="userId" required><option value="">Velg bruker …</option>${inv.map((x) => `<option value="${esc(x.id)}">${esc(x.name ?? x.displayName)}${x.username ? ` (${esc(x.username)})` : ''}</option>`).join('')}</select><select class="inp" name="role">${optList([['editor', 'Kan redigere'], ['viewer', 'Kan se']], 'editor')}</select><button class="btn pri">Del</button></form>` : '<span class="note" style="font-size:12px">Alle brukere har tilgang. Nye brukere legges til av admin under Innstillinger → Innlogging i Homelab.</span>') : ''}</div>`;
+    ${isOwner ? (inv.length ? `<form class="share-add" data-mform="bshare" data-fid="${f.id}"><select class="inp" name="userId" required><option value="">Velg bruker …</option>${inv.map((x) => `<option value="${esc(x.id)}">${esc(x.name ?? x.displayName)}${x.username ? ` (${esc(x.username)})` : ''}</option>`).join('')}</select><select class="inp" name="role">${optList([['editor', 'Kan redigere'], ['viewer', 'Kan se']], 'editor')}</select><button class="btn pri">Del</button></form>` : '<span class="note" style="font-size:12px">Alle brukere har tilgang. Nye brukere legges til av admin under Innstillinger → Konto og sikkerhet.</span>') : ''}</div>`;
 }
 
 /* ===================== Finn-handler ===================== */

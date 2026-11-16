@@ -46,7 +46,7 @@ export function paperList() {
     return `<div class="p43-mh"><span class="p43-mhl">${esc(lbl)}</span><span class="p43-mhn">Netto ${net < 0 ? '−' : '+'}${n2(Math.abs(net))} kr</span></div>`; };
   const section = (g) => `<section class="p43-mg">${head(g)}<div class="pp-rows">${g.L.map(txRow).join('')}</div></section>`;
   PLC.html = section;
-  return `<form class="pp-search" data-msearch role="search"><span aria-hidden="true">⌕</span><input class="m-input" id="m-txq" name="q" type="search" value="${esc(q)}" enterkeyhint="search" placeholder="Søk i transaksjoner og kvitteringer" aria-label="Søk i transaksjoner" autocomplete="off"><button type="button" class="p43-gpill" data-p43="lglimt" aria-label="Spør Glimt i Finans → Søk">${glimtOrb(20, 'chip')}Glimt</button></form>
+  return `<form class="pp-search" data-msearch role="search"><span aria-hidden="true">⌕</span><input class="m-input" id="m-txq" name="q" type="search" value="${esc(q)}" enterkeyhint="search" placeholder="Søk i transaksjoner og kvitteringer" aria-label="Søk i transaksjoner" autocomplete="off"><button type="button" class="p43-gpill" data-p43="lglimt" aria-label="Spør Glimt i Økonomi">${glimtOrb(20, 'chip')}Glimt</button></form>
     <div class="pp-chips">${cats.map((n) => `<button class="pp-fchip" data-ppl="cat" data-k="${esc(n)}" aria-pressed="${PL.cat === n}">${esc(n)}</button>`).join('')}</div>
     ${items === null ? '<div class="m-spin"></div>' : `<div class="pp-mgs" data-pl-list>${groups.slice(0, shownGroups(groups, items)).map(section).join('')}</div>`}
     ${items === null || L.length ? '' : `${head({ k: S.summary?.month ?? '', L: [] })}<div class="pp-mut" style="padding:16px 4px;font-size:14px">Ingen treff. Trykk Glimt og spør fritt, for eksempel «hvor mye brukte jeg på mat i september».</div>`}`;
@@ -300,7 +300,7 @@ function secHtml(k) {
   if (k === 'notify') return `<span class="pp-lab">VARSLER</span><div class="pp-card pp-tight">${notifyRows()}</div>`;
   if (k === 'carriers') {
     const C = TR.data?.carriers ?? [];
-    return `<span class="pp-lab">TRANSPORTØRER</span><div class="pp-card pp-tight">${C.map((c) => `<div class="pp-tog">${badge(c.id, 32, c.logo)}<span class="m-grow"><b>${esc(c.name ?? carOf(c.id).name)}</b></span><span class="${c.configured ? 'pp-pos' : 'pp-mut'}" style="font-size:12.5px">${c.configured ? 'Tilkoblet' : 'Mangler nøkkel'}</span></div>`).join('') || '<div class="pp-mut" style="padding:12px 14px">Nøklene legges inn i Homelab → Innstillinger → Integrasjoner → Sporing.</div>'}</div>`;
+    return `<span class="pp-lab">TRANSPORTØRER</span><div class="pp-card pp-tight">${C.map((c) => `<div class="pp-tog">${badge(c.id, 32, c.logo)}<span class="m-grow"><b>${esc(c.name ?? carOf(c.id).name)}</b></span><span class="${c.configured ? 'pp-pos' : 'pp-mut'}" style="font-size:12.5px">${c.configured ? 'Tilkoblet' : 'Mangler nøkkel'}</span></div>`).join('') || '<div class="pp-mut" style="padding:12px 14px">Nøklene legges inn i Homelab → Innstillinger → Tilkoblinger → Reise og pakker.</div>'}</div>`;
   }
   return '';
 }
@@ -316,7 +316,7 @@ export function paperTrkSheet() {
     <a class="pp-card p17-golink" href="#/set/varsler"><span class="m-grow"><b>Varsler</b><span class="pp-mut">Pakkevarsler ligger nå under Innstillinger → Varsler</span></span><span aria-hidden="true">›</span></a>
     <span class="pp-lab">KILDER</span><div class="pp-card pp-tight">${sourceRows()}</div>
     ${P37B.trkKeysSection()}
-    <span class="pp-lab">PARCELSAPP</span><div class="pp-card pp-tight"><div class="pp-tog"><span class="m-grow"><b>Reserve for ukjente transportører</b><span class="pp-mut">${TR.data?.parcelsapp?.configured ? `${n0(TR.data.parcelsapp.used ?? 0)} av ${n0(TR.data.parcelsapp.limit ?? 3)} oppslag brukt denne måneden` : 'Legg inn nøkkelen i Homelab → Innstillinger → Integrasjoner → Sporing. Gratisplanen har 3 oppslag i måneden.'}</span></span><span class="${TR.data?.parcelsapp?.configured ? 'pp-pos' : 'pp-mut'}" style="font-size:12.5px">${TR.data?.parcelsapp?.configured ? 'Tilkoblet' : 'Mangler nøkkel'}</span></div></div>
+    <span class="pp-lab">PARCELSAPP</span><div class="pp-card pp-tight"><div class="pp-tog"><span class="m-grow"><b>Reserve for ukjente transportører</b><span class="pp-mut">${TR.data?.parcelsapp?.configured ? `${n0(TR.data.parcelsapp.used ?? 0)} av ${n0(TR.data.parcelsapp.limit ?? 3)} oppslag brukt denne måneden` : 'Legg inn nøkkelen i Homelab → Innstillinger → Tilkoblinger → Reise og pakker. Gratisplanen har 3 oppslag i måneden.'}</span></span><span class="${TR.data?.parcelsapp?.configured ? 'pp-pos' : 'pp-mut'}" style="font-size:12.5px">${TR.data?.parcelsapp?.configured ? 'Tilkoblet' : 'Mangler nøkkel'}</span></div></div>
     ${secHtml('carriers')}
     <span class="pp-mut" style="line-height:1.45">E-post leses via Proton Mail Bridge hvert 15. minutt. Finn-handler med Fiks ferdig hentes automatisk.</span></div>`;
 }

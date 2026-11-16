@@ -161,7 +161,7 @@ function subsHtml() {
 function kort() {
   if (S.err && !S.d) return [['feil', 'full tomt', `<b class="mu-h">Fikk ikke kontakt med yubal</b><p>${esc(S.err)}</p><button type="button" class="mu-b ink stor" data-mu-a="last">Prøv igjen</button>`]];
   if (!S.d) return [['venter', 'full tomt', '<p>Laster …</p>']];
-  if (S.d.configured === false) return [['tomt', 'full tomt', '<b class="mu-h stor">Musikk er ikke satt opp</b><p>Legg inn adressen til yubal under Integrasjoner. Da kan du laste ned album og spillelister fra YouTube Music til musikkbiblioteket.</p><button type="button" class="mu-b ink stor" data-m43="integ">Åpne Integrasjoner</button>']];
+  if (S.d.configured === false) return [['tomt', 'full tomt', '<b class="mu-h stor">Musikk er ikke satt opp</b><p>Legg inn adressen til yubal under Tilkoblinger. Da kan du laste ned album og spillelister fra YouTube Music til musikkbiblioteket.</p><button type="button" class="mu-b ink stor" data-m43="integ">Åpne Integrasjoner</button>']];
   return [['form', 'full form', formHtml()], ['ko', 'ko', koHtml()], ['subs', 'subs', subsHtml()]];
 }
 function render() {

@@ -58,7 +58,7 @@ function stopWaiting(hide) {
 /** data = 403-svaret fra innloggingen. done(user) når godkjent, fail(tekst) ved avvisning/utløp. */
 export function waitApproval51(data, { done, fail }) {
   stopWaiting(false);
-  box('Venter på godkjenning …', `Dette er en ny enhet (${data.device || 'ukjent enhet'}). Åpne Homelab på en enhet du allerede er logget inn på – Innstillinger → Sikkerhet – og trykk «Godkjenn». En administrator kan også godkjenne.`);
+  box('Venter på godkjenning …', `Dette er en ny enhet (${data.device || 'ukjent enhet'}). Åpne Homelab på en enhet du allerede er logget inn på – Innstillinger → Konto og sikkerhet – og trykk «Godkjenn». En administrator kan også godkjenne.`);
   const hdr = { 'X-Approval-Key': data.pollKey };
   const tick = async () => {
     if (!waiting) return;

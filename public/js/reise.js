@@ -12,7 +12,7 @@ export function render() {
   const none = store.data.ruter && !store.data.ruter.trips?.length;
   return `<div class="rs">${subtabs('reise', 'avganger')}
     <section class="rs-sec" aria-label="Avganger">
-      ${none ? '<p class="rs-empty">Ingen strekninger ennå. Legg dem til under <a href="#/innstillinger/reise">Innstillinger → Reise</a>.</p>' : `<div class="${is2c() ? 'p-trips' : 'trips'}" id="trips">${renderTrips()}</div>`}
+      ${none ? '<p class="rs-empty">Ingen strekninger ennå. Legg dem til under <a href="#/innstillinger/reise">Innstillinger → Moduler → Reise</a>.</p>' : `<div class="${is2c() ? 'p-trips' : 'trips'}" id="trips">${renderTrips()}</div>`}
     </section></div>`;
 }
 

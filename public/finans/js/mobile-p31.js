@@ -346,7 +346,7 @@ function finCard(cd) {
 }
 function taskCard(cd) {
   const L = (cd.items ?? cd.tasks ?? []).slice(0, 8);
-  return `<div class="p31-gc"><button type="button" class="p31-gch" ${go('#/huske')}><b>${esc(cd.title ?? cd.list ?? 'Huskeliste')}</b><span aria-hidden="true">›</span></button>
+  return `<div class="p31-gc"><button type="button" class="p31-gch" ${go('#/huske')}><b>${esc(cd.title ?? cd.list ?? 'Gjøremål')}</b><span aria-hidden="true">›</span></button>
     ${L.map((x) => `<button type="button" class="p31-gcr p31-task" data-p31="task" data-id="${esc(x.id ?? '')}" role="checkbox" aria-checked="${!!x.done}"><span class="p31-cb${x.done ? ' on' : ''}">${x.done ? svg(CK, 11, 3.4, '#fff') : ''}</span><span class="m-ell m-grow${x.done ? ' p31-strike' : ''}">${esc(x.title ?? x.t ?? x.text ?? '')}</span></button>`).join('') || '<span class="p31-none">Alt er gjort ✓</span>'}</div>`;
 }
 

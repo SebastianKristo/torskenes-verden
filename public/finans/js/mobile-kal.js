@@ -375,7 +375,7 @@ function learnSheet() {
       ${G.type === 'annet' ? `<input class="k27-in" value="${esc(G.title)}" placeholder="Tittel, f.eks. Massasje · Spa Nova" data-k33i="title" autocomplete="off">` : ''}
       ${G.err ? `<span class="k27-err">${esc(G.err)}</span>` : ''}
       <button type="submit" class="k27-save"${!G.type || G.busy ? ' disabled' : ''}>${G.busy ? 'Lagrer …' : G.suggest ? 'Husk' : 'Lagre'}</button>
-      <span class="k27-mut sm">Glimt bruker dette neste gang en melding fra samme avsender legges inn. Se Innstillinger → AI → Glimt husker.</span></form>`);
+      <span class="k27-mut sm">Glimt bruker dette neste gang en melding fra samme avsender legges inn. Se Innstillinger → Glimt og AI → Glimt husker.</span></form>`);
 }
 function learnOpen(ev, pre = {}) { K.sel = null; K.learn = { step: 'pick', type: pre.type ?? '', name: pre.name ?? nameOfEvent(ev ?? {}), title: pre.title ?? '', text: pre.text ?? '', suggest: !!pre.suggest, err: '' }; draw(); }
 async function learnSave() {
@@ -635,7 +635,7 @@ async function saveForm() {
     else await hlApi('/kalender/events', { method: 'POST', json: body });
   } catch (e) {
     if (e.status === 404 || e.status === 405) local();
-    else if (e.status === 409) { F.busy = false; F.err = 'Google må kobles til på nytt med skrivetilgang (Innstillinger → Kalendere).'; draw(); return; }
+    else if (e.status === 409) { F.busy = false; F.err = 'Google må kobles til på nytt med skrivetilgang (Innstillinger → Tilkoblinger → Kalender og gjøremål).'; draw(); return; }
     else { F.busy = false; F.err = e.message; draw(); return; }
   }
   K.form = null; K.cur = F.date; haptic('ok'); flash(F.id || F.uid ? 'Hendelsen er oppdatert ✓' : 'Hendelsen er lagret ✓');

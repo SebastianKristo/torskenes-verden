@@ -48,14 +48,14 @@ function paint() {
     </div>`;
   }).join('') : '<p class="km35-note">Ingen kalendere.</p>';
   const add = M.add === 'ical' ? `<form class="km35-form" data-km-ical><b>Nytt iCal-abonnement</b><input name="url" type="url" required placeholder="https:// eller webcal://…/kalender.ics" autocomplete="off" spellcheck="false" aria-label="Adresse"><input name="name" placeholder="Navn (valgfritt)" autocomplete="off" aria-label="Navn"><span class="km35-fr"><button type="submit" class="gs-pill dark"${M.busy ? ' disabled' : ''}>${M.busy ? 'Legger til …' : 'Legg til'}</button><button type="button" class="gs-pill" data-km-add="">Avbryt</button></span><span class="km35-note">Hentes hver time. Hendelsene vises i alle visningene og i Glimt.</span></form>`
-    : M.add === 'ha' ? `<div class="km35-form"><b>Kalendere fra Home Assistant</b>${M.ha == null ? `<span class="km35-note">${M.haErr ? esc(M.haErr) : 'Henter …'}</span>` : !M.ha.connected ? '<span class="km35-note">Home Assistant er ikke koblet til. Sett det opp under Innstillinger → Integrasjoner.</span>'
+    : M.add === 'ha' ? `<div class="km35-form"><b>Kalendere fra Home Assistant</b>${M.ha == null ? `<span class="km35-note">${M.haErr ? esc(M.haErr) : 'Henter …'}</span>` : !M.ha.connected ? '<span class="km35-note">Home Assistant er ikke koblet til. Sett det opp under Innstillinger → Tilkoblinger.</span>'
       : `${(M.ha.entities ?? []).map((x) => `<label class="km35-ent"><input type="checkbox" value="${esc(x.entity_id)}"${x.added ? ' checked disabled' : ''}><span><b>${esc(x.name || x.entity_id)}</b><span>${esc(x.entity_id)}</span></span></label>`).join('') || '<span class="km35-note">Fant ingen kalendere i Home Assistant.</span>'}<span class="km35-fr"><button type="button" class="gs-pill dark" data-km-haadd${M.busy ? ' disabled' : ''}>${M.busy ? 'Legger til …' : 'Legg til valgte'}</button><button type="button" class="gs-pill" data-km-add="">Avbryt</button></span>`}</div>`
       : `<span class="km35-fr"><button type="button" class="gs-pill" data-km-add="ical">+ iCal-abonnement</button><button type="button" class="gs-pill" data-km-add="ha">+ Home Assistant</button></span>`;
   box.innerHTML = `<div class="km35-head"><b>Kalendere</b><button type="button" class="gs-pill dark" data-km-close>Ferdig</button></div>
     <p class="km35-note">Velg farge, vis eller skjul kalendere, og skjul dem fra sidemenyen. Endringene gjelder også Kalender-appen.</p>
     ${M.err ? `<p class="km35-err">${esc(M.err)}</p>` : ''}
     <div class="km35-list">${rows}</div>${M.msg ? `<p class="km35-msg">${esc(M.msg)}</p>` : ''}${add}
-    <button type="button" class="km35-more" data-km-set>Flere valg i Innstillinger → Kalendere ›</button>`;
+    <button type="button" class="km35-more" data-km-set>Flere valg i Innstillinger → Tilkoblinger → Kalender og gjøremål ›</button>`;
 }
 
 async function patch(id, body) {

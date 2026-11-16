@@ -359,7 +359,7 @@ export async function bind26(e, t, ctx = {}) {
     case 'feup': { const i = +x.dataset.i; if (!i) return true; const v = [...cur]; [v[i - 1], v[i]] = [v[i], v[i - 1]]; feSave(v); haptic('tab'); draw(); return true; }
     case 'ferm': { if (cur.length <= 1) return true; feSave(cur.filter((_, j) => j !== +x.dataset.i)); FE.ic = null; haptic('tap'); draw(); return true; }
     case 'feadd': { if (cur.length >= 5) { flash('Maks 5 faner. Fjern en først.'); haptic('err'); return true; } feSave([...cur, x.dataset.k]); haptic('tab'); draw(); return true; }
-    case 'fereset': L.fin = {}; keep(); FE.ic = null; feSave([...FT_DEF]); flash('Fanelinja i Finans er tilbakestilt'); draw(); return true;
+    case 'fereset': L.fin = {}; keep(); FE.ic = null; feSave([...FT_DEF]); flash('Fanelinja i Økonomi er tilbakestilt'); draw(); return true;
     default: return false;
   }
 }

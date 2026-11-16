@@ -223,7 +223,7 @@ const GSC_WHY43 = {
   scope: ['Mangler lesetilgang', 'Tilkoblingen mangler webmasters.readonly. Koble til på nytt og godta «Se Search Console-data».'],
   token: ['Innloggingen er utløpt', 'Homelab fikk ikke fornyet tilgangen hos Google. Koble til på nytt (da lagres en ny refresh-token).'],
   pending: ['Venter på første henting', 'Dataene hentes nå eller ved neste nattlige henting (06:00). Google har 2–3 dagers forsinkelse.'],
-  nosource: ['Domenet er ikke koblet til Search Console', 'Kontoen er koblet, men dette domenet har ikke valgt eiendom ennå. Velg eiendom under Innstillinger → Domener → Google Search Console.'],
+  nosource: ['Domenet er ikke koblet til Search Console', 'Kontoen er koblet, men dette domenet har ikke valgt eiendom ennå. Velg eiendom under Innstillinger → Moduler → Domener → Google Search Console.'],
   // Prompt 45 (claude-code-search-console-statistikk.md): flere konkrete årsaker fra serveren.
   api_disabled: ['Search Console API er ikke slått på', 'API-et må slås på i Google Cloud-prosjektet som eier OAuth-klienten eller servicekontoen. Slå det på, vent et par minutter og trykk Hent nå.'],
   token_testing: ['Google-appen står i «Testing»', 'Da utløper tilgangen etter 7 dager. Publiser OAuth-appen i Google Cloud (eller bruk en servicekonto), og koble til på nytt.'],
@@ -284,7 +284,7 @@ function gscHtml(name) {
     return `<div data-dm-gsc>${head(false)}<section class="dm-card dm-gsc-off">
       <div class="dm-gsc-intro"><b class="dm-gsc-bt">${re ? 'Koble til på nytt' : 'Koble til Google Search Console'}</b><span class="dm-gsc-tx">${re && d.error ? `${esc(d.error)} ` : ''}Se klikk, visninger, plassering og hvilke søk som gir trafikk til ${esc(name)}. Dataene hentes én gang i døgnet og er 2–3 dager forsinket fra Google.</span></div>
       <div class="dm-gsc-steps">${['Logg inn med Google-kontoen som eier eiendommen', `Velg eiendom, f.eks. sc-domain:${name}`, 'Data for de siste 16 månedene hentes inn'].map((t, i) => `<div><span>${i + 1}</span><span>${esc(t)}</span></div>`).join('')}</div>
-      <div class="dm-gsc-cta"><button type="button" class="dm-gsc-cbtn" data-dom-gconnect${d.missing ? ' disabled title="Serveren har ikke Google Search Console ennå"' : ''}>${G_LOGO}${re ? 'Koble til på nytt' : 'Koble til med Google'}</button><span class="dm-gsc-ro">${d.missing ? 'Serveren har ikke Google Search Console ennå' : d.configured === false ? 'Kun lesetilgang · webmasters.readonly · Google-klienten settes opp under Innstillinger → Kalendere' : 'Kun lesetilgang · webmasters.readonly'}</span></div></section></div>`;
+      <div class="dm-gsc-cta"><button type="button" class="dm-gsc-cbtn" data-dom-gconnect${d.missing ? ' disabled title="Serveren har ikke Google Search Console ennå"' : ''}>${G_LOGO}${re ? 'Koble til på nytt' : 'Koble til med Google'}</button><span class="dm-gsc-ro">${d.missing ? 'Serveren har ikke Google Search Console ennå' : d.configured === false ? 'Kun lesetilgang · webmasters.readonly · Google-klienten settes opp under Innstillinger → Tilkoblinger → Kalender og gjøremål' : 'Kun lesetilgang · webmasters.readonly'}</span></div></section></div>`;
   }
   if (d.needsSite) {
     const L = d.candidates ?? d.sites ?? [];
@@ -367,7 +367,7 @@ function overview() {
     ['Forespørsler totalt', big(ds.reduce((a, d) => a + (d.requests ?? 0), 0)), 'Siste ' + PER_TXT[S.per]],
     ['Besøkende totalt', big(ds.reduce((a, d) => a + (d.visitors ?? 0), 0)), 'Unike, siste ' + PER_TXT[S.per]],
     ['Neste utløp', next ? `${days(next.sslExpires)} dager` : '–', next ? 'SSL for ' + next.name : '']];
-  return `${S.list.length ? card('dm-tbl', `<div class="dm-tw"><div class="dm-row head">${cols}</div>${tbl}</div>`) : `<div class="dm-card dm-empty">Ingen domener ennå. Legg dem til under Innstillinger → Utseende → Domener. <button class="dm-btn" data-dom-manage>Administrer domener</button></div>`}
+  return `${S.list.length ? card('dm-tbl', `<div class="dm-tw"><div class="dm-row head">${cols}</div>${tbl}</div>`) : `<div class="dm-card dm-empty">Ingen domener ennå. Legg dem til under Innstillinger → Moduler → Domener. <button class="dm-btn" data-dom-manage>Administrer domener</button></div>`}
     <div class="dm-kpis">${kpis.map(([l, v, s]) => `<div class="dm-card dm-kpi"><span>${l}</span><b>${esc(v)}</b><small>${esc(s)}</small></div>`).join('')}</div>`;
 }
 

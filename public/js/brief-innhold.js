@@ -11,12 +11,12 @@ import { brief52State } from './brief-kort-bruker.js';
 /** [key, tittel, kilde, på som standard] – reserve når serveren ikke svarer (samme som server/glimt/brief-content.js CATALOG73). */
 export const CAT73 = [
   ['vaer', 'Vær', 'Nå, i dag og varsel', 1], ['kal', 'Kalender', 'Første avtale og resten av dagen', 1], ['fokus', 'Dagens fokus', 'Det viktigste i dag, valgt av Glimt', 1],
-  ['gjore', 'Gjøremål · 3 viktigste', 'Fra Gjøremål', 1], ['reise', 'Min reise', 'Ruter: neste avgang og når du må gå', 1], ['regn', 'Regninger denne uka', 'Fra Finans', 1],
+  ['gjore', 'Gjøremål · 3 viktigste', 'Fra Gjøremål', 1], ['reise', 'Min reise', 'Ruter: neste avgang og når du må gå', 1], ['regn', 'Regninger denne uka', 'Fra Økonomi', 1],
   ['kveld', 'Nytt i kveld', 'Nye episoder og filmer fra Media', 1], ['nyheter', 'Nyheter', 'Sammendrag fra Nyheter', 1], ['pakker', 'Pakker', 'Sporing på vei', 0],
   ['homelab', 'Homelab-status', 'Varsler fra serveren', 0], ['domener', 'Domener og SSL', 'Utløper snart', 0],
   ['klaer', 'Klær i dag', 'Hva du bør ha på deg, fra Vær', 1], ['abo', 'Prøveperioder', 'Fra Abonnementer', 1], ['bibel', 'Bibelvers', 'Dagens vers', 1],
   ['familie', 'Familie', 'De som deler posisjon', 1], ['skole', 'Skole og jobb', 'Prøver og frister neste 7 dager', 1], ['bursdager', 'Bursdager', 'Neste bursdager', 1],
-  ['nordlys', 'Nordlys i natt', 'Når Kp er høy nok', 1], ['aksjer', 'Aksjer', 'Porteføljen fra Finans', 0],
+  ['nordlys', 'Nordlys i natt', 'Når Kp er høy nok', 1], ['aksjer', 'Aksjer', 'Porteføljen fra Økonomi', 0],
 ];
 /** Nøkkel → id i /api/brief52. */
 export const B52_73 = { fokus: 'focus', gjore: 'todo', reise: 'trip', regn: 'bills', kveld: 'tonight', homelab: 'homelab', domener: 'domains', klaer: 'clothes', aksjer: 'stocks' };

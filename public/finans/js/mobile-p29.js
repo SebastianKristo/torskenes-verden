@@ -293,7 +293,7 @@ export function backupPage() {
   if (!isAdmin()) return '<div class="pp-card p29-note"><span class="pp-mut">Backup av hele systemet settes opp av administrator.</span></div>';
   if (BK.st === 'idle') { bkLoad().then(draw); return '<div class="m-spin"></div>'; }
   if (BK.st === 'loading' && !BK.s) return '<div class="m-spin"></div>';
-  if (BK.st === 'missing') return '<div class="pp-card p29-note"><b>Krever nyere server</b><span class="pp-mut">Backup av hele systemet krever nyere server. Oppdater Homelab under Innstillinger → Oppdatering.</span></div>';
+  if (BK.st === 'missing') return '<div class="pp-card p29-note"><b>Krever nyere server</b><span class="pp-mut">Backup av hele systemet krever nyere server. Oppdater Homelab under Innstillinger → Server → System.</span></div>';
   if (BK.st === 'err' && !BK.s) return `<div class="pp-card p29-note"><span class="pp-mut">${esc(BK.err || 'Fikk ikke hentet backup-oppsettet.')}</span></div><button class="pp-btn" data-p29="bkreload">Prøv igjen</button>`;
   const s = BK.s ?? {}, st = BK.status ?? {}, last = st.last ?? st.latest ?? BK.list?.[0] ?? null, run = BK.run ?? ((st.running ?? st.current) ? { pct: Math.round((st.running ?? st.current).pct ?? 0) } : null);
   const auto = s.auto !== false, custom = s.scope === 'custom', mods = new Set(s.modules ?? []), cloud = s.cloud ?? {};

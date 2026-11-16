@@ -1030,14 +1030,14 @@ export function draw() {
   // E-postimporten (felles med Homelab-innstillingene) monteres i Innstillinger → Import.
   const mp = el.querySelector('[data-mailpane]');
   if (mp) { if (mailPaneEl) mp.replaceWith(mailPaneEl); else { mailPaneEl = mp; import('/assets/js/settings-mail.js').then((m) => m.mailPane(mp)).catch(() => { mp.innerHTML = '<div class="note">Kunne ikke laste e-postoppsettet.</div>'; }); } }
-  // Prompt 34: AI-kontroll i Innstillinger → AI (samme element mellom tegningene, så panelet ikke flimrer).
+  // Prompt 34: AI-kontroll i Innstillinger → Glimt og AI → AI (samme element mellom tegningene, så panelet ikke flimrer).
   const ac = el.querySelector('[data-aictl-finans]');
   if (ac) {
     if (aiCtlEl) ac.replaceWith(aiCtlEl); else aiCtlEl = ac;
     import('/assets/js/ai-control.js').then((m) => m.mountAiControl(aiCtlEl, { variant: 'web', scope: 'finans', theme: design() === 'lys' ? 'papir' : 'finans', admin: canSrv(), tab: aiCtlTab, onTab: (x) => { aiCtlTab = x; } }))
       .catch(() => { S.aiLegacy = true; draw(); });
   }
-  // Prompt 48: Innstillinger → AI → Kvitteringer (Mac-OCR og stegene i kjeden).
+  // Prompt 48: Innstillinger → Glimt og AI → AI → Kvitteringer (Mac-OCR og stegene i kjeden).
   const r48 = el.querySelector('[data-r48-mount]');
   if (r48) import('/assets/js/receipts-settings.js').then((m) => m.mountReceipts48(r48)).catch(() => { r48.innerHTML = '<div class="note">Kunne ikke laste kvitteringsoppsettet.</div>'; });
   if (u.page === 'dir') afterB42(el);

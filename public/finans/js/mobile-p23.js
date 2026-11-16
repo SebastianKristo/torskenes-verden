@@ -511,7 +511,7 @@ async function toBind(x) {
 }
 
 /* =====================================================================
-   6. Innstillinger → App → Integrasjoner (Home Assistant)
+   6. Innstillinger → Tilkoblinger → Integrasjoner (Home Assistant)
    ===================================================================== */
 export const IG = { cfg: null, err: '', test: '', busy: false, ed: false, f: {} };
 export async function integLoad() {

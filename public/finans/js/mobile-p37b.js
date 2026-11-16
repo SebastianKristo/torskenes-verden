@@ -220,7 +220,7 @@ async function markRead() {
   draw();
 }
 export function bibleView() {
-  if (!bibleOn()) return `<div class="p37-empty">${BB.set || BB.miss ? 'Bibelvers er ikke slått på for deg. Admin kan slå det på under Innstillinger → Brukere → Moduler.' : 'Laster …'}</div>`;
+  if (!bibleOn()) return `<div class="p37-empty">${BB.set || BB.miss ? 'Bibelvers er ikke slått på for deg. Admin kan slå det på under Innstillinger → Husstand.' : 'Laster …'}</div>`;
   statsLoad();
   const S = skLocal(), has = days(), t = todayIso(), n = BB.stats?.streak ?? streak(has), readToday = has.has(t), best = Math.max(BB.stats?.best ?? 0, S.best || 0, n);
   const p = per(), v = verse(p, 0), L = look(p);
@@ -296,7 +296,7 @@ function obView() {
     body = `<span class="p37-ok2">STEG 3 AV 3</span><b class="p37-oh">Dette kobles til deg</b>
       <div class="p37-ome">${av(P, 48)}<span class="m-grow"><b>${esc(P.name)}</b><small>@${esc(user)} ⟷ profil</small></span></div>
       <div class="p37-card p37-grp">${L.map(([k, n, s, d, c]) => `<button type="button" class="p37-r" data-p37b="obln" data-k="${k}" role="switch" aria-checked="${!!OB.ln[k]}"><span class="p37-ri" style="--c:${c}">${svg(d, 16)}</span><span class="m-grow"><b>${esc(n)}</b><small>${esc(s)}</small></span><span class="p37-sw${OB.ln[k] ? ' on' : ''}"><i></i></span></button>`).join('')}</div>
-      <span class="p37-hint">Du kan endre koblingen senere i Innstillinger → Konto → Profil. Admin får beskjed om nye koblinger.</span>${OB.err ? `<span class="p37-err">${esc(OB.err)}</span>` : ''}
+      <span class="p37-hint">Du kan endre koblingen senere i Innstillinger → Konto og sikkerhet → Profil. Admin får beskjed om nye koblinger.</span>${OB.err ? `<span class="p37-err">${esc(OB.err)}</span>` : ''}
       <span class="m-grow"></span><button type="button" class="p37-obtn" data-p37b="oblink" ${OB.busy ? 'disabled' : ''}>${OB.busy ? 'Kobler …' : 'Koble og fortsett'}</button>`;
   } else {
     const nm = first(OB.prof?.name ?? P.name), n = Object.entries(OB.ln).filter(([k, v]) => v && (!OB.isNew || k !== 'subs')).length;
@@ -463,7 +463,7 @@ export function trkKeyLine() {
 /** Listen i Sporing → ⚙: én rad per leverandør, maskert nøkkel og «lagt inn av». Bare admin kan endre (på web). */
 export function trkKeysSection() {
   tkLoad(); const L = TK.d?.providers ?? []; if (!L.length) return '';
-  return `<span class="pp-lab">DELT I HUSSTANDEN</span><div class="pp-card pp-tight">${L.map((p) => `<div class="p37-tkr"><i class="${p.set ? (p.status === 'error' ? 'bad' : 'ok') : 'off'}"></i><span class="m-grow"><b>${esc(p.name ?? p.id)}</b><small>${p.set ? `Delt i husstanden${p.addedBy ? ` · lagt inn av ${esc(first(p.addedBy?.name ?? p.addedBy))}` : ''}` : 'Ikke satt opp'}</small></span><code>${p.set ? `••••${esc(p.tail ?? '')}` : '–'}</code></div>`).join('')}</div><span class="pp-mut" style="font-size:12px">${TK.d?.admin ? 'Endre nøklene under Innstillinger → Integrasjoner på web.' : 'Administreres av admin. Pakkene dine er alltid private.'}</span>`;
+  return `<span class="pp-lab">DELT I HUSSTANDEN</span><div class="pp-card pp-tight">${L.map((p) => `<div class="p37-tkr"><i class="${p.set ? (p.status === 'error' ? 'bad' : 'ok') : 'off'}"></i><span class="m-grow"><b>${esc(p.name ?? p.id)}</b><small>${p.set ? `Delt i husstanden${p.addedBy ? ` · lagt inn av ${esc(first(p.addedBy?.name ?? p.addedBy))}` : ''}` : 'Ikke satt opp'}</small></span><code>${p.set ? `••••${esc(p.tail ?? '')}` : '–'}</code></div>`).join('')}</div><span class="pp-mut" style="font-size:12px">${TK.d?.admin ? 'Endre nøklene under Innstillinger → Tilkoblinger på web.' : 'Administreres av admin. Pakkene dine er alltid private.'}</span>`;
 }
 
 /* =====================================================================

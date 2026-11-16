@@ -182,5 +182,5 @@ export function finansBtn50(meta, key, state) {
   const a = meta?.receipt?.action;
   if (!a?.url) return '';
   const done = state === 'ok', busy = state === 'busy';
-  return `<button type="button" class="ch-fin50" data-ch-fin50="${esc(key)}" ${done || busy ? 'disabled' : ''}>${done ? 'Lagt i Finans ✓' : busy ? 'Legger i Finans …' : esc(a.label || 'Legg i Finans ›')}</button>`;
+  return `<button type="button" class="ch-fin50" data-ch-fin50="${esc(key)}" ${done || busy ? 'disabled' : ''}>${done ? 'Lagt i Økonomi ✓' : busy ? 'Legger i Økonomi …' : esc(a.label || 'Legg i Økonomi ›')}</button>`;
 }

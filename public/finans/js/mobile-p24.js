@@ -126,13 +126,13 @@ const IDX = [
   // Prompt 35: Innstillinger → GLIMT → Glimt (figur, brief, stemme og venner).
   ['glimt', 'Glimt', 'Glimt', '#/glimt', 'glimt figur figurer vert venner gris ugle sky dråpe natt maskot', 'gl-fig'], ['gl-brief', 'Glimt-brief', 'Glimt', '#/glimt', 'brief briefer morgenbrief dagsbrief kveldsbrief nattbrief varsel guide vis meg rundt', 'gl-brief'],
   ['gl-voice', 'Stemme og opplesning', 'Glimt', '#/glimt', 'stemme stemmer opplesning les opp tts openai elevenlabs azure nora henrik lys tempo språk engelsk', 'gl-voice'],
-  ['fai', 'AI og tolkning', 'Økonomi', '#/aictl/fin', 'ai gemini groq ollama roboflow kvittering ocr finans'], ['r48', 'Kvitteringer · Mac-OCR', 'Finans · AI og tolkning', '#/aictl/fin/ocr', 'mac ocr vision tesseract gemini kvittering kjede nøkkel skann'], // prompt 48
+  ['fai', 'AI og tolkning', 'Økonomi', '#/aictl/fin', 'ai gemini groq ollama roboflow kvittering ocr finans'], ['r48', 'Kvitteringer · Mac-OCR', 'Økonomi · AI og tolkning', '#/aictl/fin/ocr', 'mac ocr vision tesseract gemini kvittering kjede nøkkel skann'], // prompt 48
   ['kat', 'Kategorier og budsjett', 'Økonomi', '#/set/kat', 'kategori budsjett'], ['regel', 'Regler', 'Økonomi', '#/set/regel', 'regel automatisk'],
-  ['bank', 'Bankimport', 'Økonomi', '#/set/bank', 'bank dnb csv import'], ['t212', 'Aksjer · Trading 212', 'Økonomi', '#/set/t212', 'aksje trading212 t212 fond'], ['fanelinje', 'Fanelinje og Mer i Finans', 'Finans', '#/set/fanelinje', 'fane faner navigasjon'], ['sub', 'Subscription OS', 'Finans', '#/sub', 'abonnement'],
+  ['bank', 'Bankimport', 'Økonomi', '#/set/bank', 'bank dnb csv import'], ['t212', 'Aksjer · Trading 212', 'Økonomi', '#/set/t212', 'aksje trading212 t212 fond'], ['fanelinje', 'Fanelinje og Mer i Økonomi', 'Økonomi', '#/set/fanelinje', 'fane faner navigasjon'], ['sub', 'Faste betalinger', 'Finans', '#/sub', 'abonnement'],
   // Prompt 39: alt med utseende og farger ligger i Homelab → Tilpass (#/set/tilpass).
   ['tilpass', 'Tilpass', 'Homelab', '#/set/tilpass', 'tilpass utseende tema farge farger ikon navn fanelinje bakgrunn customize mørk lys papir', 'theme'],
   ['appnavn', 'Navn på appen', 'Homelab · Tilpass', '#/set/tilpass', 'navn app tittel'], ['appikon', 'App-ikon', 'Homelab · Tilpass', '#/set/tilpass', 'ikon logo app'], ['hjemnav', 'Fanelinje i Hjem', 'Homelab · Tilpass', '#/set/fanelinje', 'fane faner hjem navigasjon'], ['navstil', 'Fanelinje-stil', 'Homelab · Tilpass', '#/set/tilpass', 'fane fanelinje stil ikoner tekst navn navigasjon'],
-  ['mod', 'Moduler', 'Homelab', '#/set/mod', 'modul widget sporing domener mat'], ['rss', 'Nyhetsleser', 'Homelab', '#/nyheter', 'rss nyheter kilder ikon'],
+  ['mod', 'Moduler', 'Homelab', '#/set/mod', 'modul widget sporing domener mat'], ['rss', 'Nyheter', 'Homelab', '#/nyheter', 'rss nyheter kilder ikon'],
   ['look', 'Tema og farger', 'Homelab · Tilpass', '#/set/tilpass', 'tema mørk lys farge farger papir utseende ikonfarger aksent', 'theme'], ['bakgrunn', 'Bakgrunn på Hjem', 'Homelab · Tilpass', '#/set/bakgrunn', 'bakgrunn bilde planeter vær oslo', 'bg'],
   ['haptic', 'Haptikk', 'App · Varsler og haptikk', '#/set/hap', 'haptikk vibrasjon vibrer', 'haptic'], ['varsler', 'Varsler og haptikk', 'App', '#/set/varsler', 'varsel push lyd bursdager', 'push'], ['quiet', 'Stille timer', 'App · Varsler', '#/set/varsler', 'stille timer natt lyd', 'quiet'], ['kal', 'Kalendere', 'App', '#/set/kal', 'kalender google home assistant ha ical canvas skole timeplan synk'], ['integ', 'Integrasjoner', 'App', '#/set/integ', 'integrasjon nøkkel api'],
   ['bd', 'Bursdager', 'Mer', '#/bd', 'bursdag'], ['kalside', 'Kalender', 'Mer', '#/kal', 'timeplan prøver frister skole uke måned agenda'],
@@ -322,7 +322,7 @@ export function calCard() {
     ${gOn ? `<span class="p24-fl">Kalendere · ${gSel(G).length} valgt</span><div class="p24-chips">${(BD.cals ?? []).map(cal).map((c) => chip(gSel(G).includes(c.id), `data-p24="gcal" data-v="${esc(c.id)}"`, `${gSel(G).includes(c.id) ? '✓ ' : ''}${c.n}`)).join('') || '<span class="p24-mut">Henter kalendere …</span>'}</div>
       ${P36.gcalSection()}${tog(G.writeNew !== false, 'data-p24="gtog" data-k="writeNew"', 'Skriv nye bursdager til Google', 'Årlig heldagshendelse med påminnelse')}${tog(G.contacts !== false, 'data-p24="gtog" data-k="contacts"', 'Hent bursdager fra Google-kontakter', 'Fra kontaktlisten din')}
       <div class="p24-row8"><button class="p24-b lab m-grow" data-p24="gsync" ${BD.busy === 'g' ? 'disabled' : ''}>${BD.busy === 'g' ? 'Synker …' : '↻ Synk nå'}</button><button class="p24-b" data-p24="glogout">Logg ut</button></div>`
-    : `<button class="p24-glog" data-p24="glogin" ${BD.local ? 'disabled' : ''}>${GSVG}Logg inn med Google</button>${G.configured === false ? '<span class="p24-mut">Google-klienten er ikke satt opp. Admin legger den inn under Innstillinger → Integrasjoner → Google Kalender.</span>' : ''}`}${G.error ? `<span class="p24-mut" style="color:var(--pp-lab)">${esc(G.error)}</span>` : ''}
+    : `<button class="p24-glog" data-p24="glogin" ${BD.local ? 'disabled' : ''}>${GSVG}Logg inn med Google</button>${G.configured === false ? '<span class="p24-mut">Google-klienten er ikke satt opp. Admin legger den inn under Innstillinger → Tilkoblinger → Google Kalender.</span>' : ''}`}${G.error ? `<span class="p24-mut" style="color:var(--pp-lab)">${esc(G.error)}</span>` : ''}
     ${haOk ? `    <i class="p24-hr"></i>
     <div class="p24-ch"><span class="p24-ci ha"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7M5 10v10h14V10M10 20v-6h4v6"/></svg></span><span class="m-grow"><b>Home Assistant</b><small style="color:${hOn ? 'var(--pp-pos)' : 'var(--pp-mut)'}">${hOn ? `${esc(H.entityId)}${H.syncedAt ? ` · importert ${hm(H.syncedAt)}` : ''}` : 'Velg kalender og importer'}</small></span></div>
     ${ents.length ? `<span class="p24-fl">Kalender i Home Assistant</span><div class="p24-chips">${ents.map((e) => chip(H.entityId === e, `data-p24="haent" data-v="${esc(e)}"`, e).replace('p24-chip', 'p24-chip mono')).join('')}</div>` : isAdmin() || BD.local ? '' : '<span class="p24-mut">Bare administrator kan velge kalender i Home Assistant.</span>'}
@@ -345,7 +345,7 @@ export function bdView() {
   return `<div class="p24-bd">${hero}
     <div class="p24-bdq"><label class="p24-ssf"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/></svg><input id="p24-bdq" data-p24in="bdq" type="search" value="${esc(BD.q)}" placeholder="Søk etter navn" autocomplete="off" aria-label="Søk etter navn"></label><button class="p24-add" data-p24="bdadd">${BD.add ? 'Lukk' : '+ Legg til'}</button></div>
     ${BD.add ? addCard() : ''}
-    ${!F.length ? `<div class="p24-card p24-mut">${L0.length ? 'Ingen treff.' : 'Ingen bursdager ennå. Trykk «+ Legg til», eller koble til Google Kalender eller Home Assistant i Innstillinger → Kalendere.'}</div>` : ''}
+    ${!F.length ? `<div class="p24-card p24-mut">${L0.length ? 'Ingen treff.' : 'Ingen bursdager ennå. Trykk «+ Legg til», eller koble til Google Kalender eller Home Assistant i Innstillinger → Tilkoblinger → Kalender og gjøremål.'}</div>` : ''}
     ${G.map((g) => `<div class="p24-bdg"><span class="p24-lab"><span>${esc(g.t)}</span><span class="p24-c">${g.items.length}</span></span><div class="p24-card p24-bdl">${g.items.map(bdRow).join('')}</div></div>`).join('')}
     </div>`; // prompt 41: Kalendere er fjernet fra siden (oppsettet ligger i Innstillinger → Kalendere)
 }
@@ -670,7 +670,7 @@ async function bindAsync(e, t) {
       await bdWrite(() => hlApi(`/birthdays/${encodeURIComponent(id)}`, { method: 'DELETE' }), `${p?.name ?? 'Bursdagen'} er slettet`); return true;
     }
     case 'glogin': {
-      if (BD.d?.google?.configured === false) { flash('Admin må legge inn Google-klienten under Innstillinger → Integrasjoner'); return true; }
+      if (BD.d?.google?.configured === false) { flash('Admin må legge inn Google-klienten under Innstillinger → Tilkoblinger'); return true; }
       const ret = `${location.origin}/finans/#/${m.screen === 'set' ? 'set/kal' : 'bd'}`;
       try { const r = await hlApi('/birthdays/google/start', { method: 'POST', json: { return: ret } }); location.href = r.url; }
       catch { location.href = `/api/birthdays/google/auth?return=${encodeURIComponent(ret)}`; }

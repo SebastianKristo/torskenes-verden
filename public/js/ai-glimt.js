@@ -66,7 +66,7 @@ export function chatRows65(ui) {
   const ch = A.chat, out = [];
   if (ch) {
     const on = ch.chat_my_data !== false; // prompt 41: mangler = på
-    out.push(ui.row({ ic: 'lock', t: 'La Chat lese mine data', s: 'Finans, Kalender og Gjøremål sendes med når «Mine data» er på i samtalen. Lokale modeller får dataene uten spørsmål.', right: swb(ui, on, 'data-g65-tog="chat_my_data"', 'La Chat lese mine data') }));
+    out.push(ui.row({ ic: 'lock', t: 'La Chat lese mine data', s: 'Økonomi, Kalender og Gjøremål sendes med når «Mine data» er på i samtalen. Lokale modeller får dataene uten spørsmål.', right: swb(ui, on, 'data-g65-tog="chat_my_data"', 'La Chat lese mine data') }));
     out.push(ui.row({ ic: 'shield', t: 'Spør før sky-modeller får data', s: 'Gemini og Groq må godkjennes per samtale', right: swb(ui, !!ch.chat_ask_cloud, 'data-g65-tog="chat_ask_cloud"', 'Spør før sky-modeller får data') }));
     const opts = (A.models ?? []).filter((m) => m.installed);
     const L = [...(A.auto ? [[A.auto.id, `${A.auto.label || '✦ Auto'} · Glimt velger`]] : [['', 'Automatisk (siste brukte)']]), ...opts.map((m) => [m.id, m.kind === 'sky' ? `${m.name} · sky` : `${m.id} · lokal`])];

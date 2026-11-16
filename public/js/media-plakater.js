@@ -102,7 +102,7 @@ export function trackHtml50(k, ctx = {}) {
   const acts = (t.actions ?? []).map((a) => {
     if (a.id === 'manual') return ctx.movieId ? '<button type="button" class="m43-btn sm line" data-m43="minter">Velg manuelt</button>' : ctx.episodeId ? `<button type="button" class="m43-btn sm line" data-m43-epint="${+ctx.episodeId}">Velg manuelt</button>` : '';
     if (a.id === 'start' && a.hash) return `<button type="button" class="m43-btn sm ink" data-m50-start="${esc(a.hash)}" data-m50-k="${esc(k)}">Start</button>`;
-    if (a.id === 'settings') return '<button type="button" class="m43-btn sm line" data-m50-set>Innstillinger → Media</button>';
+    if (a.id === 'settings') return '<button type="button" class="m43-btn sm line" data-m50-set>Innstillinger → Moduler → Media</button>';
     if (a.id === 'retry') return `<button type="button" class="m43-btn sm line" data-m50-retry="${esc(k)}">Søk igjen</button>`;
     return '';
   }).join('');

@@ -246,7 +246,7 @@ export function settingsHtml64() {
   if (!d) return `<div class="ac-sec"><span class="ac-lab">KVALITET OVER TID</span><div class="ac-card ac-list"><div class="ac-mut" style="padding:12px 0">Laster …</div></div></div>`;
   const srvW = d.server?.weekly !== false, own = d.user?.weekly, onW = srvW && (own ?? srvW);
   const mine = `<button type="button" class="ac-li" data-q64-user="weekly" role="switch" aria-checked="${onW}"${Q.sbusy || !srvW ? ' disabled' : ''}><span class="ac-col ac-grow"><b>${lab('weekly')}</b><span>${!srvW ? 'Slått av for alle av administrator' : `${help('weekly')}${own == null ? '' : ' · Ditt eget valg'}`}</span></span>${sw(onW)}</button>`;
-  const link = '<button type="button" class="ac-li" data-q64-go><span class="ac-col ac-grow"><b>Se kvalitet</b><span>Innstillinger → Kvalitet: ukerapporten og nattlige eval-kjøringer</span></span><span aria-hidden="true">›</span></button>';
+  const link = '<button type="button" class="ac-li" data-q64-go><span class="ac-col ac-grow"><b>Se kvalitet</b><span>Innstillinger → Glimt og AI → Kvalitet: ukerapporten og nattlige eval-kjøringer</span></span><span aria-hidden="true">›</span></button>';
   let admin = '';
   if (d.admin) {
     const tog = (k, sub) => { const v = d.server?.[k] !== false; return `<button type="button" class="ac-li" data-q64-server="${k}" role="switch" aria-checked="${v}"${Q.sbusy ? ' disabled' : ''}><span class="ac-col ac-grow"><b>${k === 'weekly' ? 'Ukerapport for alle' : lab(k)}</b><span>${sub}</span></span>${sw(v)}</button>`; };

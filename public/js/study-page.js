@@ -99,7 +99,7 @@ function nowCard() {
       <div class="st44-np"><span>Starter ${esc(when)}</span></div>${after ? `<div class="st44-nn"><span class="st44-k">ETTERPÅ</span><b>${esc(after.title)}</b><span class="mono">${hm(after.s)}</span></div>` : ''}</div>`;
   }
   const conf = store.data.school?.configured !== false || S.ov?.events;
-  return `<div class="st44-now"><div class="st44-nh"><span class="st44-k acc">TIMEPLAN</span></div><b class="st44-nb sm">${conf ? 'Ingen flere timer' : 'Ingen timeplan ennå'}</b><div class="st44-np"><span>${conf ? 'Ingenting mer på timeplanen de neste dagene.' : 'Legg inn skolens iCal (tp.uio.no eller Canvas) under Innstillinger → Kalendere.'}</span></div>${conf ? '' : '<div class="st44-nn"><button type="button" class="st44-lk" data-st44-cal>Åpne Kalendere ›</button></div>'}</div>`;
+  return `<div class="st44-now"><div class="st44-nh"><span class="st44-k acc">TIMEPLAN</span></div><b class="st44-nb sm">${conf ? 'Ingen flere timer' : 'Ingen timeplan ennå'}</b><div class="st44-np"><span>${conf ? 'Ingenting mer på timeplanen de neste dagene.' : 'Legg inn skolens iCal (tp.uio.no eller Canvas) under Innstillinger → Tilkoblinger → Kalender og gjøremål.'}</span></div>${conf ? '' : '<div class="st44-nn"><button type="button" class="st44-lk" data-st44-cal>Åpne Kalendere ›</button></div>'}</div>`;
 }
 function todayCard() {
   const now = new Date(), L = lessons(now), H0 = Math.min(8, ...L.map((e) => e.s.getHours())), H1 = Math.min(24, Math.max(15, ...L.map((e) => e.e.getHours() + (e.e.getMinutes() ? 1 : 0))));

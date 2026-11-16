@@ -28,7 +28,7 @@ export function subRows(t) {
 }
 /** Raden som erstatter HA-kortet i sidemenyen. */
 export function haRow() {
-  return `<button type="button" class="tk44-ha" data-tk44-ha><span aria-hidden="true">⇄</span><span><b>Synk med Home Assistant</b><span>Endres i Innstillinger → Gjøremål ›</span></span></button>`;
+  return `<button type="button" class="tk44-ha" data-tk44-ha><span aria-hidden="true">⇄</span><span><b>Synk med Home Assistant</b><span>Endres i Innstillinger → Tilkoblinger → Kalender og gjøremål ›</span></span></button>`;
 }
 
 /* ---------------- Panelet fra høyre ---------------- */

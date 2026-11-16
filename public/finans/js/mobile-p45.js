@@ -255,7 +255,7 @@ async function recoSet(n) {
 }
 export const recoSeg = () => `<div class="p45-seg" role="radiogroup" aria-label="Antall anbefalte reiser">${[1, 2, 3].map((n) => `<button type="button" role="radio" aria-checked="${RU.n === n}" class="${RU.n === n ? 'on' : ''}" data-p45="reco" data-n="${n}">${n}</button>`).join('')}</div>`;
 /** ⋯ på kortet «Anbefalt for min reise». */
-export const recoMenuBtn = () => `<button type="button" class="p45-rmb" data-p45="recomenu" aria-expanded="${RU.menu}" aria-label="Valg for anbefalte reiser">⋯</button>${RU.menu ? `<div class="p45-rmenu" role="dialog" aria-label="Antall anbefalte reiser"><span class="p45-rml">ANTALL ANBEFALTE REISER</span>${recoSeg()}<small>Samme valg i Innstillinger → Ruter.</small></div>` : ''}`;
+export const recoMenuBtn = () => `<button type="button" class="p45-rmb" data-p45="recomenu" aria-expanded="${RU.menu}" aria-label="Valg for anbefalte reiser">⋯</button>${RU.menu ? `<div class="p45-rmenu" role="dialog" aria-label="Antall anbefalte reiser"><span class="p45-rml">ANTALL ANBEFALTE REISER</span>${recoSeg()}<small>Samme valg i Innstillinger → Moduler → Reise.</small></div>` : ''}`;
 
 /* =====================================================================
    5. Vær: «Min posisjon» (enheten som har appen åpen)

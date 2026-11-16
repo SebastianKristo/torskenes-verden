@@ -148,7 +148,7 @@ export function p17SetMain(T = {}) {
       row('#/set/kat', 'Kategorier og budsjett', `${(S.boot?.categories ?? []).length} kategorier`, '', 'cat', 'kat'), row('#/set/regel', 'Regler', `${(S.boot?.rules ?? []).length} regler`, '', 'rule', 'regel'),
       row('#/set/bank', 'Bankimport', 'DNB · CSV · ✦ AI', '', 'bank', 'bank'), row('#/set/t212', 'Aksjer · Trading 212', t212, '', 'aks', 't212'), row('#/set/fanelinje', 'Fanelinje og Mer i Økonomi', `${fk} faner`, '', 'list', 'fanelinje'), row('#/fast/abonnementer', 'Faste betalinger', 'Abonnementer, faste utgifter og AI-sparing', '', 'sub', 'sub')])}
     ${grp(appName().toUpperCase(), [row('#/set/tilpass', 'Tilpass', 'Navn, ikon, tema, farger, bakgrunn og fanelinje', '', 'look', 'tilpass'), /* prompt 39: Navn, App-ikon, Fanelinje-stil og Fanelinje i Hjem ligger i Tilpass */
-      row('#/set/mod', 'Moduler', domOk() ? 'Sporing, Domener, Mat, Nyheter' : 'Sporing, Mat, Nyheter', '', 'globe', 'mod'), row('#/nyheter', 'Nyhetsleser', 'Kilder og AI', '', 'look', 'rss')])}
+      row('#/set/mod', 'Moduler', domOk() ? 'Sporing, Domener, Mat, Nyheter' : 'Sporing, Mat, Nyheter', '', 'globe', 'mod'), row('#/nyheter', 'Nyheter', 'Kilder og AI', '', 'look', 'rss')])}
     ${grp('GLIMT', [row('#/glimt', 'Glimt', 'Figur, brief, stemme og venner', '', 'ai', 'glimt')])}
     ${globalThis.P45?.modGroup?.(grp, row) ?? '' /* prompt 45: MODULER – alle innstillinger samlet her (Media, Ruter, Vær, Studie) */}
     ${globalThis.P42?.healthGroup?.(grp, row) ?? '' /* prompt 42: HELSE (FAMILIE) – flyttet fra Familie → Helse */}
@@ -159,7 +159,7 @@ export function p17SetMain(T = {}) {
 }
 /** Moduler: snarveier til modulene (de kan også legges i fanelinja). */
 export function p17Modules() {
-  const M = [['#/spor', 'Sporing', 'Pakker fra e-post og Finn', 'globe'], ['#/dom', 'Domener', 'Cloudflare-statistikk', 'globe'], ['#/mat', 'Mat', 'Ukeplan og oppskrifter', 'home'], ['#/nyheter', 'Nyhetsleser', 'RSS med AI-sammendrag', 'look'],
+  const M = [['#/spor', 'Sporing', 'Pakker fra e-post og Finn', 'globe'], ['#/dom', 'Domener', 'Cloudflare-statistikk', 'globe'], ['#/mat', 'Mat', 'Ukeplan og oppskrifter', 'home'], ['#/nyheter', 'Nyheter', 'RSS med AI-sammendrag', 'look'],
     ['#/huske', 'Gjøremål', 'To-do: egne og delte lister', 'list'], ['#/fam', 'Familie og kart', 'Posisjon, soner og helse', 'users'], ['#/avg', 'Avganger', 'Sanntid fra Entur', 'globe'], ['#/vaer', 'Vær', 'MET og Yr mot Storm', 'look']];
   return grp('MODULER', M.filter(([h]) => h !== '#/dom' || domOk()).map(([h, n, s, ic]) => row(h, n, s, '', ic, `mod-${n}`))) + '<div class="snote">Modulene kan også legges i fanelinja under Fanelinje i Hjem.</div>';
 }
@@ -346,7 +346,7 @@ export function huskeView() {
     ${all || AR || HK.local ? '' : listShareLine(listOf(HK.cur), mem, m.me?.id ?? currentUser())}
     ${HK.err ? `<div class="pp-card pp-mut">${esc(HK.err)}</div>` : ''}
     ${groups.map(([t, a, an, ak]) => `<span class="pp-lab p32-gh"><span>${t}</span>${an ? `<button type="button" class="p32-gb" data-p17="${ak}">${an}</button>` : ''}</span><div class="pp-card p17-tks">${a.map((x) => taskRow(x, all || AR)).join('')}</div>`).join('') || `<div class="pp-card pp-mut">${AR ? 'Ingenting i arkivet. Fullførte oppgaver arkiveres automatisk etter 7 dager.' : `Ingen oppgaver i ${esc(curN)}.`}</div>`}
-    ${HK.local ? '<span class="pp-mut" style="font-size:12px;padding:0 4px">Lagres på denne enheten til serveren har Huskeliste. Oppdater Homelab for å dele listen med familien.</span>' : '<span class="pp-mut" style="font-size:12px;padding:0 4px">Listene dine er private. Velg en liste og trykk «Del liste» for å dele den med navngitte personer.</span>'}</div>`;
+    ${HK.local ? '<span class="pp-mut" style="font-size:12px;padding:0 4px">Lagres på denne enheten til serveren har Gjøremål. Oppdater Homelab for å dele listen med familien.</span>' : '<span class="pp-mut" style="font-size:12px;padding:0 4px">Listene dine er private. Velg en liste og trykk «Del liste» for å dele den med navngitte personer.</span>'}</div>`;
 }
 /** Hjem-kortet: de tre neste oppgavene med avkrysning. */
 export function huskeWidget() {

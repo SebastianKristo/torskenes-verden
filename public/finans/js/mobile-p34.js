@@ -247,7 +247,7 @@ export function briefView() {
     <div class="p34-bcard${ring('nyh')}" data-gb="nyh"><span class="p34-bh"><b>Nyheter</b></span>
       ${b.news.length ? b.news.map((n) => `<a class="p34-nw" href="${esc(n.url || '#/nyheter')}" target="_blank" rel="noopener"><span>${esc(String(n.source).slice(0, 4).toUpperCase())}</span><span class="p34-nwt">${esc(n.title)}</span><span>${esc(n.time)}</span></a>`).join('')
         : '<a class="p34-none" href="#/nyheter">Ingen nyheter ennå. Åpne nyhetsleseren ›</a>'}</div>
-    <span class="p34-foot">Laget av Glimt ${esc(b.at)} · Vær: MET / Open-Meteo · Nyheter: ${esc([...new Set(b.news.map((n) => n.source).filter(Boolean))].join(', ') || 'Nyhetsleser')}</span>
+    <span class="p34-foot">Laget av Glimt ${esc(b.at)} · Vær: MET / Open-Meteo · Nyheter: ${esc([...new Set(b.news.map((n) => n.source).filter(Boolean))].join(', ') || 'Nyheter')}</span>
     ${BR.err ? `<span class="p34-foot err">${esc(BR.err)}</span>` : ''}
   </div>
   <div class="p34-guide">${bub ? `<div class="p34-gb" role="status" aria-live="polite"><span>${esc(cur[1])}</span><span class="p34-gbb">${st < G0.length - 1 ? '<button type="button" data-p34="gskip">Hopp over</button>' : ''}<button type="button" class="ink" data-p34="gnext">${esc(cur[2])}</button></span></div>` : ''}

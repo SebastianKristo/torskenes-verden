@@ -179,7 +179,7 @@ function placeTicker() {
 
 // «SISTE NYTT ›» åpner den felles nyhetsleseren (news.js). Finnes den ikke ennå, skjer ingenting.
 async function openNewsReader() {
-  try { const m = await import('./news.js'); (m.openNews ?? m.default)?.(); } catch (e) { console.warn('Nyhetsleseren er ikke tilgjengelig', e); }
+  try { const m = await import('./news.js'); (m.openNews ?? m.default)?.(); } catch (e) { console.warn('Nyheter er ikke tilgjengelig', e); }
 }
 
 function weatherPill() {

@@ -83,7 +83,7 @@ function folders(th) {
       <div class="opt-row col"><span style="font-size:13px;opacity:.7">Type</span><div class="schips">${['Enebolig', 'Leilighet', 'Hytte', 'Utleie', 'Annet'].map((t) => `<button class="chip" type="button" data-dirtype="${t}" aria-pressed="${f.type === t}">${t}</button>`).join('')}</div></div>
       <label class="field">${isIos(th) ? '<span>Adresse</span>' : 'Adresse'}<input name="address" value="${esc(f.address)}" placeholder="Valgfritt"></label>
       <div style="padding:${isIos(th) ? '10px 12px' : '0'};display:flex;gap:8px"><button class="pri-b" type="submit" style="flex:1">Opprett</button><button class="sec-b" type="button" data-diradd="0" style="flex:1">Avbryt</button></div></form>
-      <div class="snote">Del boligen med andre brukere etterpå. Nye brukere legges til av admin i Homelab → Innstillinger → Innlogging.</div>` : '';
+      <div class="snote">Del boligen med andre brukere etterpå. Nye brukere legges til av admin i Homelab → Innstillinger → Konto og sikkerhet.</div>` : '';
   return `${head(th, navName('dir', 'Boliger'), D.dirAdd ? '' : '<button class="tonal" data-diradd="1">+ Ny</button>')}
     <div style="font-size:14px;opacity:.7;padding:0 4px;margin-top:-6px">Utgifter til bolig, hytte og utleie</div>${form}
     ${list.length ? list.map((f) => `<a class="fold ${gl(th, 'glass')}" href="#/dir/${f.id}"><span class="fold-ic">${icon('dir', 22)}</span><span class="m-grow"><b class="m-ell" style="font-weight:600">${esc(f.name)}</b><span class="m-ell s">${[f.type, f.address].filter(Boolean).map(esc).join(' · ') || `${(f.members ?? []).length} medlemmer`}</span></span><span class="m-mono" style="font-weight:600">${n0(f.total ?? 0)} kr</span></a>`).join('') : '<div class="m-empty">Ingen boliger ennå. Trykk «+ Ny» for å opprette en.</div>'}`;
@@ -147,7 +147,7 @@ function finn(th) {
   return `${head(th, navName('finn', 'Finn-handler'))}
     ${kpis(th, [['Kjøpt i år', `${n0(f.bought ?? 0)} kr`], ['Solgt i år', `${n0(f.sold ?? 0)} kr`], ['Pågående', String(f.ongoing ?? 0)]])}
     ${listBox(th, (f.items ?? []).map((x) => `<div class="item" style="align-items:flex-start">${logo({ domain: 'finn.no', description: 'Finn' }, 40, isIos(th) ? 20 : 12)}<span class="m-grow"><span class="m-row" style="gap:8px"><em class="role ${x.role === 'sold' ? 'sold' : 'bought'}">${x.role === 'sold' ? 'Solgt' : 'Kjøpt'}</em><span class="m-ell" style="font-weight:500">${esc(x.item)}</span></span><span class="m-ell s">${esc(x.counterpart ?? '')}${x.date ? ` · ${dd(x.date)}` : ''}</span>
-      <span class="steps">${(x.steps ?? []).map((s) => `<em class="${s.done ? 'done' : ''}">${esc(s.t ?? s.name ?? s.label ?? s)}</em>`).join('')}</span></span><span class="m-mono" style="font-weight:600;color:${x.role === 'sold' ? '#9FE3C6' : 'inherit'}">${x.role === 'sold' ? '+' : '−'}${n0(x.amount)}</span></div>`).join('') || '<div class="m-empty">Ingen Finn-handler ennå. Lim inn Finn-e-poster i FinansHub på PC.</div>')}`;
+      <span class="steps">${(x.steps ?? []).map((s) => `<em class="${s.done ? 'done' : ''}">${esc(s.t ?? s.name ?? s.label ?? s)}</em>`).join('')}</span></span><span class="m-mono" style="font-weight:600;color:${x.role === 'sold' ? '#9FE3C6' : 'inherit'}">${x.role === 'sold' ? '+' : '−'}${n0(x.amount)}</span></div>`).join('') || '<div class="m-empty">Ingen Finn-handler ennå. Lim inn Finn-e-poster i Økonomi på PC.</div>')}`;
 }
 
 /* ---------- Domener (Cloudflare): faner Trafikk · Besøk · Ytelse · Sikkerhet ---------- */
@@ -229,7 +229,7 @@ function domManage(th) {
     ${sec('Legg til domene')}<form class="list ${gl(th)}" data-domadd><label class="opt-row col"><span style="font-size:13px;opacity:.7">Domene</span><input class="sinp" name="name" id="m-dom-name" value="${esc(f.name)}" placeholder="eksempel.no" inputmode="url" autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="off"></label>
       <div class="opt-row col"><span style="font-size:13px;opacity:.7">Statistikkilde</span><div class="chips">${Object.entries(DSRC).map(([k, n]) => `<button type="button" class="chip" data-dom="src" data-v="${k}" aria-pressed="${f.source === k}">${n}</button>`).join('')}</div></div>
       <button class="opt-row" type="submit"><span class="m-grow" style="color:var(--m-acc);font-weight:600">Legg til domene</span></button></form>
-    <div class="snote" style="padding:0 6px">Listen er den samme som i Homelab. Cloudflare bruker standard-tokenet fra Integrasjoner; eget API-token per domene legges inn på web (Homelab → Innstillinger → Domener).</div>`;
+    <div class="snote" style="padding:0 6px">Listen er den samme som i Homelab. Cloudflare bruker standard-tokenet fra Tilkoblinger; eget API-token per domene legges inn på web (Homelab → Innstillinger → Moduler → Domener).</div>`;
 }
 
 // Papir på mobil: bare toppkortet (domenevelger + periode) ligger i et hvitt kort over bildeheaderen. Resten er egne

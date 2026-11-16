@@ -153,7 +153,7 @@ export function isHuske41(q) {
 const STEPS41 = ['Leser beskjeden', 'Deler opp i punkter', 'Finner rekkefølge og steder', 'Lagrer i Gjøremål'];
 /** Legg i Gjøremål med samme Glimt-animasjon som rask time. Bakgrunnsjobb på serveren (origin home_search). */
 export async function addFromSearch41(q) {
-  const id = aiStart({ title: 'Legger til i Gjøremål', toast: 'Glimt deler opp beskjeden …', model: 'Glimt', input: q, steps: STEPS41, fields: { Beskjed: q.length > 80 ? `${q.slice(0, 80)} …` : q, Liste: 'Huskeliste', Original: 'Lagres i «Laget med Glimt»' }, dur: 4200 });
+  const id = aiStart({ title: 'Legger til i Gjøremål', toast: 'Glimt deler opp beskjeden …', model: 'Glimt', input: q, steps: STEPS41, fields: { Beskjed: q.length > 80 ? `${q.slice(0, 80)} …` : q, Liste: 'Gjøremål', Original: 'Lagres i «Laget med Glimt»' }, dur: 4200 });
   let shown = true;
   const slow = setTimeout(() => { if (shown) { shown = false; aiDone(id, { text: '✦ Glimt deler opp i bakgrunnen …' }); } }, 6000);
   const done = (text, ok = true) => {

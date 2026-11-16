@@ -238,7 +238,7 @@ function head(title, sub, left = '', right = '') {
   return `${left || right ? `<div class="f50-topbar">${left}<span class="f50-grow"></span>${right}</div>` : '<div class="f50-topgap"></div>'}
     <div class="f50-head"><h1 class="f50-h1">${esc(title)}</h1>${sub ? `<div class="f50-sub">${sub}</div>` : ''}</div>`;
 }
-const homeBtn = () => (F.o.env === 'pwa' ? btn('data-f50="home"', '‹ Hjem', 'f50-pill') : '');
+const homeBtn = () => (F.o.env === 'pwa' ? btn('data-f50="home"', '‹ Oversikt', 'f50-pill') : '');
 const backBtn = (label, cls = 'f50-pill') => btn('data-f50="back"', `‹ ${esc(label)}`, cls);
 
 /* ---------------- 1 · Folk ---------------- */

@@ -413,7 +413,7 @@ function modelSheet() {
   const loc = allModels().filter((m) => m.kind === 'lokal' && m.installed), sky = allModels().filter((m) => m.kind === 'sky');
   const auto = C.auto ? `<div class="ch-list"><button type="button" class="ch-mrow ch-auto41" data-ch-model="${esc(C.auto.id)}"><span class="ch-grow"><b>${esc(C.auto.label || '✦ Auto')}</b><span>Glimt velger beste modell for hver melding · lokalt når dine data er med</span></span><span class="ch-badge auto41">AUTO</span><span class="ch-chk">${id === C.auto.id ? '✓' : ''}</span></button></div>` : '';
   return sheetWrap(`${auto}<div class="ch-gl">LOKALT · OLLAMA PÅ HJEMMESERVEREN</div><div class="ch-list">${loc.map(row).join('') || '<div class="ch-li-e">Ingen lokale modeller installert.</div>'}</div>
-    <div class="ch-gl">SKY</div><div class="ch-list">${sky.map(row).join('') || '<div class="ch-li-e">Ingen sky-modeller. Legg inn Gemini- eller Groq-nøkkel under Innstillinger → AI.</div>'}</div>
+    <div class="ch-gl">SKY</div><div class="ch-list">${sky.map(row).join('') || '<div class="ch-li-e">Ingen sky-modeller. Legg inn Gemini- eller Groq-nøkkel under Innstillinger → Glimt og AI → AI.</div>'}</div>
     <span class="ch-hint">Sky-modeller merkes SKY. Før dine data eller vedlegg sendes dit, får du spørsmål om det.</span>
     <button type="button" class="ch-btn line" data-ch-sheet="mods">Administrer modeller ›</button>`, 'Velg modell');
 }
@@ -792,8 +792,8 @@ async function toFinans(key) {
     const r = await fetch(a.url, { method: a.method || 'POST' });
     const d = await r.json().catch(() => ({}));
     if (!r.ok) throw new Error(d.error || `Feil ${r.status}`);
-    C.fin50[key] = 'ok'; toast('Kvitteringen er lagt i Finans · Til godkjenning');
-  } catch (e) { delete C.fin50[key]; toast(`Kunne ikke legge i Finans: ${e.message}`); }
+    C.fin50[key] = 'ok'; toast('Kvitteringen er lagt i Økonomi · Til godkjenning');
+  } catch (e) { delete C.fin50[key]; toast(`Kunne ikke legge i Økonomi: ${e.message}`); }
   paint();
 }
 async function loadKb() {
@@ -1020,7 +1020,7 @@ function bind(h) {
     if (d.chCf60) { const [k, mi] = d.chCf60.split(':'); confirm60(+mi, k === 'yes'); return; }
     if ('chStop' in d) { stop(); return; }
     if ('chWeb' in d) { C.web = !C.web; writeLocal(); paint(); return; }
-    if ('chData' in d) { if (!C.set.chat_my_data) { toast('Slått av i Innstillinger → AI og tolkning'); return; } C.data = !C.data; dataSave41(C.cur, C.data); writeLocal(); paint(); return; }
+    if ('chData' in d) { if (!C.set.chat_my_data) { toast('Slått av i Innstillinger → Glimt og AI'); return; } C.data = !C.data; dataSave41(C.cur, C.data); writeLocal(); paint(); return; }
     if ('chMic' in d) { mic(); return; }
     if (d.chRmatt) { const x = C.att[+d.chRmatt]; if (x?.preview) setTimeout(() => URL.revokeObjectURL(x.preview), 60_000); C.att = C.att.filter((_, i) => i !== +d.chRmatt); paint(); return; }
     if (d.chLb) { openLb(d.chLb); return; } // prompt 50: lysboks

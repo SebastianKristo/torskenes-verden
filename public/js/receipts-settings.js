@@ -91,7 +91,7 @@ function stepsCard(H) {
     return `<button type="button" class="r48s-li${gem ? ' blocked' : ''}" role="switch" aria-checked="${on}" data-r48s="tog" data-k="${k}"${dis ? ' disabled' : ''}${gem ? ' aria-describedby="r48s-gem"' : ''}><span class="r48s-col2"><b>${esc(n)}</b><span${gem ? ' id="r48s-gem"' : ''}>${esc(sub)}</span></span>${sw(on)}</button>`;
   }).join('');
   return `<div class="r48s-card"><span class="r48s-lab">STEG I KJEDEN</span>${rows}
-    <div class="r48s-note">Rekkefølgen er A → B → C → Tesseract, ellers legges kvitteringen i kø og prøves igjen; første steg som består kontrollen, vinner. Selve lesingen på telefonen slås på i FinansHub-appen (av som standard).${can ? '' : ' Bare administrator kan endre stegene.'}</div></div>`;
+    <div class="r48s-note">Rekkefølgen er A → B → C → Tesseract, ellers legges kvitteringen i kø og prøves igjen; første steg som består kontrollen, vinner. Selve lesingen på telefonen slås på i Homelab-appen (av som standard).${can ? '' : ' Bare administrator kan endre stegene.'}</div></div>`;
 }
 
 export function viewReceipts48() {

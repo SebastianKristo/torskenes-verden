@@ -169,10 +169,10 @@ export function isHuske(t) {
 export function huskeRow(q) {
   if (!isHuske(q)) return '';
   const t = String(q).trim();
-  return `<button type="button" class="p29-ap p41-hap" data-p29="addq"><span class="p29-apic">${svg('M9 6h11M9 12h11M9 18h11M4 6l1 1 2-2M4 12l1 1 2-2M4 18l1 1 2-2', 16)}</span><span class="m-grow"><b>${esc(t.length > 60 ? `${t.slice(0, 58)}…` : t)}</b><span>Glimt deler opp i punkter</span></span><span class="p29-apb">Legg i Huskeliste</span></button>`;
+  return `<button type="button" class="p29-ap p41-hap" data-p29="addq"><span class="p29-apic">${svg('M9 6h11M9 12h11M9 18h11M4 6l1 1 2-2M4 12l1 1 2-2M4 18l1 1 2-2', 16)}</span><span class="m-grow"><b>${esc(t.length > 60 ? `${t.slice(0, 58)}…` : t)}</b><span>Glimt deler opp i punkter</span></span><span class="p29-apb">Legg i Gjøremål</span></button>`;
 }
 export const HJ41 = { jobs: [], done: null, doneT: null, srcs: null, srcT: 0, srcMiss: false, poll: null };
-const STEPS_H = ['Leser beskjeden', 'Deler opp i punkter', 'Finner rekkefølge og steder', 'Lagrer i Huskeliste'];
+const STEPS_H = ['Leser beskjeden', 'Deler opp i punkter', 'Finner rekkefølge og steder', 'Lagrer i Gjøremål'];
 async function reloadTasks() { try { const P17 = await import('./mobile-p17.js'); P17.HK.t = 0; await P17.tasksLoad(true); } catch {} }
 /**
  * POST /api/tasks/glimt {q, async:true, list?, origin} → 202 {jobId, placeholder}. Returnerer false når serveren ikke har
@@ -251,19 +251,19 @@ export function glimtView(GL, rowOf) {
 /** Fra søket på Hjem: samme Glimt-toast som for frisørtimer (steg og felt), så ✓ når punktene er lagret. */
 export async function huskeFromHome(t) {
   const tmp = `p41h${Date.now()}`, short = t.length > 48 ? `${t.slice(0, 46)}…` : t;
-  P31.jobPut(tmp, { kind: 'assist', title: 'Legger til i Huskeliste', model: 'Glimt', input: t, dur: 4200, steps: STEPS_H, fields: [['Beskjed', short], ['Liste', 'Glimt velger'], ['Original', 'I «Laget med Glimt»']] });
+  P31.jobPut(tmp, { kind: 'assist', title: 'Legger til i Gjøremål', model: 'Glimt', input: t, dur: 4200, steps: STEPS_H, fields: [['Beskjed', short], ['Liste', 'Glimt velger'], ['Original', 'I «Laget med Glimt»']] });
   draw();
   let finished = false, late = false;
   const lateT = setTimeout(() => { if (finished) return; late = true; P31.jobDrop(tmp); P31.aiDone('✦ Glimt deler opp i bakgrunnen …', { ms: 3800 }); }, 4600);
   const ok = await huskeAsync(t, undefined, 'home_search', (n) => {
     finished = true; clearTimeout(lateT); P31.jobDrop(tmp);
     if (n < 0) { P31.aiDone('Glimt fikk ikke delt opp beskjeden', { ms: 4000 }); return; }
-    P31.aiDone(`✓ Glimt lagde ${n} punkt${n === 1 ? '' : 'er'} i Huskeliste`, { show: () => { location.hash = '#/huske'; }, ms: 5000 });
+    P31.aiDone(`✓ Glimt lagde ${n} punkt${n === 1 ? '' : 'er'} i Gjøremål`, { show: () => { location.hash = '#/huske'; }, ms: 5000 });
   });
   if (!ok) {
     // Eldre server: ett punkt med hele beskjeden (Huskeliste deler det opp lokalt når du åpner Glimt der).
     clearTimeout(lateT); P31.jobDrop(tmp);
-    try { await hlApi('/tasks', { method: 'POST', json: { title: t.replace(/^(husk( å)?|påminn meg( om)?( å)?)\s+/i, '') } }); await reloadTasks(); P31.aiDone('✓ Lagt i Huskeliste', { ms: 3500 }); }
+    try { await hlApi('/tasks', { method: 'POST', json: { title: t.replace(/^(husk( å)?|påminn meg( om)?( å)?)\s+/i, '') } }); await reloadTasks(); P31.aiDone('✓ Lagt i Gjøremål', { ms: 3500 }); }
     catch (e) { P31.aiDone(`Fikk ikke til: ${String(e.message ?? '').slice(0, 60)}`, { ms: 4000 }); }
   } else if (late) { /* ✓ kommer når jobben er ferdig */ }
   draw();
@@ -391,7 +391,7 @@ async function hurra() {
 export function holidayGroup() {
   const opt = (k, n, s2) => `<button type="button" class="opt-row p17-row" data-p41="mai" data-v="${k}"><span class="m-grow p17-rt"><b>${n}</b><small>${s2}</small></span><span class="sval" style="${MAI.s === k ? 'color:var(--pp-pos);opacity:1;font-weight:700' : ''}">${MAI.s === k ? '✓ Valgt' : ''}</span></button>`;
   return `<span class="pp-lab p17-gl" data-hl="mai17">HØYTIDER · 17. MAI-DESIGN</span><div class="list p17-list">${opt('auto', 'Automatisk 17. mai', 'Rød topp, program og «Hipp hipp hurra!» på selve dagen')}${opt('pa', 'Vis nå', 'Forhåndsvisning på Hjem')}${opt('av', 'Av', 'Vanlig Hjem også 17. mai')}</div>
-    <div class="snote">Figurene får flagg 14.–17. mai (styres av Høytider i Innstillinger → Glimt, samme som julemodus).</div>`;
+    <div class="snote">Figurene får flagg 14.–17. mai (styres av Høytider i Innstillinger → Glimt og AI → Glimt, samme som julemodus).</div>`;
 }
 async function maiSet(v) {
   MAI.s = v; lsSet('p41_mai17', v); haptic('tab'); draw();

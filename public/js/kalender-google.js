@@ -46,7 +46,7 @@ function paint() {
   if (!M.el) return;
   const head = `<div class="kg39-h"><span><span class="kg39-k">KALENDERE · GOOGLE</span><b>Hvilken kalender er hva?</b><span class="kg39-s">${esc(M.d?.email ? `Google-kontoen ${M.d.email}` : 'Hver Google-kalender får en rolle. Flere kan slås sammen til Personlig.')}</span></span><button type="button" class="kg39-x" data-kg-close aria-label="Lukk">✕</button></div>`;
   let body;
-  if (M.missing) body = '<div class="kg39-empty"><b>Serveren har ikke Google-velgeren ennå</b><span>Oppdater serveren (Innstillinger → System). Til da brukes Google-kalenderne som før, og Kalender viser dem i Personlig og Bursdager.</span></div>';
+  if (M.missing) body = '<div class="kg39-empty"><b>Serveren har ikke Google-velgeren ennå</b><span>Oppdater serveren (Innstillinger → Server → System). Til da brukes Google-kalenderne som før, og Kalender viser dem i Personlig og Bursdager.</span></div>';
   else if (!M.d) body = '<div class="kg39-empty"><span>Henter kalenderne i Google-kontoen …</span></div>';
   else if (M.d.connected === false) body = '<div class="kg39-empty"><b>Google er ikke koblet til</b><span>Koble til Google under Google Kalender lenger ned på siden, så kan du velge hvilke kalendere som er hva.</span></div>';
   else {

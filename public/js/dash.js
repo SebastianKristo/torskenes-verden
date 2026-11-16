@@ -31,7 +31,7 @@ export const tiles = () => {
   }
   return list.map(({ name, url, domain }, i) =>
     `<a class="tile" href="${esc(url)}" target="_blank" rel="noopener" title="${esc(name)}" style="--tc:${TILE_COLORS[i % TILE_COLORS.length]}">${logoImg(domain, name === 'Home Assistant' ? 'HA' : name, 'tile-lg')}<span>${esc(name)}</span></a>`).join('')
-    || '<div class="empty">Ingen snarveier. Legg til under Innstillinger → Startside → Snarveier.</div>';
+    || '<div class="empty">Ingen snarveier. Legg til under Innstillinger → Utseende → Snarveier.</div>';
 };
 
 /* ---------- Skoledata ---------- */
@@ -111,7 +111,7 @@ function depPanel(trip, d, m) {
 /** Avgangene (Ruter/Entur), brukt på Oversikt og i Reise (reise.js). */
 export function renderTrips() {
   const r = store.data.ruter;
-  if (!r) return store.errors.ruter ? errBox('ruter', 'Ruter') : '<div class="trip"><div class="skeleton"></div></div>'.repeat(4);
+  if (!r) return store.errors.ruter ? errBox('ruter', 'Reise') : '<div class="trip"><div class="skeleton"></div></div>'.repeat(4);
   const t = store.now.getTime();
   const paper = is2c();
   const out = r.trips.map((trip) => {
@@ -242,8 +242,8 @@ widget('d_energy', { render() {
 // Økonomi-sammendrag fra FinansHub (/finans/api/summary).
 widget('d_eco', { render() {
   const f = store.data.finans;
-  const head = `<div class="card-head"><div><div class="card-title">Økonomi</div><div class="card-sub">${cap(new Date().toLocaleDateString('nb-NO', { month: 'long' }))} · FinansHub</div></div><a class="btn" href="/finans/">Åpne ↗</a></div>`;
-  if (!f) return head + (errBox('finans', 'FinansHub') || '<div class="skeleton" style="min-height:120px"></div>');
+  const head = `<div class="card-head"><div><div class="card-title">Økonomi</div><div class="card-sub">${cap(new Date().toLocaleDateString('nb-NO', { month: 'long' }))} · Økonomi</div></div><a class="btn" href="/finans/">Åpne ↗</a></div>`;
+  if (!f) return head + (errBox('finans', 'Økonomi') || '<div class="skeleton" style="min-height:120px"></div>');
   const top = f.byCategory.slice(0, 5);
   return `${head}<div class="sub"><b class="num" style="color:var(--text)">${kr(f.budgetTotal ? f.budgetUsed : f.ut)}</b> ${f.budgetTotal ? `av ${kr(f.budgetTotal)}` : 'brukt'}</div>
     <div class="bar"><i style="width:${Math.min(100, f.budgetTotal ? (f.budgetUsed / f.budgetTotal) * 100 : 0)}%"></i></div>
@@ -392,7 +392,7 @@ widget('p_money', { cls: 'p-sec', render() {
   const tr = !t ? '<div class="skeleton" style="min-height:60px"></div>' : !t.configured ? `<div class="p-mute">${NOT_SET_UP}</div>`
     : `<div class="p-big">${nb(t.total)} ${esc(cur)}</div>${t.dayChange != null ? `<div class="${t.dayChange < 0 ? 'p-neg' : 'p-pos'}">${signed(t.dayChange)} ${esc(cur)} (${signed(t.dayPct, 1)} %)</div>` : `<div class="${t.pplPct < 0 ? 'p-neg' : 'p-pos'}">${signed(t.pplPct, 1)} % totalt</div>`}`;
   const month = cap(store.now.toLocaleDateString('nb-NO', { month: 'long' }));
-  const fh = !f ? (errBox('finans', 'FinansHub') || '<div class="skeleton" style="min-height:60px"></div>')
+  const fh = !f ? (errBox('finans', 'Økonomi') || '<div class="skeleton" style="min-height:60px"></div>')
     : `<div class="p-big">${kr(f.budgetTotal ? f.budgetUsed : f.ut)}</div><div class="p-mute">${f.budgetTotal ? `av ${kr(f.budgetTotal)}` : 'brukt'}${f.review?.length ? ` · <a class="p-u" href="/finans/#/kv">${f.review.length} til gjennomgang</a>` : ''}</div>`;
   return lab('PENGER') + `<div class="p-money"><a href="/finans/#/aks"><div class="p-mute">Trading 212</div>${tr}</a><a href="/finans/"><div class="p-mute">Brukt i ${esc(month.toLowerCase())}</div>${fh}</a></div>`;
 } });

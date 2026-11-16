@@ -194,7 +194,7 @@ export function settingsHtml62() {
   }).join('');
   const z = zoneOf(d);
   const zone = `<div class="ac-par"><span class="ac-row ac-sb"><span class="ac-col"><b>Prisområde for strøm</b><span>Brukes av strømprisoppgaver og strømvarsler når du ikke sier noe annet</span></span><b class="ac-mono">${esc(z)}</b></span><div class="ac-seg" role="group" aria-label="Prisområde">${zonesOf(d).map((x) => `<button type="button" class="${x.id === z ? 'on' : ''}" data-s62-zone="${esc(x.id)}" aria-pressed="${x.id === z}" title="${esc(x.label)}"${S.busy ? ' disabled' : ''}>${esc(x.id)}</button>`).join('')}</div></div>`;
-  const link = '<button type="button" class="ac-li" data-s62-open><span class="ac-col ac-grow"><b>Se faste oppgaver</b><span>Innstillinger → Faste oppgaver: neste kjøring, logg, pause, kjør nå</span></span><span aria-hidden="true">›</span></button>';
+  const link = '<button type="button" class="ac-li" data-s62-open><span class="ac-col ac-grow"><b>Se faste oppgaver</b><span>Innstillinger → Glimt og AI → Faste oppgaver: neste kjøring, logg, pause, kjør nå</span></span><span aria-hidden="true">›</span></button>';
   let admin = '';
   if (d.admin) {
     const rows = KEYS62.map((k) => { const on = d.server?.[k] !== false; return `<button type="button" class="ac-li" data-s62-server="${k}" role="switch" aria-checked="${on}"${S.busy ? ' disabled' : ''}><span class="ac-col ac-grow"><b>${lab(d, k)}</b><span>${help(d, k)}</span></span>${sw(on)}</button>`; }).join('');
@@ -291,7 +291,7 @@ export function pageHtml62() {
   const shown = items.filter((x) => !L.filter || x.status === L.filter);
   const list = shown.length ? shown.map(rowHtml).join('') : `<div class="sg-row"><span class="sg-txt"><span>${items.length ? 'Ingen oppgaver her.' : 'Ingen faste oppgaver ennå. Si det til Glimt i Chat eller søkefeltet, f.eks. «Send meg strømprisene hver morgen kl. 7», «Minn meg på å betale husleia den 1. hver måned» eller «Si fra hvis strømprisen går over 2 kr i morgen». Glimt viser alltid tolkningen før noe lagres.'}</span></span></div>`;
   const msg = L.msg ? `<div class="sg-row"><span class="sg-txt"><span role="status">${esc(L.msg)}</span></span></div>` : '';
-  const builtin = Array.isArray(d.builtin) && d.builtin.length ? `<section class="sg"><h3 class="sg-t">Briefer</h3><div class="sg-box">${d.builtin.map(briefHtml).join('')}</div><div class="sg-note">Briefene er de samme som under Innstillinger → Glimt. «Flytt morgenbriefen til 06:30» til Glimt endrer klokkeslettet her.</div></section>` : '';
+  const builtin = Array.isArray(d.builtin) && d.builtin.length ? `<section class="sg"><h3 class="sg-t">Briefer</h3><div class="sg-box">${d.builtin.map(briefHtml).join('')}</div><div class="sg-note">Briefene er de samme som under Innstillinger → Glimt og AI → Glimt. «Flytt morgenbriefen til 06:30» til Glimt endrer klokkeslettet her.</div></section>` : '';
   return `<div class="s62" data-s62><section class="sg"><h3 class="sg-t">Oppgaver</h3><div class="sg-box">${off}${bar}${msg}${list}</div><div class="sg-note">Lag, flytt og stopp oppgaver ved å si det til Glimt («Hvilke faste oppgaver har jeg?», «Stopp strømprisvarselet»). Hver kjøring logges her med resultat og levering.</div></section>${builtin}${pageToggles()}</div>`;
 }
 

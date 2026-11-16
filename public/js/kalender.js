@@ -373,7 +373,7 @@ function learnSheet() {
         ${L.type === 'annet' ? `<input class="k2-in" name="title" value="${esc(L.title ?? '')}" placeholder="Tittel, f.eks. Massasje · Spa Nova" autocomplete="off">` : ''}
         ${L.err ? `<span class="k2-err">${esc(L.err)}</span>` : ''}
         <button type="submit" class="k2-b ink"${!L.type || K.busy ? ' disabled' : ''}>${K.busy ? 'Lagrer …' : L.suggest ? 'Husk' : 'Lagre'}</button>
-        <span class="k2-src">Glimt bruker dette neste gang en melding fra samme avsender legges inn. Se Innstillinger → AI → Glimt husker.</span>
+        <span class="k2-src">Glimt bruker dette neste gang en melding fra samme avsender legges inn. Se Innstillinger → Glimt og AI → Glimt husker.</span>
       </form>`;
   return `<div class="k2-sheet-bg" data-k-lclose><div class="k2-sheet k2-learn-sheet" role="dialog" aria-modal="true" aria-label="Lær Glimt hva dette er">
     <div class="k2-det-h"><div class="k2-grow"><span class="k2-lab">✦ GLIMT HUSKER</span><b>Lær Glimt hva dette er</b></div><button type="button" class="k2-x" data-k-lclose aria-label="Lukk">✕</button></div>

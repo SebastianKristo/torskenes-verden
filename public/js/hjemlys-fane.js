@@ -135,7 +135,7 @@ function whoHtml() {
   return `<div class="hl41-head"><button type="button" class="hl41-back" data-hl41="back">‹ Tilbake</button><b>Hvem får beskjed?</b><span class="hl41-mut">${esc(KINDS[V.kind].t)}</span></div>
     <label class="hl41-q"><input name="hl41q" value="${esc(V.q)}" placeholder="Søk etter navn" autocomplete="off" aria-label="Søk etter personer"></label>
     <div class="hl41-seg">${[['hus', 'Husstanden'], ['siste', 'Siste brukt'], ['alle', 'Alle']].map(([k, n]) => `<button type="button" aria-pressed="${V.filt === k}" data-hl41="filt" data-k="${k}">${n}</button>`).join('')}</div>
-    <span class="hl41-k">HUSSTANDEN</span><div class="hl41-list">${F.map(row).join('') || `<span class="hl41-mut hl41-pad">${L.length ? 'Ingen treff.' : 'Ingen andre i husstanden har konto i Homelab ennå. Legg dem til under Innstillinger → Brukere.'}</span>`}</div>
+    <span class="hl41-k">HUSSTANDEN</span><div class="hl41-list">${F.map(row).join('') || `<span class="hl41-mut hl41-pad">${L.length ? 'Ingen treff.' : 'Ingen andre i husstanden har konto i Homelab ennå. Legg dem til under Innstillinger → Husstand.'}</span>`}</div>
     ${V.filt === 'alle' ? '<span class="hl41-k">VENNER OG KONTAKTER</span><div class="hl41-list"><span class="hl41-mut">Venner med Papir og kontakter fra telefonen (SMS-lenke) velges i appen på telefonen.</span></div>' : ''}
     <div class="hl41-foot"><span class="hl41-avs">${sel.map((p) => av(p, 26)).join('')}</span><b>${sel.length} valgt</b>
       <button type="button" class="hl41-tg${V.remember ? ' on' : ''}" role="switch" aria-checked="${V.remember}" data-hl41="remember"><i></i></button><span class="hl41-mut">Husk valget</span>

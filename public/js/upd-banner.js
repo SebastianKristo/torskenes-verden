@@ -102,7 +102,7 @@ export function updBanner(where = 'dash') {
     ic = IC_OK; t = `Oppdatert til Nordlys ${cur}`; sub = 'Alt kjører. Endringene er aktive i appen og på web.';
     btns = '<div class="ub-btns"><button type="button" class="ub-b pri wide" data-ub="ack">Ferdig</button></div>';
   } else {
-    ic = IC_ERR; cls = ' fail'; t = 'Oppdateringen feilet'; sub = s.error ? String(s.error) : 'Ukjent feil. Se loggen under Innstillinger → System.';
+    ic = IC_ERR; cls = ' fail'; t = 'Oppdateringen feilet'; sub = s.error ? String(s.error) : 'Ukjent feil. Se loggen under Innstillinger → Server → System.';
     const rb = U.d.rollback, rbV = rb?.version ?? U.prev?.version ?? cur;
     btns = `<div class="ub-btns"><button type="button" class="ub-b pri" data-ub="retry">Prøv igjen</button>${rb && rb.available === false && !rb.version ? '' : `<button type="button" class="ub-b" data-ub="rollback">Gjenopprett ${esc(rbV)}</button>`}</div>`;
   }
@@ -160,7 +160,7 @@ export function loadUpdBanner() {
     const a = b.dataset.ub;
     if (a === 'close' && e.target !== b && b.classList.contains('ub-scrim')) return;
     e.preventDefault();
-    if (a === 'later') { ls(HIDE_KEY, String(Date.now())); haptic(8); paint(); flash('Du finner oppdateringen i Innstillinger → System'); return; }
+    if (a === 'later') { ls(HIDE_KEY, String(Date.now())); haptic(8); paint(); flash('Du finner oppdateringen i Innstillinger → Server → System'); return; }
     if (a === 'notes') { B.notesOpen = !B.notesOpen; if (B.notesOpen) await loadNotes(); paint(); return; }
     if (a === 'start' || a === 'retry') { if (state() === 'failed') { const s = U.d?.status ?? {}; ls(ACK_KEY, `f:${s.id ?? s.finishedAt ?? ''}`); } await startNoPw(); return; }
     if (a === 'rollback') {

@@ -186,7 +186,7 @@ export function settingsHtml63() {
   const days = d.staleDays ?? 90;
   const seg = `<div class="ac-par"><span class="ac-row ac-sb"><span class="ac-col"><b>Ikke brukt på lenge etter</b><span>Når et faktum får merket. Det slettes aldri automatisk.</span></span><b class="ac-mono">${esc(days63(days))}</b></span><div class="ac-seg" role="group" aria-label="Dager uten bruk">${STALE_DAYS63.map((n) => `<button type="button" class="${n === days ? 'on' : ''}" data-m63-days="${n}" aria-pressed="${n === days}"${M.sbusy || d.settings?.stale === false ? ' disabled' : ''}>${n} d</button>`).join('')}</div></div>`;
   const cnt = countsLine63(d.counts ?? {});
-  const link = `<button type="button" class="ac-li" data-m63-open><span class="ac-col ac-grow"><b>Se forslag og motstrid</b><span>${cnt ? `${esc(cnt)} · ` : ''}Innstillinger → AI → Glimt husker</span></span><span aria-hidden="true">›</span></button>`;
+  const link = `<button type="button" class="ac-li" data-m63-open><span class="ac-col ac-grow"><b>Se forslag og motstrid</b><span>${cnt ? `${esc(cnt)} · ` : ''}Innstillinger → Glimt og AI → Glimt husker</span></span><span aria-hidden="true">›</span></button>`;
   let admin = '';
   if (d.admin) {
     const rows = KEYS63.map((k) => { const v = d.server?.[k] !== false; return `<button type="button" class="ac-li" data-m63-server="${k}" role="switch" aria-checked="${v}"${M.sbusy ? ' disabled' : ''}><span class="ac-col ac-grow"><b>${lab(k)}</b><span>${help(k)}</span></span>${sw(v)}</button>`; }).join('');

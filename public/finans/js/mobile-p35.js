@@ -316,10 +316,10 @@ export function briefView() {
   const kalNext = nx ? (nx.min != null && !nx.tomorrow ? (nx.min <= 0 ? 'PÅGÅR NÅ' : `NESTE OM ${nx.min < 60 ? `${nx.min} MIN` : `${Math.round(nx.min / 60)} T`}`) : `NESTE ${nx.tomorrow ? 'I MORGEN ' : ''}${P34.evStart(nx)}`) : 'FRI';
   const ring = (k) => (B5.tgt === k ? ' p34-on' : '');
   const notes = [w.vsYesterday ? ['Sammenlignet med i går', w.vsYesterday] : null, w.sunset ? ['Solnedgang', `Sola går ned ${w.sunset}`] : null].filter(Boolean);
-  const srcs = [...new Set(b.news.map((n) => n.source).filter(Boolean))].slice(0, 4).join(', ') || 'Nyhetsleser';
+  const srcs = [...new Set(b.news.map((n) => n.source).filter(Boolean))].slice(0, 4).join(', ') || 'Nyheter';
   return `<div class="p34-br p35-br">
     <div class="p34-brt p38-brt"><span class="p38-brl"><b>${esc(b.title)}</b><button type="button" class="p34-done" data-p34="brclose" data-p34back>Ferdig</button></span><span>${esc(b.summary)}</span></div>
-    ${speakPill() /* Prompt 38: lyd (🔇) og ⚙ er fjernet fra toppen – de ligger i Innstillinger → Glimt. Tittel og Ferdig på samme linje. */}
+    ${speakPill() /* Prompt 38: lyd (🔇) og ⚙ er fjernet fra toppen – de ligger i Innstillinger → Glimt og AI → Glimt. Tittel og Ferdig på samme linje. */}
     ${P37B.bibleBrief('top')}
     <div class="p34-wx p37-wxb${ring('vaer')}" data-gb="vaer" data-p35="brwx" role="button" tabindex="0" aria-label="Åpne Vær">
       <div class="p34-wxh"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="${w.code === 'sol' ? '#ffd27a' : w.code === 'regn' ? '#9cc8ff' : '#e6eef7'}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${P34.WXP[w.code] ?? P34.WXP.sky}"/></svg>

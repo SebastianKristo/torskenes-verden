@@ -75,7 +75,7 @@ export function fam42View(H, sub) {
   const ap = platformStatus('apple'), hc = platformStatus('hc');
   const devs = devicesOf(F.ha), linked = devs.filter((d) => d.personId).length;
   const haS = F.haMissing ? 'Serveren har ikke Home Assistant-helse ennå' : F.haErr ? F.haErr : !F.ha ? 'Henter …' : F.ha.connected === false
-    ? (F.ha.error === 'token' ? 'Koble til Home Assistant på nytt (tokenet er utløpt)' : F.ha.message || 'Home Assistant er ikke satt opp under Integrasjoner')
+    ? (F.ha.error === 'token' ? 'Koble til Home Assistant på nytt (tokenet er utløpt)' : F.ha.message || 'Home Assistant er ikke satt opp under Tilkoblinger')
     : `Hent helsesensorer fra HA Companion · ${devs.length} ${devs.length === 1 ? 'enhet' : 'enheter'}`;
   const sh = F.fam?.me?.shareHealth ?? {};
   const chips = `<div class="f42-chips" role="group" aria-label="Hva deles med familien">${SHARE.map(([k, n]) => `<button type="button" class="f42-chip${sh[k] ? ' on' : ''}" data-f42-share="${k}" aria-pressed="${!!sh[k]}">${esc(n)}</button>`).join('')}</div>`;
@@ -105,7 +105,7 @@ function haView(H) {
   if (F.haMissing) return { ...base, html: `<div class="sg-empty">Serveren har ikke Home Assistant-helse ennå. Oppdater Homelab, så vises HA-enhetene her.</div>` };
   if (F.haErr) return { ...base, html: `<div class="sg-empty">${esc(F.haErr)}</div>` };
   if (!F.ha) return { ...base, html: '<div class="sg-empty">Henter enhetene fra Home Assistant …</div>' };
-  if (F.ha.connected === false) return { ...base, html: `<div class="sg-empty">${esc(F.ha.error === 'token' ? 'Tokenet til Home Assistant er utløpt. Koble til Home Assistant på nytt under Integrasjoner.' : F.ha.message || 'Home Assistant er ikke satt opp. Legg inn adresse og token under Integrasjoner.')}</div><button type="button" class="sbtn" data-go="int">Åpne Integrasjoner</button>` };
+  if (F.ha.connected === false) return { ...base, html: `<div class="sg-empty">${esc(F.ha.error === 'token' ? 'Tokenet til Home Assistant er utløpt. Koble til Home Assistant på nytt under Tilkoblinger.' : F.ha.message || 'Home Assistant er ikke satt opp. Legg inn adresse og token under Tilkoblinger.')}</div><button type="button" class="sbtn" data-go="int">Åpne Integrasjoner</button>` };
   const all = devicesOf(F.ha), view = F.view ?? 'phones';
   const kindOf = (d) => d.kind ?? (/ipad|tab\b|tablet/i.test(`${d.model ?? ''} ${d.name ?? ''}`) ? 'tablet' : 'phone');
   const devs = view === 'all' ? all : all.filter((d) => kindOf(d) !== 'tablet');

@@ -159,7 +159,7 @@ function calendars() {
       ${tog(g.writeNew !== false, 'data-bd-gtog="writeNew"', 'Skriv nye bursdager til Google', 'Årlig heldagshendelse med påminnelse')}
       ${tog(g.contacts !== false, 'data-bd-gtog="contacts"', 'Hent bursdager fra Google-kontakter', 'Fra kontaktlisten din')}
       <div class="bd-gb"><button type="button" class="bd-btn bd-grow lab" data-bd-act="gsync"${S.busy === 'gsync' ? ' disabled' : ''}>${S.busy === 'gsync' ? 'Synker …' : '↻ Synk nå'}</button><button type="button" class="bd-btn" data-bd-act="glogout">Logg ut</button></div>`
-    : g.configured === false ? `<span class="bd-note">Google Kalender er ikke satt opp ennå. ${isAdmin() ? 'Legg inn klient-ID og hemmelighet under Innstillinger → Integrasjoner → Google Kalender.' : 'Settes opp av administrator.'}</span>`
+    : g.configured === false ? `<span class="bd-note">Google Kalender er ikke satt opp ennå. ${isAdmin() ? 'Legg inn klient-ID og hemmelighet under Innstillinger → Tilkoblinger → Google Kalender.' : 'Settes opp av administrator.'}</span>`
     : `<button type="button" class="bd-glogin" data-bd-act="glogin"${S.busy === 'glogin' ? ' disabled' : ''}>${G_SVG}${S.busy === 'glogin' ? 'Kobler til …' : 'Logg inn med Google'}</button>`;
   const hst = ha.entityId ? `${ha.entityId}${ha.syncedAt ? ` · importert ${hmTxt(ha.syncedAt)}` : ''}` : 'Velg kalender og importer';
   const ents = S.hacals ?? [];

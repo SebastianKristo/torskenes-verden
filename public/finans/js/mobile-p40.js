@@ -156,7 +156,7 @@ function kbTrack() {
 }
 
 /* =====================================================================
-   2. Julemodus (Innstillinger → Glimt) + antrekk overalt
+   2. Julemodus (Innstillinger → Glimt og AI → Glimt) + antrekk overalt
    ===================================================================== */
 const PH = [['Advent', 'advent'], ['Jul', 'jul'], ['Nyttår', 'nyttar'], ['Vinter', 'vinter']];
 const J = { snow: lsGet('glimt_snow', true) !== false, sound: lsRaw('glimt_jul_sound', 'av') };
@@ -230,7 +230,7 @@ async function tfLoad() {
   catch (e) { if (e.status === 404) TF.miss = true; TF.st = { enabled: !!m.me?.totp, backupLeft: null }; }
 }
 const tfOn = () => (TF.st ? !!TF.st.enabled : !!m.me?.totp);
-/** Gruppen «Tofaktor» i Innstillinger → Sikkerhet (erstatter lenken til web). G = gruppebyggeren i mobile-set.js. */
+/** Gruppen «Tofaktor» i Innstillinger → Konto og sikkerhet (erstatter lenken til web). G = gruppebyggeren i mobile-set.js. */
 export function tfaGroup(G) {
   if (!TF.st) tfLoad().then(() => { if (m.screen === 'set') draw(); });
   const on = tfOn(), left = TF.st?.backupLeft;
@@ -470,7 +470,7 @@ export async function searchAsk(q) {
     const pm = items.reduce((a, x) => a + perMonth(x.amount, x.cycle), 0), nx = items.find((x) => x.next);
     const dn = nx ? daysTo(nx.next) : null;
     return { text: `Du har ${items.length} abonnement${items.length === 1 ? '' : 'er'}. Til sammen ${kr(pm)} i måneden.${nx ? ` Neste trekk er ${nx.name} ${dn === 0 ? 'i dag' : dn === 1 ? 'i morgen' : `om ${dn} dager`}.` : ''}`,
-      source: 'fra Abonnementer', kpis: [{ label: 'PER MÅNED', value: kr(pm) }, { label: 'PER ÅR', value: kr(pm * 12) }, ...(nx ? [{ label: 'NESTE TREKK', value: dShort(nx.next), sub: `${nx.name} · ${kr(nx.amount)}` }] : [])], cards: items, open: { label: 'Åpne Subscription OS ›', href: '#/sub' } };
+      source: 'fra Abonnementer', kpis: [{ label: 'PER MÅNED', value: kr(pm) }, { label: 'PER ÅR', value: kr(pm * 12) }, ...(nx ? [{ label: 'NESTE TREKK', value: dShort(nx.next), sub: `${nx.name} · ${kr(nx.amount)}` }] : [])], cards: items, open: { label: 'Åpne Faste betalinger ›', href: '#/sub' } };
   }
   return null; // resten: vanlig AI-søk
 }

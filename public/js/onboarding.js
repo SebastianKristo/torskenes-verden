@@ -72,7 +72,7 @@ const userName = () => O.d?.me?.username ?? store.me?.me?.username ?? '';
 function stepWho() {
   const d = O.d, me = d.me ?? {};
   if (d.locked && !d.adminLinked) {
-    return `<span class="onb37-k">STEG 2 AV 3</span><h2>Hvem er du?</h2><p>Admin kobler brukere til profiler i denne husstanden. Be admin koble <b>@${esc(userName())}</b> til riktig profil under Innstillinger → Brukere.</p>
+    return `<span class="onb37-k">STEG 2 AV 3</span><h2>Hvem er du?</h2><p>Admin kobler brukere til profiler i denne husstanden. Be admin koble <b>@${esc(userName())}</b> til riktig profil under Innstillinger → Husstand.</p>
       <div class="onb37-foot"><button type="button" class="onb37-pri" data-onb="later">Lukk</button></div>`;
   }
   if (d.adminLinked) {
@@ -101,7 +101,7 @@ function stepLink() {
   return `<span class="onb37-k">STEG 3 AV 3</span><h2>Dette kobles til deg</h2>
     <div class="onb37-pcard"><span class="onb37-av" style="background:${esc(colOf(p))}">${esc(ini(p))}</span><span class="onb37-pt"><b>${esc(p?.name ?? '')}</b><small class="mono">@${esc(userName())} ⟷ profil</small></span></div>
     <div class="onb37-cons">${Object.keys(ICON).map((k) => { const [d, c, t, s] = ICON[k]; return `<div class="onb37-c"><span class="onb37-ib" style="--c:${c}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${d}"/></svg></span><span class="onb37-pt"><b>${t}</b><small>${esc(sub[k] ?? s)}</small></span>${sw(!!O.cons[k], k)}</div>`; }).join('')}</div>
-    <p class="onb37-hint">Du kan endre koblingen senere i Innstillinger → Konto → Profil. Admin får beskjed om nye koblinger.</p>
+    <p class="onb37-hint">Du kan endre koblingen senere i Innstillinger → Konto og sikkerhet → Profil. Admin får beskjed om nye koblinger.</p>
     ${O.err ? `<span class="onb37-err" role="alert">${esc(O.err)}</span>` : ''}
     <div class="onb37-foot"><button type="button" class="onb37-pri" data-onb="link"${O.busy ? ' disabled' : ''}>${O.busy ? 'Kobler …' : 'Koble og fortsett'}</button></div>`;
 }
@@ -110,7 +110,7 @@ function stepDone() {
   const bits = [O.cons.location ? 'posisjon i Familie' : null, O.cons.lists ? 'delte gjøremålslister' : null, O.cons.subs ? 'delte abonnementer' : null, O.cons.calendars ? 'kalendere' : null].filter(Boolean);
   return `<div class="onb37-fin"><span class="onb37-av big" style="background:${esc(colOf(p))}">${esc(ini(p))}</span><h2>Hei, ${esc(String(p.name ?? '').split(' ')[0])}!</h2>
     <p>Du er nå koblet til profilen <b>${esc(p.name ?? '')}</b>${bits.length ? ` med ${esc(bits.length < 2 ? bits[0] : `${bits.slice(0, -1).join(', ')} og ${bits.at(-1)}`)}` : ''}.</p></div>
-    <div class="onb37-foot"><button type="button" class="onb37-pri" data-onb="home">Gå til Hjem</button></div>`;
+    <div class="onb37-foot"><button type="button" class="onb37-pri" data-onb="home">Gå til Oversikt</button></div>`;
 }
 function paint() {
   if (!O.el) return;

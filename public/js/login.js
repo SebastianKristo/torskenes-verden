@@ -92,7 +92,7 @@ function render(focus = true) {
   if (show.s4) {
     const r = $('g-restore');
     r.setAttribute('aria-pressed', String(st.restore));
-    r.textContent = st.restore ? '✓ Etter oppsettet åpnes Innstillinger → Backup, der du velger «Gjenopprett fra fil …»' : 'Har du en backup? Gjenopprett fra fil etter oppsettet';
+    r.textContent = st.restore ? '✓ Etter oppsettet åpnes Innstillinger → Server → Backup, der du velger «Gjenopprett fra fil …»' : 'Har du en backup? Gjenopprett fra fil etter oppsettet';
   }
   if (show['2fa']) {
     const c = form.code;

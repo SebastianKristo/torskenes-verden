@@ -269,13 +269,13 @@ const poster = (x, w, h, cls = '', inner = '') => `<span class="p43-pst ${cls}" 
 const toggle = (on) => `<span class="p43-tg${on ? ' on' : ''}" aria-hidden="true"><i></i></span>`;
 const empty = (key, what) => {
   if (D.err.forbid) return `<div class="p43-empty"><b>Ingen tilgang</b><span>${esc(D.err.forbid)}</span></div>`;
-  if (D.miss[key]) return `<div class="p43-empty"><b>${esc(what)} er ikke tilgjengelig ennå</b><span>Media krever en nyere Homelab-server. Oppdater serveren, og sett opp tjenestene under Innstillinger → Integrasjoner → Media.</span><a class="p43-btn" href="#/set/integ">Åpne Integrasjoner ›</a></div>`;
+  if (D.miss[key]) return `<div class="p43-empty"><b>${esc(what)} er ikke tilgjengelig ennå</b><span>Media krever en nyere Homelab-server. Oppdater serveren, og sett opp tjenestene under Innstillinger → Tilkoblinger → Media.</span><a class="p43-btn" href="#/set/integ">Åpne Integrasjoner ›</a></div>`;
   // Prompt 44 (claude-code-media-mobil-ikke-innlogget.md): samme kilde som Innstillinger (backend-status). Skill mellom «Ikke satt opp»,
   // «Svarer ikke» og «Utlogget fra Homelab» – aldri «ikke logget inn» når backend bare er treg.
   const sk = { upc: 'sonarr', ser: 'sonarr', mov: 'radarr', tor: 'qbittorrent', idx: 'prowlarr' }[key];
   const so = sk && Array.isArray(D.status?.services) ? D.status.services.find((y) => String(y.id ?? y.name).toLowerCase().replace('qbit', 'qbittorrent').replace('qbittorrenttorrent', 'qbittorrent') === sk) : null;
   if (D.err[key] && /Utlogget/.test(D.err[key])) return `<div class="p43-empty"><b>Utlogget fra Homelab</b><span>Logg inn igjen for å se ${esc(what)}.</span><button type="button" class="p43-btn" data-p43m="relogin">Logg inn</button></div>`;
-  if (D.err[key] && so && so.configured === false && !so.mock) return `<div class="p43-empty"><b>${esc(what)} er ikke satt opp</b><span>Legg inn adresse og API-nøkkel på serveren under Integrasjoner → Media.</span><a class="p43-btn" href="#/set/integ">Åpne Integrasjoner ›</a></div>`;
+  if (D.err[key] && so && so.configured === false && !so.mock) return `<div class="p43-empty"><b>${esc(what)} er ikke satt opp</b><span>Legg inn adresse og API-nøkkel på serveren under Tilkoblinger → Media.</span><a class="p43-btn" href="#/set/integ">Åpne Integrasjoner ›</a></div>`;
   if (D.err[key]) return `<div class="p43-empty"><b>${esc(what)} svarer ikke</b><span>${esc(D.err[key])}</span><span class="p43-row"><button type="button" class="p43-btn" data-p43m="retry">Prøv igjen</button><a class="p43-btn ghost" href="#/set/integ">Integrasjoner ›</a></span></div>`;
   return '<div class="m-spin"></div>';
 };
@@ -701,7 +701,7 @@ function setSheet() {
   return sheetWrap(`${shHead('Innstillinger for Media')}<div class="p43-card p43-togs">${togRow('Varsel når en nedlasting er ferdig', 'Push til telefonen og Glimt-briefen', M.set.nDone, 'stog', 'nDone')}${togRow('Varsel når noe feiler eller står fast', '0 seedere i 30 min, feil fra indekser, full disk', M.set.nFail, 'stog', 'nFail')}${togRow('Vis i Kalender-appen', 'Nye episoder og filmer som egen kalender «Media»', M.set.cal, 'stog', 'cal')}</div>
     ${sec('SPILL AV MED', `<div class="p43-row two">${['Jellyfin', 'Plex'].map((n) => `<button type="button" class="p43-chip lg${M.set.player === n ? ' on' : ''}" data-p43m="player" data-k="${n}" aria-pressed="${M.set.player === n}">${n}</button>`).join('')}</div>`)}
     ${sec('TJENESTER', `<div class="p43-card p43-svcs">${svcs.map(({ n, o }) => { const conf = o ? o.configured !== false : false, ok = o?.ok ?? (o ? conf : false); return `<div class="p43-sv"><i style="background:${ok ? '#2f6b4a' : conf ? '#b23a2a' : 'var(--pp-line)'}"></i><div class="m-grow"><b>${esc(n)}</b><span class="mono mut m-ell">${esc(o?.url ?? o?.host ?? (o?.mock && ok ? 'Demodata (MOCK)' : conf || ok ? '' : 'Ikke satt opp'))}</span></div><span class="p43-sm" style="font-weight:700;color:${ok ? '#2f6b4a' : conf ? '#b23a2a' : 'var(--pp-mut)'}">${esc(o ? (ok ? `${o.version ? `v${String(o.version).split('.')[0]} · ` : ''}OK${o.ms != null ? ` · ${o.ms} ms` : ''}${o.mock ? ' · demo' : ''}` : conf ? 'Svarer ikke' : 'Ikke satt opp') : D.miss.status ? '–' : '…')}</span></div>`; }).join('')}</div>
-      <span class="mut p43-sm">API-nøklene lagres på serveren. Appen snakker bare med home.kristo.no. Adresser, nøkler og oppsett steg for steg: <a href="#/set/integ" class="lab">Innstillinger → Integrasjoner → Media</a>.</span>`)}`, 'Innstillinger for Media');
+      <span class="mut p43-sm">API-nøklene lagres på serveren. Appen snakker bare med home.kristo.no. Adresser, nøkler og oppsett steg for steg: <a href="#/set/integ" class="lab">Innstillinger → Tilkoblinger → Media</a>.</span>`)}`, 'Innstillinger for Media');
 }
 export function layer43m() {
   const sh = M.sh; requestAnimationFrame(() => { M.shSeen = sh; }); // arket glir bare inn første gang
@@ -922,7 +922,7 @@ function goBack() {
 }
 
 export async function bind43m(e, t) {
-  const onSet = m.screen === 'set' && m.sub === 'media' && !!t.closest?.('.p45-mset'); // prompt 45: Innstillinger → Media
+  const onSet = m.screen === 'set' && m.sub === 'media' && !!t.closest?.('.p45-mset'); // prompt 45: Innstillinger → Moduler → Media
   if (m.screen !== 'media' && !onSet) return false;
   const x = t.closest?.('[data-p43m]'); if (!x) return false;
   const a = x.dataset.p43m, k = x.dataset.k;
@@ -937,7 +937,7 @@ export async function bind43m(e, t) {
     case 'glhit': { const h = M.gl?.res?.hit; if (!h) return true; if (h.ex) { M.gl = null; M.gq = ''; openDet(h.k, h.raw?.id ?? h.id); return true; } openAdd(h.k, { sel: h, prof: h.prof, mon: h.mon }); M.add.go = true; await addConfirm(); return true; }
     case 'gledit': { const h = M.gl?.res?.hit; if (h) openAdd(h.k, { sel: h, prof: h.prof, mon: h.mon, q: h.t }); return true; }
     case 'glact': { const ac = M.gl?.res?.actions?.[+x.dataset.i]; if (ac) await glAct(ac); return true; }
-    case 'set': M.sh = null; haptic('tap'); location.hash = '#/set/media'; return true; // prompt 45: Innstillinger → Media
+    case 'set': M.sh = null; haptic('tap'); location.hash = '#/set/media'; return true; // prompt 45: Innstillinger → Moduler → Media
     case 'setgo': M.sh = null; haptic('tap'); location.hash = '#/set/media'; return true;
     case 'more45': M.sh = M.sh === 'more45' ? null : 'more45'; haptic('tap'); draw(); return true;
     case 'dmore': M.sh = 'dmore'; haptic('tap'); draw(); return true;

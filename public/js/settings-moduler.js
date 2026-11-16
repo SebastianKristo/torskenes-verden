@@ -30,7 +30,7 @@ Object.assign(TAB_IC, { media: ['#2a8fbf', P45.media], ruter: ['#c0392b', P45.ru
 export const TABS45 = [
   ['media', 'Media', 'Varsler, kalender, avspilling og tjenestene (Sonarr, Radarr, qBittorrent, Prowlarr, Plex, Jellyfin).', 'Moduler', P45.media],
   ['ruter', 'Reise', 'Strekninger, anbefalte reiser og avganger.', 'Moduler', P45.ruter], // Fase 6 (Q8): modulen heter Reise (id reise er et alias)
-  ['vaer', 'Vær', 'Steder, Min posisjon og værkortet på Hjem.', 'Moduler', P45.vaer],
+  ['vaer', 'Vær', 'Steder, Min posisjon og værkortet på Oversikt.', 'Moduler', P45.vaer],
   ['studie', 'Studie', 'Timeplan, Canvas og dokumenter (vitnemål, karakterutskrifter).', 'Moduler', P45.studie],
   ['finans', 'Økonomi', 'Kategorier og regler, bank og import, aksjer.', 'Moduler', P45.finans], // Q2: modulen heter Økonomi (samme id som modulen: finans)
 ];
@@ -48,7 +48,7 @@ function loadMedia(force) {
 export function mediaView45(H) {
   const { group, row, note } = H;
   loadMedia();
-  if (MD.err === 'missing') return { groups: [group('Media', [row({ t: 'Media er ikke klart på serveren ennå', s: 'Oppdater Homelab-serveren, og sett opp tjenestene under Integrasjoner → Media.', go: 'int', btn: 'Integrasjoner' })])] };
+  if (MD.err === 'missing') return { groups: [group('Media', [row({ t: 'Media er ikke klart på serveren ennå', s: 'Oppdater Homelab-serveren, og sett opp tjenestene under Tilkoblinger → Media.', go: 'int', btn: 'Tilkoblinger' })])] };
   if (MD.err) return { groups: [group('Media', [row({ t: 'Fikk ikke hentet innstillingene', s: MD.err, act: 'data-s45="mretry"', btn: 'Prøv igjen' })])] };
   const S = MD.st, p = S?.settings ?? {};
   const svc = !S ? [row({ t: 'Henter …' })] : (S.services ?? []).map((s) => row({ t: s.name, s: s.url ?? (s.configured ? '' : 'Ikke satt opp'), v: s.ok ? s.text ?? 'OK' : s.configured ? s.error ?? 'Feil' : s.mock ? 'demodata' : 'Mangler', vc: s.ok ? '#2f7a4f' : s.configured ? '#b23a2a' : '', k: 'tjeneste sonarr radarr qbittorrent prowlarr plex jellyfin' }));
@@ -60,7 +60,7 @@ export function mediaView45(H) {
       row({ t: 'Vis i Kalender', s: 'Egen kalender «Media» i Kalender-appen', tog: p.calendar !== false, act: 'data-s45-mpref="calendar"', k: 'media kalender kommer snart' }),
     ]),
     group('Spill av med', [{ html: `<div class="sg-row"><span class="sg-txt"><b>Avspilling</b><span>Hvor «Spill av» åpner serier og filmer</span></span>${players}</div>`, q: 'spill av med jellyfin plex avspilling' }]),
-    group('Tjenester', svc, `API-nøklene lagres på serveren. Appen snakker bare med Homelab. Adresser og nøkler: <button type="button" class="s45-link" data-go="int">Integrasjoner → Media</button>.`),
+    group('Tjenester', svc, `API-nøklene lagres på serveren. Appen snakker bare med Homelab. Adresser og nøkler: <button type="button" class="s45-link" data-go="int">Tilkoblinger → Media</button>.`),
   ];
   if (S?.admin) groups.push(diagGroup50(H)); // prompt 50 (SRVMEDIA50): ledd 2–6 grønt/rødt
   if (S?.admin) {
@@ -79,8 +79,8 @@ export function vaerView45(H) {
     group('Vær', [
       row({ t: 'Steder', s: 'Legg til, fjern og sorter stedene dine på Vær-siden (søk øverst til venstre)', act: 'data-s45-href="#/vaer"', btn: 'Åpne Vær', k: 'vær steder by sted' }),
       row({ t: 'Min posisjon', s: geo45 === 'granted' ? 'Tillatt i denne nettleseren · vises øverst i stedslista' : geo45 === 'denied' ? 'Avslått i nettleseren. Tillat posisjon for nettstedet (låsikonet ved adressen).' : 'Nettleseren spør første gang du åpner Vær. Posisjonen lagres ikke.', v: geo45 === 'granted' ? 'På' : geo45 === 'denied' ? 'Avslått' : '', vc: geo45 === 'granted' ? '#2f7a4f' : '', act: geo45 === 'denied' ? undefined : 'data-s45-geo', btn: geo45 === 'granted' ? false : 'Tillat', k: 'min posisjon geolokasjon vær der jeg er' }),
-      row({ t: 'Værkortet og bakgrunnen på Hjem', s: 'Bakgrunn «Vær nå», tema og widgets', go: 'look', btn: 'Utseende', k: 'vær bakgrunn hjem widget' }),
-      row({ t: 'Yr / MET-integrasjonen', s: 'Adresse og standardsted for værdata', go: 'int', btn: 'Integrasjoner', k: 'yr met vær integrasjon' }),
+      row({ t: 'Værkortet og bakgrunnen på Oversikt', s: 'Bakgrunn «Vær nå», tema og widgets', go: 'look', btn: 'Utseende', k: 'vær bakgrunn hjem widget' }),
+      row({ t: 'Yr / MET-integrasjonen', s: 'Adresse og standardsted for værdata', go: 'int', btn: 'Tilkoblinger', k: 'yr met vær integrasjon' }),
     ]),
   ] };
 }
@@ -96,10 +96,10 @@ export function studieView45(H) {
 export function finansView45(H) {
   const { group, row } = H;
   return { groups: [
-    group('Finans', [
-      row({ t: 'Innstillinger i FinansHub', s: 'Kategorier og regler, budsjett, bank, import og eksport', act: 'data-s45-href="/finans/?desktop=1#/inn"', btn: 'Åpne', k: 'finans finanshub regler kategorier budsjett bank import' }),
-      row({ t: 'Bank og aksjer', s: 'Nøkler for bank-import og Trading 212', go: 'int', btn: 'Integrasjoner', k: 'bank trading 212 aksjer nøkkel' }),
-      row({ t: 'Glimt i Finans', s: 'Kvitteringslesing og modell – under AI → Kvitteringer', act: 'data-p65-ai="rcpt"', btn: 'AI', k: 'glimt kvittering ai finans modell ocr' }), // prompt 65: lenke til AI → Kvitteringer
+    group('Økonomi', [
+      row({ t: 'Innstillinger i Økonomi', s: 'Kategorier og regler, budsjett, bank, import og eksport', act: 'data-s45-href="/finans/?desktop=1#/inn"', btn: 'Åpne', k: 'finans finanshub regler kategorier budsjett bank import' }),
+      row({ t: 'Bank og aksjer', s: 'Nøkler for bank-import og Trading 212', go: 'int', btn: 'Tilkoblinger', k: 'bank trading 212 aksjer nøkkel' }),
+      row({ t: 'Glimt i Økonomi', s: 'Kvitteringslesing og modell – under AI → Kvitteringer', act: 'data-p65-ai="rcpt"', btn: 'AI', k: 'glimt kvittering ai finans modell ocr' }), // prompt 65: lenke til AI → Kvitteringer
     ]),
   ] };
 }
@@ -125,7 +125,7 @@ export function ruterView45(H) {
   loadRuter();
   const cur = recoCount();
   const seg = `<div class="s45-seg" role="radiogroup" aria-label="Antall anbefalte reiser">${[1, 2, 3].map((n) => `<button type="button" role="radio" aria-checked="${cur === n}" data-s45-reco="${n}">${n}</button>`).join('')}</div>`;
-  return { groups: [group('Min reise', [{ html: `<div class="sg-row"><span class="sg-txt"><b>Antall anbefalte reiser</b><span>Kortet «Anbefalt for min reise» viser nøyaktig så mange (på Hjem og i appen)</span></span>${seg}</div>`, q: 'ruter anbefalt antall reiser min reise kollektiv' }],
+  return { groups: [group('Min reise', [{ html: `<div class="sg-row"><span class="sg-txt"><b>Antall anbefalte reiser</b><span>Kortet «Anbefalt for min reise» viser nøyaktig så mange (på Oversikt og i appen)</span></span>${seg}</div>`, q: 'ruter anbefalt antall reiser min reise kollektiv' }],
     RT.err === 'missing' ? 'Serveren lagrer ikke valget ennå – det gjelder bare denne nettleseren til Homelab er oppdatert.' : 'Lagres på brukeren og synkes mellom enhetene dine.')] };
 }
 

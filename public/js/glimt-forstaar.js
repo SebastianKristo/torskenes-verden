@@ -7,7 +7,7 @@ const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', 
 export const KEYS60 = ['state', 'entities', 'choices'];
 const LAB = { state: 'Samtaletilstand', entities: 'Entitetsregister', choices: 'Valgknapper ved usikkerhet' };
 const HELP = {
-  state: 'Glimt husker forrige spørsmål i samtalen, så «og i Bergen?» og «flytt den til 11» forstås. Utløper etter 30 min i søket på Hjem og 12 t i Chat.',
+  state: 'Glimt husker forrige spørsmål i samtalen, så «og i Bergen?» og «flytt den til 11» forstås. Utløper etter 30 min i søket på Oversikt og 12 t i Chat.',
   entities: 'Personer, steder, butikker, abonnementer og faste hendelser med aliaser («hytta», «jobben»), brukt i minne, kalendersøk, vær og finans.',
   choices: 'Glimt spør med konkrete valg («Mener du A eller B?») i stedet for å gjette, og forstår «den første».',
 };
@@ -49,7 +49,7 @@ export function understandHtml60() {
     const sub = !srv ? 'Slått av for alle av administrator' : own == null ? help(k) : `${help(k)} · Ditt eget valg`;
     return `<button type="button" class="ac-li" data-u60-user="${k}" role="switch" aria-checked="${on}"${S.busy || !srv ? ' disabled' : ''}><span class="ac-col ac-grow"><b>${lab(k)}</b><span>${sub}</span></span>${sw(on)}</button>`;
   }).join('');
-  const ent = '<button type="button" class="ac-li" data-u60-ent><span class="ac-col ac-grow"><b>Se og rediger entitetsregisteret</b><span>Innstillinger → AI → Entitetsregister</span></span><span aria-hidden="true">›</span></button>';
+  const ent = '<button type="button" class="ac-li" data-u60-ent><span class="ac-col ac-grow"><b>Se og rediger entitetsregisteret</b><span>Innstillinger → Glimt og AI → Entitetsregister</span></span><span aria-hidden="true">›</span></button>';
   let admin = '';
   if (d.admin) {
     const rows = KEYS60.map((k) => { const on = d.server?.[k] !== false; return `<button type="button" class="ac-li" data-u60-server="${k}" role="switch" aria-checked="${on}"${S.busy ? ' disabled' : ''}><span class="ac-col ac-grow"><b>${lab(k)}</b><span>${help(k)}</span></span>${sw(on)}</button>`; }).join('');

@@ -493,7 +493,7 @@ export function paperMer() {
   const mod = inBar.has('spor') ? (domOk() ? ['dom', 'Domener', 'Trafikk, besøk og oppetid'] : null) : ['spor', 'Sporing', n ? `${n} pakke${n === 1 ? '' : 'r'} på vei` : 'Pakker og sendinger'];
   const rows = [...(P24.profRoot() ? [['hl', 'Hjem', 'Pakker, avganger og widgets']] : []), ['brief', 'Brief', P36.briefMerSub()], ...(P37B.bibleOn() ? [['bibel', 'Bibel', 'Dagens vers, rekke og leseplan']] : []), // prompt 37: bare med bibelvers-modulen // prompt 36: Now Brief øverst i Mer
      ...(mod ? [mod] : []), ['kal', 'Kalender', 'Timeplan, prøver og frister'], ['bd', 'Bursdager', 'Hvem har bursdag snart'], ['huske', 'Gjøremål', 'To-do for hele familien'], ['fam', 'Familie og kart', 'Posisjon, soner og helse'], ['tkart', 'Kart', 'Holdeplasser, sanntid og soner'] /* prompt 46 */,
-    ['chat', 'Chat', 'Ollama, Gemini og Groq · historikk'], ['media', 'Media', 'Sonarr, Radarr og nedlastinger'], ['hjem', 'Økonomi', 'Oversikt, transaksjoner, Finn og mer'], ['sub', 'Subscription OS', 'Abonnementer og faste trekk'], ['nyheter', 'Nyhetsleser', 'RSS med AI-sammendrag'], ['studie', 'Studie', 'Vitnemål, karakterer og snitt med Glimt'], ['avspilling', 'Avspilling', 'Plex og Jellyfin · spilles nå og historikk'] /* prompt 44 */, ['set', 'Innstillinger', 'Tema, bakgrunn og konto']]
+    ['chat', 'Chat', 'Ollama, Gemini og Groq · historikk'], ['media', 'Media', 'Sonarr, Radarr og nedlastinger'], ['hjem', 'Økonomi', 'Oversikt, transaksjoner, Finn og mer'], ['sub', 'Faste betalinger', 'Abonnementer, faste utgifter og planlagte trekk'], ['nyheter', 'Nyheter', 'RSS med AI-sammendrag'], ['studie', 'Studie', 'Vitnemål, karakterer og snitt med Glimt'], ['avspilling', 'Avspilling', 'Plex og Jellyfin · spilles nå og historikk'] /* prompt 44 */, ['set', 'Innstillinger', 'Tema, bakgrunn og konto']]
     ; // prompt 40 (claude-code-fanelinje-alle-sider.md): faner i fanelinja vises fortsatt i Mer
   // Prompt 25: ikon til venstre (40-boks med strekikon i fargene fra ikonpaletten).
   // Prompt 28: hold inne for å flytte og skjule (lagres per konto), Subscription OS etter Finans.
@@ -524,7 +524,7 @@ const CATS = [['siste', 'Siste'], ['norge', 'Norge'], ['verden', 'Verden'], ['ok
 const FCOL = ['#c8102e', '#d7263d', '#1a5a8a', '#2a3440', '#e05a2a', '#2f7a4f', '#5b4a8a'];
 export async function newsLoad() {
   try { P.news = await hlApi(`/rss?cat=${P.cat}&limit=40`); P.newsErr = ''; }
-  catch (e) { P.newsErr = e.status === 404 ? 'Nyhetsleseren krever en nyere server.' : e.message; P.news ??= null; }
+  catch (e) { P.newsErr = e.status === 404 ? 'Nyheter krever en nyere server.' : e.message; P.news ??= null; }
 }
 export function newsView() {
   P23.setNewsState(P);
@@ -549,7 +549,7 @@ function newsSheet(feeds, st, cats) {
     ${newsSetInner(feeds, st, cats)}
   </div>`;
 }
-/** Prompt 46 (claude-code-nyheter-innstillinger-flytt.md): innholdet brukes nå av Innstillinger → Nyheter (#/set/nyheter).
+/** Prompt 46 (claude-code-nyheter-innstillinger-flytt.md): innholdet brukes nå av Innstillinger → Moduler → Nyheter (#/set/nyheter).
  *  Kategorien per kilde er en ekte nedtrekksmeny (claude-code-nyheter-kilder-favicon-dropdown.md), og nettstedets ikon
  *  vises i stedet for bokstavene når serveren har det (f.favicon / f.icon); feiler bildet, vises bokstavene. */
 function newsSetInner(feeds, st, cats) {
@@ -565,7 +565,7 @@ function newsSetInner(feeds, st, cats) {
       <label class="pp-chip p46-csel"><select data-p46feedcat="${esc(f.id)}" aria-label="Kategori for ${esc(f.name)}">${opts(f)}</select><span aria-hidden="true">▾</span></label><button class="pp-x" data-pp="feeddel" data-id="${f.id}" aria-label="Fjern ${esc(f.name)}">×</button></div>`).join('') || '<div class="pp-mut" style="padding:12px">Ingen kilder.</div>'}</div>
     <form class="pp-col" data-ppform="feed"><input class="pp-in" name="url" value="${esc(P.nf)}" placeholder="https://www.nrk.no/toppsaker.rss" inputmode="url" autocomplete="off" aria-label="RSS- eller Atom-adresse"><button class="pp-btn lab" type="submit" ${P.busy ? 'disabled' : ''}>${P.busy ? 'Sjekker …' : '+ Legg til adresse'}</button><span class="pp-mut">${st.aiCategorize !== false ? '✦ AI finner navnet på kilden og foreslår kategori.' : 'Kategorien settes til Auto.'}</span></form>`;
 }
-/** Innstillinger → Nyheter (prompt 46). */
+/** Innstillinger → Moduler → Nyheter (prompt 46). */
 export function newsSetBody() {
   const N = P.news, feeds = N?.feeds ?? [], st = N?.settings ?? { aiSummary: true, aiCategorize: true };
   const cats0 = N?.categories?.length ? N.categories.map((c) => [c.id, c.name]) : CATS;

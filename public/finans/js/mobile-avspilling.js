@@ -50,7 +50,7 @@ function nowView() {
   const r = A.d.now; if (r === undefined) return '<div class="m-spin"></div>';
   const S = srvState().find((s) => s.k === A.srv);
   if (S && !S.on && A.srv === 'plex') return plexLogin();
-  if (S && !S.on) return `<div class="p44a-empty"><b>Jellyfin er ikke koblet til</b><span>Legg inn adresse og API-nøkkel (eller Quick Connect) under Integrasjoner → Jellyfin.</span><a class="p44a-btn" href="#/set/integ">Åpne Integrasjoner ›</a></div>`;
+  if (S && !S.on) return `<div class="p44a-empty"><b>Jellyfin er ikke koblet til</b><span>Legg inn adresse og API-nøkkel (eller Quick Connect) under Tilkoblinger → Jellyfin.</span><a class="p44a-btn" href="#/set/integ">Åpne Integrasjoner ›</a></div>`;
   const L = arr(r, 'items', 'sessions').filter((x) => !x.server || x.server === A.srv), K = r?.kpi ?? r?.summary ?? {};
   const bw = K.bandwidth ?? L.reduce((a, x) => a + (+x.bitrate || 0), 0);
   const kpi = [[String(L.length), 'strømmer nå'], [K.bandwidthText ?? (bw ? `${Math.round(bw * 10) / 10} Mbit/s` : '0'), 'båndbredde'], [nbN(K.weekPlays ?? K.week ?? 0), 'sett denne uka'], [nbN(K.users ?? new Set(L.map((x) => x.user)).size), 'brukere']];

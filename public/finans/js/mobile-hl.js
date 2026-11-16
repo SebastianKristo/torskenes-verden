@@ -13,7 +13,7 @@ import { classicBand } from './mobile-paper.js';
 const DEF = { sec: ['clock', 'search', 'links', 'os', 'srv', 'ruter'], hlTabs: ['hl', 'home', 'trk', 'dom', 'mat'], finTabs: ['home', 'list', 'finn', 'bud', 'ai', 'mer'], hide: { srv: true, ruter: true, bud: true } };
 const WD = {
   clock: ['Klokke og vær', 'Tid, vær og pakker på vei', 'clock'], search: ['Google-søk', 'Søk med forslag og historikk', 'search'],
-  links: ['Snarveier', 'Favorittsider og tjenester på hjemmenettet', 'mer'], os: ['Andre OS', 'Finans, Domener og Mat', 'konto2'],
+  links: ['Snarveier', 'Favorittsider og tjenester på hjemmenettet', 'mer'], os: ['Andre OS', 'Økonomi, Domener og Mat', 'konto2'],
   srv: ['Serverstatus', 'CPU, minne, lagring og oppetid', 'srv'], ruter: ['Ruter-avganger', 'Neste avganger i sanntid', 'bus'],
 };
 const fix = (a, d) => { a = (Array.isArray(a) ? a : []).filter((x) => d.includes(x)); return [...new Set([...a, ...d.filter((x) => !a.includes(x))])]; };

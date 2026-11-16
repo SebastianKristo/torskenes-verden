@@ -57,7 +57,7 @@ function newsCatDigest(Pn, cats) {
     ${pts.length ? `<ul>${pts.map((p) => { const t = typeof p === 'string' ? p : p.text ?? '', u = typeof p === 'string' ? null : p.url ?? p.link ?? null; return `<li>${u ? `<a href="${esc(u)}" target="_blank" rel="noopener">${esc(t)}</a>` : esc(t)}</li>`; }).join('')}</ul>` : `<p>${esc(D.text)}</p>`}</div>`;
 }
 const newsCatDigestOn = (Pn) => { const D = digestOf(Pn.cat); return !!D && D !== 'busy' && !D.none; };
-/** Ekstra bryter i Innstillinger → Nyheter. */
+/** Ekstra bryter i Innstillinger → Moduler → Nyheter. */
 function newsTogExtra(st, tog) { return tog('catSummary', '✦ Sammendrag per kategori', 'Eget Glimt-sammendrag øverst i hver kategori. «Siste» har det felles.', st.catSummary !== false); }
 /** KATEGORIER: egne kategorier (navn + nøkkelord) og interesser for «For deg» – vises når serveren sender dem. */
 function newsCatSection(cats) {

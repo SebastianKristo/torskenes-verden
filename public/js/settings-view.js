@@ -251,8 +251,8 @@ function bgView() {
   const own = box('Egne bilder', `<label class="sg-row" style="cursor:pointer"><span class="sg-txt"><b>Eget bilde</b><span>Vises når «Eget bilde» er valgt. Deles med appene.</span></span><span class="sg-btn2">Last opp</span><input type="file" accept="image/*" hidden data-bg-custom></label>
     ${isAdmin() ? `<label class="sg-row" style="cursor:pointer"><span class="sg-txt"><b>Oslo-bilder</b><span>${osloList ? `${osloList.length} egne bilder` : 'Egne bilder av Oslo, for eksempel fra drone. Maks 15 MB per bilde.'}</span></span><span class="sg-btn2">Legg til</span><input type="file" accept="image/*" multiple hidden data-bg-oslo></label>
       ${osloList?.length ? `<div class="sg-row bg-oslo">${osloList.map((o) => `<span class="bg-oslo-th" style="background-image:${esc(safeUrl(o.url))}"><button type="button" data-bg-oslo-del="${esc(o.id)}" aria-label="Slett bildet">×</button></span>`).join('')}</div>` : ''}` : ''}`,
-    'Oslo hentes fra Unsplash eller Pexels når en nøkkel er lagt inn under Integrasjoner → Bakgrunner, ellers fra egne og medfølgende bilder. Getty Images brukes ikke, siden bildene krever kjøpt lisens.');
-  return { title: 'Bakgrunn', sub: hlTheme() === '2c' ? 'Fotovinduet øverst på alle sider. Valget deles med mobilappene.' : 'Bak Dashboard. Valget deles med fotovinduet og mobilappene.',
+    'Oslo hentes fra Unsplash eller Pexels når en nøkkel er lagt inn under Tilkoblinger → Bakgrunner, ellers fra egne og medfølgende bilder. Getty Images brukes ikke, siden bildene krever kjøpt lisens.');
+  return { title: 'Bakgrunn', sub: hlTheme() === '2c' ? 'Fotovinduet øverst på alle sider. Valget deles med mobilappene.' : 'Bak Oversikt. Valget deles med fotovinduet og mobilappene.',
     html: `<div class="bg-cards">${BG_TYPES.map((t) => bgCard(t, cur)).join('')}</div>
       ${credit ? `<div class="sg-note bg-credit41">${credit}</div>` : ''}
       ${bgMsg ? `<div class="sg-note green">${esc(bgMsg)}</div>` : ''}
@@ -277,7 +277,7 @@ function lookView() {
   if (!sub) return { groups: [
     { ...group('Tema', [{ html: themeCards(), q: `tema ${THEMES.map((t) => t[1]).join(' ')} papir vindu` }], 'Byttet skjer med en gang og lagres på brukeren din. Alt virker likt i begge temaene.'), cls: 'sg-theme' },
     modeGroup44(H), // prompt 44: LYS OG MØRK
-    group('Bakgrunn', [row({ t: 'Bakgrunnsbilde', s: hlTheme() === '2c' ? 'Vises i fotovinduet øverst på Oversikt.' : 'Vises bare på Dashboard. De andre sidene har en rolig, mørk bakgrunn.', v: BGN[bgState().type] ?? 'Oslo', k: 'vær planeter jorda månen jupiter mars saturn oslo uskarphet mørklegging', go: 'look|bg' })]),
+    group('Bakgrunn', [row({ t: 'Bakgrunnsbilde', s: hlTheme() === '2c' ? 'Vises i fotovinduet øverst på Oversikt.' : 'Vises bare på Oversikt. De andre sidene har en rolig, mørk bakgrunn.', v: BGN[bgState().type] ?? 'Oslo', k: 'vær planeter jorda månen jupiter mars saturn oslo uskarphet mørklegging', go: 'look|bg' })]),
     group('Søkebar', [
       row({ t: 'Vis søkebar', s: 'Kan dras mellom avgangene og klokka.', tog: !s.hideSearch, act: 'data-toggle="search"' }),
       row({ t: 'Stil', v: SRN[s.searchStyle] ?? 'Lys', go: 'look|style' }),
@@ -296,7 +296,7 @@ function lookView() {
     + note('Google lar ikke andre sider lese søkehistorikken direkte. Eksporter den fra takeout.google.com og importer filen her, så kommer de gamle søkene med i forslagene.') };
   if (sub === 'cats') {
     const cats = s.categories.map((cat, i) => `<div class="sg-row cat-row"><input type="color" value="${cat.color}" data-ci="${i}" data-ck="color" aria-label="Farge"><input class="tab-name" value="${esc(cat.name)}" data-ci="${i}" data-ck="name" aria-label="Navn" maxlength="30"><button class="sg-pill danger" data-cdel="${i}" aria-label="Slett ${esc(cat.name)}">Slett</button></div>`).join('');
-    return { title: 'Kategorier', sub: 'Utseende · Kvitteringer', html: box('Kategorier', cats, 'Brukes på kvitteringene i Homelab. FinansHub har egne kategorier.')
+    return { title: 'Kategorier', sub: 'Utseende · Kvitteringer', html: box('Kategorier', cats, 'Brukes på kvitteringene i Homelab. Økonomi har egne kategorier.')
       + '<div class="sg-acts"><button class="sg-btn" data-cadd>+ Ny kategori</button></div>' };
   }
   sub = null; return lookView();
@@ -353,11 +353,11 @@ function topView() {
       group('Forside', [
         row({ t: 'Widgets på dashboardet', k: 'kort skjul rekkefølge', s: 'Skjul det du ikke bruker, for eksempel snarveier.', v: shownOf(DASH_WIDGETS), btn: 'Administrer', go: 'top|dash' }),
         row({ t: 'Widgets på mobil', v: shownOf(MOBILE_WIDGETS), btn: 'Administrer', go: 'top|mob' }),
-        row({ t: 'Snarveier', s: 'Lenker på dashboardet og i mobilappen.', v: String(sc.length), btn: 'Administrer', go: 'top|sc' }),
+        row({ t: 'Snarveier', s: 'Lenker på Oversikt og i mobilappen.', v: String(sc.length), btn: 'Administrer', go: 'top|sc' }),
       ], 'Rekkefølgen kan også endres ved å dra kortene på forsiden.'),
     ] };
   }
-  if (sub === 'tabs') return { title: 'Faner', sub: 'App · Topplinje', html: box('Faner i topplinjen', tabRows(), 'Klikk på navnet for å endre det. Tomt felt gir standardnavnet. Dashboard kan ikke skjules. Skjulte sider kan fortsatt åpnes med lenke.')
+  if (sub === 'tabs') return { title: 'Faner', sub: 'App · Topplinje', html: box('Faner i topplinjen', tabRows(), 'Klikk på navnet for å endre det. Tomt felt gir standardnavnet. Oversikt kan ikke skjules. Skjulte sider kan fortsatt åpnes med lenke.')
       + '<div class="sg-acts"><button class="sg-btn" data-tabs-reset>Tilbakestill faner</button></div>' };
   if (sub === 'head') return { title: 'Avstand og faner', sub: 'App · Topplinje', html: box('Avstand', TOP.map(([k, , label, min, max, step]) =>
       `<label class="sg-field range"><span>${label}</span><input type="range" min="${min}" max="${max}" step="${step}" value="${topVal(k)}" data-top="${k}"><output class="mono">${topVal(k)} px</output></label>`).join(''),
@@ -400,7 +400,7 @@ function domView() {
       row({ t: 'Google Search Console', s: 'Klikk, visninger og søkeord fra Google · hent domener', k: 'search console google gsc søk klikk visninger søkeord seo', btn: 'Åpne', go: 'dom|doms' }), // prompt 39
       row({ t: 'Administrer domener', s: 'Legg til, fjern og velg statistikkilde.', v: n == null ? '' : `${n} ${n === 1 ? 'domene' : 'domener'}`, btn: 'Administrer', go: 'dom|doms' }),
       row({ t: 'Verdenskart med besøk per land', s: 'Vises på Domener-siden.', tog: ui().domMap !== false, act: 'data-toggle="ui:domMap"' }),
-    ], 'Cloudflare-domener uten eget token bruker standard-tokenet under Integrasjoner → Cloudflare.')] };
+    ], 'Cloudflare-domener uten eget token bruker standard-tokenet under Tilkoblinger → Cloudflare.')] };
   }
   if (sub === 'doms') return { title: 'Domener', sub: 'Legg til, fjern og velg statistikkilde.', html: domainsPane() };
   sub = null; return domView();
@@ -573,7 +573,7 @@ function mountMail(slot) {
     return m.mailPane(mailHost);
   }).catch(() => {
     mailMounted = false;
-    mailHost.innerHTML = box('Proton Mail', row({ t: 'Oppsett i FinansHub', s: 'Henting av kvitteringer fra e-post settes opp under FinansHub → Innstillinger → Import.', btn: 'Åpne', act: 'data-open-fh-mail' }).html);
+    mailHost.innerHTML = box('Proton Mail', row({ t: 'Oppsett i Økonomi', s: 'Henting av kvitteringer fra e-post settes opp under Økonomi → Innstillinger → Import.', btn: 'Åpne', act: 'data-open-fh-mail' }).html);
   });
 }
 
@@ -607,7 +607,7 @@ async function saveGroup(name, changes) {
 /* ---------- Søk på tvers av sidene ---------- */
 
 const H = { group, row, note };
-// Prompt 35: Innstillinger → GLIMT → Glimt (fasit Glimt Brief.dc.html mode="settings"). Samme data som ⚙ i briefen.
+// Prompt 35: Innstillinger → Glimt og AI → Glimt → Glimt (fasit Glimt Brief.dc.html mode="settings"). Samme data som ⚙ i briefen.
 const glimtView = () => ({ html: glimtSettingsHtml({ figs: true }), search: [group('Glimt', [
   row({ t: 'Glimt-figur', s: 'Velg vert: Glimt, Halo, Boble, Antenne, Bane, Pastell, Natt, Sky, Dråpe, Ugle, Stjerne, Spire, Gris eller Blekksprut', go: 'glimt', btn: 'Åpne', k: 'glimt figur karakter maskot gris ugle sky blekksprut' }),
   row({ t: 'Glimt-brief', s: 'Morgen-, dags-, kvelds- og nattbrief med klokkeslett', go: 'glimt', btn: 'Åpne', k: 'brief morgenbrief kveldsbrief varsel guide venner' }),
@@ -685,7 +685,7 @@ function backupView65() {
 /** Ruter: Entur-status med lenke til Integrasjoner (nøkkelen/strekningene settes der, ikke her). */
 function ruterView65() {
   const v = ruterView45(H), g = cfg?.find((x) => x.name === 'Ruter (Entur)'), val = g ? valOf(g) : '';
-  const st = row({ t: 'Entur', k: 'entur ruter strekninger stopp nsr', s: 'Strekninger og stopp settes under Integrasjoner', v: val.replace(/^!/, ''), vc: val.startsWith('!') ? 'var(--ds-warning)' : undefined, btn: 'Integrasjoner', go: g ? 'int|cfg:Ruter (Entur)' : 'int' });
+  const st = row({ t: 'Entur', k: 'entur ruter strekninger stopp nsr', s: 'Strekninger og stopp settes under Tilkoblinger', v: val.replace(/^!/, ''), vc: val.startsWith('!') ? 'var(--ds-warning)' : undefined, btn: 'Tilkoblinger', go: g ? 'int|cfg:Ruter (Entur)' : 'int' });
   return v.groups ? { ...v, groups: [...v.groups, group('Entur', [st])] } : v;
 }
 let sysTab65 = 'ov'; // System-fanen som vises (Oversikt · Oppdateringer · Ytelse · Selvreparasjon · Mer)
@@ -693,7 +693,7 @@ const VIEWS = { glimt: glimtView65, konto: kontoView65, look: lookView65, dom: d
   'faste-oppgaver': () => fasteView62(H), kvalitet: () => kvalitetView64(H),
   sporing: () => sporView70(H, () => { if (!modal().hidden && (tab === 'sporing' || q.trim())) render(); }), // prompt 70
   skjold: () => skjView77(H, () => { if (!modal().hidden && (tab === 'skjold' || q.trim())) render(); }) }; // prompt 77
-// Prompt 45: Sonevarsler (av/på, per person og sone). Prompt 65: bare under Varsler (hele settet); Brukere og familie viser en lenke.
+// Prompt 45: Sonevarsler (av/på, per person og sone). Prompt 65: bare under Varsler (hele settet); Husstand viser en lenke.
 const rerender45 = () => { if (!modal().hidden && ['users', 'varsel', 'media', 'ruter', 'vaer'].includes(tab)) render(); };
 function withZones45(v, where) { setRender45(rerender45); if (v?.groups) v.groups = [...v.groups, ...zoneGroups45(H, where)]; return v; }
 function searchView() {

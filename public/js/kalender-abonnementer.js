@@ -4,7 +4,7 @@
 // - Hendelsene: heldags, kind:'trekk' | 'trial' | 'renewal', subId, amount, currency, account, logo. Kommer de ikke med /api/kalender,
 //   hentes GET /api/calendars/events?cal=ab&start&end, og til slutt lages de her fra /finans/api/subscriptions (12 måneder fram).
 // - Måned: chip med logo (12 px) + navn; mange trekk samme dag → «3 trekk · 627 kr». Liste: logo, navn, beløp (Plex Mono), merke TREKK/PRØVE/ÅRLIG.
-// - Detaljarket: logo, beløp, konto, intervall, neste trekk, «Åpne i Finans ›», «Si opp …». Ikke redigerbart («Endres i Finans → Abonnementer»).
+// - Detaljarket: logo, beløp, konto, intervall, neste trekk, «Åpne i Økonomi ›», «Si opp …». Ikke redigerbart («Endres i Finans → Abonnementer»).
 import { esc } from './util.js';
 
 export const AB_CAL = { id: 'abonnementer', key: 'ab', name: 'Abonnementer', color: '#3d7f8a', source: 'builtin', badge: 'INNEBYGD', sourceLabel: 'Finans', readOnly: true };
@@ -100,7 +100,7 @@ export const chipInner = (e) => (e.kind === 'abg' ? `${logo(e.items[0])}<span cl
 /** Rad i Liste-visningen. */
 export function listRow(e, tStyle) {
   const a = e.ab ?? {}, b = badge(e);
-  return `<button type="button" class="k39-lr k42-lr" data-k-sel="${esc(e.id)}" style="${tStyle}">${logo(e, 22)}<span class="k39-lrm"><b data-no-i18n>${esc(a.name || e.t)}</b><span>${esc(a.kind === 'trial' ? 'Prøveperioden slutter' : a.account || 'Abonnementer · Finans')}</span></span><span class="k42-amt">${esc(a.amount != null ? krTxt(a.amount) : a.varies ? 'varierer' : '')}</span><span class="k39-tag${b === 'PRØVE' ? ' red' : ''}">${b}</span></button>`;
+  return `<button type="button" class="k39-lr k42-lr" data-k-sel="${esc(e.id)}" style="${tStyle}">${logo(e, 22)}<span class="k39-lrm"><b data-no-i18n>${esc(a.name || e.t)}</b><span>${esc(a.kind === 'trial' ? 'Prøveperioden slutter' : a.account || 'Faste betalinger · Økonomi')}</span></span><span class="k42-amt">${esc(a.amount != null ? krTxt(a.amount) : a.varies ? 'varierer' : '')}</span><span class="k39-tag${b === 'PRØVE' ? ' red' : ''}">${b}</span></button>`;
 }
 
 /** Detaljarket for et trekk. dLong(d) og fromKey(k) fra kalender.js. */
@@ -114,8 +114,8 @@ export function subSheet(e, { longDate, fromKey }) {
     <div class="k2-det-h">${logo(e, 40)}<div class="k2-grow"><span class="k2-lab">ABONNEMENTER · ${b}</span><b data-no-i18n>${esc(a.name || e.t)}</b><span>${esc(longDate(fromKey(e.k)))} · Hele dagen</span></div><button type="button" class="k2-x" data-k-close aria-label="Lukk">✕</button></div>
     ${a.amount != null ? `<b class="k42-big">${esc(krTxt(a.amount))}</b>` : ''}
     <div class="k2-rows">${rows.map(([x, y]) => `<div><span>${esc(x)}</span><b>${esc(y)}</b></div>`).join('')}</div>
-    <span class="k2-src">Endres i Finans → Abonnementer.</span>
-    <div class="k2-btns"><a class="k2-b ink" href="${esc(fin)}">Åpne i Finans ›</a>${/^https:\/\//.test(a.cancelUrl) ? `<a class="k2-b line" href="${esc(a.cancelUrl)}" target="_blank" rel="noopener">Si opp …</a>` : ''}</div>
+    <span class="k2-src">Endres i Økonomi → Faste betalinger.</span>
+    <div class="k2-btns"><a class="k2-b ink" href="${esc(fin)}">Åpne i Økonomi ›</a>${/^https:\/\//.test(a.cancelUrl) ? `<a class="k2-b line" href="${esc(a.cancelUrl)}" target="_blank" rel="noopener">Si opp …</a>` : ''}</div>
   </div></div>`;
 }
 

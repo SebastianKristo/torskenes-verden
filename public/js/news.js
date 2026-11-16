@@ -473,10 +473,10 @@ function reader(opts = {}) {
     // Prompt 46: hver kategori har sitt eget sammendrag øverst (Siste beholder det felles). For deg uten interesser: hint.
     if (isFd46(st.cat) && !intList().length && !items.length) return '<div class="nw46-hint"><b>✦ For deg</b><span>Legg til interesser (f.eks. Oslo, Elbil, KI) under Nyhetsinnstillinger, så samler Glimt sakene her.</span><button type="button" class="nw-pill" data-act="nw46-set">Nyhetsinnstillinger</button></div>';
     if (st.cat !== 'siste') {
-      if (!items.length) return `<div class="nw-empty">${d.feeds?.length ? 'Ingen saker i denne kategorien ennå.' : 'Ingen kilder. Legg til en RSS- eller Atom-adresse under Innstillinger → Nyheter.'}</div>`;
+      if (!items.length) return `<div class="nw-empty">${d.feeds?.length ? 'Ingen saker i denne kategorien ennå.' : 'Ingen kilder. Legg til en RSS- eller Atom-adresse under Innstillinger → Moduler → Nyheter.'}</div>`;
       return catSumHtml(items) + `<section class="nw-g nw-wide">${items.map((x) => item(x, false)).join('')}</section>`;
     }
-    if (!items.length) return leadHtml + (d.feeds?.length ? '' : '<div class="nw-empty">Ingen kilder. Legg til en RSS- eller Atom-adresse under Innstillinger → Nyheter.</div>');
+    if (!items.length) return leadHtml + (d.feeds?.length ? '' : '<div class="nw-empty">Ingen kilder. Legg til en RSS- eller Atom-adresse under Innstillinger → Moduler → Nyheter.</div>');
     if (st.cat === 'siste') {
       const groups = (d.categories ?? []).slice(1).map((c) => ({ c, items: items.filter((x) => x.category === c.id) })).filter((g) => g.items.length);
       return leadHtml + groups.map((g) => `<section class="nw-g"><div class="nw-gh">${esc(g.c.name.toUpperCase())}</div>${g.items.slice(0, 8).map((x) => item(x, false)).join('')}</section>`).join('');
@@ -484,7 +484,7 @@ function reader(opts = {}) {
     return leadHtml + `<section class="nw-g nw-wide">${items.map((x) => item(x, false)).join('')}</section>`;
   }
 
-  // Prompt 46: innstillingene vises i Innstillinger → Nyheter (settingsOnly), ikke lenger som ark i leseren.
+  // Prompt 46: innstillingene vises i Innstillinger → Moduler → Nyheter (settingsOnly), ikke lenger som ark i leseren.
   function setHtml() {
     const d = st.data ?? { feeds: [], settings: {} };
     const s = d.settings ?? {};
@@ -580,7 +580,7 @@ function reader(opts = {}) {
   el.addEventListener('click', async (e) => {
     if (!SO && click73(e, { findItem, art: st.art?.x ?? null })) return; // prompt 73: lagre/fjern/åpne lagret
     if (await glClick(e)) return;
-    // Prompt 46: ⋯-menyen, «Nyhetsinnstillinger» (dyp lenke til Innstillinger → Nyheter), kategorier og interesser.
+    // Prompt 46: ⋯-menyen, «Nyhetsinnstillinger» (dyp lenke til Innstillinger → Moduler → Nyheter), kategorier og interesser.
     if (st.more && !e.target.closest('.nw46-mw')) { st.more = false; render(); }
     const sg46 = e.target.closest('[data-nw46-sug]');
     if (sg46) return setInts([...intList(), sg46.dataset.nw46Sug]);

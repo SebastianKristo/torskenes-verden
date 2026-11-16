@@ -15,7 +15,7 @@ import { vw } from '/assets/js/lib/viewport.js'; // vindusstørrelsen uten tvung
 const LOC0 = [['llama3.1:8b', 'Llama 3.1', '8B · 4,9 GB', 'Tekst'], ['gemma3:12b', 'Gemma 3', '12B · 8,1 GB', 'Tekst og bilde'], ['qwen2.5vl:7b', 'Qwen 2.5 VL', '7B · 6,0 GB', 'Leser bilder og kvitteringer'], ['deepseek-r1:8b', 'DeepSeek R1', '8B · 5,2 GB', 'Tenker før den svarer']];
 const SKY0 = [['gemini-2.5-flash', 'Gemini 2.5 Flash', 'Google · sky', 'Rask, bilder og lange dokumenter', 'gemini'], ['groq-llama-3.3-70b', 'Llama 3.3 70B', 'Groq · sky', 'Veldig rask tekst', 'groq']];
 const LIB = [['llama3.2:3b', 'Llama 3.2', '3B · 2,0 GB'], ['qwen3:8b', 'Qwen 3', '8B · 5,2 GB'], ['mistral:7b', 'Mistral', '7B · 4,1 GB'], ['phi4:14b', 'Phi-4', '14B · 9,1 GB']];
-const PERS = [['std', 'Standard', ''], ['oko', 'Økonomi', 'Svar kort og bruk tall i kroner. Bruk dataene fra Finans når de finnes.'], ['kode', 'Homelab', 'Du hjelper med Docker, Home Assistant, Proxmox og Python. Gi konkrete kommandoer.'], ['norsk', 'Norsklærer', 'Rett språket og forklar kort hvorfor.']];
+const PERS = [['std', 'Standard', ''], ['oko', 'Økonomi', 'Svar kort og bruk tall i kroner. Bruk dataene fra Økonomi når de finnes.'], ['kode', 'Homelab', 'Du hjelper med Docker, Home Assistant, Proxmox og Python. Gi konkrete kommandoer.'], ['norsk', 'Norsklærer', 'Rett språket og forklar kort hvorfor.']];
 const SUGG = [['Hva har jeg brukt på mat i oktober?', 'Bruker Mine data', 'data'], ['Hva står det om oppsigelse i husleiekontrakten?', 'Fra kunnskapsbasen', 'kb'], ['Lag en handleliste til taco for fire', '', ''], ['Forklar Docker-volumer enkelt', '', '']];
 const DEF = { persona: 'std', system: '', temperature: 0.7, topP: 0.9, numCtx: 8192 };
 
@@ -203,7 +203,7 @@ function toast(t) { C.toast = t; clearTimeout(toastT); draw(); toastT = setTimeo
 const ensureCur = () => { C.cur ??= { id: null, title: '', model: curModel(), pinned: false, folderId: null, up: nowMs(), settings: { ...DEF, ...(L.def ?? {}) }, messages: [] }; C.cur.messages ??= []; return C.cur; };
 
 function guardItems(useData) {
-  return ['Meldingen din', ...(useData ? ['Sammendrag av Finans, Kalender og Huskeliste'] : []), ...C.att.map((a) => `Vedlegg: ${a.name}`)];
+  return ['Meldingen din', ...(useData ? ['Sammendrag av Økonomi, Kalender og Gjøremål'] : []), ...C.att.map((a) => `Vedlegg: ${a.name}`)];
 }
 async function send(text, opt = {}) {
   const t = String(text ?? '').trim();
@@ -670,7 +670,7 @@ export async function chatBind(e, t) {
     case 'send': { const ta = document.getElementById('ch27-in'); await send(ta ? ta.value : C.inp); return true; }
     case 'stop': stopRun(); return true;
     case 'web': C.web = !C.web; haptic('tab'); break;
-    case 'data': if (!dataOK()) { toast('Slått av i Innstillinger → AI og tolkning'); return true; } C.data = !C.data; haptic('tab'); break;
+    case 'data': if (!dataOK()) { toast('Slått av i Innstillinger → Glimt og AI'); return true; } C.data = !C.data; haptic('tab'); break;
     case 'mic': await mic(); return true;
     case 'arm': C.att.splice(+x.dataset.i, 1); break;
     case 'kbt': { const d = C.kb?.find((y) => String(y.id) === x.dataset.id); if (!d) return true; const i = C.att.findIndex((y) => y.kind === 'doc' && String(y.id) === x.dataset.id); if (i >= 0) C.att.splice(i, 1); else C.att.push({ name: d.name, kind: 'doc', id: d.id }); break; }

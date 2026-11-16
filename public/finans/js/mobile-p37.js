@@ -272,7 +272,7 @@ export function huskeView37() {
     ${HK.err ? `<div class="p37-card p37-mut">${esc(HK.err)}</div>` : ''}
     ${groups.map(([t, c, a, an, ak]) => `<div class="p37-gh"><span class="${c}">${t}</span>${an ? `<button type="button" data-p17="${ak}">${an}</button>` : ''}</div><div class="p37-card p37-rows">${a.map((x, i) => row(x, i, all || AR)).join('')}</div>`).join('')
       || `<div class="p37-empty">${AR ? 'Ingenting i arkivet. Fullførte oppgaver arkiveres automatisk etter 7 dager.' : `Ingen oppgaver i ${esc(curN)}.`}</div>`}
-    ${globalThis.P44?.haRow ? globalThis.P44.haRow() : P22.haSection() /* prompt 44: raden som åpner Innstillinger → Gjøremål */}
+    ${globalThis.P44?.haRow ? globalThis.P44.haRow() : P22.haSection() /* prompt 44: raden som åpner Innstillinger → Tilkoblinger → Kalender og gjøremål */}
     ${HK.local ? '<span class="p37-foot">Lagres på denne enheten til serveren har Gjøremål.</span>' : '<span class="p37-foot">Gjøremål er private for deg. Delte lister ser alle som er med i listen.</span>'}</div>`;
 }
 const SPARK = (S = 22, busy = false) => `<span class="p37-spk${busy ? ' busy' : ''}" style="width:${S}px;height:${S}px"><i></i><b style="font-size:${Math.round(S * 0.5)}px">✦</b></span>`;
@@ -694,7 +694,7 @@ async function tipAct(x) {
   if (a === 'geotest') { vib([10, 40, 10]); G7.geoShow = true; clearTimeout(G7.geoT); G7.geoT = setTimeout(() => { G7.geoShow = false; if (m.screen === 'huske') draw(); }, 5000); draw(); return true; }
   if (a === 'pack') { await packList(x.dataset.ev); return true; }
   if (a === 'packno') { const s = lsGet('huske_tip_dismiss', {}) || {}; s[x.dataset.ev] = true; lsSet('huske_tip_dismiss', s); draw(); return true; }
-  if (a === 'packoff') { lsSet('huske_tip_off', { ...(lsGet('huske_tip_off', {}) || {}), pack: true }); hlApi('/me/layout', { method: 'PUT', json: { huske_tip_off: { pack: true } } }).catch(() => {}); haptic('tab'); flash('Glimt foreslår ikke pakkelister lenger · slå på igjen i Innstillinger → Glimt'); draw(); return true; }
+  if (a === 'packoff') { lsSet('huske_tip_off', { ...(lsGet('huske_tip_off', {}) || {}), pack: true }); hlApi('/me/layout', { method: 'PUT', json: { huske_tip_off: { pack: true } } }).catch(() => {}); haptic('tab'); flash('Glimt foreslår ikke pakkelister lenger · slå på igjen i Innstillinger → Glimt og AI → Glimt'); draw(); return true; }
   return true;
 }
 async function gImage(f) {

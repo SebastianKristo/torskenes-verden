@@ -103,7 +103,7 @@ export function sporView70(H, rerender) {
   const head = (t, right) => `<h3 class="sg-t"><span>${esc(t)}</span><span class="sp70-r">${right}</span></h3>`;
   const sec = (g, right) => `<section class="sg sp70">${head(g.t, right)}<div class="sg-box">${g.rows.map((r) => r.html).join('')}</div></section>`;
   const html = sec(gK, `${esc(last)}${last ? ' · ' : ''}<button type="button" data-sp70-check${SP.busy ? ' disabled' : ''}>Sjekk nå</button>`)
-    + sec(gT, '<button type="button" data-go="int|cfg:Sporing">Nøkler i Integrasjoner ›</button>')
+    + sec(gT, '<button type="button" data-go="int|cfg:Sporing">Nøkler i Tilkoblinger ›</button>')
     + (SP.err ? `<div class="sg-note">Fikk ikke hentet sporingen: ${esc(SP.err)}</div>` : SP.msg ? `<div class="sg-note" role="status">${esc(SP.msg)}</div>` : '');
   return { html, search: [gK, gT] };
 }

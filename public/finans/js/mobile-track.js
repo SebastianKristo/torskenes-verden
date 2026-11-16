@@ -220,7 +220,7 @@ export function trkView(th) {
     <div class="sec">Varsler og haptikk</div><div class="list ${gl()}">${trkPrefRows().join('')}${tog('data-trkhap', 'Haptisk tilbakemelding', 'Vibrasjon ved nye pakker og statusendringer', hpref('hap') && hpref('hapPkg'))}</div>
     <div class="snote">Varslene vises mens appen er åpen eller i bakgrunnen. Push når appen er lukket krever de native appene.</div>
     ${carriers.length ? `<div class="sec">Transportører</div><div class="list ${gl()}">${carriers.map((c) => `<div class="opt-row">${badge(c.id, 32, c.logo)}<span class="m-grow">${esc(c.name ?? carOf(c.id).name)}</span><span class="sval" style="color:${c.configured ? '#8fe0b0' : '#f3b54a'};opacity:1">${c.configured ? 'Tilkoblet' : 'Mangler nøkkel'}</span></div>`).join('')}</div>
-      <div class="snote">Nøklene legges inn i Homelab → Innstillinger → Integrasjoner → Sporing.</div>` : ''}`;
+      <div class="snote">Nøklene legges inn i Homelab → Innstillinger → Tilkoblinger → Reise og pakker.</div>` : ''}`;
 }
 
 /* ---------- Hendelser ---------- */

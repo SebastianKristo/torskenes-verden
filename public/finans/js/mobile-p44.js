@@ -379,7 +379,7 @@ export function haRow() {
   const d = P22.HA.d, on = !!d?.enabled;
   if (!P22.HA.t && !P22.HA.miss) P22.haLoad().then(() => { if (m.screen === 'huske') draw(); }).catch(() => {});
   const st = !d ? 'Av' : !on ? 'Av' : d.status === 'error' ? 'Feil' : d.syncedAt ? `Synket ${hm(d.syncedAt)}` : 'Kobler til …';
-  return `<a class="p44-harow" href="#/set/huske"><span class="p44-hai" aria-hidden="true">⇄</span><span class="m-grow"><b>Synk med Home Assistant</b><small>${esc(st)} · endres i Innstillinger → Gjøremål</small></span><span class="p44-chev" aria-hidden="true">›</span></a>`;
+  return `<a class="p44-harow" href="#/set/huske"><span class="p44-hai" aria-hidden="true">⇄</span><span class="m-grow"><b>Synk med Home Assistant</b><small>${esc(st)} · endres i Innstillinger → Tilkoblinger → Kalender og gjøremål</small></span><span class="p44-chev" aria-hidden="true">›</span></a>`;
 }
 
 /* =====================================================================

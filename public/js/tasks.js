@@ -242,7 +242,7 @@ function body() {
   if (ARC) {
     return `${lists2}${group(`ARKIVERT · ${S.arch.length}`, 'mut', S.arch, actBtn('arch-clear', 'Tøm arkivet'))}
       ${S.arch.length ? '' : '<div class="tk-empty">Ingenting i arkivet. Fullførte oppgaver arkiveres automatisk etter 7 dager.</div>'}
-      <div class="tk-foot">Arkiverte oppgaver telles ikke i lister, widgets eller på Hjem. ↺ Gjenopprett legger oppgaven tilbake som åpen i sin liste.</div>`;
+      <div class="tk-foot">Arkiverte oppgaver telles ikke i lister, widgets eller på Oversikt. ↺ Gjenopprett legger oppgaven tilbake som åpen i sin liste.</div>`;
   }
   if (wide()) return webBody(inL, curName); // prompt 39: 2a = sidemeny + detaljer (1a) med tavle (1b) som visning
   const curL = S.cur === 'alle' ? null : listOf(S.cur);
@@ -888,7 +888,7 @@ export function render() {
   bindWide();
   if (fs40()) {
     document.body.classList.add('tk-fs40');
-    return `<div class="tk40-fs" role="region" aria-label="Gjøremål"><div class="tk40-bar"><button type="button" class="tk40-home" data-tk40-close>‹ Hjem</button><span class="tk40-tt"><span>To-do for hele familien</span><b>Gjøremål</b></span><span class="tk40-sp"></span><button type="button" class="tk40-x" data-tk40-close aria-label="Lukk Gjøremål" title="Lukk (Esc)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div><div class="tk40-sc"><div id="tasks" class="tk">${body()}</div></div></div>`;
+    return `<div class="tk40-fs" role="region" aria-label="Gjøremål"><div class="tk40-bar"><button type="button" class="tk40-home" data-tk40-close>‹ Oversikt</button><span class="tk40-tt"><span>To-do for hele familien</span><b>Gjøremål</b></span><span class="tk40-sp"></span><button type="button" class="tk40-x" data-tk40-close aria-label="Lukk Gjøremål" title="Lukk (Esc)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div><div class="tk40-sc"><div id="tasks" class="tk">${body()}</div></div></div>`;
   }
   document.body.classList.remove('tk-fs40');
   return `<div class="tk-top"><div class="os-title">Gjøre<b>mål</b></div><div class="tk-sub">To-do for hele familien · dine lister og lister som er delt med deg</div></div><div id="tasks" class="tk">${body()}</div>`;

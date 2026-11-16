@@ -379,7 +379,7 @@ export function kal70() {
     <div class="m70-row g8 xwrap"><button type="button" class="m70-rb44" data-m70="wkprev" aria-label="Forrige uke">${chev(-1)}</button><button type="button" class="m70-btn line" data-m70="wknow"${S.wk === 0 ? ' aria-pressed="true"' : ''}>I dag</button><button type="button" class="m70-rb44" data-m70="wknext" aria-label="Neste uke">${chev(1)}</button><button type="button" class="m70-btn line" data-m43="cal" title="Vis episodene i Kalender-appen">Vis i Kalender</button></div></div>`;
   if (!D) return head + loading(420);
   if (D.error) return head + C.errBox(D.error);
-  if (C.confOff(D)) return head + C.emptySvc({ message: 'Sonarr og Radarr er ikke satt opp. Legg dem inn under Innstillinger → Integrasjoner → Media.' }, 'Media');
+  if (C.confOff(D)) return head + C.emptySvc({ message: 'Sonarr og Radarr er ikke satt opp. Legg dem inn under Innstillinger → Tilkoblinger → Media.' }, 'Media');
   // Eldre server uten ?from=: dagene starter i dag i stedet for mandag.
   const days = (D.days ?? []).map((d) => ({ ...d, items: d.items ?? [] }));
   const strip = `<div class="m70-days" role="tablist" aria-label="Dager">${days.map((d, i) => { const dt = dOf(d.date), on = S.calDay === i; return `<button type="button" role="tab" aria-selected="${on}" class="m70-day${on ? ' on' : ''}${d.today ? ' today' : ''}" data-m70-day="${i}"><span class="m70-13 b5">${DAYS[dt.getDay()]}</span><span class="m70-dn">${dt.getDate()}</span><span class="m70-dots">${d.items.slice(0, 10).map((x) => `<i class="c-${CAT(x)}"></i>`).join('')}</span></button>`; }).join('')}</div>`;

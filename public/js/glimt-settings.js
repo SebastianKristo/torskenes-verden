@@ -237,7 +237,7 @@ function julCard(s) {
 /* Prompt 41 (claude-code-17-mai.md): Høytider → «17. mai» Automatisk 17. mai / Vis nå / Av. Av = vanlig Hjem og figurer uten flagg. */
 function mai17Row41(s) {
   const m = s.mai17 ?? 'auto';
-  const note = m === 'auto' ? (mai17Auto() ? 'På nå · flagg på figurene til og med 17. mai' : 'Flagg på figurene 14.–17. mai, eget Hjem på selve dagen') : m === 'pa' ? 'Vises nå (forhåndsvisning)' : 'Av · vanlig Hjem og figurer uten flagg';
+  const note = m === 'auto' ? (mai17Auto() ? 'På nå · flagg på figurene til og med 17. mai' : 'Flagg på figurene 14.–17. mai, egen Oversikt på selve dagen') : m === 'pa' ? 'Vises nå (forhåndsvisning)' : 'Av · vanlig Oversikt og figurer uten flagg';
   const seg = (k, n) => `<button type="button" data-gs-mai17="${k}" aria-pressed="${m === k}">${n}</button>`;
   return `<div class="gs40-snd gs41-m17" data-hl="glimt-17mai"><span class="gs-ot"><b>17. mai</b><span class="gs-os">${esc(note)}</span></span><div class="gs40-seg sm" role="group" aria-label="17. mai">${seg('auto', 'Automatisk')}${seg('pa', 'Vis nå')}${seg('av', 'Av')}</div></div>`;
 }

@@ -225,7 +225,7 @@ const ic = {
 function toast(t) { clearTimeout(toastT); M.toast = t; paintToast(); toastT = setTimeout(() => { M.toast = ''; paintToast(); }, 3600); }
 const nb = (n) => (+n || 0).toLocaleString('nb-NO');
 const confOff = (d) => d && d.configured === false;
-const emptySvc = (d, name) => `<div class="m43-empty"><b>${esc(name)} er ikke satt opp</b><span>${esc(d?.message || `Legg inn adresse og nøkkel under Innstillinger → Integrasjoner → Media.`)}</span><button type="button" class="m43-btn line" data-m43="integ">Åpne Integrasjoner</button></div>`;
+const emptySvc = (d, name) => `<div class="m43-empty"><b>${esc(name)} er ikke satt opp</b><span>${esc(d?.message || `Legg inn adresse og nøkkel under Innstillinger → Tilkoblinger → Media.`)}</span><button type="button" class="m43-btn line" data-m43="integ">Åpne Integrasjoner</button></div>`;
 const errBox = (e) => `<div class="m43-empty err"><b>Fikk ikke hentet data</b><span>${esc(e)}</span><button type="button" class="m43-btn line" data-m43="retry">Prøv igjen</button></div>`;
 const skel = (h = 220) => `<div class="m43-skel" style="min-height:${h}px"></div>`;
 
@@ -490,7 +490,7 @@ function sheetHtml() {
       <div class="m43-card nopad m43-col">${tog('Varsel når en nedlasting er ferdig', 'Push og Glimt-brief: «Ferdig: Shrinking S03E08 · klar i Jellyfin»', p.notifyDone !== false, 'data-m43-pref="notifyDone"')}${tog('Varsel når noe feiler eller står fast', '0 seedere i 30 min, indekser nede, full disk', p.notifyFail !== false, 'data-m43-pref="notifyFail"')}${tog('Vis i Kalender', 'Egen kalender «Media» i Kalender-appen', p.calendar !== false, 'data-m43-pref="calendar"')}</div>
       <div class="m43-col g8"><span class="m43-lab">SPILL AV MED</span><div class="m43-row g6">${[['jellyfin', 'Jellyfin'], ['plex', 'Plex']].map(([k, n]) => `<button type="button" class="m43-chip grow${pill((p.player ?? 'jellyfin') === k)}" data-m43-player="${k}">${n}</button>`).join('')}</div></div>
       <div class="m43-col g8"><span class="m43-lab">TJENESTER</span><div class="m43-card nopad m43-col">${!S ? '<span class="t-mut m43-pad">Henter …</span>' : S.error ? `<span class="t-bad m43-pad">${esc(S.error)}</span>` : (S.services ?? []).map((s) => `<div class="m43-svc"><span class="m43-dot t-${s.ok ? 'ok' : s.configured ? 'bad' : 'mut'}"></span><div class="m43-col grow mw0"><b>${esc(s.name)}</b><span class="mono m43-sm t-mut ell">${esc(s.url ?? (s.configured ? '' : 'Ikke satt opp'))}</span></div><span class="m43-sm b7 ${s.ok ? 't-ok' : s.configured ? 't-bad' : 't-mut'}">${esc(s.ok ? s.text ?? '' : s.configured ? s.error ?? s.text ?? 'Feil' : s.mock ? 'demodata' : 'Mangler')}</span></div>`).join('')}</div>
-        <span class="m43-sm t-mut">API-nøklene lagres på serveren. Appen snakker bare med Homelab. Adresser, nøkler og oppsett steg for steg: <button type="button" class="m43-link" data-m43="integ">Innstillinger → Integrasjoner → Media</button>.</span></div>
+        <span class="m43-sm t-mut">API-nøklene lagres på serveren. Appen snakker bare med Homelab. Adresser, nøkler og oppsett steg for steg: <button type="button" class="m43-link" data-m43="integ">Innstillinger → Tilkoblinger → Media</button>.</span></div>
       ${S?.admin ? `<div class="m43-col g8"><span class="m43-lab">TILGANG TIL MEDIA</span><div class="m43-card nopad m43-col">${!M.access ? '<span class="t-mut m43-pad">Henter …</span>' : M.access.error ? `<span class="t-bad m43-pad">${esc(M.access.error)}</span>` : (M.access.users ?? []).map((u) => (u.admin ? `<div class="m43-svc"><div class="m43-col grow"><b>${esc(u.name)}</b><span class="m43-sm t-mut">Administrator · har alltid tilgang</span></div></div>` : tog(u.name, u.allowed ? 'Har tilgang' : 'Ingen tilgang', u.allowed, `data-m43-acc="${esc(u.id)}"`))).join('')}</div></div>` : ''}`;
   }
   if (!b) return '';
@@ -501,7 +501,7 @@ function sheetHtml() {
 
 function mainHtml() {
   if (M.restricted) return `<div class="m43-empty"><b>Ingen tilgang</b><span>${esc(M.restricted)}</span></div>`;
-  if (M.missing) return '<div class="m43-empty"><b>Media er ikke klart på serveren ennå</b><span>Serveren mangler /api/media. Oppdater Homelab-serveren, og sett opp Sonarr, Radarr, qBittorrent og Prowlarr under Innstillinger → Integrasjoner → Media.</span><button type="button" class="m43-btn line" data-m43="integ">Åpne Integrasjoner</button></div>';
+  if (M.missing) return '<div class="m43-empty"><b>Media er ikke klart på serveren ennå</b><span>Serveren mangler /api/media. Oppdater Homelab-serveren, og sett opp Sonarr, Radarr, qBittorrent og Prowlarr under Innstillinger → Tilkoblinger → Media.</span><button type="button" class="m43-btn line" data-m43="integ">Åpne Integrasjoner</button></div>';
   if (M.srch) return srchHtml();
   if (M.det) return detHtml();
   if (M.tab === 'kal') return kal70();
@@ -767,7 +767,7 @@ function bind(r) {
     const b = t.closest('button,a[data-m43]');
     if (!b || b.disabled) return;
     const d = b.dataset;
-    if (await click50(b)) return; // prompt 50: Start / Søk igjen / Innstillinger → Media i statuslinja
+    if (await click50(b)) return; // prompt 50: Start / Søk igjen / Innstillinger → Moduler → Media i statuslinja
     if (d.m43Tab) return goTab(d.m43Tab);
     if (await act44(b, d)) return; // prompt 44
     if (await act70(b, d)) return; // prompt 70: kalenderuker, filtre, avkrysning, ⋯-menyer, varsler
@@ -820,7 +820,7 @@ function bind(r) {
     const a = d.m43;
     if (!a) return;
     if (a === 'close') return close();
-    // Prompt 45 (claude-code-innstillinger-samlet.md): innstillingene for Media ligger i Innstillinger → Media.
+    // Prompt 45 (claude-code-innstillinger-samlet.md): innstillingene for Media ligger i Innstillinger → Moduler → Media.
     if (a === 'set') { import('./settings.js').then((m) => m.openSettings('media')).catch(() => { location.hash = '#/innstillinger/media'; }); return; }
     if (a === 'set43') { M.sh = 'set'; paintSheet(); loadStatus().then(() => { if (M.status?.admin && !M.access) mapi('/access').then((j) => { M.access = j; paintSheet(); }).catch((er) => { M.access = { error: er.message }; paintSheet(); }); }); return; }
     if (a === 'shclose') return closeSheet();

@@ -80,9 +80,9 @@ function fourBox() {
 // Prompt 42: varsler for kalenderen Abonnementer (Av / Dagen før / Prøveperioder og årlige; standard: prøveperioder og årlige).
 function subsBox() {
   const c = kalCals().find((x) => x.id === 'abonnementer'), v = abNotify(c);
-  return `<section class="sg"><h3 class="sg-t">Abonnementer · varsler</h3><div class="sg-box"><div class="sg-row kal42-row"><span class="sg-txt"><b>Trekk fra Finans → Abonnementer</b><span>Vanlige trekk varsles ikke som standard. Prøveperioder varsles 2 dager og 1 dag før, årlige fornyelser 7 dager før.</span></span></div>
+  return `<section class="sg"><h3 class="sg-t">Abonnementer · varsler</h3><div class="sg-box"><div class="sg-row kal42-row"><span class="sg-txt"><b>Trekk fra Økonomi → Faste betalinger</b><span>Vanlige trekk varsles ikke som standard. Prøveperioder varsles 2 dager og 1 dag før, årlige fornyelser 7 dager før.</span></span></div>
     <div class="kal42-seg" role="group" aria-label="Varsler for abonnementer">${NOTIFY.map(([k, n]) => `<button type="button" data-kal42-notify="${k}" aria-pressed="${v === k}">${esc(n)}</button>`).join('')}</div></div>
-    <div class="sg-note">Abonnementer er en innebygd kalender. Trekkene endres i Finans → Abonnementer og kan ikke redigeres i Kalender.</div></section>`;
+    <div class="sg-note">Abonnementer er en innebygd kalender. Trekkene endres i Økonomi → Faste betalinger og kan ikke redigeres i Kalender.</div></section>`;
 }
 
 /** Siden. search er radene innstillingssøket leter i. */

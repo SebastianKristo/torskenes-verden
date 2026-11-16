@@ -50,7 +50,7 @@ async function req(path, body) {
   const r = await fetch(BASE + path, { method: 'POST', credentials: 'same-origin', cache: 'no-store', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body ?? {}) });
   const d = r.headers.get('content-type')?.includes('json') ? await r.json().catch(() => null) : null;
   if (!r.ok) {
-    const msg = r.status === 404 ? 'Serveren har ikke veiviseren ennå. Oppdater Homelab under Innstillinger → Oppdatering.'
+    const msg = r.status === 404 ? 'Serveren har ikke veiviseren ennå. Oppdater Homelab under Innstillinger → Server → System.'
       : r.status === 403 ? 'Bare administrator kan sette opp nettverksdisk.' : r.status === 401 ? 'Du er logget ut. Logg inn på nytt.' : d?.error || `Serveren svarte ${r.status}`;
     throw Object.assign(new Error(msg), { status: r.status, kind: d?.kind ?? (r.status >= 500 ? 'host' : null), char: d?.char ?? null, name: d?.name ?? null });
   }
@@ -318,12 +318,12 @@ function step4() {
   return `<div class="smbw-who"><span class="smbw-ico" aria-hidden="true">${FOLDER}</span><span class="smbw-rt"><b class="smbw-crumbtxt">${crumbText()}</b><small>${esc(W.name || W.host)} · ${esc(W.guest ? 'Gjest' : W.user)} · ${esc(W.protocol)}</small><details class="smbw-det"><summary>Detaljer</summary><span class="smbw-mono">${esc(label())}</span></details></span></div>
     ${res}
     <div class="smbw-lab">Bruk nettverksdisken til</div>
-    <div class="smbw-list">${use('finans', 'FinansHub-backup', 'Hele databasen, kvitteringer og innstillinger')}${use('system', 'Systembackup', 'Kopi av hver backup fra Innstillinger → Backup')}</div>
+    <div class="smbw-list">${use('finans', 'Økonomi-backup', 'Hele databasen, kvitteringer og innstillinger')}${use('system', 'Systembackup', 'Kopi av hver backup fra Innstillinger → Server → Backup')}</div>
     ${warn}${errBox(W.err)}`;
 }
 function doneView() {
   return `<div class="smbw-done" role="status"><div class="smbw-big" aria-hidden="true">✓</div><p>Koblet til</p><b class="smbw-mono">${esc(W.done.label)} ✓</b>
-    <span class="smbw-note">${esc([W.done.use?.includes('finans') ? 'FinansHub-backup' : '', W.done.use?.includes('system') ? 'Systembackup' : ''].filter(Boolean).join(' og '))} bruker nettverksdisken fra nå av.</span></div>`;
+    <span class="smbw-note">${esc([W.done.use?.includes('finans') ? 'Økonomi-backup' : '', W.done.use?.includes('system') ? 'Systembackup' : ''].filter(Boolean).join(' og '))} bruker nettverksdisken fra nå av.</span></div>`;
 }
 
 function draw() {

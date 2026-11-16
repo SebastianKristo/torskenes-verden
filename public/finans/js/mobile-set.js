@@ -66,9 +66,9 @@ const link = (label, href, sub = '') => `<a class="opt-row" href="${href}"><span
 function profile(big = false) {
   const me = m.me ?? {};
   const sz = big ? 58 : 44;
-  return `<a class="opt-row" href="#/set/konto"><span class="m-av${avatarUrl() ? ' img' : ''}" style="width:${sz}px;height:${sz}px;font-size:${big ? 22 : 17}px">${avInner()}</span><span class="m-grow"><b style="font-size:${big ? 19 : 16}px;font-weight:600">${esc(meName())}</b><br><span style="font-size:13px;opacity:.65">${me.username ? `@${esc(me.username)}` : 'FinansHub'}${me.role ? ` · ${esc(me.role)}` : ''} · ${esc(me.serverName || location.host)}</span></span><span style="opacity:.5">›</span></a>`;
+  return `<a class="opt-row" href="#/set/konto"><span class="m-av${avatarUrl() ? ' img' : ''}" style="width:${sz}px;height:${sz}px;font-size:${big ? 22 : 17}px">${avInner()}</span><span class="m-grow"><b style="font-size:${big ? 19 : 16}px;font-weight:600">${esc(meName())}</b><br><span style="font-size:13px;opacity:.65">${me.username ? `@${esc(me.username)}` : 'Homelab'}${me.role ? ` · ${esc(me.role)}` : ''} · ${esc(me.serverName || location.host)}</span></span><span style="opacity:.5">›</span></a>`;
 }
-const PAGES = { tilpass: 'Tilpass', appprofil: 'Appprofil', integ: 'Integrasjoner', kal: 'Kalendere', varsler: 'Varsler og haptikk', mod: 'Moduler', profil: 'Profil', bakgrunn: 'Bakgrunn', fanelinje: 'Fanelinje', konto: 'Kontoer', sik: 'Sikkerhet', tok: 'API-tokens', look: 'Utseende', nav: 'Navigasjonslinje', dom: 'Domener', scan: 'Skanning og AI', notif: 'Varsler', hap: 'Haptikk', sokbar: 'Søkebar', srv: 'Server og synk', data: 'Data og lagring', om: 'Om FinansHub', fai: 'AI og tolkning', kat: 'Kategorier', regel: 'Regler', bank: 'Bank og import', t212: 'Aksjer · Trading 212', bk: 'Backup og data', oppd: 'Oppdatering', sysbk: 'Backup', widgets: 'Widgets', kalapp: 'Kalender-appen', huske: 'Gjøremål', logger: 'Logger', media: 'Media', ruter: 'Ruter', helseha: 'Home Assistant', nyheter: 'Nyheter' }; // prompt 45: Innstillinger samlet // prompt 44: Gjøremål (HA-synk) og Logger
+const PAGES = { tilpass: 'Tilpass', appprofil: 'Appprofil', integ: 'Integrasjoner', kal: 'Kalendere', varsler: 'Varsler og haptikk', mod: 'Moduler', profil: 'Profil', bakgrunn: 'Bakgrunn', fanelinje: 'Fanelinje', konto: 'Kontoer', sik: 'Sikkerhet', tok: 'API-tokens', look: 'Utseende', nav: 'Navigasjonslinje', dom: 'Domener', scan: 'Skanning og AI', notif: 'Varsler', hap: 'Haptikk', sokbar: 'Søkebar', srv: 'Server og synk', data: 'Data og lagring', om: 'Om Homelab', fai: 'AI og tolkning', kat: 'Kategorier', regel: 'Regler', bank: 'Bank og import', t212: 'Aksjer · Trading 212', bk: 'Backup og data', oppd: 'Oppdatering', sysbk: 'Backup', widgets: 'Widgets', kalapp: 'Kalender-appen', huske: 'Gjøremål', logger: 'Logger', media: 'Media', ruter: 'Ruter', helseha: 'Home Assistant', nyheter: 'Nyheter' }; // prompt 45: Innstillinger samlet // prompt 44: Gjøremål (HA-synk) og Logger
 const when = (t) => (t ? new Date(t).toLocaleDateString('nb-NO', { day: '2-digit', month: '2-digit', year: 'numeric' }) : 'aldri');
 const aiMode = () => { const st = S.boot?.settings ?? {}; return st.provider === 'gemini' ? 'gemini' : st.provider === 'groq' ? 'groq' : st.fallback ? 'both' : 'ollama'; };
 
@@ -88,7 +88,7 @@ const PHOTO_N = { cur: 'Ingen', oslo: 'Oslo', weather: 'Vær', planets: 'Planete
 function paperTop() {
   const md = paperModeValgt(), r = (k, n, s2) => `<button class="opt-row" data-sact="ppmode" data-v="${k}"><span class="m-grow"><b style="font-weight:600">${n}</b><br><span style="font-size:13px;opacity:.65">${s2}</span></span><span class="sval" style="${md === k ? 'color:var(--pp-pos);opacity:1;font-weight:600' : ''}">${md === k ? '✓ Valgt' : ''}</span></button>`;
   return `${G('Tema', [r('lys', 'Papir · lys', 'Lyst papir og svart fanelinje'), r('mork', 'Papir · mørk', 'Kveldspapir og lys fanelinje'), r('auto', 'Papir · følg systemet', 'Lys om dagen, mørk når telefonen er mørk')])}
-    ${G('Tilpass', [nav('profil', 'Profil', m.me?.username ? `@${m.me.username}` : '', 'users', '#5E8BFF'), nav('bakgrunn', 'Bakgrunn på Hjem', PHOTO_N[pref('photo')] ?? 'Ingen', 'look', '#FF9F0A'), nav('fanelinje', 'Fanelinje', 'Faner, navn og ikoner', 'list', '#5E5CE6'), link('<b style="font-weight:600">Nyhetsleser</b>', '#/nyheter', 'Kilder, kategorier og AI')])}
+    ${G('Tilpass', [nav('profil', 'Profil', m.me?.username ? `@${m.me.username}` : '', 'users', '#5E8BFF'), nav('bakgrunn', 'Bakgrunn på Hjem', PHOTO_N[pref('photo')] ?? 'Ingen', 'look', '#FF9F0A'), nav('fanelinje', 'Fanelinje', 'Faner, navn og ikoner', 'list', '#5E5CE6'), link('<b style="font-weight:600">Nyheter</b>', '#/nyheter', 'Kilder, kategorier og AI')])}
     <div class="sec">Ikonfarger</div>${iconThemeRow()}
 `;
 }
@@ -117,7 +117,7 @@ const PAGE = {
       <span class="pp-lab p17-gl">IKONFARGER</span>${iconThemeRow()}
       ${grp('BAKGRUNN', [row('#/set/bakgrunn', 'Bakgrunn på Hjem', 'Toppbilde, vær, planeter eller eget bilde', PHOTO_N[pref('photo')] ?? 'Ingen', 'look', 'bakgrunn')])}
       ${globalThis.P41?.holidayGroup?.() ?? '' /* prompt 41: HØYTIDER · 17. mai */}
-      ${G('Forside', [chips('startL', 'Startside', [['homelab', 'Homelab'], ['fin-hjem', 'Økonomi · Oversikt'], ['fin-liste', 'Økonomi · Transaksjoner'], ['fin-budsjett', 'Finans · Budsjett']], st)], st === 'homelab' ? 'Appen åpner på Homelab.' : 'Appen åpner i Finans, og hjem-knappen går til Finans.')}
+      ${G('Forside', [chips('startL', 'Startside', [['homelab', 'Homelab'], ['fin-hjem', 'Økonomi · Oversikt'], ['fin-liste', 'Økonomi · Transaksjoner'], ['fin-budsjett', 'Økonomi · Budsjett']], st)], st === 'homelab' ? 'Appen åpner på Homelab.' : 'Appen åpner i Økonomi, og hjem-knappen går til Økonomi.')}
       <span class="pp-lab p17-gl">FANELINJE · FLERE VALG</span>${P32.secNavSettings()}`;
   },
   // Prompt 39 (claude-code-innst-appprofil-underside.md): PROFIL-gruppen er flyttet hit fra toppen av Innstillinger.
@@ -134,7 +134,7 @@ const PAGE = {
   profil: () => {
     const me = m.me ?? {};
     return `${P36.kontoTop()}
-      ${G('Konto', [val('Brukernavn', me.username ? `@${esc(me.username)}` : '–'), val('Rolle', me.role === 'admin' ? 'Administrator' : me.role ? 'Bruker' : '–'), val('Tofaktor', me.totp ? '● På' : '○ Av', me.totp ? '#2f7a4f' : '')], 'Profilbildet vises i alle appene og i Homelab på PC. Navn og brukernavn endres av admin i Homelab → Innstillinger → Brukere.')}
+      ${G('Konto', [val('Brukernavn', me.username ? `@${esc(me.username)}` : '–'), val('Rolle', me.role === 'admin' ? 'Administrator' : me.role ? 'Bruker' : '–'), val('Tofaktor', me.totp ? '● På' : '○ Av', me.totp ? '#2f7a4f' : '')], 'Profilbildet vises i alle appene og i Homelab på PC. Navn og brukernavn endres av admin i Homelab → Innstillinger → Husstand.')}
       ${G('', [nav('konto', 'Kontoer og brukere', '', 'users', '#5E8BFF'), nav('sik', 'Sikkerhet', me.totp ? '2FA på' : '', 'shield', '#34C759')])}
       ${G('', [P38.qrRow()])}${P38.oktGroup(G) /* prompt 38: ØKT */}`;
   },
@@ -147,7 +147,7 @@ const PAGE = {
     'Nettappen er logget inn med én konto om gangen. Flere kontoer i samme app, og raskt bytte ved å holde inne profilbildet, finnes i iOS- og Android-appene.')}
     ${globalThis.P44?.kontoGroups?.() ?? '' /* prompt 44: FAMILIE · LOGG INN SOM og SERVER · EIER */}
     ${globalThis.P41?.serverGroup?.() ?? '' /* prompt 41: SERVER · lokal og ekstern adresse */}
-    ${G('Brukere', [link('Administrer brukere', '/', 'Homelab → Innstillinger → Innlogging')], 'Nye brukere opprettes av admin i Homelab. Hver bruker har egne tokens og varsler.')}
+    ${G('Brukere', [link('Administrer brukere', '/', 'Homelab → Innstillinger → Konto og sikkerhet')], 'Nye brukere opprettes av admin i Homelab. Hver bruker har egne tokens og varsler.')}
     ${G('', [P38.qrRow()])}${P38.oktGroup(G) /* prompt 38: ØKT – Lås skjermen, Logg ut, Logg ut av alle enheter */}`,
 
   sik: () => {
@@ -156,7 +156,7 @@ const PAGE = {
     return `${G('Lås', [tog('lock', 'Krev innlogging etter tid i bakgrunnen', 'Face ID og fingeravtrykk finnes i de native appene', pref('lock')),
         chips('lockAfter', 'Lås etter', [['0', 'Umiddelbart'], ['1', '1 min'], ['5', '5 min'], ['15', '15 min']], pref('lockAfter')),
         tog('appHide', 'Skjul beløp i appveksleren', 'Uskarpt bilde når du bytter app', pref('appHide'))])}
-      ${globalThis.P40?.tfaGroup ? globalThis.P40.tfaGroup(G) : G('Tofaktor', [val(`2FA for ${m.me?.username ? '@' + esc(m.me.username) : 'kontoen'}`, tfa === undefined ? '–' : tfa ? '● På · TOTP' : '○ Av', tfa ? '#7BE3A0' : tfa === false ? '#F2B56B' : ''), link(tfa ? 'Administrer 2FA' : 'Sett opp 2FA', '/', 'Homelab → Innstillinger → Innlogging')],
+      ${globalThis.P40?.tfaGroup ? globalThis.P40.tfaGroup(G) : G('Tofaktor', [val(`2FA for ${m.me?.username ? '@' + esc(m.me.username) : 'kontoen'}`, tfa === undefined ? '–' : tfa ? '● På · TOTP' : '○ Av', tfa ? '#7BE3A0' : tfa === false ? '#F2B56B' : ''), link(tfa ? 'Administrer 2FA' : 'Sett opp 2FA', '/', 'Homelab → Innstillinger → Konto og sikkerhet')],
         'Bruk en autentiseringsapp som 1Password, Google Authenticator eller Aegis.') /* prompt 40: oppsett i appen (mobile-p40.js) */}
       ${G('Pålitelige enheter', d?.devices?.length ? d.devices.map((x) => val(`${esc(x.name)}${x.current ? ' · denne' : ''}`, when(x.lastSeen), x.current ? '#7BE3A0' : '')) : [val('Ingen pålitelige enheter', '')],
         d ? (d.lan ? 'Du er på lokalt nett nå.' : 'Du er ikke på lokalt nett nå. Fra internett kreves alltid passord.') : '')}`;
@@ -189,7 +189,7 @@ const PAGE = {
       ${G('', [btn('Tilbakestill navigasjon', 'navreset', '#FF8A80')])}`;
   },
 
-  dom: () => `${G('Domener', [link('Administrer domener', '#/dom/admin', 'Legg til eller fjern domener'), link('Åpne Domener', '#/dom')], 'Listen deles med Homelab på PC. API-token per domene legges inn på web: Homelab → Innstillinger → Domener.')}`,
+  dom: () => `${G('Domener', [link('Administrer domener', '#/dom/admin', 'Legg til eller fjern domener'), link('Åpne Domener', '#/dom')], 'Listen deles med Homelab på PC. API-token per domene legges inn på web: Homelab → Innstillinger → Moduler → Domener.')}`,
 
   scan: () => `${G('Skanneknappen', [chips('scanTap', 'Trykk på skann', [['cam', 'Åpne kamera'], ['sheet', 'Vis valg']], pref('scanTap'))], 'Hold inne skanneknappen for å velge fra Bilder eller Filer.')}
     ${G('Bilde', [tog('crop', 'Beskjær automatisk', 'Hold kvitteringen innenfor rammen i kameraet', pref('crop')), tog('origImg', 'Lagre originalbildet', 'Lagres sammen med kvitteringen på serveren', pref('origImg')), tog('wifi', 'Last opp bare på Wi-Fi', 'Ellers settes filer i kø', pref('wifi'))])}
@@ -199,7 +199,7 @@ const PAGE = {
     const st = S.boot?.settings ?? {};
     const perm = 'Notification' in window ? Notification.permission : 'unsupported';
     return `${G('Send varsel når', [tog('srv:nRc', 'Kvittering er lest', 'Når AI er ferdig og noe må bekreftes', st.nRc), tog('srv:n80', 'Budsjett passerer 80 %', '', st.n80), tog('nSub', 'Abonnement trekkes snart', 'Dagen før trekk', pref('nSub')), tog('nDom', 'Domene eller SSL utløper', '30 og 7 dager før', pref('nDom')), tog('nWeek', 'Ukesoppsummering', 'Søndag kl. 18', pref('nWeek'))],
-      perm === 'denied' ? 'Varsler er blokkert i nettleseren. Tillat dem i nettleserens innstillinger for dette nettstedet.' : perm === 'unsupported' ? 'Denne nettleseren støtter ikke varsler. Legg FinansHub til på Hjem-skjermen, eller bruk de native appene.' : 'Nettappen varsler mens den er åpen i bakgrunnen. Push-varsler når appen er lukket finnes i de native appene.')}
+      perm === 'denied' ? 'Varsler er blokkert i nettleseren. Tillat dem i nettleserens innstillinger for dette nettstedet.' : perm === 'unsupported' ? 'Denne nettleseren støtter ikke varsler. Legg Homelab til på Hjem-skjermen, eller bruk de native appene.' : 'Nettappen varsler mens den er åpen i bakgrunnen. Push-varsler når appen er lukket finnes i de native appene.')}
       ${G('Sporing', trkPrefRows(), 'Gjelder pakker i Sporing-fanen i Homelab. Standard er alle på, unntatt Forsinket.')}`;
   },
 
@@ -270,7 +270,7 @@ const PAGE = {
     const SCH = { off: 'Bare manuelt', daily: 'Hver natt kl. 03.00', weekly: 'Hver søndag kl. 03.00', change: 'Etter endringer' };
     return `${G('Last ned', [`<a class="opt-row" href="/finans/api/backup/export?format=json" download><span class="m-grow" style="color:var(--m-acc);font-weight:500">Full backup (.json)</span></a>`, `<a class="opt-row" href="/finans/api/backup/export?format=xlsx" download><span class="m-grow" style="color:var(--m-acc);font-weight:500">Excel-database (.xlsx)</span></a>`, `<a class="opt-row" href="/finans/api/backup/export?format=csv" download><span class="m-grow" style="color:var(--m-acc);font-weight:500">Bare transaksjoner (CSV)</span></a>`],
       'JSON-filen er den komplette backupen. Excel-filen har ett ark per tabell.')}
-      ${b && b.canSmb === false ? G('SMB-share', [val('Backup av hele serveren', ADMIN_NOTE)], 'Du kan laste ned og gjenopprette dine egne data. Backup av hele databasen til SMB-sharen gjøres av hovedadministratoren.') : G('SMB-share', b ? [val('Share', c.share || 'Ikke satt opp', '', true), val('Tidsplan', SCH[c.schedule] ?? c.schedule ?? '–'), val('Behold versjoner', String(c.keep ?? '–')), val('Kryptering', c.encrypt === false ? 'Av' : 'AES-256-GCM'), val('Siste backup', b.last ? `${new Date(b.last.at ?? b.last.created ?? b.last).toLocaleString('nb-NO')}${b.last.status ? ' · ' + b.last.status : ''}` : 'Aldri', b.last?.status === 'ok' ? '#7BE3A0' : ''), btn(c.share ? 'Bytt nettverksdisk (veiviser)' : 'Sett opp nettverksdisk', 'bksmbw'), c.share ? btn('Kjør backup nå', 'bkrun') : ''] : [val('SMB-share', 'Krever innlogging i nettleseren')], 'Veiviseren finner NAS-en på nettverket og lar deg velge mappe. Gjenoppretting gjøres i FinansHub på PC.')}
+      ${b && b.canSmb === false ? G('SMB-share', [val('Backup av hele serveren', ADMIN_NOTE)], 'Du kan laste ned og gjenopprette dine egne data. Backup av hele databasen til SMB-sharen gjøres av hovedadministratoren.') : G('SMB-share', b ? [val('Share', c.share || 'Ikke satt opp', '', true), val('Tidsplan', SCH[c.schedule] ?? c.schedule ?? '–'), val('Behold versjoner', String(c.keep ?? '–')), val('Kryptering', c.encrypt === false ? 'Av' : 'AES-256-GCM'), val('Siste backup', b.last ? `${new Date(b.last.at ?? b.last.created ?? b.last).toLocaleString('nb-NO')}${b.last.status ? ' · ' + b.last.status : ''}` : 'Aldri', b.last?.status === 'ok' ? '#7BE3A0' : ''), btn(c.share ? 'Bytt nettverksdisk (veiviser)' : 'Sett opp nettverksdisk', 'bksmbw'), c.share ? btn('Kjør backup nå', 'bkrun') : ''] : [val('SMB-share', 'Krever innlogging i nettleseren')], 'Veiviseren finner NAS-en på nettverket og lar deg velge mappe. Gjenoppretting gjøres i Økonomi på PC.')}
       ${G('', [link('Åpne Backup og data på PC-visningen', '/finans/?desktop=1#/inn')])}`;
   },
   om: () => `${G('', [val('Appversjon', `${VERSION} (nettapp)`), val('Server', esc(S.boot?.version ?? m.me?.version ?? '–')), val('Plattform', isIOS() ? 'iOS · nettleser' : /Android/.test(navigator.userAgent) ? 'Android · nettleser' : 'Nettleser')])}

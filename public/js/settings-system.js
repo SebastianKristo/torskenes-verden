@@ -243,7 +243,7 @@ function merHtml65() {
   ].join('')) + sec('FLYTTET HERFRA', [
     r('hdd', 'Backup', 'Kopier, gjenoppretting og database – egen side under Server', 'data-go="backup"'),
     r('chip', 'Lokale modeller', 'Desert Ant Labs-modellene – AI → Modeller', 'data-p65-ai="mod"'),
-    r('people', 'Brief og Glimt-figur', 'Per bruker – Brukere og familie', 'data-go="users"'),
+    r('people', 'Brief og Glimt-figur', 'Per bruker – Husstand', 'data-go="users"'),
   ].join(''));
 }
 
@@ -251,7 +251,7 @@ function merHtml65() {
 export function updNotifyRow(h) {
   if (!admin()) return '';
   const st = settings30();
-  return h.row({ t: 'Varsle om nye versjoner', k: 'varsel push banner nordlys os versjon oppdatering', s: 'Nordlys OS · banner på Hjem og push', tog: st.notify_updates !== false, act: 'data-upd-set="notify_updates"', disabled: !st.loaded });
+  return h.row({ t: 'Varsle om nye versjoner', k: 'varsel push banner nordlys os versjon oppdatering', s: 'Nordlys OS · banner på Oversikt og push', tog: st.notify_updates !== false, act: 'data-upd-set="notify_updates"', disabled: !st.loaded });
 }
 
 /* Brukervalg for oppdatering (GET/PUT /api/system/update/settings). Eldre server: fra U.d.settings, ellers standard. */

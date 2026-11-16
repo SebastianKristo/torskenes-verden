@@ -400,13 +400,13 @@ export function haSection() {
     <span class="pp-mut" style="font-size:12px;line-height:1.45;padding:0 4px">Trykk på en liste for å velge hvilken HA-liste den skal kobles til. Endringer i appen og i Home Assistant (også fra Assist og stemmestyring) synkes begge veier.</span></div>`;
 }
 function haSheet() {
-  if (HA.pick == null || !(m.screen === 'huske' || (m.screen === 'set' && (String(m.sub).startsWith('integ') || m.sub === 'huske')))) return ''; // prompt 44: også Innstillinger → Gjøremål
+  if (HA.pick == null || !(m.screen === 'huske' || (m.screen === 'set' && (String(m.sub).startsWith('integ') || m.sub === 'huske')))) return ''; // prompt 44: også Innstillinger → Tilkoblinger → Kalender og gjøremål
   const l = (HK.d?.lists ?? []).find((x) => String(x.id) === String(HA.pick)), cur = (HA.d?.maps ?? []).find((x) => String(x.listId) === String(HA.pick))?.entityId ?? null;
   const ents = HA.d?.entities ?? [];
   return `<div class="sheet-bg" data-h22="pickx"></div><div class="pp-sheet" role="dialog" aria-label="Koble ${esc(l?.name ?? '')}"><span class="pp-grab"></span><div class="pp-sh">Koble «${esc(l?.name ?? '')}»</div>
     <div class="pp-card pp-tight">${[[null, 'Ikke koblet', ''], ...ents.map((x) => [x.entity_id, x.name || x.entity_id, x.entity_id])].map(([id, n, s]) => `<button class="pp-srow" data-h22="map" data-e="${esc(id ?? '')}" aria-pressed="${cur === id}"><span class="m-grow"><b>${esc(n)}</b>${s ? `<span class="pp-mut h22-mono">${esc(s)}</span>` : ''}</span>${cur === id ? '<span class="pp-pos">✓</span>' : ''}</button>`).join('')}
       <button class="pp-srow" data-h22="new"><span class="m-grow"><b class="pp-lab-c">+ Lag ny liste i HA</b><span class="pp-mut">Heter «${esc(l?.name ?? '')}» i Home Assistant</span></span></button></div>
-    ${ents.length ? '' : '<span class="pp-mut" style="font-size:13px">Fant ingen todo.*-entiteter. Sjekk Home Assistant-tilkoblingen under Innstillinger → Integrasjoner.</span>'}
+    ${ents.length ? '' : '<span class="pp-mut" style="font-size:13px">Fant ingen todo.*-entiteter. Sjekk Home Assistant-tilkoblingen under Innstillinger → Tilkoblinger.</span>'}
     <button class="pp-btn" data-h22="pickx">Lukk</button></div>`;
 }
 async function haCall(path, opts, ok) {

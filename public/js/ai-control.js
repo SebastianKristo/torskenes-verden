@@ -590,7 +590,7 @@ export { ui65 };
 const { row, sec, seg, sel, swb, fld, banner, kpis } = ui65;
 const btn = ui65.btn;
 const vtxt = (t, c = '') => `<span class="ac-v${c ? ` ${c}` : ''}">${esc(t)}</span>`;
-const missingNote = (what) => `<p class="ac-note">${esc(what)} er ikke tilgjengelig på serveren ennå. Oppdater serveren (Innstillinger → System), så dukker det opp her.</p>`;
+const missingNote = (what) => `<p class="ac-note">${esc(what)} er ikke tilgjengelig på serveren ennå. Oppdater serveren (Innstillinger → Server → System), så dukker det opp her.</p>`;
 
 /* ---------------- Faner og nøkler ---------------- */
 
@@ -833,7 +833,7 @@ function taskTab(o) {
   }
   const head = `<div class="ac-tr ac-th" aria-hidden="true"><span>OPPGAVE</span><span>MODELL</span><span>RESERVE</span>${fin ? '' : '<span>MOTOR</span>'}</div>`;
   const table = sec(fin ? 'HVILKEN MODELL GJØR HVA I FINANS' : 'HVILKEN MODELL GJØR HVA', `<div class="ac-tbl${fin ? ' fin' : ''}">${head}${taskRows(L, all, o)}</div>`,
-    { note: admin ? (fin ? '' : 'Motor: Ollama er standard. Bytt en oppgave til oMLX når eval har vist at den er bedre (docs/omlx-58.md).') : fin ? 'Modellene i Finans bestemmes av administrator.' : 'Du kan velge egne modeller for Chat, AI-søk, Glimt og brief. Resten bestemmer administrator.' });
+    { note: admin ? (fin ? '' : 'Motor: Ollama er standard. Bytt en oppgave til oMLX når eval har vist at den er bedre (docs/omlx-58.md).') : fin ? 'Modellene i Økonomi bestemmes av administrator.' : 'Du kan velge egne modeller for Chat, AI-søk, Glimt og brief. Resten bestemmer administrator.' });
   if (fin) return rwBox + table + finRules(R, admin);
   const { n, missing } = glPlan(), done = !n;
   const glSub = done ? `Alle oppgaver bruker allerede Glimts anbefaling${missing ? ` · ${missing} ${missing === 1 ? 'modell bør' : 'modeller bør'} lastes ned` : ''}` : `Fyller ut ${n} ${n === 1 ? 'oppgave' : 'oppgaver'} med beste installerte modell${missing ? ` · ${missing} mangler` : ''}`;
@@ -895,7 +895,7 @@ function rcptTab() {
     ].join('');
   })();
   const cats = (H.categories ?? []).length ? `Kategoriforslag velges fra ${H.categories.length} kategorier: ${H.categories.slice(0, 6).join(', ')}${H.categories.length > 6 ? ' …' : ''}.` : '';
-  return `${ban}${sec('STEG I KJEDEN', steps, { note: `Rekkefølgen er A → B → C → Tesseract, ellers legges kvitteringen i kø og prøves igjen; første steg som består kontrollen, vinner. Selve lesingen på telefonen slås på i FinansHub-appen.${can ? '' : ' Bare administrator kan endre stegene.'}`, hl: 'ai-r48' })}
+  return `${ban}${sec('STEG I KJEDEN', steps, { note: `Rekkefølgen er A → B → C → Tesseract, ellers legges kvitteringen i kø og prøves igjen; første steg som består kontrollen, vinner. Selve lesingen på telefonen slås på i Homelab-appen.${can ? '' : ' Bare administrator kan endre stegene.'}`, hl: 'ai-r48' })}
     ${sec('TOLKING', model + L.tolk.join(''), { note: cats })}${lfm72 ? sec('LFM-MOTORER (TEST)', lfm72, { note: `${F72.note ?? ''} Standard er Apple Vision + qwen3:8b. Bytt bare der evalen (eval/receipts72.mjs) viser at LFM er bedre.${can ? '' : ' Bare administrator kan endre.'}` }) : ''}${L.logo.length ? sec('LOGOER', L.logo.join(''), { note: 'Logoer finnes uten at AI gjetter: Brønnøysundregistrene, Wikidata, nettstedet selv og (valgfritt) Gemini med bare butikknavnet.' }) : ''}
     ${X.msg ? `<p class="ac-note ${X.ok ? '' : 'bad'}" role="status">${esc(X.msg)}</p>` : ''}`;
 }
@@ -964,7 +964,7 @@ function svcList(o) {
     if (V?.voz) L.push({ id: 'voz', group: 'SERVER', name: 'Voz', s: 'Engelsk og 24 europeiske språk (ikke norsk) · på serveren', dot: V.voz.dot, text: V.voz.text, panel: () => '<p class="ac-note">Kjører på serveren (Desert Ant Labs). Ingen adresse eller nøkkel. Språket oppdages automatisk; engelsk går til Voz, så Phonon, så NB-Whisper. Lyden forlater aldri huset.</p>' });
     if (W) {
       L.push({ id: 'searxng', group: 'SERVER', name: 'SearXNG', s: W.searxng.url ? W.searxng.url.replace(/^https?:\/\//, '') : 'Ingen adresse', dot: W.searxng.url ? 'ok' : 'off', text: W.searxng.url ? 'Satt opp' : 'Ikke satt opp',
-        panel: () => `<div class="ac-form">${fld('Adresse', urlInput('data-ac-wset="searxngUrl"', W.searxng.url, 'http://192.168.1.30:8888', admin))}<div class="ac-btns">${admin ? btn('Lagre', 'data-ac-wsave="searxngUrl"', 'ink') : ''}</div></div><p class="ac-note">Nettsøk i Glimt. Rekkefølgen på kildene og «Test nettsøk» står under Innstillinger → Glimt.</p>` });
+        panel: () => `<div class="ac-form">${fld('Adresse', urlInput('data-ac-wset="searxngUrl"', W.searxng.url, 'http://192.168.1.30:8888', admin))}<div class="ac-btns">${admin ? btn('Lagre', 'data-ac-wsave="searxngUrl"', 'ink') : ''}</div></div><p class="ac-note">Nettsøk i Glimt. Rekkefølgen på kildene og «Test nettsøk» står under Innstillinger → Glimt og AI → Glimt.</p>` });
     }
   }
   // SKY
@@ -973,7 +973,7 @@ function svcList(o) {
   if (!fin) L.push({ ...keySvc('openrouter', 'OpenRouter', 'sk-or-…', 'openrouter.ai', 'https://openrouter.ai/keys', 'Valgfri · Claude, GPT og flere via én nøkkel'), group: 'SKY' });
   L.push({ ...keySvc('roboflow', 'Roboflow', 'Private API Key', 'app.roboflow.com', 'https://app.roboflow.com/settings/api', 'Strekkoder og pakkelapper', [['model', 'Modell', 'workspace/modell/1']]), group: 'SKY' });
   if (!fin && W) L.push({ id: 'brave', group: 'SKY', name: 'Brave Search', s: 'Nettsøk i Glimt', dot: W.brave.configured ? 'ok' : 'off', text: W.brave.configured ? 'Nøkkel satt' : 'Ingen nøkkel',
-    panel: () => `<div class="ac-form">${keyInput('data-ac-wset="braveKey"', 'Nøkkel', W.brave.configured, 'BSA…', admin)}<div class="ac-btns">${admin ? btn('Lagre', 'data-ac-wsave="braveKey"', 'ink') : ''}${admin && W.brave.configured ? btn('Fjern nøkkel', 'data-ac-wdel="braveKey"', 'red') : ''}</div></div><p class="ac-note">Brukes når den står i rekkefølgen under Innstillinger → Glimt → Nettsøk.</p>` });
+    panel: () => `<div class="ac-form">${keyInput('data-ac-wset="braveKey"', 'Nøkkel', W.brave.configured, 'BSA…', admin)}<div class="ac-btns">${admin ? btn('Lagre', 'data-ac-wsave="braveKey"', 'ink') : ''}${admin && W.brave.configured ? btn('Fjern nøkkel', 'data-ac-wdel="braveKey"', 'red') : ''}</div></div><p class="ac-note">Brukes når den står i rekkefølgen under Innstillinger → Glimt og AI → Glimt → Nettsøk.</p>` });
   // ANDRE
   if (!fin) {
     L.push({ id: 'glimtapi', group: 'ANDRE', name: 'Glimt-API', s: `POST ${location.origin}/api/glimt · personlige nøkler for egne skript`, dot: (G.tokens ?? []).length ? 'ok' : 'off', text: `${(G.tokens ?? []).length} ${(G.tokens ?? []).length === 1 ? 'nøkkel' : 'nøkler'}`,
@@ -1058,14 +1058,14 @@ function useTab(o) {
       + [['hardStop', 'Stopp sky-AI ved grensen', 'Bytter til lokale modeller resten av måneden', 'lock'], ['warn80', 'Varsle ved 80 %', 'Push til mobilen', 'bell']].map(([k, nm, s, ic]) => row({ ic, t: nm, s, right: swb(!!R.budget?.[k], `data-ac-budt="${k}"`, nm, !admin) })).join(''))}`;
 }
 
-/* ---------------- Glimt (Innstillinger → Glimt, only:'glimt') ---------------- */
+/* ---------------- Glimt (Innstillinger → Glimt og AI → Glimt, only:'glimt') ---------------- */
 
 function glimtTab() {
   const g = need('g65');
   loadPers45();
   const P = G.pers45, cur = P?.personality ?? 'little', d = PERS45.find((x) => x[0] === cur) ?? PERS45[1];
   const pers = P?.missing ? '' : sec('PERSONLIGHET', row({ ic: 'spark', t: 'Personlighet', s: d[2], hl: 'glimt-pers65', right: seg(PERS45.map(([k, n]) => [k, n]), cur, (v) => `data-ac-pers45="${v}"`, 'Personlighet', !P) }),
-    { note: 'Bekreftelsen av hva som faktisk skjedde kommer alltid først. Gjelder Glimt i hele appen (Hjem, Kalender, Gjøremål, Finans, Chat).' });
+    { note: 'Bekreftelsen av hva som faktisk skjedde kommer alltid først. Gjelder Glimt i hele appen (Oversikt, Kalender, Gjøremål, Økonomi, Chat).' });
   const hs = g ? sec('GLIMT I SØKEFELTET', g.hsRow65(ui65)) : '';
   const web = webSec();
   const mem = g ? g.memorySec65(ui65) : sec('GLIMT HUSKER', row({ ic: 'brain', t: 'Laster …' }));
@@ -1105,7 +1105,7 @@ function parts(p) {
   p.status = status;
   const main = only === 'glimt' ? glimtTab() : TABS_FN[p.tab](o);
   const svcN = only ? 0 : svcBad(o);
-  const hd = o.embedded ? '' : `<div class="ac-hd"><span class="ac-hic" aria-hidden="true">${ico(fin ? 'receipt' : 'spark', 19)}</span><span class="ac-rm"><b class="ac-title">${fin ? 'AI i Finans' : 'AI'}</b><span class="ac-hs ac-ell">${esc(status)}</span></span>${o.onClose ? '<button type="button" class="ac-b ink ac-done" data-ac-close>Ferdig</button>' : ''}</div>`;
+  const hd = o.embedded ? '' : `<div class="ac-hd"><span class="ac-hic" aria-hidden="true">${ico(fin ? 'receipt' : 'spark', 19)}</span><span class="ac-rm"><b class="ac-title">${fin ? 'AI i Økonomi' : 'AI'}</b><span class="ac-hs ac-ell">${esc(status)}</span></span>${o.onClose ? '<button type="button" class="ac-b ink ac-done" data-ac-close>Ferdig</button>' : ''}</div>`;
   const nav = only ? '' : `<nav class="ac-tabs" role="tablist" aria-label="AI">${tabs.map(([k, n, ic]) => { const b = k === 'job' ? failN : k === 'svc' ? svcN : 0; return `<button type="button" role="tab" class="${p.tab === k ? 'on' : ''}" data-ac-tab="${k}" aria-selected="${p.tab === k}">${ico(ic)}<span>${n}</span>${b ? `<i class="ac-badge ${k === 'job' ? 'b-bad' : 'b-warn'}">${b}</i>` : ''}</button>`; }).join('')}</nav>`;
   const top = hd || nav ? `${hd}${nav}` : '';
   const root = `ac ${web ? 'web' : 'mob'} th-${esc(thk)}${o.embedded ? ' emb' : ''}${only ? ' only' : ''}|${Object.entries(T).map(([k, v]) => `--${k}:${v}`).join(';')}`;

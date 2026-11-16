@@ -300,7 +300,7 @@ function finTasks(R) {
 function finRows(R, A) {
   const M = R?.models ?? [], T = finTasks(R);
   const optsOf = (t) => t.options ?? M.filter((x) => (t.kind === 'vision' ? x.kind === 'bilde' || x.kind === 'tekst' || !x.local : x.kind !== 'embedding')).map((x) => ({ id: x.id, label: x.id, local: !!x.local }));
-  if (!T.some((t) => optsOf(t).length)) return `<div class="p34a-empty p38-aie"><b>Ingen modeller ennå</b><span>Installer en lokal modell eller koble til en sky-tjeneste, så kan du velge hvem som gjør hva i Finans.</span><a class="p34-ink" href="#/aictl/mod">Installer modell ›</a></div>`;
+  if (!T.some((t) => optsOf(t).length)) return `<div class="p34a-empty p38-aie"><b>Ingen modeller ennå</b><span>Installer en lokal modell eller koble til en sky-tjeneste, så kan du velge hvem som gjør hva i Økonomi.</span><a class="p34-ink" href="#/aictl/mod">Installer modell ›</a></div>`;
   const finLocal = !!(R?.rules?.finLocal);
   return T.map((t, i) => {
     const O = optsOf(t), can = A || t.personal;

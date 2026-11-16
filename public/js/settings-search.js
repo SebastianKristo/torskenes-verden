@@ -114,7 +114,7 @@ export const ANCHORS = {
   people55: { sel: '[data-p65-people]' },
 };
 /** Prompt 65: stier fra serverens indeks (GET /api/settings/index) som peker til sider som er slått sammen eller flyttet. */
-const PATH65 = [[/^Helse \(Familie\)/, 'Husstand → Helse'], [/^Varsler → Familie → /, 'Varsler → '], [/^Startside → Faner/, 'Utseende → Topplinje → Faner'], [/^Startside → Topplinje/, 'Utseende → Topplinje'], [/^Startside/, 'Utseende'], [/^Familie/, 'Brukere og familie'], [/^Brukere(?! og familie)/, 'Brukere og familie'],
+const PATH65 = [[/^Helse \(Familie\)/, 'Husstand → Helse'], [/^Varsler → Familie → /, 'Varsler → '], [/^Startside → Faner/, 'Utseende → Topplinje → Faner'], [/^Startside → Topplinje/, 'Utseende → Topplinje'], [/^Startside/, 'Utseende'], [/^Familie/, 'Husstand'], [/^Brukere(?! og familie)/, 'Husstand'],
   [/^Gjøremål/, 'Tilkoblinger → Kalender og gjøremål → Gjøremål'], [/^Kalendere/, 'Tilkoblinger → Kalender og gjøremål'], [/^Sikkerhet/, 'Konto og sikkerhet'], [/^AI → API og nøkler/, 'Glimt og AI → AI → Tjenester'], [/^AI → Valg/, 'Glimt og AI → AI → Oppgaver'],
   [/^AI → Glimt og chat/, 'Glimt og AI → Glimt'], [/^System → Backup/, 'Server → Backup'], [/^System → Mer → (Lokale modeller|Desert)/, 'Glimt og AI → AI → Modeller'], [/^System → Mer → Brukere/, 'Husstand'], [/^Generelt → Domener/, 'Moduler → Domener']];
 /** Prompt 66: titler fra serverens indeks som er navnet på en side som er slått sammen eller flyttet. Skrives om på klienten

@@ -5,7 +5,7 @@ import { store } from './store.js';
 const D = (p, o) => api('/../domains/api' + p, o);
 export const SRC = { cloudflare: 'Cloudflare', tunnel: 'Cloudflare Tunnel', gsc: 'Google Search Console', plausible: 'Plausible', umami: 'Umami', uptime: 'Bare oppetid og SSL' };
 export const HELP = {
-  cloudflare: 'Lag et API-token i Cloudflare med Zone:Read, DNS:Read, Analytics:Read, Registrar:Read og Firewall Services:Read for sonen. Tomt felt bruker standard-tokenet fra Innstillinger → Integrasjoner → Cloudflare.',
+  cloudflare: 'Lag et API-token i Cloudflare med Zone:Read, DNS:Read, Analytics:Read, Registrar:Read og Firewall Services:Read for sonen. Tomt felt bruker standard-tokenet fra Innstillinger → Tilkoblinger → Cloudflare.',
   tunnel: 'Bruk samme token som over. Trafikken hentes fra sonen, filtrert på vertsnavnet (f.eks. home.kristo.no).',
   plausible: 'Lag en Stats API-nøkkel i Plausible. Gir besøkende, sider, henvisere, land og enheter. Statuskoder og sikkerhet krever Cloudflare.',
   umami: 'Oppgi adressen til Umami-instansen og en API-nøkkel. Gir besøkende, sider, henvisere, land og enheter.',
@@ -82,7 +82,7 @@ function gscHtml() {
   let box;
   if (!G) box = `<div class="sg-row"><span class="sg-txt"><span>${S.gscErr ? esc(S.gscErr) : 'Henter …'}</span></span></div>`;
   else if (G.missing) box = '<div class="sg-row"><span class="sg-txt"><b>Ikke tilgjengelig ennå</b><span>Serveren har ikke Search Console-oppsettet. Oppdater Homelab.</span></span></div>';
-  else if (!G.connected) box = `<div class="sg-row">${domIc40('gsc')}<span class="sg-txt"><b>Klikk, visninger og søkeord fra Google</b><span>${G.configured === false ? 'Google-appen er ikke satt opp på serveren (Integrasjoner → Google).' : 'Kun lesetilgang · webmasters.readonly'}</span></span><button type="button" class="sg-btn2 gsc39-g" data-dom-gscconnect>${GLOGO}Koble til med Google</button></div>`;
+  else if (!G.connected) box = `<div class="sg-row">${domIc40('gsc')}<span class="sg-txt"><b>Klikk, visninger og søkeord fra Google</b><span>${G.configured === false ? 'Google-appen er ikke satt opp på serveren (Tilkoblinger → Google).' : 'Kun lesetilgang · webmasters.readonly'}</span></span><button type="button" class="sg-btn2 gsc39-g" data-dom-gscconnect>${GLOGO}Koble til med Google</button></div>`;
   else {
     // Prompt 43: «Test» per eiendom → GET /api/domains/:domain/gsc/test {siteUrl, permissionLevel, scope, scopeOk, lastFetch, dataTo, rows28, ok, error}.
     const testOut = (x) => { const T = S.gscTest; if (!T || T.domain !== x.domain || T.busy) return ''; if (T.err) return `<div class="sg-note red">${esc(T.err)}</div>`; const r = T.res ?? {};

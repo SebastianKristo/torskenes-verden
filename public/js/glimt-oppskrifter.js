@@ -152,7 +152,7 @@ export function settingsHtml61() {
     const sub = !srv ? 'Slått av for alle av administrator' : own == null ? help(k) : `${help(k)} · Ditt eget valg`;
     return `<button type="button" class="ac-li" data-r61-user="${k}" role="switch" aria-checked="${on}"${S.busy || !srv ? ' disabled' : ''}><span class="ac-col ac-grow"><b>${lab(k)}</b><span>${sub}</span></span>${sw(on)}</button>`;
   }).join('');
-  const link = '<button type="button" class="ac-li" data-r61-open><span class="ac-col ac-grow"><b>Se hva Glimt har lært</b><span>Innstillinger → AI → Glimt lærer</span></span><span aria-hidden="true">›</span></button>';
+  const link = '<button type="button" class="ac-li" data-r61-open><span class="ac-col ac-grow"><b>Se hva Glimt har lært</b><span>Innstillinger → Glimt og AI → Glimt lærer</span></span><span aria-hidden="true">›</span></button>';
   let admin = '';
   if (d.admin) {
     const rows = KEYS61.map((k) => { const on = d.server?.[k] !== false; return `<button type="button" class="ac-li" data-r61-server="${k}" role="switch" aria-checked="${on}"${S.busy ? ' disabled' : ''}><span class="ac-col ac-grow"><b>${lab(k)}</b><span>${help(k)}</span></span>${sw(on)}</button>`; }).join('');

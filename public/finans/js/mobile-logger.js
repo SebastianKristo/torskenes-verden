@@ -59,7 +59,7 @@ function liveSet(on) {
 const dot = (st) => `<i class="p44l-dot ${st}"></i>`;
 export function logView() {
   if (!L.t && L.busy !== 'load') logLoad().catch(() => {});
-  if (L.miss) return '<div class="p44l-empty"><b>Logger er ikke tilgjengelig ennå</b><span>Krever en nyere Homelab-server. Oppdater serveren under Innstillinger → System.</span></div>';
+  if (L.miss) return '<div class="p44l-empty"><b>Logger er ikke tilgjengelig ennå</b><span>Krever en nyere Homelab-server. Oppdater serveren under Innstillinger → Server → System.</span></div>';
   // Prompt 45 (claude-code-docker-logger-automatisk.md): Homelab setter opp Docker-tilgangen selv (proxyen er del av stacken).
   // Ingen tom side og ingen manuelle steg: «Sett opp nå» (POST /api/system/docker/setup) og «Vis detaljer» med feilen.
   if (L.off) {

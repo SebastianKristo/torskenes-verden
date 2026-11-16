@@ -77,7 +77,7 @@ function bindGate() {
         if (data.needsTotp) { G.ticket = data.ticket; G.user = data.username || u; G.step = '2fa'; return mount(); }
         if (ok) return done();
         G.err = data.error || 'Feil brukernavn eller passord.';
-      } catch { G.busy = false; G.err = 'Får ikke kontakt med Homelab. Prøv igjen, eller endre serveradressen i Innstillinger → Konto → Server.'; }
+      } catch { G.busy = false; G.err = 'Får ikke kontakt med Homelab. Prøv igjen, eller endre serveradressen i Innstillinger → Konto og sikkerhet → Server.'; }
       return mount();
     }
     if (k === 'totp') {

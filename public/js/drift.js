@@ -22,7 +22,7 @@ function loadAll(force = false) {
   if (O.hLoading || (!force && O.h && Date.now() - O.hAt < 60_000)) return;
   O.hLoading = true;
   Promise.allSettled([j(`/api/system/obs51/health${force ? '?force=1' : ''}`), j('/api/system/obs51/heal'), j('/api/system/obs51/traces?limit=15'), j('/api/system/obs51/proxmox')]).then(([h, he, tr, pv]) => {
-    if (h.status === 'fulfilled') { O.h = h.value; O.hErr = ''; } else O.hErr = /404/.test(h.reason?.message) ? 'Serveren har ikke driftsdashbordet ennå. Oppdater Nordlys.' : h.reason?.message;
+    if (h.status === 'fulfilled') { O.h = h.value; O.hErr = ''; } else O.hErr = /404/.test(h.reason?.message) ? 'Serveren har ikke Drift ennå. Oppdater serveren.' : h.reason?.message;
     if (he.status === 'fulfilled') O.heal = he.value;
     if (tr.status === 'fulfilled') O.tr = tr.value;
     if (pv.status === 'fulfilled') O.pve = pv.value;

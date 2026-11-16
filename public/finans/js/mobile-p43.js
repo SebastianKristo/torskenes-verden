@@ -72,7 +72,7 @@ export function widgetGallery() {
 function howSheet() {
   const h = WG.how; if (!h) return '';
   const and = plat() !== 'ios', lock = h.sz === 'lk';
-  const steps = and ? ['Installer Homelab-appen (APK) og åpne den én gang.', 'Gå til Innstillinger → Widgets i appen og trykk «Legg til på startskjermen», eller hold inne på et tomt sted på startskjermen → Widgets.', `Finn Homelab, velg «${h.n}» og dra den dit du vil ha den.`]
+  const steps = and ? ['Installer Homelab-appen (APK) og åpne den én gang.', 'Gå til Innstillinger → Enheter og widgets → Widgets i appen og trykk «Legg til på startskjermen», eller hold inne på et tomt sted på startskjermen → Widgets.', `Finn Homelab, velg «${h.n}» og dra den dit du vil ha den.`]
     : lock ? ['Hold inne på låseskjermen og trykk Tilpass → Låseskjerm.', 'Trykk på feltet under klokka.', `Velg Homelab og «${h.n}».`] : ['Hold inne på et tomt sted på Hjem-skjermen til ikonene vugger.', 'Trykk + oppe til venstre og søk etter «Homelab».', `Velg «${h.n}», sveip til riktig størrelse og trykk «Legg til widget».`];
   return `<div class="p43-scrim" data-p43="whx"></div><div class="p43-sheet" role="dialog" aria-modal="true" aria-label="Legg til widget"><span class="p43-grab" aria-hidden="true"></span><b class="p43-serif24">Legg til «${esc(h.n)}»</b>
     ${steps.map((t, i) => `<div class="p43-step"><span>${i + 1}</span><span>${esc(t)}</span></div>`).join('')}<span class="pp-mut p43-sm">${and ? 'Nettappen kan ikke legge til widgets selv. I Homelab-appen gjør Android det med ett trykk.' : `Apple lar ikke apper legge til widgets selv. Widgeten heter «${esc(h.n.split(' · ')[0])}» under Homelab i galleriet.`}</span><button type="button" class="p43-btn ink lg" data-p43="whx">Ferdig</button></div>`;
