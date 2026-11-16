@@ -208,6 +208,12 @@ test('Visma-feed: timene vises, now.next er timen om 1 time (ikke eksamen om 2 m
   assert.equal(web.status, 200);
   assert.ok(day(web.body, '2026-10-19').some((e) => e.type === 'time'));
   assert.equal(web.body.now.next.title, '3STA MAT1R');
+  // Nedtellingen regnes på serveren for alle prøver og frister (Oslo-datoen til «now»), så appene ikke regner selv.
+  const tests = web.body.events.filter((e) => e.type === 'prove' || e.type === 'innl');
+  assert.ok(tests.length >= 1, 'eksamen i vinduet');
+  for (const e of tests) assert.equal(e.daysLeft, Math.round((Date.parse(`${e.date}T12:00:00Z`) - Date.parse('2026-10-19T12:00:00Z')) / 86_400_000), e.title);
+  assert.equal(tests.find((e) => e.title === 'Eksamen matematikk R1').daysLeft, 57);
+  assert.ok(web.body.events.filter((e) => e.type === 'time').every((e) => e.daysLeft === undefined), 'timene har ingen nedtelling');
   const w = await S(`/api/widgets/calendar?now=${at(now)}`);
   assert.equal(w.body.kind, 'next');
   assert.equal(w.body.next.title, '3STA MAT1R');

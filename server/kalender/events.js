@@ -484,7 +484,10 @@ export async function calendarOut(user, { from, to, now = Date.now() } = {}) {
   const subjects = {};
   for (const e of [...events, ...ahead.events]) if (e.type === 'time' && e.subject && !subjects[e.subject]) subjects[e.subject] = e.color;
   for (const [n, c] of Object.entries(ctx.colors)) subjects[n] = c;
-  return { from: fromDate, to: toDate, today, events, subjects, labColor: LAB, sources, calendars: calendarsOut(user), now: nowOf(ahead.events, now), updatedAt: new Date().toISOString() };
+  // Nedtelling for alle prøver og frister (Oslo-datoen, Q20), så appene viser serverens tall og ikke regner selv. Negativ = passert.
+  // Kopier, så hendelsene fra eventsFor (som andre bruker) ikke får dagens tall hengende ved seg.
+  const countdown = (e) => (e.type === 'prove' || e.type === 'innl' ? { ...e, daysLeft: daysBetween(today, e.date) } : e);
+  return { from: fromDate, to: toDate, today, events: events.map(countdown), subjects, labColor: LAB, sources, calendars: calendarsOut(user), now: nowOf(ahead.events, now), updatedAt: new Date().toISOString() };
 }
 
 /** Skrive til Privat/Familie: Google med skrivetilgang, ellers lokalt i kv(user,'kal_local_events') når Google ikke er koblet til (prompt 29: rask time skal virke uten Google). */

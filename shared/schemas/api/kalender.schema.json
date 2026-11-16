@@ -191,6 +191,10 @@
         "fri": {
           "type": "boolean",
           "description": "Helligdager: fridag eller ikke."
+        },
+        "daysLeft": {
+          "type": "integer",
+          "description": "Prøver og frister (type 'prove' og 'innl'): dager fra dagens Oslo-dato (today) til date. 0 = i dag, negativ = passert. Mangler på andre hendelser. Appene viser tallet og regner ikke selv."
         }
       },
       "if": {
