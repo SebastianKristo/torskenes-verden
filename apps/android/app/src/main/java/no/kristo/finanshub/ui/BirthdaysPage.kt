@@ -408,7 +408,7 @@ internal fun BdCalendars(vm: AppViewModel, ctx: android.content.Context) {
                 Text("Google Kalender", color = p.textPrimary, fontWeight = FontWeight.Bold, fontSize = HomelabType.callout.fontSize)
                 Text(when {
                     s.localOnly -> "Trenger en nyere Homelab-server"
-                    !g.configured -> "Ikke satt opp · Integrasjoner → Google Kalender"
+                    !g.configured -> "Ikke satt opp · Tilkoblinger → Google Kalender"
                     g.error != null && !g.connected -> g.error
                     g.connected -> listOfNotNull(g.email, g.syncedAt?.let { "synket ${clock24(it)}" } ?: "kobler til …").joinToString(" · ")
                     s.authAt != 0L -> "Venter på innlogging i nettleseren …"

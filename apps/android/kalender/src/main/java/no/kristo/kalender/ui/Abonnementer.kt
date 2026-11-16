@@ -131,9 +131,9 @@ fun AbDetail42(vm: KalVm, e: KEv) {
             if (x.cancelled.isNotEmpty()) AbInfo42("Status", x.cancelled)
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-            InkPill("Åpne i Finans ›", { Ab42.openFinans(ctx, e, vm.session?.server) })
+            InkPill("Åpne i Økonomi ›", { Ab42.openFinans(ctx, e, vm.session?.server) })
             if (x.cancelUrl.isNotEmpty() && x.cancelled.isEmpty()) LinePill("Si opp …", { Ab42.openUrl(ctx, x.cancelUrl) })
         }
-        Tx("Endres i Finans → Abonnementer", man(KType.footnote, FontWeight.Medium, k.mut))
+        Tx("Endres i Økonomi → Faste betalinger", man(KType.footnote, FontWeight.Medium, k.mut))
     }
 }

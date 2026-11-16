@@ -671,7 +671,7 @@ internal fun PaperLogin(vm: AppViewModel) {
                     // Prompt 46 (claude-code-qr-innlogging-finans-kalender.md): logg inn ved å skanne QR-en med en innlogget mobil.
                     QrLoginButton46 { vm.openQrLogin46(server) }
                     Join51Button() // prompt 51 (ANDFEAT51): ny i familien med invitasjon (ui/Onboard51Ui.kt)
-                    Text("Face ID / fingeravtrykk kan slås på etter innlogging, under Innstillinger → Sikkerhet.", color = p.mut, fontSize = 12.sp)
+                    Text("Face ID / fingeravtrykk kan slås på etter innlogging, under Innstillinger → Konto og sikkerhet.", color = p.mut, fontSize = 12.sp)
                     if (vm.addingAccount) Text("‹ Avbryt", color = p.lab, fontWeight = FontWeight.SemiBold, modifier = Modifier.clickable { vm.addingAccount = false })
                 } else {
                     Text("Skriv inn den sekssifrede koden fra autentiseringsappen for ${pend.username.ifBlank { "kontoen" }}.", color = p.mut, fontSize = 14.sp)
@@ -757,7 +757,7 @@ internal fun PaperOnboarding(vm: AppViewModel) {
                         }
                     }
                     1 -> {
-                        Text("Bildet øverst på Hjem. Du kan bytte det med pillen i fotovinduet.", color = p.mut, fontSize = 14.sp)
+                        Text("Bildet øverst på Oversikt. Du kan bytte det med pillen i fotovinduet.", color = p.mut, fontSize = 14.sp)
                         LaunchedEffect(Unit) { vm.loadPhotoThumbs() }
                         listOf("cur" to "Nåværende", "oslo" to "Oslo", "weather" to "Vær nå", "planets" to "Planeter").chunked(2).forEach { row ->
                             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -786,7 +786,7 @@ internal fun PaperOnboarding(vm: AppViewModel) {
                             PToggle("Haptisk tilbakemelding", "Små vibrasjoner ved trykk", vm.flag(Haptics.ON, true), top = true) { vm.setPref(Haptics.ON, it) }
                             OnboardAccessRows(access)
                         }
-                        Text("«Logg ut» ligger under Innstillinger → Konto.", color = p.mut, fontSize = 12.sp)
+                        Text("«Logg ut» ligger under Innstillinger → Konto og sikkerhet.", color = p.mut, fontSize = 12.sp)
                     }
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.padding(top = 8.dp)) {

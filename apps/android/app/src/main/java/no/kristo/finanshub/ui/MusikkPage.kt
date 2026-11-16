@@ -116,7 +116,7 @@ internal fun Musikk88(vm: AppViewModel, pad: PaddingValues) {
 private fun MuTom88(vm: AppViewModel) {
     Kort87 {
         PSerif("Musikk er ikke satt opp", 26.sp)
-        Mut87("Legg inn adressen til yubal under Integrasjoner. Da kan du laste ned album og spillelister fra YouTube Music til musikkbiblioteket.", 15f)
+        Mut87("Legg inn adressen til yubal under Tilkoblinger. Da kan du laste ned album og spillelister fra YouTube Music til musikkbiblioteket.", 15f)
         if (vm.userIsAdmin) Btn43("Åpne Integrasjoner", dark = true) { vm.p43.mediaOpen = false; vm.openIntegrations43() }
         else Mut87("Be en administrator om å sette den opp.")
     }

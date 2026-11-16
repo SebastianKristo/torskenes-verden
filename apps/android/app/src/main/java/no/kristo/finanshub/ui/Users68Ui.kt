@@ -49,5 +49,5 @@ internal fun Users68Page(vm: AppViewModel) {
 /** Lenkeraden på Konto og i Glimt-innstillingene. */
 @Composable
 internal fun Users68Link(vm: AppViewModel, sub: String, onGo: () -> Unit = { vm.settingsPage = USERS68 }) {
-    PCard { SetRow(vm, 0, Icons.Filled.Groups, "Brukere og familie", sub) { onGo() } }
+    PCard { SetRow(vm, 0, Icons.Filled.Groups, "Husstand", sub) { onGo() } }
 }

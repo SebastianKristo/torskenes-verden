@@ -29,7 +29,7 @@ fun glimtErr50(status: Int, code: String?, msg: String?, where: String = "reread
         (status == 0 && (m.contains("i tide") || m.contains("timeout", true) || m.contains("timed out", true)))
     val missing = c in MISSING_CODES50 || (status == 404 && (m.contains("bilde", true) || m.contains("image", true)))
     return when {
-        c == "gemini_mangler" -> GlimtErr50("Legg inn en Gemini-nøkkel under Innstillinger → AI-motor for å analysere på nytt.", GlimtErrKind50.OTHER)
+        c == "gemini_mangler" -> GlimtErr50("Legg inn en Gemini-nøkkel under Innstillinger → Glimt og AI → AI for å analysere på nytt.", GlimtErrKind50.OTHER)
         c == "opptatt" -> GlimtErr50("Kvitteringen leses allerede.", GlimtErrKind50.OTHER)
         c == "ulesbar" -> GlimtErr50("Glimt fikk ikke lest kvitteringen. Prøv igjen, eller les en mindre versjon.", GlimtErrKind50.SLOW)
         c == "modell_utilgjengelig" || m.contains("modell_utilgjengelig") || status == 503 ->

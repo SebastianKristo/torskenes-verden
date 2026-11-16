@@ -113,7 +113,7 @@ internal fun AiFinRouting38(vm: AppViewModel, T: AcT34) {
     AcCard34(T) {
         if (s.finEmpty || (!anyOpts && vm.p34.aiModels != null)) {
             Text("Ingen modeller ennå", color = T.ink, fontWeight = FontWeight.Bold, fontSize = 14.5.sp)
-            Text("Installer en lokal modell eller koble til en sky-modell, så kan du velge hvem som gjør hva i Finans.", color = T.mut, fontSize = 12.5.sp, lineHeight = 17.sp)
+            Text("Installer en lokal modell eller koble til en sky-modell, så kan du velge hvem som gjør hva i Økonomi.", color = T.mut, fontSize = 12.5.sp, lineHeight = 17.sp)
             AcPill34(T, "Installer modell ›", solid = true) { vm.setAiTab34("mod") }
             return@AcCard34
         }

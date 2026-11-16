@@ -127,7 +127,7 @@ internal fun Track50Line(vm: AppViewModel, t: MTrack50, onManual: (() -> Unit)?,
                     "manual" -> Btn43(a.optString("label").ifBlank { "Velg manuelt" }) { onManual?.invoke() }
                     "start" -> { val h = a.optString("hash"); val on = Med50.started[h] == true
                         Btn43(if (on) "Startet" else a.optString("label").ifBlank { "Start" }, dark = true, enabled = !on && h.isNotBlank()) { vm.startTorrent50(h, t.id) } }
-                    "settings" -> Btn43("Innstillinger → Media") { vm.closeMedia43(); vm.openPaperPage("set"); vm.settingsPage = "media" }
+                    "settings" -> Btn43("Innstillinger → Moduler → Media") { vm.closeMedia43(); vm.openPaperPage("set"); vm.settingsPage = "media" }
                     "retry" -> Btn43(a.optString("label").ifBlank { "Søk igjen" }) { vm.retry50(t, a) }
                 }
             }

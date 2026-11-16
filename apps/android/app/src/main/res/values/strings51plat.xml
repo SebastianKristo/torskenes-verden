@@ -9,7 +9,7 @@
     <string name="sc51_saldo_long">Hva er saldoen?</string>
     <string name="sc51_buss_short">Neste buss</string>
     <string name="sc51_buss_long">Når går bussen?</string>
-    <string name="sc51_disabled">Logg inn i FinansHub først</string>
+    <string name="sc51_disabled">Logg inn i Homelab først</string>
 
     <string-array name="sc51_feature_checkin">
         <item>sjekk inn</item>

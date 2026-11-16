@@ -321,7 +321,7 @@ private fun Ch27GuardSheet(vm: AppViewModel, v: ChatV27, g: ChatGuard27) {
     val s = vm.chat27
     Ch27Head(v, "Sende til ${g.model}?", null) { s.sheet = null; s.guard = null }
     Text("Dette er en sky-modell. Dette forlater hjemmeserveren hvis du sender:", color = v.ink, fontFamily = v.sans, fontSize = 14.5.sp, lineHeight = 21.sp)
-    val items = g.leaves.ifEmpty { listOfNotNull("Meldingen din", if (g.hasData) "Data fra Finans, Kalender og Gjøremål" else null) + s.att.map { "Vedlegg: " + it.name } }
+    val items = g.leaves.ifEmpty { listOfNotNull("Meldingen din", if (g.hasData) "Data fra Økonomi, Kalender og Gjøremål" else null) + s.att.map { "Vedlegg: " + it.name } }
     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(v.line), verticalArrangement = Arrangement.spacedBy(1.dp)) {
         items.forEach { n ->
             Row(Modifier.fillMaxWidth().heightIn(min = 46.dp).background(v.card).padding(horizontal = 14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {

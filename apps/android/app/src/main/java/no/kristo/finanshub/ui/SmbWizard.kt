@@ -209,8 +209,8 @@ private fun Smb30SaveView(vm: AppViewModel) {
     Smb30TestView(vm)
     Text("BRUK NETTVERKSDISKEN TIL", color = farger.textTertiary, fontFamily = PaperFonts.mono, fontSize = HomelabType.caption.fontSize, letterSpacing = 1.2.sp)
     Smb30ListBox {
-        Smb30Check("FinansHub-backup", "Hele databasen, kvitteringer og innstillinger", s.useFinans) { s.useFinans = !s.useFinans }
-        Smb30Check("Systembackup", "Kopi av hver backup fra Innstillinger → Backup", s.useSystem) { s.useSystem = !s.useSystem }
+        Smb30Check("Økonomi-backup", "Hele databasen, kvitteringer og innstillinger", s.useFinans) { s.useFinans = !s.useFinans }
+        Smb30Check("Systembackup", "Kopi av hver backup fra Innstillinger → Server → Backup", s.useSystem) { s.useSystem = !s.useSystem }
     }
     if (s.useSystem && !s.encrypted) {
         val warn = Color(0xFF9A6A0C)

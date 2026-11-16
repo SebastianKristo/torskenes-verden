@@ -161,7 +161,7 @@ fun SettingsPage35(vm: KalVm) {
                 // Prompt 42: trekk fra Finans → Abonnementer (standard: prøveperioder 2 d og 1 d før, årlige 7 d før).
                 val app42 = vm.getApplication<android.app.Application>()
                 Box(Modifier.padding(vertical = 10.dp)) {
-                    Seg35("Abonnementer", "Trekk fra Finans", listOf("off" to "Av", "day" to "Dagen før", "special" to "Prøve og årlige"), no.kristo.kalender.Ab42.mode(app42)) {
+                    Seg35("Abonnementer", "Trekk fra Økonomi", listOf("off" to "Av", "day" to "Dagen før", "special" to "Prøve og årlige"), no.kristo.kalender.Ab42.mode(app42)) {
                         Hap.tick()
                         no.kristo.kalender.Ab42.setMode(app42, it)
                         runCatching { no.kristo.kalender.KalNotify.reschedule(app42) }

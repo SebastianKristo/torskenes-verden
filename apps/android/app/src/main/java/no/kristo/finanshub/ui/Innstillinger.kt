@@ -405,7 +405,7 @@ internal fun AccountsPage(vm: AppViewModel) = Pages {
     Button(onClick = { vm.addingAccount = true }, modifier = Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(26.dp),
         colors = ButtonDefaults.buttonColors(containerColor = PaperPal.current.lab, contentColor = PaperPal.current.onLab)) { Icon(Icons.Filled.PersonAdd, null); Spacer(Modifier.width(8.dp)); Text("Legg til konto", fontWeight = FontWeight.Bold) }
     if (vm.accounts.size > 1) OutlinedButton(onClick = { vm.logoutOthers() }, modifier = Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(26.dp)) { Text("Logg ut andre kontoer") }
-    Note("Nye brukere opprettes av admin i Homelab → Innstillinger → Innlogging.")
+    Note("Nye brukere opprettes av admin i Homelab → Innstillinger → Konto og sikkerhet.")
     // Prompt 44: FAMILIE · LOGG INN SOM og SERVER · EIER – prompt 68: flyttet til Husstand → Brukere og familie (ui/Users68Ui.kt).
     Users68Link(vm, if (vm.userIsAdmin) "Brukerne, Logg inn som og eier av serveren · Familie, helse og posisjon" else "Familie, helse og posisjon")
     // Prompt 38: ENHETER (Logg inn på ny enhet) og ØKT (Lås skjermen, Logg ut, Logg ut av alle enheter) nederst på Konto.
@@ -615,7 +615,7 @@ internal fun AiPage(vm: AppViewModel) = Pages {
         Info("Minimum sikkerhet", "${st?.minConf ?: 85} %")
         Toggle("Kategoriser automatisk", "Regler først, deretter AI", st?.autoCat == true) { vm.saveSetting("autoCat", it) }
     }
-    Note(if (vm.canEditServer) "Glimt leser kvitteringer lokalt (telefon, Mac Vision, Tesseract og lokal modell). Kvitteringsbilder sendes aldri til skytjenester. Modeller settes i FinansHub på PC."
+    Note(if (vm.canEditServer) "Glimt leser kvitteringer lokalt (telefon, Mac Vision, Tesseract og lokal modell). Kvitteringsbilder sendes aldri til skytjenester. Modeller settes under Glimt og AI → AI."
         else "Glimt leser kvitteringer lokalt. Modellene er felles for serveren. $SERVER_LOCKED")
 }
 
@@ -664,7 +664,7 @@ internal fun StocksPrefsPage(vm: AppViewModel) = Pages {
     }
     Button(onClick = { vm.open(Screen.Stocks) }, modifier = Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(26.dp),
         colors = ButtonDefaults.buttonColors(containerColor = C.primary, contentColor = C.onPrimary)) { Text("Åpne Aksjer", fontWeight = FontWeight.Bold) }
-    Note("Lag nøkkelen hos Trading 212 under Innstillinger → API (Beta), med bare lesetilgang. Legg din egen nøkkel og secret inn under Innstillinger → Integrasjoner → Trading 212. De lagres kryptert på serveren.")
+    Note("Lag nøkkelen hos Trading 212 under Innstillinger → API (Beta), med bare lesetilgang. Legg din egen nøkkel og secret inn under Innstillinger → Tilkoblinger → Trading 212. De lagres kryptert på serveren.")
 }
 
 @Composable
@@ -781,14 +781,14 @@ private fun setIndex24(vm: AppViewModel): List<SetItem24> = buildList {
     add(SetItem24("appname", "Navn på appen", vm.appName, vm.appName, null, "navn"))
     add(SetItem24("appicon", "App-ikon", vm.appName, "Bytt ikon på appen", null, "ikon logo"))
     add(SetItem24("navstyle", "Fanelinje-stil", vm.appName, "Tekst, bare ikoner eller ikoner + navn på valgt", null, "fane faner ikon ikoner stil navbar"))
-    add(SetItem24("tabedit", "Fanelinje i Hjem", vm.appName, "Fjern, flytt, gi nytt navn og ikon", null, "fane faner"))
+    add(SetItem24("tabedit", "Fanelinje på Oversikt", vm.appName, "Fjern, flytt, gi nytt navn og ikon", null, "fane faner"))
     add(SetItem24("modules", "Familie, Gjøremål, Reise og Vær", "Moduler", "Innstillingene for modulene på telefonen", "modules", "widget modul familie gjøremål reise avganger vær"))
     add(SetItem24("news", "Nyheter", "Moduler", "Kilder og AI", null, "nyheter nyhetsleser rss"))
     add(SetItem24("look", "Utseende", "Innstillinger", "Navn, ikon, tema, farger, bakgrunn og fanelinje", "tilpass", "tema mørk lys farge farger ikon navn fanelinje bakgrunn tilpass utseende"))
     add(SetItem24("notify", "Varsler", "Innstillinger", "Lyd, stille timer, vibrasjon og test", "notify", "varsel lyd vibr push"))
     add(SetItem24("kal", "Kalender og gjøremål", "Tilkoblinger", "Google Kalender, Home Assistant, Skole-iCal og Canvas", "kal", "kalender google ha skole canvas ical timeplan bursdag"))
     add(SetItem24("integ", "Integrasjoner", "Tilkoblinger", if (vm.userIsAdmin) "Dine og serverens: Plex, Bring, IMAP, Home Assistant og flere" else "Dine egne: kalender, Plex, Trading 212, Bring, IMAP og flere", "integ", "integrasjon"))
-    add(SetItem24(USERS68, "Brukere og familie", "Husstand", users68Sub(vm.userIsAdmin), USERS68, "brukere bruker familie husstand barn roller logg inn som helse posisjon"))
+    add(SetItem24(USERS68, "Husstand", "Husstand", users68Sub(vm.userIsAdmin), USERS68, "brukere bruker familie husstand barn roller logg inn som helse posisjon"))
     add(SetItem24("healthpos", "Helse og posisjon", "Husstand", "Health Connect, skritt, puls, søvn og posisjonsdeling", USERS68, "helse posisjon skritt kart"))
     add(SetItem24("scan", "Skanning", "Enheter og widgets", "Kamera, beskjæring og opplasting", "scan", "kamera skann"))
     add(SetItem24("server", "Server og synk", "Enheter og widgets", "Lokal og ekstern adresse", "server", "server adresse"))
@@ -888,7 +888,7 @@ private fun open24(vm: AppViewModel, it: SetItem24) {
         it.id == "sub" -> { vm.settingsPage = "fin67"; vm.highlight25(rowKey25("Abonnementer"), 0) }
         it.id == "appname" || it.id == "appicon" || it.id == "navstyle" || it.id == "tabedit" -> {
             vm.settingsPage = "tilpass"
-            vm.highlight25(rowKey25(when (it.id) { "appname" -> "Navn på appen"; "appicon" -> "App-ikon"; "navstyle" -> "Fanelinje-stil"; else -> "Fanelinje i Hjem" }), 1)
+            vm.highlight25(rowKey25(when (it.id) { "appname" -> "Navn på appen"; "appicon" -> "App-ikon"; "navstyle" -> "Fanelinje-stil"; else -> "Fanelinje på Oversikt" }), 1)
         }
         it.id == "news" -> { vm.settingsPage = "modules"; vm.highlight25(rowKey25("Nyheter"), 0) }
         it.page != null -> { vm.settingsPage = it.page; vm.highlight25("page:${it.page}", 0) }
@@ -1350,7 +1350,7 @@ internal fun LazyListScope.tilpassHead39(vm: AppViewModel) {
         PCard {
             ScanHomeRow41(vm) // Prompt 41: «Skanneknapp på Hjem» øverst i FANELINJE
             SetRow(vm, 2, Icons.Filled.ViewWeek, "Fanelinje-stil", navStyleSub25(), navStyleName25() + " ›", top = true) { vm.setNavStyle25(nextNavStyle25()) }
-            SetRow(vm, 3, Icons.Filled.ViewWeek, "Fanelinje i Hjem", "Fjern, flytt, gi nytt navn og ikon · eller hold inne på fanelinjen", top = true) { vm.tabEdit = true }
+            SetRow(vm, 3, Icons.Filled.ViewWeek, "Fanelinje på Oversikt", "Fjern, flytt, gi nytt navn og ikon · eller hold inne på fanelinjen", top = true) { vm.tabEdit = true }
             // Prompt 42: Hjem-knapp (Standard / 1a–1d) med forhåndsvisning i et ark (ui/Ui42.kt).
             SetRow(vm, 4, Icons.Filled.Home, "Hjem-knapp", NAV_HOME42.firstOrNull { it.first == vm.navHome42() }?.third, vm.navHomeLabel42() + " ›", top = true) { vm.p42.navHomeSheet = true }
         }
@@ -1377,7 +1377,7 @@ internal fun UpdNotifyToggle39(vm: AppViewModel) {
     if (!vm.userIsAdmin) return
     LaunchedEffect(Unit) { vm.loadUpdSettings30() }
     Column {
-        PToggle("Varsle om nye versjoner", "Nordlys OS · banner på Hjem og push", vm.p30.upd.notifyUpdates, top = true) { vm.setUpdSetting30("notify_updates", it) }
+        PToggle("Varsle om nye versjoner", "Nordlys OS · banner på Oversikt og push", vm.p30.upd.notifyUpdates, top = true) { vm.setUpdSetting30("notify_updates", it) }
     }
 }
 

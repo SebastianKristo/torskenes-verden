@@ -320,11 +320,11 @@ fun AppViewModel.closeTasksHome40() {
 
 /** Hjem-knappen i fanelinja: verdiene som lagres og synkes. */
 val NAV_HOME42: List<Triple<String, String, String>> = listOf(
-    Triple("standard", "Standard", "«‹ Hjem» øverst, som i dag"),
+    Triple("standard", "Standard", "«‹ Oversikt» øverst, som i dag"),
     Triple("1a", "Egen Hjem-knapp", "Rund knapp til venstre for fanelinja"),
-    Triple("1b", "Hjem først i linjen", "Hjem-ikon som første plass, skilt med en strek"),
-    Triple("1c", "Hjem i midten", "Hevet rød knapp midt i fanelinja"),
-    Triple("1d", "Modulvelger", "«kr Finans ▴» åpner Hjem og alle moduler"),
+    Triple("1b", "Oversikt først i linjen", "Hjem-ikon som første plass, skilt med en strek"),
+    Triple("1c", "Oversikt i midten", "Hevet rød knapp midt i fanelinja"),
+    Triple("1d", "Modulvelger", "«kr Økonomi ▴» åpner Oversikt og alle moduler"),
 )
 
 /** Godtar også designets «std». */

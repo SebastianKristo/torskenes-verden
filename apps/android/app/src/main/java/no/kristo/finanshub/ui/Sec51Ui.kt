@@ -65,7 +65,7 @@ internal fun ApprovalWait51(vm: AppViewModel) {
                     PCard {
                         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                             Step51("1", "Åpne Homelab på en enhet som allerede er logget inn (telefon, nettbrett eller PC).")
-                            Step51("2", "Trykk på varselet «Ny enhet vil logge inn», eller gå til Innstillinger → Sikkerhet.")
+                            Step51("2", "Trykk på varselet «Ny enhet vil logge inn», eller gå til Innstillinger → Konto og sikkerhet.")
                             Step51("3", "Godkjenn. Denne skjermen fortsetter av seg selv.")
                         }
                     }

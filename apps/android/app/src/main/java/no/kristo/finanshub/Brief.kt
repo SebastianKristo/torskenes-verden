@@ -628,7 +628,7 @@ object B73 {
         Item73("abo", "Prøveperioder", "Fra Abonnementer", true), Item73("bibel", "Bibelvers", "Dagens vers", true),
         Item73("familie", "Familie", "De som deler posisjon", true), Item73("skole", "Skole og jobb", "Prøver og frister neste 7 dager", true),
         Item73("bursdager", "Bursdager", "Neste bursdager", true), Item73("nordlys", "Nordlys i natt", "Når Kp er høy nok", true),
-        Item73("aksjer", "Aksjer", "Porteføljen fra Finans", false),
+        Item73("aksjer", "Aksjer", "Porteføljen fra Økonomi", false),
     )
     /** Nøkkel → id i /api/brief52. */
     val B52 = mapOf("fokus" to "focus", "gjore" to "todo", "reise" to "trip", "regn" to "bills", "kveld" to "tonight",

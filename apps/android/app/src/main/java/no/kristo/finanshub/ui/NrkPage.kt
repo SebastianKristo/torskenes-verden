@@ -205,7 +205,7 @@ internal fun Nrk87(vm: AppViewModel, pad: PaddingValues) {
 private fun Tom87(vm: AppViewModel) {
     Kort87 {
         PSerif("NRK-nedlasteren er ikke satt opp", 26.sp)
-        Mut87("Legg inn adressen og tokenet til nrk-dl under Integrasjoner. Tjenesten kjører bak en egen VPN-tunnel til Norge.", 15f)
+        Mut87("Legg inn adressen og tokenet til nrk-dl under Tilkoblinger. Tjenesten kjører bak en egen VPN-tunnel til Norge.", 15f)
         if (vm.userIsAdmin) Btn43("Åpne Integrasjoner", dark = true) { vm.p43.mediaOpen = false; vm.openIntegrations43() }
         else Mut87("Be en administrator om å sette den opp.")
     }

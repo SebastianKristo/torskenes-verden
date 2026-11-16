@@ -446,7 +446,7 @@ private fun Prices51(vm: AppViewModel, d: JSONObject) {
                 PField("Søk etter vare eller butikk", q, { q = it }, placeholder = "melk, REMA …", keyboard = KeyboardOptions(imeAction = ImeAction.Search),
                     onDone = { F51.ui["pris.q"] = q.trim(); vm.load51("prices", force = true) })
                 Choice51(listOf("change" to "Mest økt", "count" to "Mest kjøpt", "name" to "Navn"), F51.opt("pris.sort", "change")) { F51.ui["pris.sort"] = it; vm.load51("prices", force = true) }
-                if (items.isEmpty()) Text(if (F51.opt("pris.q", "").isNotBlank()) "Ingen varer passer søket." else "Ingen varelinjer ennå. Skann kvitteringer med varelinjer, så følger FinansHub prisene for deg.",
+                if (items.isEmpty()) Text(if (F51.opt("pris.q", "").isNotBlank()) "Ingen varer passer søket." else "Ingen varelinjer ennå. Skann kvitteringer med varelinjer, så følger Økonomi prisene for deg.",
                     color = p.textTertiary, style = HomelabType.subheadline)
                 items.forEachIndexed { i, it -> key(it.str51("key")) { PriceRow51(vm, it, i > 0) } }
             }

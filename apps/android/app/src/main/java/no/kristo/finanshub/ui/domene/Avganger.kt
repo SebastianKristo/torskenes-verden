@@ -277,7 +277,7 @@ private fun TripCard41(vm: AppViewModel, t: Trip41, home: Boolean) {
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     listOf(1, 2, 3).forEach { n -> Pill41("$n", vm.p45.recoCount == n) { vm.setRecoCount45(n) } }
                 }
-                PLabel("På Hjem når du forlater skolen", p.mut)
+                PLabel("På Oversikt når du forlater skolen", p.mut)
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     listOf("over" to "Over Ruter-kortet", "instead" to "I stedet", "off" to "Av").forEach { (k, n) -> Pill41(n, s.homeCard == k) { vm.setHomeCard41(k) } }
                 }

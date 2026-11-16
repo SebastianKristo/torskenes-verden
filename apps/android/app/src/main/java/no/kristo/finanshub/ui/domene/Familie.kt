@@ -91,7 +91,7 @@ internal fun Zones41(vm: AppViewModel) {
             }
         }
     }
-    Text("Når du forlater siste skolesone (og er ute i 2 min, hverdager 07–18) vises Min reise på Hjem og som Live Update.", color = p.mut, fontSize = 12.sp, lineHeight = 16.sp)
+    Text("Når du forlater siste skolesone (og er ute i 2 min, hverdager 07–18) vises Min reise på Oversikt og som Live Update.", color = p.mut, fontSize = 12.sp, lineHeight = 16.sp)
 }
 
 /* ======================= Familie → Vel fremme ======================= */

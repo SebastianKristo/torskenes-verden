@@ -340,7 +340,7 @@ internal fun RailHome45(vm: AppViewModel, visible: Boolean, onLeave: (() -> Unit
                 Modifier.fillMaxWidth().height(58.dp).graphicsLayer { scaleX = sc; scaleY = sc }
                     .shadow(12.dp, shape, ambientColor = Color.Black.copy(alpha = .5f), spotColor = Color.Black.copy(alpha = .5f))
                     .clip(shape).background(p.lab)
-                    .clickable(interactionSource = src, indication = null, role = Role.Button, onClickLabel = "Til Hjem") {
+                    .clickable(interactionSource = src, indication = null, role = Role.Button, onClickLabel = "Til Oversikt") {
                         if (s.homeBusy) return@clickable
                         s.homeBusy = true
                         Haptics.tap()
@@ -355,7 +355,7 @@ internal fun RailHome45(vm: AppViewModel, visible: Boolean, onLeave: (() -> Unit
                             s.homeBusy = false
                         }
                     }
-                    .semantics(mergeDescendants = true) { contentDescription = "Til Hjem" }
+                    .semantics(mergeDescendants = true) { contentDescription = "Til Oversikt" }
                     .padding(horizontal = 2.dp),
                 horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp, Alignment.CenterVertically),
             ) {

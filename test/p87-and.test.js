@@ -195,7 +195,7 @@ test('én kolonne i rekkefølgen Last ned → Køen → Serier → Bibliotek, me
   assert.deepEqual([...rekke].sort((a, b) => a - b), rekke, 'riktig rekkefølge');
   assert.match(liste, /n\.configured == false -> item\("tom"\) \{ Tom87\(vm\) \}/);
   for (const t of ['Last ned fra NRK', 'Køen', 'Serier du følger', 'Bibliotek', 'NRK-nedlasteren er ikke satt opp', 'Åpne Integrasjoner',
-    'Legg inn adressen og tokenet til nrk-dl under Integrasjoner. Tjenesten kjører bak en egen VPN-tunnel til Norge.',
+    'Legg inn adressen og tokenet til nrk-dl under Tilkoblinger. Tjenesten kjører bak en egen VPN-tunnel til Norge.',
     'VPN stoppet · køen venter', 'Venter på VPN: tunnelen er ikke i Norge. Køen står stille.', 'Ingenting i køen. Lim inn en lenke fra tv.nrk.no eller radio.nrk.no.',
     'Du følger ingen serier. Slå på «Følg serien» når du legger inn en lenke.', 'Følg serien', 'Laster ned nye episoder automatisk', 'Komprimer (H.265, ca. halv størrelse)',
     'Fjern ferdige', 'Avbryt', 'Prøv igjen', 'Se etter nye', 'Fjern', 'Sjekk nå', 'Sjekker …', 'Slutt å følge', '‹ Bibliotek', 'Åpne på NRK', 'som mangler',

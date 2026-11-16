@@ -115,7 +115,7 @@ private fun VelgStopp27(vm: AppViewModel) {
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
-                    PLabel("Hjem · Ruter-kortet")
+                    PLabel("Oversikt · Avganger-kortet")
                     PSerif("Velg stopp", 24.sp)
                 }
                 Box(Modifier.height(36.dp).clip(CircleShape).background(p.textPrimary).clickable { s.homeSheet = false }.padding(horizontal = 16.dp), contentAlignment = Alignment.Center) {

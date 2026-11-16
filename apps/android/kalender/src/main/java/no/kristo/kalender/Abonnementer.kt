@@ -138,7 +138,7 @@ object Ab42 {
         if (!Q.containsMatchIn(ql)) return null
         val subs = all.filter { it.ab != null && !it.d.isBefore(T) }.sortedBy { it.d }
         val steps = listOf("Ser i Abonnementer", "Regner sammen trekk")
-        if (subs.isEmpty()) return KAns(steps, "Jeg finner ingen kommende trekk i Abonnementer. Er kalenderen slått på i Finans?")
+        if (subs.isEmpty()) return KAns(steps, "Jeg finner ingen kommende trekk i Abonnementer. Er kalenderen slått på i Økonomi?")
         if (ql.contains("når")) {
             subs.firstOrNull { e -> val n = short(e).lowercase().substringBefore(' '); n.length >= 3 && ql.contains(n) }?.let { e ->
                 val a = amountText(e)

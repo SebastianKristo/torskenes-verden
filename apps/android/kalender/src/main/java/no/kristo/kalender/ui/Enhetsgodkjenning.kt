@@ -53,7 +53,7 @@ fun Approve51(vm: KalVm) {
     val s = vm.k41
     Spark(34.dp, true)
     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(k.card).padding(horizontal = 14.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Tx("Godkjenn innloggingen fra en enhet som allerede er logget inn – Kalender eller Homelab-appen (Innstillinger → Sikkerhet), eller Homelab på web.",
+        Tx("Godkjenn innloggingen fra en enhet som allerede er logget inn – Kalender (Innstillinger → Sikkerhet) eller Homelab-appen (Innstillinger → Konto og sikkerhet), eller Homelab på web.",
             man(KType.subheadline, FontWeight.Medium, k.ink, 19.sp), maxLines = 6)
         Tx("Er du hjemme? Logg inn på hjemmenettet, så trengs ingen godkjenning. Du kan også avbryte og bruke «Logg inn med Homelab-appen» eller QR-kode.",
             man(KType.footnote, FontWeight.Medium, k.mut, 18.sp), maxLines = 6)

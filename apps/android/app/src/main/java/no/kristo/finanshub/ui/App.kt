@@ -191,7 +191,7 @@ private fun MenuContent(vm: AppViewModel) {
                     color = C.text2, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
-        MenuRow("Homelab", "Dashbord, søk og snarveier", Icons.Filled.Dashboard, vm.screen == Screen.Homelab, 0, 1) { vm.editHome = false; vm.go(Screen.Homelab) }
+        MenuRow("Homelab", "Oversikt, søk og snarveier", Icons.Filled.Dashboard, vm.screen == Screen.Homelab, 0, 1) { vm.editHome = false; vm.go(Screen.Homelab) }
         MenuRow("Søk i alt", "Gjøremål, kvitteringer, familie, steder …", Icons.Filled.Search, false, 0, 1) { vm.open51("sok") } // prompt 51 (ANDFEAT51)
         SectionLabel("Andre OS")
         Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {

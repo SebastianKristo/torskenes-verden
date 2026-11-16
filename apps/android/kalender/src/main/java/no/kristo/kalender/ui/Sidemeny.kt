@@ -229,7 +229,7 @@ private fun AddCalPanel35(vm: KalVm) {
                 when {
                     x.haBusy || l == null -> Tx("Henter kalendere fra Home Assistant …", man(KType.footnote, FontWeight.Medium, k.mut))
                     l.error != null -> Tx(l.error, man(KType.footnote, FontWeight.Medium, k.acc), maxLines = 4)
-                    !l.connected -> Tx("Home Assistant er ikke koblet til. Legg inn adresse og langtids-token i Homelab → Innstillinger → Integrasjoner.", man(KType.footnote, FontWeight.Medium, k.mut, 16.sp), maxLines = 4)
+                    !l.connected -> Tx("Home Assistant er ikke koblet til. Legg inn adresse og langtids-token i Homelab → Innstillinger → Tilkoblinger.", man(KType.footnote, FontWeight.Medium, k.mut, 16.sp), maxLines = 4)
                     else -> {
                         Tx("Home Assistant · ${l.entities.size} kalendere funnet", man(KType.footnote, FontWeight.Medium, k.mut))
                         l.entities.forEach { e ->

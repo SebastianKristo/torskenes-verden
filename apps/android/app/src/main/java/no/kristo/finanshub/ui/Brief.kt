@@ -1130,7 +1130,7 @@ internal fun GlimtSettings35(vm: AppViewModel, figures: Boolean) {
                 color = p.mut, fontSize = 12.5.sp, lineHeight = 17.5.sp, modifier = Modifier.padding(horizontal = 4.dp))
         }
         // Prompt 52 (AND52B): standardfigur per bruker (admin) – prompt 68: flyttet til Husstand → Brukere og familie (ui/Users68Ui.kt).
-        if (figures && vm.userIsAdmin) Users68Link(vm, "Standardfigur per bruker (admin) ligger under Brukere og familie") {
+        if (figures && vm.userIsAdmin) Users68Link(vm, "Standardfigur per bruker (admin) ligger under Husstand") {
             vm.closeGlimt35(); vm.openPaperPage("set"); vm.settingsPage = USERS68
         }
         // Prompt 40 (claude-code-glimt-jul.md): Julemodus rett under figurvalget og teksten om vennene, før Glimt-brief-bryteren.

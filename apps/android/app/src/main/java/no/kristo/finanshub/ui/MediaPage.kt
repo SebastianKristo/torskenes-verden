@@ -506,7 +506,7 @@ private fun OptSheet43(vm: AppViewModel, o: String) {
                         Box(Modifier.size(9.dp).clip(CircleShape).background(if (!conf) p.line else if (x.ok || (!x.configured && integ == true)) OK43 else RED43))
                         Column(Modifier.weight(1f)) {
                             Text(x.name, color = p.textPrimary, fontWeight = FontWeight.Bold, fontSize = HomelabType.callout.fontSize)
-                            Text(if (!conf) "Ikke satt opp · Integrasjoner → MEDIA" else if (!x.configured) "Koblet til (Integrasjoner)" else listOfNotNull(x.version?.let { "v$it" }, x.ms?.let { "$it ms" }, x.error?.let { "Svarer ikke: $it" }).joinToString(" · "),
+                            Text(if (!conf) "Ikke satt opp · Tilkoblinger → Media" else if (!x.configured) "Koblet til (Integrasjoner)" else listOfNotNull(x.version?.let { "v$it" }, x.ms?.let { "$it ms" }, x.error?.let { "Svarer ikke: $it" }).joinToString(" · "),
                                 color = if (x.error != null) RED43 else p.textTertiary, fontSize = HomelabType.footnote.fontSize)
                         }
                     }
@@ -1621,7 +1621,7 @@ internal fun MediaSettings45(vm: AppViewModel) {
                     Box(Modifier.size(10.dp).clip(CircleShape).background(MEDIA_COLORS45[x.key]?.let { Color(it) } ?: p.textTertiary))
                     Column(Modifier.weight(1f)) {
                         Text(x.name, color = p.textPrimary, fontWeight = FontWeight.Bold, fontSize = HomelabType.callout.fontSize)
-                        Text(if (!conf) "Ikke satt opp · Integrasjoner → MEDIA" else if (!x.configured) "Koblet til (Integrasjoner)" else listOfNotNull(x.version?.let { "v$it" }, x.ms?.let { "$it ms" }, x.error?.let { "Svarer ikke: $it" }).joinToString(" · "),
+                        Text(if (!conf) "Ikke satt opp · Tilkoblinger → Media" else if (!x.configured) "Koblet til (Integrasjoner)" else listOfNotNull(x.version?.let { "v$it" }, x.ms?.let { "$it ms" }, x.error?.let { "Svarer ikke: $it" }).joinToString(" · "),
                             color = if (x.error != null) RED43 else p.textTertiary, fontSize = HomelabType.footnote.fontSize)
                     }
                     Box(Modifier.size(9.dp).clip(CircleShape).background(if (!conf) p.line else if (x.ok || (!x.configured && integ == true)) OK43 else RED43))

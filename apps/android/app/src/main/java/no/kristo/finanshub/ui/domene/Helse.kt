@@ -41,7 +41,7 @@ internal fun HealthFamily42(vm: AppViewModel, hcState: Int, myShare: Set<String>
         PLabel("Helse (Familie)", modifier = Modifier.padding(start = 4.dp, top = 6.dp))
         PCard {
             PRow("Apple Health", "Koblet til via appen · iPhone", if (appleOn) "✓ Koblet" else "Koble til", if (appleOn) p.pos else p.lab, serif = false) {
-                vm.flash("Apple Health godkjennes i Homelab-appen på iPhone (Innstillinger → Helse og posisjon)")
+                vm.flash("Apple Health godkjennes i Homelab-appen på iPhone (Innstillinger → Husstand → Helse)")
             }
             PRow("Health Connect", "Koblet til via appen · Android", if (hcOn) "✓ Koblet" else "Koble til", if (hcOn) p.pos else p.lab, serif = false, top = true) { onAsk() }
             PRow("Hva deles med familien", HEALTH_KEYS.filter { it.first in myShare }.joinToString(", ") { it.second.lowercase() }.ifBlank { "Ingenting ennå" }.replaceFirstChar { it.uppercase() },
@@ -70,7 +70,7 @@ private fun HaHealth42(vm: AppViewModel) {
         }
     }
     when {
-        s.haMissing -> PCard { Text("Serveren har ikke helse fra Home Assistant ennå. Oppdater Homelab, og koble til Home Assistant under Innstillinger → Integrasjoner.",
+        s.haMissing -> PCard { Text("Serveren har ikke helse fra Home Assistant ennå. Oppdater Homelab, og koble til Home Assistant under Innstillinger → Tilkoblinger.",
             color = p.mut, fontSize = 13.sp, lineHeight = 18.sp, modifier = Modifier.padding(14.dp)) }
         s.haError != null -> PCard {
             Text(s.haError ?: "", color = p.lab, fontSize = 13.sp, modifier = Modifier.padding(14.dp, 12.dp, 14.dp, 4.dp))

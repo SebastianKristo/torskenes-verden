@@ -68,7 +68,7 @@ private fun ServerSheet89(onClose: () -> Unit, onSaved: (String) -> Unit) {
             PSerif("Server", 26.sp)
             PField("Ekstern adresse", ext, { ext = it; test = null }, placeholder = DEFAULT_EXTERNAL47, keyboard = uri)
             PField("Lokal adresse", loc, { loc = it; test = null }, placeholder = DEFAULT_LOCAL47, keyboard = uri.copy(imeAction = ImeAction.Done))
-            Text("Lokal brukes når du er hjemme på Wi-Fi, ellers ekstern. Samme verdier som Innstillinger → Server.", color = p.mut, fontSize = 12.5.sp)
+            Text("Lokal brukes når du er hjemme på Wi-Fi, ellers ekstern. Samme verdier som Innstillinger → Enheter og widgets → Server og synk.", color = p.mut, fontSize = 12.5.sp)
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 PButton(if (busy) "Tester …" else "Test tilkobling", height = 44.dp, kind = "line") {
                     val e = Regel89.clean(ext)

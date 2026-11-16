@@ -296,7 +296,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     private suspend fun flushPending(quiet: Boolean) {
         if (pendingBusy || !loggedIn) return
-        if (!canUpload()) { if (!quiet) message = "Venter på Wi-Fi (Innstillinger → Skanning)"; return }
+        if (!canUpload()) { if (!quiet) message = "Venter på Wi-Fi (Innstillinger → Enheter og widgets → Skanning)"; return }
         pendingBusy = true
         try {
             val id = account?.id ?: return

@@ -428,7 +428,7 @@ object Kal46Qr {
 
     private fun msgFor(e: KalApiException): String = when (e.status) {
         0 -> "Fikk ikke kontakt med serveren. Prøv igjen."
-        403 -> "Denne innloggingen kan ikke godkjenne andre enheter. Bruk Papir Finans på mobilen, eller logg inn på nytt."
+        403 -> "Denne innloggingen kan ikke godkjenne andre enheter. Bruk Homelab på mobilen, eller logg inn på nytt."
         404, 405 -> "Serveren har ikke QR-innlogging ennå. Oppdater Homelab-serveren."
         409, 410 -> "Koden er allerede brukt eller utløpt. Be om en ny kode på den andre enheten."
         429 -> "For mange forsøk. Vent litt og prøv igjen."
@@ -471,7 +471,7 @@ object Kal46Qr {
                 scanMsg = when {
                     !approve -> "Innloggingen ble avvist. Den andre enheten får en ny kode."
                     o.optBoolean("needs2fa") -> "Godkjent. Skriv koden fra autentiseringsappen på den andre enheten for å fullføre."
-                    else -> "$askDevice er logget inn som $askAccount. Du finner den under Innstillinger → Enheter i Homelab."
+                    else -> "$askDevice er logget inn som $askAccount. Du finner den under Innstillinger → Enheter og widgets i Homelab."
                 }
             } catch (e: KalApiException) { scanPhase = "err"; scanMsg = msgFor(e) }
         }

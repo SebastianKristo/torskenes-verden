@@ -742,7 +742,7 @@ private fun Ch27Composer(vm: AppViewModel, v: ChatV27, m: ChatModel27?) {
                     Row(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     Ch27Toggle(v, ChIc27.WEB, "Nettsøk", s.web) { s.web = !s.web; Haptics.select() }
                     Ch27Toggle(v, ChIc27.DATA, "Mine data", s.data && s.myDataOn) {
-                        if (!s.myDataOn) vm.chatToast27("Slått av i Innstillinger → AI og tolkning") else { s.data = !s.data; Haptics.select() }
+                        if (!s.myDataOn) vm.chatToast27("Slått av i Innstillinger → Glimt og AI") else { s.data = !s.data; Haptics.select() }
                     }
                     }
                     Box(Modifier.size(38.dp).clip(CircleShape).background(if (mic56) CH27_SKY else Color.Transparent).holdMic56("Snakk (hold inne, eller trykk for start og stopp)",
@@ -933,7 +933,7 @@ internal fun ChatFinBtn50(vm: AppViewModel, v: ChatV27, key: String, url: String
     val st = Chat50.fin[key]
     Box(Modifier.height(36.dp).clip(CircleShape).border(1.dp, v.ink, CircleShape).then(if (st == null) Modifier.press24 { vm.finans50(key, url) } else Modifier).padding(horizontal = 14.dp),
         contentAlignment = Alignment.Center) {
-        Text(when (st) { "ok" -> "Lagt i Finans ✓"; "busy" -> "Legger i Finans …"; else -> "Legg i Finans ›" }, color = v.ink.copy(alpha = if (st == null) 1f else .6f),
+        Text(when (st) { "ok" -> "Lagt i Økonomi ✓"; "busy" -> "Legger i Økonomi …"; else -> "Legg i Økonomi ›" }, color = v.ink.copy(alpha = if (st == null) 1f else .6f),
             fontFamily = v.sans, fontWeight = FontWeight.Bold, fontSize = 13.5.sp)
     }
 }

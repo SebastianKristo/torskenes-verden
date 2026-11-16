@@ -50,7 +50,7 @@ internal val PAPER_SET_TITLES = mapOf(
     "huske" to "Gjøremål", // prompt 44: synk med Home Assistant
     "nyheter" to "Nyheter", // prompt 46: innstillingene fra Nyheter-siden (kilder, kategorier, For deg, sammendrag)
     "media" to "Media", // prompt 45: innstillingene fra Media (status per tjeneste, Integrasjoner, Rydd uovervåkede)
-    USERS68 to "Brukere og familie", // prompt 68: HUSSTAND (ui/Users68Ui.kt)
+    USERS68 to "Husstand", // prompt 68: HUSSTAND (ui/Users68Ui.kt)
     "prog50" to "System", // prompt 50: egen side i høyre kolonne på brett · prompt 67: «System» under SERVER (bare admin)
 ) + SET67_TITLES // prompt 67: Glimt og undersidene, App og Finans (ui/Set67Ui.kt)
 
@@ -93,7 +93,7 @@ private fun PaperSettings17Body(vm: AppViewModel, navBottom: Dp, onPrivacyChange
             "fin" -> item {
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     // Prompt 26: samme editor som når man holder inne på Finans-linja.
-                    PCard { PRow("Rediger fanelinjen", "Navn, ikon, rekkefølge og stil · eller hold inne på fanelinjen i Finans", "Rediger ›", PaperPal.current.lab, serif = false) { vm.b26.finEdit = true } }
+                    PCard { PRow("Rediger fanelinjen", "Navn, ikon, rekkefølge og stil · eller hold inne på fanelinjen i Økonomi", "Rediger ›", PaperPal.current.lab, serif = false) { vm.b26.finEdit = true } }
                     PaperNavSettings(vm)
                 }
             }

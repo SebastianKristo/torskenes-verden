@@ -142,7 +142,7 @@ internal fun stripThink52(c: String): String = if (!c.contains("<think>")) c els
 internal fun localSteps52(hasAtt: Boolean, model: String?, useData: Boolean): List<String> = listOfNotNull(
     "Leser spørsmålet",
     if (hasAtt) "Ser på vedlegget" else null,
-    if (useData) "Henter data fra Finans, Kalender og Gjøremål" else null,
+    if (useData) "Henter data fra Økonomi, Kalender og Gjøremål" else null,
     model?.let { "Velger modell: $it" },
     "Planlegger svaret",
 )

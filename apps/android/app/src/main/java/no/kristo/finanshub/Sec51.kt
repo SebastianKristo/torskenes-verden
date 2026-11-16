@@ -351,7 +351,7 @@ object Sec51Notify {
         if (d.optString("kind") != "sec51.approval") return false
         val id = d.optString("approvalId").ifBlank { x.optString("id") }
         if (id.isBlank() || seen(ctx, id)) return true
-        show(ctx, x.optString("title").ifBlank { "Ny enhet vil logge inn" }, x.optString("body").ifBlank { "Godkjenn eller avvis i Innstillinger → Sikkerhet." }, id)
+        show(ctx, x.optString("title").ifBlank { "Ny enhet vil logge inn" }, x.optString("body").ifBlank { "Godkjenn eller avvis i Innstillinger → Konto og sikkerhet." }, id)
         return true
     }
 }

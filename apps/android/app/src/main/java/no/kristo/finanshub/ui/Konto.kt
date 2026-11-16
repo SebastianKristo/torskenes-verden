@@ -273,7 +273,7 @@ internal fun Onboard37(vm: AppViewModel) {
                                 }
                             }
                         }
-                        Text("Du kan endre koblingen senere i Innstillinger → Konto → Profil. Admin får beskjed om nye koblinger.", color = mut, fontSize = 12.5.sp)
+                        Text("Du kan endre koblingen senere i Innstillinger → Konto og sikkerhet → Profil. Admin får beskjed om nye koblinger.", color = mut, fontSize = 12.5.sp)
                         s.obErr?.let { Text(it, color = Color(0xFFB23A2A), fontSize = 13.sp) }
                     }
                     else -> Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically)) {
@@ -291,7 +291,7 @@ internal fun Onboard37(vm: AppViewModel) {
                 }
             }
             val ok = when (s.obStep) { 1 -> if (s.obLocked && s.obMine != null) true else if (s.obNew) s.obNewName.isNotBlank() else s.obSel != null; else -> true }
-            val label = when (s.obStep) { 1 -> if (s.obLocked && s.obMine != null) "Bekreft" else if (s.obNew) "Lag profil" else "Dette er meg"; 2 -> if (s.obBusy) "Kobler …" else "Koble og fortsett"; else -> "Gå til Hjem" }
+            val label = when (s.obStep) { 1 -> if (s.obLocked && s.obMine != null) "Bekreft" else if (s.obNew) "Lag profil" else "Dette er meg"; 2 -> if (s.obBusy) "Kobler …" else "Koble og fortsett"; else -> "Gå til Oversikt" }
             Box(Modifier.fillMaxWidth().height(54.dp).clip(RoundedCornerShape(27.dp)).background(if (ok) ink else Color(0xFFA39D90)).clickable(enabled = ok && !s.obBusy, role = Role.Button) {
                 Haptics.tap()
                 when (s.obStep) {
@@ -674,7 +674,7 @@ internal fun Accounts44(vm: AppViewModel) {
                 PRow(u.name, listOfNotNull(roleNo44(u.role), u.device, if (u.locked) "låst oppsett" else "kan endre selv").joinToString(" · "), "›", top = i > 0) { t.asSheet = u }
             }
         }
-        Text("Logg inn som et familiemedlem for å rydde i Hjem, fanelinja og Mer. Uten passord, fordi du er admin. Gå ut når du er ferdig.",
+        Text("Logg inn som et familiemedlem for å rydde i Oversikt, fanelinja og Mer. Uten passord, fordi du er admin. Gå ut når du er ferdig.",
             color = p.mut, fontSize = 12.sp, lineHeight = 17.sp, modifier = Modifier.padding(horizontal = 4.dp))
         PLabel("Server · eier", modifier = Modifier.padding(start = 4.dp, top = 10.dp))
         PCard {
@@ -708,7 +708,7 @@ private fun AsSheet44(vm: AppViewModel, u: AsUser44) {
             "Chat, Finans og Helse er skrivebeskyttet, og passord, 2FA og rolle kan ikke endres. Trykk «Gå ut» øverst når du er ferdig.", color = p.mut, fontSize = 12.5.sp, lineHeight = 18.sp)
         var ask by remember(u.id) { mutableStateOf<String?>(null) }
         PCard {
-            PRow("Kopier mitt oppsett hit", "Hjem, fanelinje og Mer", "›", serif = false) { ask = "copy-from-me" }
+            PRow("Kopier mitt oppsett hit", "Oversikt, fanelinje og Mer", "›", serif = false) { ask = "copy-from-me" }
             PRow("Tilbakestill til standard", null, "›", serif = false, top = true) { ask = "reset" }
             PToggle("${firstName37(u.name)} kan endre selv", if (u.locked) "Av: oppsettet styres av deg" else "Wiggle-redigering er på hos ${firstName37(u.name)}", !u.locked, top = true) { on -> vm.layoutAct44(u, "lock", locked = !on) }
         }

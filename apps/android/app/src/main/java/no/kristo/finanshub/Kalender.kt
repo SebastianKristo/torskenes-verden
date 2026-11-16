@@ -584,7 +584,7 @@ val KAL27_VIEWS: List<Triple<String, String, String>>
 private val KAL27_SRC = mapOf(
     "timeplan" to "skolens iCal", "prover" to "skolens iCal", "skole" to "skolens iCal",
     "privat" to "Google Kalender", "familie" to "Google Kalender (delt med familien)", "bursdager" to "Bursdager-modulen",
-    "abonnementer" to "Finans → Abonnementer (innebygd, endres i Finans)", // prompt 42
+    "abonnementer" to "Økonomi → Faste betalinger (innebygd, endres i Økonomi)", // prompt 42
 )
 
 fun parseKalCals27(raw: String): List<Kal27Cal> {
@@ -709,7 +709,7 @@ fun AppViewModel.reloadKal27() {
 }
 
 private fun kalErr27(e: ApiException): String = when (e.status) {
-    409 -> "Google-tilkoblingen mangler skrivetilgang. Koble til Google på nytt i Innstillinger → Kalendere."
+    409 -> "Google-tilkoblingen mangler skrivetilgang. Koble til Google på nytt i Innstillinger → Tilkoblinger → Kalender og gjøremål."
     404 -> "Serveren kan ikke lagre hendelser ennå. Oppdater Homelab-serveren."
     else -> e.message ?: "Fikk ikke lagret"
 }

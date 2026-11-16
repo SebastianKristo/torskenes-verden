@@ -173,7 +173,7 @@ fun KalVm.googleLogin() {
     viewModelScope.launch {
         val u = KalGoogle36Repo.loginUrl(this@googleLogin)
         val ok = u != null && runCatching { c.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(u)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }.isSuccess
-        if (!ok) g36.err = "Fikk ikke åpnet innloggingen. Logg inn med Google i Homelab → Innstillinger → Kalendere."
+        if (!ok) g36.err = "Fikk ikke åpnet innloggingen. Logg inn med Google i Homelab → Innstillinger → Tilkoblinger → Kalender og gjøremål."
     }
 }
 
@@ -213,7 +213,7 @@ private fun GoogleNotConnected36(vm: KalVm, g: KGoogle36) {
     g.error?.let { Tx(it, man(KType.footnote, FontWeight.Medium, k.acc), maxLines = 4) }
     Tx(
         if (g.configured || g.error != null) "Logg inn med Google i Homelab. Deretter velger du hovedkalenderen her."
-        else "Google Kalender er ikke satt opp på serveren ennå (Homelab → Innstillinger → Integrasjoner).",
+        else "Google Kalender er ikke satt opp på serveren ennå (Homelab → Innstillinger → Tilkoblinger).",
         man(KType.footnote, FontWeight.Medium, k.mut, 16.sp), maxLines = 4,
     )
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

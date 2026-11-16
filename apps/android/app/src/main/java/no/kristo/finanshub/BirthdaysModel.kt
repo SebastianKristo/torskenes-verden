@@ -273,7 +273,7 @@ private const val BD_RETURN = "finanshub://bursdager"
 fun AppViewModel.googleLogin24(ctx: Context) {
     val s = bd24
     if (s.localOnly) { flash("Google Kalender trenger en nyere Homelab-server"); return }
-    if (!s.google.configured) { flash("Google Kalender er ikke satt opp. Administrator legger det inn under Integrasjoner → Google Kalender."); return }
+    if (!s.google.configured) { flash("Google Kalender er ikke satt opp. Administrator legger det inn under Tilkoblinger → Google Kalender."); return }
     val tok = account?.token ?: return
     val root = base.trimEnd('/')
     s.authAt = System.currentTimeMillis()

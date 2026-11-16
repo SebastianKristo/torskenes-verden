@@ -882,7 +882,7 @@ class KalVm(app: Application) : AndroidViewModel(app) {
         val i = android.content.Intent(android.content.Intent.ACTION_VIEW, Uri.parse("finanshub://settings/glimt")).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
         val ok = KalAuth.homelabInstalled(c) && runCatching { c.startActivity(i) }.isSuccess
         if (!ok) session?.server?.let { s -> runCatching { c.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, Uri.parse(s.trimEnd('/') + "/#innstillinger/glimt")).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) } }
-            ?: showToast("Glimt-innstillingene ligger i Homelab → Innstillinger → Glimt")
+            ?: showToast("Glimt-innstillingene ligger i Homelab → Innstillinger → Glimt og AI → Glimt")
     }
 
     /** «Kontoer og synk»: sidemenyen med «Legg til kalender → Konto» åpen. */
@@ -991,7 +991,7 @@ class KalVm(app: Application) : AndroidViewModel(app) {
         val c = ctx
         val i = android.content.Intent(android.content.Intent.ACTION_VIEW, Uri.parse("finanshub://settings/kalendere")).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
         val ok = KalAuth.homelabInstalled(c) && runCatching { c.startActivity(i) }.isSuccess
-        showToast(if (ok) "$n: logg inn i Homelab, så velger du kalenderne der" else "$n kobles til i Homelab → Innstillinger → Kalendere")
+        showToast(if (ok) "$n: logg inn i Homelab, så velger du kalenderne der" else "$n kobles til i Homelab → Innstillinger → Tilkoblinger → Kalender og gjøremål")
     }
 
     fun createCalendar(name: String, color: Long) {

@@ -92,7 +92,7 @@ fun AppViewModel.loadHa42(force: Boolean = false) {
             s.haMissing = false; s.haError = null
         } catch (e: CancellationException) { throw e } catch (e: ApiException) {
             if (e.status == 404) s.haMissing = true
-            else s.haError = if (e.status == 401 || e.status == 403) "Koble til Home Assistant på nytt (Innstillinger → Integrasjoner)." else e.message
+            else s.haError = if (e.status == 401 || e.status == 403) "Koble til Home Assistant på nytt (Innstillinger → Tilkoblinger)." else e.message
         } catch (e: Exception) {
             s.haError = uiErr73(e, "Fikk ikke kontakt med Home Assistant")
         } finally { s.haBusy = false }

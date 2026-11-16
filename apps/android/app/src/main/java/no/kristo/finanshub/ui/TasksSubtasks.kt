@@ -146,7 +146,7 @@ internal fun TasksSyncPage44(vm: AppViewModel) {
     val lists = vm.tasks?.lists?.ifEmpty { null } ?: TASK_LISTS_DEFAULT
     Column(Modifier.padding(top = 28.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         if (!vm.userIsAdmin) Text("Bare admin kan endre synken med Home Assistant.", color = p.textTertiary, fontSize = HomelabType.subheadline.fontSize, modifier = Modifier.padding(horizontal = 4.dp))
-        else if (vm.tasksHa == null) Text("Synk med Home Assistant finnes ikke på serveren, eller Home Assistant er ikke koblet til under Integrasjoner.", color = p.textTertiary, fontSize = HomelabType.subheadline.fontSize, modifier = Modifier.padding(horizontal = 4.dp))
+        else if (vm.tasksHa == null) Text("Synk med Home Assistant finnes ikke på serveren, eller Home Assistant er ikke koblet til under Tilkoblinger.", color = p.textTertiary, fontSize = HomelabType.subheadline.fontSize, modifier = Modifier.padding(horizontal = 4.dp))
         TasksHaSection(vm, lists, pad = 0.dp)
     }
 }

@@ -579,7 +579,7 @@ private fun Fam22Hero(vm: AppViewModel) {
         Column(Modifier.fillMaxSize().padding(top = statusTop + 8.dp, start = 22.dp, end = 22.dp, bottom = HERO_PB50)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
-                    Modifier.height(34.dp).clip(CircleShape).background(DsPalette.PapirLys.textPrimary.copy(alpha = .55f)).clickable(onClickLabel = "Tilbake til Hjem") { vm.closeFamily() }
+                    Modifier.height(34.dp).clip(CircleShape).background(DsPalette.PapirLys.textPrimary.copy(alpha = .55f)).clickable(onClickLabel = "Tilbake til Oversikt") { vm.closeFamily() }
                         .padding(start = 10.dp, end = 14.dp),
                     contentAlignment = Alignment.Center,
                 ) { Fam22Text("‹ ${Moduler.oversikt}", 13.sp, Color.White, FontWeight.SemiBold, maxLines = 1) }

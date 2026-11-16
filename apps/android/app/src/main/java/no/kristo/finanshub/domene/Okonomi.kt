@@ -1424,7 +1424,7 @@ fun AppViewModel.b24Invite(id: Int, who: String, role: String) = launch24b {
 fun AppViewModel.b24MailNow(id: Int) = launch24b {
     val r = runCatching { api24b { post("/mail/run") } }
     if (r.isSuccess) { flash("Innboksen er sjekket"); b24OpenHome(id) }
-    else flash("Kvitteringer på e-post hentes automatisk. Sett opp IMAP under Innstillinger → Integrasjoner.")
+    else flash("Kvitteringer på e-post hentes automatisk. Sett opp IMAP under Innstillinger → Tilkoblinger.")
 }
 
 /** Bildet for en bakgrunn: Strømstad pakkes med appen, egne bilder fra serveren eller fra telefonen. */

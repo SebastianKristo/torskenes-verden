@@ -13,8 +13,8 @@ import org.json.JSONObject
 data class Profile24(val key: String, val name: String, val sub: String, val startRoute: String, val homeNav: List<String>, val finNav: List<String>)
 
 val PROFILES24: List<Profile24> = listOf(
-    Profile24("standard", "Standard", "Hjem, Finans, Mat og Mer · vanlige Finans-faner", "hjem", emptyList(), listOf("oversikt", "liste", "finn", "sok")),
-    Profile24("finans_boliger", "Finans + Boliger", "Åpner i Boliger · Boliger, Søk, Liste, Oversikt, Kvitteringer · Hjem under Mer", "finans/boliger",
+    Profile24("standard", "Standard", "Oversikt, Økonomi, Mat og Mer · vanlige Økonomi-faner", "hjem", emptyList(), listOf("oversikt", "liste", "finn", "sok")),
+    Profile24("finans_boliger", "Finans + Boliger", "Åpner i Boliger · Boliger, Søk, Liste, Oversikt, Kvitteringer · Oversikt under Mer", "finans/boliger",
         listOf("finans"), listOf("boliger", "sok", "liste", "oversikt", "kvitteringer")),
     Profile24("boliger", "Boliger-profil", "Bare Finans og Domener, med Boliger først", "finans/boliger",
         listOf("finans", "domener"), listOf("boliger", "kvitteringer", "oversikt", "sok")),

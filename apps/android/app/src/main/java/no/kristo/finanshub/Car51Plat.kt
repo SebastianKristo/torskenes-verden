@@ -116,7 +116,7 @@ class Car51Deps(ctx: CarContext) : Car51Base(ctx) {
         error?.let { return message("Avganger", it) }
         val b = ListTemplate.Builder().setTitle("Avganger").setHeaderAction(Action.BACK)
         if (loading) return b.setLoading(true).build()
-        if (stops.isEmpty()) return message("Avganger", "Ingen stopp i Mine stopp. Legg til stopp i appen (Avganger).")
+        if (stops.isEmpty()) return message("Avganger", "Ingen stopp i Mine stopp. Legg til stopp i appen (Reise → Avganger).")
         val list = ItemList.Builder()
         stops.take(6).forEach { sd ->
             val next = sd.departures.filter { !it.cancelled }.take(3).joinToString("  ·  ") { d -> "${d.line} ${d.to.take(14)} ${car51Min(d.minutes)}" }

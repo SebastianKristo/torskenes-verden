@@ -184,7 +184,7 @@ internal fun AppAuthSheet41(vm: AppViewModel, a: AppAuth41) {
                 }
             }
         }
-        Text("${a.appName} får sin egen innlogging på denne kontoen. Du kan logge den ut i Innstillinger → Konto → Enheter.", color = p.mut, fontSize = 13.sp, lineHeight = 18.sp)
+        Text("${a.appName} får sin egen innlogging på denne kontoen. Du kan logge den ut i Innstillinger → Enheter og widgets.", color = p.mut, fontSize = 13.sp, lineHeight = 18.sp)
         (err ?: s.appAuthErr)?.let { Text(it, color = p.lab, fontSize = 13.sp, lineHeight = 18.sp) }
         PButton(if (s.appAuthBusy) "Godkjenner …" else "Godkjenn med fingeravtrykk", Modifier.fillMaxWidth()) {
             if (s.appAuthBusy) return@PButton
@@ -256,9 +256,9 @@ internal fun QrLoginScreen46(vm: AppViewModel) {
                     else -> if (left > 0) "Gjelder i ${left / 60}:${(left % 60).toString().padStart(2, '0')} · fornyes automatisk" else "Lager en ny kode …"
                 }, color = p.mut, fontSize = 13.sp)
             }
-            Text("Skann med Papir Finans på mobilen: Innstillinger → Konto → Logg inn på annen enhet (eller Mer → Logg inn på annen enhet).",
+            Text("Skann med Homelab på mobilen: Innstillinger → Enheter og widgets → Logg inn på annen enhet.",
                 color = p.ink, fontSize = 14.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
-            Text("Koden inneholder aldri passord eller token. Den nye enheten får sin egen innlogging, som du kan logge ut under Innstillinger → Enheter.",
+            Text("Koden inneholder aldri passord eller token. Den nye enheten får sin egen innlogging, som du kan logge ut under Innstillinger → Enheter og widgets.",
                 color = p.mut, fontSize = 12.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
             err?.let {
                 Text(it, color = p.lab, fontSize = 13.5.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center)

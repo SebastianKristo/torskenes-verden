@@ -1234,7 +1234,7 @@ internal fun AppViewModel.mediaUpstream46(e: ApiException): String? {
     if (e.code != "UPSTREAM_AUTH" && !m.contains("API-nøkkel", true) && !m.contains("brukernavn eller passord", true)) return null
     p44.errKind = "upstream"; p46.mediaKind = "upstream"; p46.mediaWhen = LocalTime.now().format(HM46)
     val svc = listOf("Sonarr", "Radarr", "qBittorrent", "Prowlarr", "Plex", "Jellyfin").firstOrNull { m.contains(it, true) } ?: "Tjenesten"
-    return "$svc avviser API-nøkkelen på serveren (${if (e.status > 0) e.status else "feil"}). Sjekk nøkkelen under Integrasjoner → Media. Du er fortsatt logget inn."
+    return "$svc avviser API-nøkkelen på serveren (${if (e.status > 0) e.status else "feil"}). Sjekk nøkkelen under Tilkoblinger → Media. Du er fortsatt logget inn."
 }
 
 /* ---------------- Media (GET /api/media/now og /api/media/history) ---------------- */

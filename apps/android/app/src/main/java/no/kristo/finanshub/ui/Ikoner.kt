@@ -67,7 +67,7 @@ internal fun setColor30(title: String): Long? = when (title) {
     "Moduler", "Startside" -> 0xFF3F7A6E
     "Domener" -> 0xFFC0562A
     "Varsler og haptikk", "Varsler", "Logg ut" -> 0xFFB23A2A
-    "Navn på appen", "App-ikon", "Fanelinje-stil", "Fanelinje i Hjem", "App" -> 0xFF5B6470
+    "Navn på appen", "App-ikon", "Fanelinje-stil", "Fanelinje på Oversikt", "App" -> 0xFF5B6470
     "Integrasjoner" -> 0xFF4A5BBF
     "Kalendere" -> 0xFF2F7D4F
     "AI og tolkning", "AI" -> 0xFF7A3B6B

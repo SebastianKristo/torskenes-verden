@@ -40,8 +40,8 @@ internal fun ScanHomeRow41(vm: AppViewModel, top: Boolean = false) {
         ) {
             Box(Modifier.size(30.dp).clip(RoundedCornerShape(9.dp)).background(p.lab), contentAlignment = Alignment.Center) { Icon(Icons.Filled.Add, contentDescription = "Legg til", tint = p.onLab, modifier = Modifier.size(22.dp)) }
             Column(Modifier.weight(1f)) {
-                Text("Skanneknapp på Hjem", color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 14.5.sp, maxLines = 1)
-                Text(if (on) "Vises på Hjem" else "Skjult på Hjem · vises i de andre fanene", color = p.mut, fontSize = 12.5.sp, maxLines = 2)
+                Text("Skanneknapp på Oversikt", color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 14.5.sp, maxLines = 1)
+                Text(if (on) "Vises på Oversikt" else "Skjult på Oversikt · vises i de andre fanene", color = p.mut, fontSize = 12.5.sp, maxLines = 2)
             }
             Box(Modifier.size(42.dp, 24.dp).clip(CircleShape).background(if (on) p.pos else p.line).padding(3.dp), contentAlignment = if (on) Alignment.CenterEnd else Alignment.CenterStart) {
                 Box(Modifier.size(18.dp).clip(CircleShape).background(Color.White))

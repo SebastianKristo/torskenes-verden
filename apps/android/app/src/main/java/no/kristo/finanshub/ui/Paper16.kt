@@ -118,12 +118,12 @@ internal fun PaperSettings16(vm: AppViewModel, navBottom: Dp, head: (androidx.co
                 SetRow(vm, 1, Icons.Filled.Palette, "Papir · mørk", "Kveldspapir og lys fanelinje", if (vm.paperMode == "mork" && !Theme51.auto) sel else "", top = true) { vm.setPaperMode("mork") }
                 SetRow(vm, 2, Icons.Filled.Palette, "Følg systemet", "Lys om dagen, mørk når telefonen er mørk", if (vm.paperMode == "auto" && !Theme51.auto) sel else "", top = true) { vm.setPaperMode("auto") }
                 // Prompt 50: Liquid Glass slår også på fliser på Hjem (ui/Glass50.kt).
-                SetRow(vm, 3, Icons.Filled.Palette, "Liquid Glass", "Mørkt glass, fargeskyer og fliser på Hjem", if (vm.paperMode == "glass") sel else "", top = true) { vm.setGlass50() }
+                SetRow(vm, 3, Icons.Filled.Palette, "Liquid Glass", "Mørkt glass, fargeskyer og fliser på Oversikt", if (vm.paperMode == "glass") sel else "", top = true) { vm.setGlass50() }
                 // Prompt 51 (ANDFEAT51): automatisk tema (etter solen / klokkeslett) og synk mellom enheter (ui/Theme51Ui.kt).
                 SetRow(vm, 4, Icons.Filled.Palette, "Automatisk tema", if (Theme51.auto) (if (Theme51.by == "time") "Etter klokkeslett · på alle enheter" else "Etter solnedgang · på alle enheter") else "Etter solnedgang eller klokkeslett, på alle enheter", if (Theme51.auto) sel else "›", top = true) { vm.open51("tema") }
             }
         }
-        item { PCard { PToggle("Hjem som fliser", "Avgang, Finans, Middag, Familie og Domener som fliser", vm.homeTiles50()) { vm.setPref(HOME_TILES50, it) } } } // prompt 50
+        item { PCard { PToggle("Oversikt som fliser", "Avgang, Finans, Middag, Familie og Domener som fliser", vm.homeTiles50()) { vm.setPref(HOME_TILES50, it) } } } // prompt 50
         item { LookExtras42(vm) } // Prompt 42: personvern og widget-valgene fra den slettede klassiske Utseende-siden
         item { PLabel("Ikonfarger", modifier = Modifier.padding(start = 4.dp, top = 10.dp)) }
         item {
@@ -143,7 +143,7 @@ internal fun PaperSettings16(vm: AppViewModel, navBottom: Dp, head: (androidx.co
                 }
             }
         }
-        item { PLabel("Bakgrunn på Hjem", modifier = Modifier.padding(start = 4.dp, top = 10.dp)) }
+        item { PLabel("Bakgrunn på Oversikt", modifier = Modifier.padding(start = 4.dp, top = 10.dp)) }
         item { Box(Modifier.hl34(vm, "bg")) { PaperBgSettings(vm) { own.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) } } } // prompt 34: mål «bg»
         item { Column(verticalArrangement = Arrangement.spacedBy(2.dp)) { BgCredit41(vm) } } // Prompt 41: kreditering for valgt bakgrunn (ikke på Hjem)
         item { PLabel(if (head != null) "Fanelinje · flere valg" else "Fanelinje", modifier = Modifier.padding(start = 4.dp, top = 10.dp)) }

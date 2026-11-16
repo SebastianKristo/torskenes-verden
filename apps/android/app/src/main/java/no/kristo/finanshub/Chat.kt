@@ -338,7 +338,7 @@ data class ChatDoc27(val id: String, val name: String, val sub: String)
 /** Persona: nøkkel (som serveren, chat.js PERSONAS), navn og beskrivelse (designet). */
 val CHAT27_PERSONAS = listOf(
     Triple("standard", "Standard", ""),
-    Triple("okonomi", "Økonomi", "Svar kort og bruk tall i kroner. Bruk dataene fra Finans når de finnes."),
+    Triple("okonomi", "Økonomi", "Svar kort og bruk tall i kroner. Bruk dataene fra Økonomi når de finnes."),
     Triple("homelab", "Homelab", "Du hjelper med Docker, Home Assistant, Proxmox og Python. Gi konkrete kommandoer."),
     Triple("norsklarer", "Norsklærer", "Rett språket og forklar kort hvorfor."),
 )
@@ -1427,10 +1427,10 @@ fun AppViewModel.finans50(key: String, url: String) {
             api27 { hlPost(url.removePrefix("/api"), JSONObject()) }
             Chat50.fin[key] = "ok"
             Haptics.success()
-            chatToast27("Lagt i Finans – sjekk kvitteringen der")
+            chatToast27("Lagt i Økonomi – sjekk kvitteringen der")
         } catch (e: CancellationException) { throw e } catch (e: ApiException) {
             Chat50.fin.remove(key)
-            chatToast27(if (e.code == "bilde_mangler" || e.status == 404) "Originalbildet finnes ikke lenger. Last opp kvitteringen på nytt." else e.message ?: "Fikk ikke lagt kvitteringen i Finans")
+            chatToast27(if (e.code == "bilde_mangler" || e.status == 404) "Originalbildet finnes ikke lenger. Last opp kvitteringen på nytt." else e.message ?: "Fikk ikke lagt kvitteringen i Økonomi")
         }
     }
 }

@@ -505,7 +505,7 @@ internal fun G67SchPage(vm: AppViewModel) {
         if (s.briefs.isNotEmpty()) {
             G67Lab("Briefer")
             PCard { s.briefs.forEachIndexed { i, b -> if (i > 0) G67Rule(); G67BriefRow(vm, b) } }
-            G67Note("Briefene er de samme som under Innstillinger → Glimt. «Flytt morgenbriefen til 06:30» til Glimt endrer klokkeslettet her.")
+            G67Note("Briefene er de samme som under Innstillinger → Glimt og AI → Glimt. «Flytt morgenbriefen til 06:30» til Glimt endrer klokkeslettet her.")
         }
         G67SchSettings(vm)
     }

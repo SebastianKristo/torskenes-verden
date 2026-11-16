@@ -298,7 +298,7 @@ fun QrLogin46(vm: KalVm) {
         val head = when (Kal46Qr.phase) { "scanned" -> "Skannet – godkjenn på mobilen"; "err" -> "Fikk ikke laget koden"; else -> "Logg inn med mobilen" }
         Tx(head, man(KType.body, FontWeight.Bold, k.ink).copy(textAlign = TextAlign.Center), maxLines = 2)
         val sub = if (Kal46Qr.phase == "scanned") "Sjekk at tallet ${Kal46Qr.match} også vises på mobilen."
-            else "Skann med Papir Finans på mobilen: Innstillinger → Logg inn på annen enhet. En innlogget Kalender kan også godkjenne."
+            else "Skann med Homelab på mobilen: Innstillinger → Enheter og widgets → Logg inn på annen enhet. En innlogget Kalender kan også godkjenne."
         Tx(sub, man(KType.subheadline, FontWeight.Medium, k.mut, 18.sp).copy(textAlign = TextAlign.Center), maxLines = 4)
         if (Kal46Qr.phase == "pending") Tx("Koden fornyes om ${Kal46Qr.secondsLeft} s", mono(KType.footnote, k.mut2))
         if (Kal46Qr.phase == "err") {

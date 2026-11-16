@@ -390,7 +390,7 @@ private fun MSmall27(st: WStop27?, deps: List<Pair<WDep27, Int?>>) {
     Column(GlanceModifier.fillMaxSize().appWidgetBackground().cornerRadius(28.dp).background(c.secondaryContainer).padding(18.dp).clickable(openRuter27(ctx))) {
         T27(st?.name ?: "Avganger", 13.sp, c.onSecondaryContainer, FontWeight.Medium)
         Spacer(GlanceModifier.defaultWeight())
-        if (deps.isEmpty()) Empty27(if (st == null) "Velg stopp på Hjem i appen." else "Ingen avganger nå.", c.onSecondaryContainer)
+        if (deps.isEmpty()) Empty27(if (st == null) "Velg stopp på Oversikt i appen." else "Ingen avganger nå.", c.onSecondaryContainer)
         val rows = if (LocalSize.current.height < 150.dp) 1 else 2
         deps.take(rows).forEach { (dep, m) -> MRow27(dep, m, c.onSecondaryContainer, unit = false) }
     }
@@ -409,7 +409,7 @@ private fun MMedium27(st: WStop27?, deps: List<Pair<WDep27, Int?>>, many: Boolea
                 T27("↻", 16.sp, c.onSecondaryContainer, FontWeight.Bold)
             }
         }
-        if (deps.isEmpty()) { Spacer(GlanceModifier.height(8.dp)); Empty27(if (st == null) "Velg stopp på Hjem i appen." else "Ingen avganger nå.", c.onSurfaceVariant) }
+        if (deps.isEmpty()) { Spacer(GlanceModifier.height(8.dp)); Empty27(if (st == null) "Velg stopp på Oversikt i appen." else "Ingen avganger nå.", c.onSurfaceVariant) }
         val rows = ((LocalSize.current.height - 60.dp) / 40.dp).toInt().coerceIn(1, 5)
         deps.take(rows).forEach { (dep, m) -> MRow27(dep, m, c.onSurface, unit = true) }
     }
@@ -424,7 +424,7 @@ private fun MStrip27(st: WStop27?, deps: List<Pair<WDep27, Int?>>) {
     Row(GlanceModifier.fillMaxSize().appWidgetBackground().cornerRadius(28.dp).background(c.widgetBackground).padding(horizontal = 20.dp).clickable(openRuter27(ctx)),
         verticalAlignment = Alignment.CenterVertically) {
         if (wide) { T27("Neste fra ${st?.name ?: "…"}", 13.sp, c.onSurfaceVariant); Spacer(GlanceModifier.width(14.dp)) }
-        if (deps.isEmpty()) T27(if (st == null) "Velg stopp på Hjem" else "Ingen avganger nå", 14.sp, c.onSurface, FontWeight.Bold, modifier = GlanceModifier.defaultWeight())
+        if (deps.isEmpty()) T27(if (st == null) "Velg stopp på Oversikt" else "Ingen avganger nå", 14.sp, c.onSurface, FontWeight.Bold, modifier = GlanceModifier.defaultWeight())
         deps.take(if (wide) 2 else 1).forEachIndexed { k, (dep, m) ->
             if (k > 0) { Spacer(GlanceModifier.width(8.dp)); T27("·", 16.sp, c.onSurfaceVariant); Spacer(GlanceModifier.width(8.dp)) }
             Badge27(dep, 38.dp, 30.dp)
@@ -473,7 +473,7 @@ private fun SSmall27(st: WStop27?, deps: List<Pair<WDep27, Int?>>, papir: Boolea
         T27(st?.name ?: "Avganger", 13.sp, u.sub)
         Spacer(GlanceModifier.defaultWeight())
         val first = deps.firstOrNull()
-        if (first == null) Empty27(if (st == null) "Velg stopp på Hjem" else "Ingen avganger nå", u.fg)
+        if (first == null) Empty27(if (st == null) "Velg stopp på Oversikt" else "Ingen avganger nå", u.fg)
         else {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Badge27(first.first, 34.dp, 26.dp, 8.dp)
@@ -499,7 +499,7 @@ private fun SWide27(st: WStop27?, deps: List<Pair<WDep27, Int?>>, papir: Boolean
             T27((st?.name ?: "") + if (many) " ▾" else "", 12.sp, u.acc, FontWeight.Medium,
                 modifier = if (many) GlanceModifier.clickable(actionRunCallback<Ruter27NextStop>()) else GlanceModifier)
         }
-        if (deps.isEmpty()) { Spacer(GlanceModifier.height(8.dp)); Empty27(if (st == null) "Velg stopp på Hjem i appen." else "Ingen avganger nå.", u.sub) }
+        if (deps.isEmpty()) { Spacer(GlanceModifier.height(8.dp)); Empty27(if (st == null) "Velg stopp på Oversikt i appen." else "Ingen avganger nå.", u.sub) }
         deps.take(4).forEach { (dep, m) ->
             Row(GlanceModifier.fillMaxWidth().padding(vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
                 Badge27(dep, 34.dp, 24.dp, 8.dp)
@@ -520,7 +520,7 @@ private fun SStack27(st: WStop27?, deps: List<Pair<WDep27, Int?>>, i: Int, n: In
             modifier = if (n > 1) GlanceModifier.clickable(actionRunCallback<Ruter27NextStop>()) else GlanceModifier)
         Spacer(GlanceModifier.defaultWeight())
         val first = deps.firstOrNull()
-        if (first == null) Empty27(if (st == null) "Velg stopp på Hjem" else "Ingen avganger nå", u.fg)
+        if (first == null) Empty27(if (st == null) "Velg stopp på Oversikt" else "Ingen avganger nå", u.fg)
         else {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Badge27(first.first, 34.dp, 26.dp, 8.dp)

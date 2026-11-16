@@ -65,7 +65,7 @@ internal fun Tonight51Page(vm: AppViewModel) {
             Who51(vm, d.obj51("who"))
             val items = d.arr51("items")
             when {
-                d.has("configured") && !d.optBoolean("configured", true) -> Empty51("Media er ikke satt opp", "Legg inn Sonarr og Radarr under Integrasjoner, så foreslår Homelab noe fra ditt eget bibliotek.")
+                d.has("configured") && !d.optBoolean("configured", true) -> Empty51("Media er ikke satt opp", "Legg inn Sonarr og Radarr under Tilkoblinger, så foreslår Homelab noe fra ditt eget bibliotek.")
                 items.isEmpty() -> Empty51("Ingen forslag", d.s43("empty") ?: "Prøv en annen lengde, type eller sjanger.")
                 else -> TonightGrid51(vm, items)
             }
