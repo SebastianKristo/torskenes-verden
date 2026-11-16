@@ -41,6 +41,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -131,7 +132,8 @@ internal fun NavEditor32b(
                                 val on = ic == t.icon
                                 Box(
                                     Modifier.size(38.dp).clip(RoundedCornerShape(12.dp)).background(if (on) p.ink else p.bg).border(1.dp, p.line, RoundedCornerShape(12.dp))
-                                        .clickable { set(items.map { if (it.key == t.key) it.copy(icon = ic) else it }); iconFor = null },
+                                        .clickable(role = Role.Button, onClickLabel = "Velg dette ikonet") { set(items.map { if (it.key == t.key) it.copy(icon = ic) else it }); iconFor = null }
+                                        .semantics { selected = on },
                                     contentAlignment = Alignment.Center,
                                 ) { GlyphIcon(ic, if (on) p.bg else p.ink) }
                             }
@@ -149,7 +151,7 @@ internal fun NavEditor32b(
                     missing.forEach { m ->
                         Row(
                             Modifier.height(40.dp).clip(CircleShape).background(p.card).border(1.dp, p.line, CircleShape)
-                                .clickable { Haptics.select(); set(items + m) }.padding(horizontal = 14.dp),
+                                .clickable(role = Role.Button, onClickLabel = "Legg til i fanelinja") { Haptics.select(); set(items + m) }.padding(horizontal = 14.dp),
                             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(7.dp),
                         ) {
                             GlyphIcon(m.icon, p.ink, 15.dp)
@@ -160,7 +162,7 @@ internal fun NavEditor32b(
             }
             Text(
                 "Tilbakestill til standard", color = p.mut, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, textDecoration = TextDecoration.Underline,
-                modifier = Modifier.clip(RoundedCornerShape(8.dp)).clickable { Haptics.select(); items = onReset(); dirty = false }.padding(4.dp, 10.dp),
+                modifier = Modifier.clip(RoundedCornerShape(8.dp)).clickable(role = Role.Button) { Haptics.select(); items = onReset(); dirty = false }.padding(4.dp, 10.dp),
             )
         }
     }

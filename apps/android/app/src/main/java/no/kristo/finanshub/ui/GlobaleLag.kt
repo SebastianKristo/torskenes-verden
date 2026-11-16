@@ -378,7 +378,7 @@ internal fun BoxScope.Global44(vm: AppViewModel) {
             verticalAlignment = Alignment.CenterVertically) {
             Text(msg, color = p.bg, fontWeight = FontWeight.SemiBold, fontSize = 13.sp, modifier = Modifier.weight(1f, fill = false).padding(vertical = 10.dp))
             if (t.asUndo != null) Text("Angre", color = Color(0xFFE5A00D), fontWeight = FontWeight.Bold, fontSize = 13.sp, modifier = Modifier.heightIn(min = 44.dp).clip(CircleShape)
-                .clickable { vm.undoAs44() }.padding(horizontal = 12.dp).wrapContentHeight())
+                .clickable(role = Role.Button) { vm.undoAs44() }.padding(horizontal = 12.dp).wrapContentHeight())
         }
     }
 }

@@ -85,6 +85,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
@@ -622,7 +623,7 @@ internal fun PaperFinMoreGrid(vm: AppViewModel, navBottom: Dp, wide: Boolean) {
             item(key = "fm-hid-head", span = { GridItemSpan(maxLineSpan) }) {
                 Row(Modifier.fillMaxWidth().padding(start = 4.dp, end = 4.dp, top = 10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("SKJULT · TRYKK + FOR Å VISE", color = p.lab, fontWeight = FontWeight.ExtraBold, fontSize = 11.5.sp, letterSpacing = 1.4.sp, modifier = Modifier.weight(1f), maxLines = 1)
-                    Box(Modifier.height(32.dp).clip(RoundedCornerShape(16.dp)).background(p.line).clickable { order = FM_DEFAULT_ORDER; vm.resetFmOrder(); Haptics.select() }.padding(horizontal = 14.dp), contentAlignment = Alignment.Center) {
+                    Box(Modifier.height(32.dp).clip(RoundedCornerShape(16.dp)).background(p.line).clickable(role = Role.Button) { order = FM_DEFAULT_ORDER; vm.resetFmOrder(); Haptics.select() }.padding(horizontal = 14.dp), contentAlignment = Alignment.Center) {
                         Text("Tilbakestill rekkefølge", color = p.ink, fontWeight = FontWeight.Bold, fontSize = 12.5.sp, maxLines = 1)
                     }
                 }
@@ -1009,14 +1010,14 @@ internal fun FinnWayRow(vm: AppViewModel, all: List<FinnDeal>) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(verticalAlignment = Alignment.Bottom) {
             PLabel("På vei · ${way.size}", modifier = Modifier.weight(1f))
-            Text("Vis alle ›", color = p.mut, fontSize = 12.5.sp, modifier = Modifier.clickable { vm.finnSeg = "way" })
+            Text("Vis alle ›", color = p.mut, fontSize = 12.5.sp, modifier = Modifier.clickable(role = Role.Button) { vm.finnSeg = "way" })
         }
         LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             items(way.size) { i ->
                 val d = way[i]
                 val urgent = d.level == 3
                 Row(
-                    Modifier.width(258.dp).clip(RoundedCornerShape(18.dp)).background(p.card).clickable { vm.finnSeg = "all"; vm.finnEdit = d.id }.padding(10.dp),
+                    Modifier.width(258.dp).clip(RoundedCornerShape(18.dp)).background(p.card).clickable(role = Role.Button, onClickLabel = "Rediger") { vm.finnSeg = "all"; vm.finnEdit = d.id }.padding(10.dp),
                     horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Box(Modifier.size(56.dp).clip(RoundedCornerShape(12.dp)).background(Color(0xFF2A3540))) {
