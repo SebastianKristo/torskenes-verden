@@ -51,3 +51,34 @@ test('C-S4/D-B5: ingen fast lokal standardadresse i appene; lagret adresse og se
   assert.doesNotMatch(kal, /DEFAULT_LOCAL\b/);
   assert.match(strip(raw(join(KAL, 'Serveradresser.kt'))), /getString\("k47_def_loc", ""\)\?\.takeIf \{ it\.startsWith\("http"\) \} \?: ""/);
 });
+
+test('P85 H: widgetene tegnes og hentes med korutine (og goAsync i mottakere), aldri Thread { runBlocking }', () => {
+  for (const p of ktFiles(join(AND, 'app/src/main'))) {
+    const s = strip(raw(p));
+    assert.doesNotMatch(s, /Thread\s*\{[^}]*runBlocking/, relative(AND, p));
+  }
+  const sync = strip(raw(join(APP, 'widget/WidgetSync.kt')));
+  assert.match(sync, /object WidgetJobs \{/);
+  assert.match(sync, /CoroutineScope\(SupervisorJob\(\) \+ Dispatchers\.IO\)/);
+  assert.match(sync, /val pending: BroadcastReceiver\.PendingResult\? = receiver\.goAsync\(\)/);
+  assert.match(sync, /finally \{ pending\?\.finish\(\) \}/);
+  for (const f of ['BriefWidgets.kt', 'BirthdaysWidgets.kt', 'ProveperiodeWidgets.kt', 'BibleWidgets.kt', 'KalenderWidgets.kt', 'TasksWidget.kt']) {
+    assert.match(strip(raw(join(APP, 'widget', f))), /WidgetJobs\.launch \{/, f);
+  }
+  // Mottakeren for Huskeliste-widgeten henter via WorkManager, varselknappene for prøveperioder med goAsync().
+  const tasks = strip(raw(join(APP, 'widget/TasksWidget.kt')));
+  assert.match(tasks.slice(tasks.indexOf('class TasksReceiver')), /WidgetSync\.refresh\(context\)/);
+  assert.match(strip(raw(join(APP, 'Bakgrunnsvarsler.kt'))), /WidgetJobs\.launchAsync\(this\)/);
+});
+
+test('P85 L: forrige brukers Familie-områder fjernes ved bytte av bruker eller utlogging', () => {
+  const fam = strip(raw(join(APP, 'FamilyModel.kt')));
+  const use = fam.slice(fam.indexOf('fun useAccount(ctx: Context, id: String?)'), fam.indexOf('internal fun region('));
+  assert.match(use, /if \(id != null && \(owner == null \|\| owner == id\)\)/);
+  assert.match(use, /lm\.removeProximityAlert\(pi\(ctx, it\)\)/);
+  assert.match(use, /SchoolZones41\.saveOnly50\(ctx, emptyList\(\)\)/);
+  assert.match(fam, /putString\("acct", owner\)/);
+  const vm = strip(raw(join(APP, 'AppViewModel.kt')));
+  const scope = vm.slice(vm.indexOf('private fun scopeToAccount()'));
+  assert.match(scope, /FamilyPrefs\.useAccount\(ctx, id\) \}\s*\n\s*runCatching \{ Geofence50\.useAccount\(ctx, id\) \}/);
+});

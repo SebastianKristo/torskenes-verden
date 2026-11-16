@@ -482,6 +482,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val ctx = getApplication<Application>()
         val id = accounts.firstOrNull { it.id == activeId }?.id
         runCatching { no.kristo.finanshub.family.FamilyPrefs.useAccount(ctx, id) }
+        runCatching { Geofence50.useAccount(ctx, id) } // P85 L: forrige brukers Familie-områder fjernes ved bytte
         runCatching { no.kristo.finanshub.family.FamilyService.sync(ctx) }
         runCatching {
             if (no.kristo.finanshub.family.FamilyPrefs.health(ctx).isEmpty()) no.kristo.finanshub.family.HealthSync.cancel(ctx)
