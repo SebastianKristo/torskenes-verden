@@ -71,6 +71,28 @@ test('P85 H: widgetene tegnes og hentes med korutine (og goAsync i mottakere), a
   assert.match(strip(raw(join(APP, 'Bakgrunnsvarsler.kt'))), /WidgetJobs\.launchAsync\(this\)/);
 });
 
+test('L12: stedsoppslag og vær for et sted går via serveren, aldri direkte til Open-Meteos stedssøk', () => {
+  for (const p of [...ktFiles(join(AND, 'app/src/main')), ...ktFiles(join(AND, 'kalender/src/main'))]) {
+    assert.doesNotMatch(strip(raw(p)), /geocoding-api\.open-meteo\.com/, relative(AND, p));
+  }
+  const g = strip(raw(join(APP, 'Glimt.kt')));
+  assert.doesNotMatch(g, /openMeteo35/);
+  assert.match(g, /hlGet\("\/weather\/place\?q="/);
+  assert.match(g, /private suspend fun AppViewModel\.geocode36\(place: String\)[^\n]*\n[^\n]*hlGet\("\/weather\/places\?q="/);
+});
+
+test('Q19: 404-reservene for Kalender-vær, stedssøket, Gjøremål-kortene og LED-innstillingene er borte', () => {
+  const kal = strip(raw(join(KAL, 'KalRepo.kt')));
+  assert.doesNotMatch(kal, /api\.open-meteo\.com/);
+  assert.match(kal, /if \(e\.status != 404 && e\.status != 405\) throw e\s*\n\s*emptyMap\(\)/);
+  const vm = strip(raw(join(APP, 'AppViewModel.kt')));
+  assert.doesNotMatch(vm, /\/weather\/search/);
+  assert.match(vm, /wxSearch = parseWxSearch28\(api\.hlGet\("\/weather\/places\?q=\$enc", timeout = 15_000\)\) \?: emptyList\(\)/);
+  assert.match(strip(raw(join(APP, 'Glimt.kt'))), /if \(e\.status == 404 \|\| e\.status == 405\) s\.cards = emptyList\(\)/);
+  const led = strip(raw(join(APP, 'SkjoldLED.kt')));
+  assert.doesNotMatch(led, /settingsLocal|prefs78/);
+});
+
 test('P85 L: forrige brukers Familie-områder fjernes ved bytte av bruker eller utlogging', () => {
   const fam = strip(raw(join(APP, 'FamilyModel.kt')));
   const use = fam.slice(fam.indexOf('fun useAccount(ctx: Context, id: String?)'), fam.indexOf('internal fun region('));

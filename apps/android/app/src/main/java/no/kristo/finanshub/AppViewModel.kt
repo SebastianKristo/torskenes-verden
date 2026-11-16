@@ -2744,7 +2744,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     private var wxSearchJob: kotlinx.coroutines.Job? = null
     /**
      * Stedssøk (prompt 28): GET /api/weather/places?q= (Open-Meteo + foldet variant + Nominatim, slått sammen på serveren).
-     * Reserve: eldre server svarer 404, eller ignorerer q og gir lagrede steder – da brukes /weather/search som før.
+     * Q19: ingen reserve mot /weather/search for eldre servere (for gammel server får «Oppdater serveren» via /api/version).
      * Debounce 250 ms, minst 2 tegn.
      */
     fun searchWxPlaces(q: String) {
@@ -2756,9 +2756,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             wxSearchBusy = true
             val enc = URLEncoder.encode(t, "UTF-8")
             try {
-                val res = try { parseWxSearch28(api.hlGet("/weather/places?q=$enc", timeout = 15_000)) }
-                    catch (e: ApiException) { if (e.status == 404) null else throw e }
-                wxSearch = res ?: parseWxPlaces(api.hlGet("/weather/search?q=$enc"))
+                wxSearch = parseWxSearch28(api.hlGet("/weather/places?q=$enc", timeout = 15_000)) ?: emptyList()
                 wxSearchFailed = false
                 wxSearchDoneQ = t
                 wxSearchBusy = false
