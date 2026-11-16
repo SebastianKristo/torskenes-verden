@@ -133,6 +133,8 @@ const jobs = await import('../server/jobs/index.js');
 test('Bakgrunnsjobber: de seks med sideeffekter er registrert i planleggeren og starter ikke i test eller sandkasse', async () => {
   const names = jobs.listJobs().map((j) => j.name).sort();
   for (const n of ['brief.generate', 'familie.forlot', 'familie.sjekk-inn', 'finans.smb-backup', 'kalender.ical', 'kalender.skole']) assert.ok(names.includes(n), n);
+  // Fase 7: e-postimporten (IMAP) og oppetidssjekken for domenene startet fortsatt ved import, også i sandkassen.
+  for (const n of ['finans.epost', 'domener.oppetid']) assert.ok(names.includes(n), n);
   assert.equal(jobs.jobsStarted(), false);
   assert.ok(jobs.listJobs().every((j) => !j.active));
   assert.equal(jobs.jobsAllowed({ NODE_ENV: 'test' }), false);

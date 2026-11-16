@@ -5,7 +5,16 @@
 //   node scripts/kontrakt-eksempler.mjs           (skriver fila for hvert endepunkt i shared/schemas/endpoints.json + /api/dates/parse)
 //
 // Tokenet i innloggingssvaret byttes ut med en fast tekst (ingen hemmeligheter i repoet).
-import '../test/lib/day-clock.mjs';
+//
+// Klokka står fast på mandag 16.11.2026 kl. 09:00 Oslo-tid (samme «nå» som datotolkingen nederst), så to kjøringer gir de samme
+// filene: eksempeldataene (vær, kalender, gjøremål, utløpstider) regnes fra «nå». Tidtakere (setTimeout) bruker ikke Date og går
+// som vanlig.
+const FIXED_NOW = Date.parse('2026-11-16T09:00:00+01:00');
+const RealDate = Date;
+globalThis.Date = class FixedDate extends RealDate {
+  constructor(...a) { if (a.length === 0) super(FIXED_NOW); else super(...a); }
+  static now() { return FIXED_NOW; }
+};
 import { mkdtempSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { basename, dirname, join, resolve } from 'node:path';
@@ -45,9 +54,24 @@ mkdirSync(OUT, { recursive: true });
 
 // Lange lister kortes ned til 4 elementer, så eksemplene er små nok til å lese (formen er den samme).
 const trim = (v) => (Array.isArray(v) ? v.slice(0, 4).map(trim) : v && typeof v === 'object' ? Object.fromEntries(Object.entries(v).map(([k, x]) => [k, trim(x)])) : v);
+// Tilfeldige verdier (webhook-hemmeligheten i adressene, token-id-ene) byttes med faste tekster, så kjøringene blir like og ingen
+// hemmelighet havner i repoet.
+const tokenIds = new Map();
+const fixRandom = (v, key = '') => {
+  if (Array.isArray(v)) return v.map((x) => fixRandom(x, key));
+  if (v && typeof v === 'object') return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, fixRandom(x, k)]));
+  if (typeof v === 'string') return v.replace(/([?&]token=)[^&\s"]+/g, '$1EKSEMPEL');
+  return v;
+};
+const fixTokenIds = (list) => list.map((t) => {
+  if (!tokenIds.has(t.id)) tokenIds.set(t.id, `eksempel${tokenIds.size + 1}`);
+  return { ...t, id: tokenIds.get(t.id) };
+});
 const write = (schema, body) => {
   const name = basename(schema).replace('.schema.json', '.json');
-  writeFileSync(join(OUT, name), `${JSON.stringify(trim(body), null, 2)}\n`);
+  let out = fixRandom(trim(body));
+  if (name === 'tokens.json' && Array.isArray(out)) out = fixTokenIds(out);
+  writeFileSync(join(OUT, name), `${JSON.stringify(out, null, 2)}\n`);
   console.log(`${name}`);
 };
 

@@ -138,9 +138,8 @@ struct PauseAllIntent43: AppIntent {
         var v: Media43WData = Media43W.cached
         v.paused = true
         Media43W.store(v)
-        if await Media43W.request("/api/media/qbit/torrents/pauseAll", method: "POST", body: [:]) == nil {
-            _ = await Media43W.request("/api/media/torrents/pauseAll", method: "POST", body: [:])
-        }
+        // Serveren har bare /api/media/torrents/pauseAll (den gamle /qbit/-stien ga alltid 404 og en ekstra rundtur).
+        _ = await Media43W.request("/api/media/torrents/pauseAll", method: "POST", body: [:])
         Media43W.reload()
         return .result()
     }
@@ -157,9 +156,8 @@ struct ResumeAllIntent43: AppIntent {
         var v: Media43WData = Media43W.cached
         v.paused = false
         Media43W.store(v)
-        if await Media43W.request("/api/media/qbit/torrents/resumeAll", method: "POST", body: [:]) == nil {
-            _ = await Media43W.request("/api/media/torrents/resumeAll", method: "POST", body: [:])
-        }
+        // Serveren har bare /api/media/torrents/resumeAll (den gamle /qbit/-stien ga alltid 404 og en ekstra rundtur).
+        _ = await Media43W.request("/api/media/torrents/resumeAll", method: "POST", body: [:])
         Media43W.reload()
         return .result()
     }

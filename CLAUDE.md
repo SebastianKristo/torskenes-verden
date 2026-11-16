@@ -8,19 +8,21 @@ Homelab er et personlig dashboard for husstanden: Oversikt, Kalender, Økonomi, 
 
 | Del | Hvor | Teknikk |
 |---|---|---|
-| Server | `server/` | Node 22 + Hono, SQLite (better-sqlite3, `data/homelab.db`). `server/index.js` monterer rutene. Økonomi-API-et ligger i `server/finans/` (`/finans/api/*`) |
-| Web/PWA | `public/` | Vanilla ES-moduler uten byggesteg. Økonomi i `public/finans/` (egen service worker, `/finans/` er adressen) |
-| iOS, Mac, widgets, Watch | `apps/ios/` | SwiftUI. Prosjektet genereres med XcodeGen fra `apps/ios/project.yml` (ingen `.pbxproj` i repoet) |
-| Android | `apps/android/` | Jetpack Compose, modulene `app`, `kalender` og `wear` |
-| Kontrakt og felles data | `shared/` | `shared/schemas` (API-kontrakten), `shared/design` (designtokens), `shared/testvektorer` (felles fasit for regler) |
+| Server | `server/` | Node 22 + Hono, SQLite (better-sqlite3, `data/homelab.db`). Én mappe per domene (`server/<domene>/index.js` med `mount<Domene>(app)`), og `server/index.js` monterer dem. Økonomi-API-et ligger i `server/finans/` (`/finans/api/*`). Felles: `server/http/` (feilform, komprimering, eldre aliaser), `server/jobs/` (planleggeren for bakgrunnsjobber), `server/ai/` (AI-gaten) |
+| Web/PWA | `public/` | Vanilla ES-moduler uten byggesteg, rutene lastes ved behov. CSS i `public/css/{tokens,base,layout,papir-mork}.css`, `components/` og `pages/`. Økonomi i `public/finans/` (egen service worker, `/finans/` er adressen) |
+| iOS, Mac, widgets, Watch | `apps/ios/` | SwiftUI. Prosjektet genereres med XcodeGen fra `apps/ios/project.yml` (ingen `.pbxproj` i repoet). Enhetstestene ligger i `apps/ios/HomelabTests/` |
+| Android | `apps/android/` | Jetpack Compose, modulene `app`, `kalender` og `wear`, pluss `felles` (ren Kotlin: modulliste, dyplenker, serveradresse, med JUnit) og `felles-android` (kryptert lagring) |
+| Kontrakt og felles data | `shared/` | `shared/schemas` (API-kontrakten og modullisten), `shared/design` (designtokens), `shared/testvektorer` (felles fasit for regler) |
 | Drift | `Dockerfile`, `docker-compose.yml`, `deploy/` | Docker bak Cloudflare Tunnel. Proxmox- og Unraid-oppsett i `deploy/` |
 | Dokumentasjon | `docs/`, `README.md`, `DECISIONS.md` | Norsk. `docs/sikkerhet.md` og `docs/utvikling.md` er de viktigste |
 
-**Målbildet for strukturen** (AUDIT §11, gjennomføres fase for fase, ikke alt på én gang):
-- Server: én mappe per domene, `server/<domene>/` (f.eks. `server/media/{library,downloads,playback,images}.js`), i stedet for nummererte lag som `media43/44/45/50.js`.
-- Web-CSS: `public/css/{tokens,base,layout,components,pages}`, der `tokens` er generert. Rundt 15 filer i stedet for 65.
+**Strukturen** (AUDIT §11) er gjennomført, og er regelen for ny kode:
+- Server: én mappe per domene, `server/<domene>/` (f.eks. `server/media/{library,downloads,playback,images}.js`), aldri nummererte lag som `media43/44/45/50.js`.
+- Web-CSS: `public/css/{tokens,base,layout,components,pages}`, der `tokens.css` er generert. En ny side får én fil i `public/css/pages/`.
 - Én fil per skjerm eller komponent på alle plattformer, med beskrivende navn.
-- Filene har i dag ofte et promptnummer i navnet (892 filer). De slås sammen og får nye navn i fasen for hver plattform.
+- Noen få filer har fortsatt et nummer i navnet, ofte fordi navnet står i et manifest eller et lagringsnavn. Får du grunn til å endre en av dem, gi den et beskrivende navn hvis det er trygt.
+
+**Modullisten** `shared/schemas/moduler.json` er kilden til modulene: id, navn, ikon, gruppe, plattformer, tilgang, undersider og gamle ruter. Serveren sender den per bruker på `GET /api/moduler` (`server/moduler/`), og menyene, fanelinja, Mer, titlene, Innstillinger-sidene og dyplenkene på web (`public/js/moduler.js`), iOS (`ModulListe.swift`, `Dyplenker.swift`) og Android (`:felles`, `Dyplenker.kt`) bygges fra den. En ny modul eller et nytt navn legges inn der, ikke i en håndskrevet liste i en klient. Gamle adresser beholdes som alias i lista.
 
 ## Arbeidsregler
 
@@ -47,7 +49,7 @@ Homelab er et personlig dashboard for husstanden: Oversikt, Kalender, Økonomi, 
 - Forretningsregler bor på serveren: datotolking, neste trekkdato og abonnement, budsjett og «brukt», kategorier, helligdager, prøveperioder, bursdager. Klienten viser det serveren sender (`label`, `nextDate`, `monthly`, `daysLeft` …) og regner ikke selv.
 - «I dag» er alltid Oslo-datoen (Q20). Ikke bruk `toISOString().slice(0, 10)` eller `toLocaleDateString()` uten `timeZone: 'Europe/Oslo'`.
 - **Unntak** bare for det som må virke uten nett: widgets, klokka, lokale varsler (serveren lager planen), OCR på enheten, geofence og normalisering av serveradressen. Da skal regelen ha felles testvektorer i `shared/testvektorer/` som både serveren og appen kjører.
-- `shared/testvektorer/` har i dag `datoer.json` (Q17), `abonnement.json`, `idag.json` og `serveradresse.json`. `test/testvektorer.test.js` kjører dem mot serveren og web. Avvik er merket todo til de rettes i Fase 2.
+- `shared/testvektorer/` har `datoer.json` (Q17), `abonnement.json`, `idag.json`, `proveperioder.json` og `serveradresse.json`. `test/testvektorer.test.js` kjører dem mot serveren, `HomelabTests` mot iOS og JUnit i `:felles` og `:kalender` mot Android. Et avvik merkes todo i stedet for å feile, så en ny vektor kan legges inn før koden rettes.
 
 ## Sikkerhet og personvern (faste regler)
 
@@ -85,12 +87,14 @@ Detaljer i [docs/sikkerhet.md](docs/sikkerhet.md). Disse brytes aldri:
 | `npm run a11y` | Tilgjengelighet (axe) |
 | `npm run test:visual` | Skjermbilder mot fasit (lyst/mørkt, mobil/desktop) |
 | `npm run tokens:check` | Generert designkode stemmer med `shared/design/tokens.json` |
-| iOS | Bygges i CI-jobben «Mobilapper» (`.github/workflows/mobile.yml`) fra `apps/ios/project.yml`. Lokalt: `xcodegen` i `apps/ios/`, så Xcode |
-| Android | CI «Mobilapper», eller `cd apps/android && ./gradlew assembleDebug` |
+| `npm run test:perf` | Ytelsesmåling (samme metode som auditen) |
+| iOS | CI-jobben «Mobilapper» (`.github/workflows/mobile.yml`) bygger fra `apps/ios/project.yml` og kjører `HomelabTests` (XCTest) i simulatoren. Lokalt: `xcodegen` i `apps/ios/`, så Xcode |
+| Android | CI «Mobilapper» kjører `:felles:test` og `:kalender:testDebugUnitTest` (JUnit) og bygger APK-ene. Lokalt: `cd apps/android && ./gradlew :felles:test assembleDebug` |
 
 - `MOCK_DATA=1 npm run dev` gir eksempeldata for alle integrasjoner, uten nett.
 - Tester som trenger «i dag», skal sette klokka selv (se `test/lib/day-clock.mjs`) og regne i Oslo-tid.
-- iOS og Android har ingen enhetstester ennå. XCTest og JUnit kommer i Fase 4 og 5 (Q25) og skal kjøre `shared/testvektorer/`.
+- iOS og Android har enhetstester (Q25): `HomelabTests` (fasitene, kontrakteksemplene i `shared/schemas/eksempler` og modullisten) og JUnit i `:felles` og `:kalender`. De kjører `shared/testvektorer/` i CI. Ny logikk i en app som må virke uten nett, får en test der.
+- `test/dokumentasjon-lenker.test.js` feiler når dokumentasjonen peker på en fil som ikke finnes. Flytter du en fil, rett lenkene.
 
 ## Release
 

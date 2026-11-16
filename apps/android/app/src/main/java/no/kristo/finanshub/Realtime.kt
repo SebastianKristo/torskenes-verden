@@ -6,11 +6,11 @@ import okhttp3.Response
 import okhttp3.WebSocket
 import okhttp3.WebSocketListener
 import org.json.JSONObject
-import java.net.URLEncoder
 import java.util.concurrent.TimeUnit
 
 /**
- * Sanntid fra serveren: én WebSocket mot /api/ws?token=… Meldingene er {type: 'tasks' | 'family' | 'tracking', …}.
+ * Sanntid fra serveren: én WebSocket mot /api/ws, med tokenet i Authorization-headeren (ikke i adressen, som havner i
+ * tilgangslogger hos serveren og proxyen). Meldingene er {type: 'tasks' | 'family' | 'tracking', …}.
  * Kobler til på nytt med økende pause (2–60 s) når forbindelsen faller, og stoppes når appen går i bakgrunnen.
  */
 class Realtime(private val onMessage: (String, JSONObject) -> Unit) {
@@ -19,6 +19,7 @@ class Realtime(private val onMessage: (String, JSONObject) -> Unit) {
         .addInterceptor(LokalOkHttp).addNetworkInterceptor(LokalOkHttp).build()
     private var ws: WebSocket? = null
     private var url: String? = null
+    private var token: String? = null
     private var wanted = false
     private var retry = 2_000L
     private val handler = android.os.Handler(android.os.Looper.getMainLooper())
@@ -27,10 +28,11 @@ class Realtime(private val onMessage: (String, JSONObject) -> Unit) {
 
     fun start(base: String, token: String?) {
         if (base.isBlank() || token.isNullOrBlank()) return
-        val u = base.trimEnd('/').replaceFirst(Regex("^http", RegexOption.IGNORE_CASE), "ws") + "/api/ws?token=" + URLEncoder.encode(token, "UTF-8")
-        if (wanted && u == url && ws != null) return
+        val u = base.trimEnd('/').replaceFirst(Regex("^http", RegexOption.IGNORE_CASE), "ws") + "/api/ws"
+        if (wanted && u == url && token == this.token && ws != null) return
         stop()
         url = u
+        this.token = token
         wanted = true
         retry = 2_000L
         open()
@@ -45,7 +47,8 @@ class Realtime(private val onMessage: (String, JSONObject) -> Unit) {
 
     private fun open() {
         val u = url ?: return
-        val req = runCatching { Request.Builder().url(u).build() }.getOrNull() ?: return
+        val t = token ?: return
+        val req = runCatching { Request.Builder().url(u).header("Authorization", "Bearer $t").build() }.getOrNull() ?: return
         ws = client.newWebSocket(req, object : WebSocketListener() {
             override fun onOpen(webSocket: WebSocket, response: Response) { retry = 2_000L }
             override fun onMessage(webSocket: WebSocket, text: String) {

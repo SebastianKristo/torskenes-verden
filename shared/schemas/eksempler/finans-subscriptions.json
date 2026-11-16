@@ -7,7 +7,7 @@
       "price": 239,
       "priceOre": 23900,
       "cycle": "monthly",
-      "nextDate": "2026-11-20",
+      "nextDate": "2026-11-21",
       "usageNote": "Daglig",
       "lowUse": false,
       "active": true,
@@ -19,17 +19,17 @@
       "perLabel": "/mnd",
       "cycleName": "Månedlig",
       "status": "active",
-      "chargeDay": 20,
+      "chargeDay": 21,
       "category": "Underholdning",
       "prevPrice": null,
       "priceChanged": null,
-      "billDay": 20,
+      "billDay": 21,
       "billMonth": 11,
       "state": "active",
       "logoUrl": null,
       "nextCharge": {
-        "date": "2026-11-20",
-        "label": "Neste trekk 20. november, deretter hver måned"
+        "date": "2026-11-21",
+        "label": "Neste trekk 21. november, deretter hver måned"
       },
       "ownerId": "owner",
       "mine": true,
@@ -58,7 +58,7 @@
       "price": 39,
       "priceOre": 3900,
       "cycle": "monthly",
-      "nextDate": "2026-11-27",
+      "nextDate": "2026-11-28",
       "usageNote": "86 % brukt",
       "lowUse": false,
       "active": true,
@@ -70,17 +70,17 @@
       "perLabel": "/mnd",
       "cycleName": "Månedlig",
       "status": "active",
-      "chargeDay": 27,
+      "chargeDay": 28,
       "category": "Lagring og sky",
       "prevPrice": null,
       "priceChanged": null,
-      "billDay": 27,
+      "billDay": 28,
       "billMonth": 11,
       "state": "active",
       "logoUrl": null,
       "nextCharge": {
-        "date": "2026-11-27",
-        "label": "Neste trekk 27. november, deretter hver måned"
+        "date": "2026-11-28",
+        "label": "Neste trekk 28. november, deretter hver måned"
       },
       "ownerId": "owner",
       "mine": true,
@@ -109,7 +109,7 @@
       "price": 449,
       "priceOre": 44900,
       "cycle": "monthly",
-      "nextDate": "2026-11-30",
+      "nextDate": "2026-12-01",
       "usageNote": "Sett 1 t siste 30 d",
       "lowUse": true,
       "active": true,
@@ -121,17 +121,17 @@
       "perLabel": "/mnd",
       "cycleName": "Månedlig",
       "status": "price_up",
-      "chargeDay": 30,
+      "chargeDay": 1,
       "category": "Underholdning",
       "prevPrice": 399,
-      "priceChanged": "2026-10-30",
-      "billDay": 30,
-      "billMonth": 11,
+      "priceChanged": "2026-10-31",
+      "billDay": 1,
+      "billMonth": 12,
       "state": "active",
       "logoUrl": null,
       "nextCharge": {
-        "date": "2026-11-30",
-        "label": "Neste trekk 30. november, deretter hver måned"
+        "date": "2026-12-01",
+        "label": "Neste trekk 1. desember, deretter hver måned"
       },
       "ownerId": "owner",
       "mine": true,
@@ -160,7 +160,7 @@
       "price": 149,
       "priceOre": 14900,
       "cycle": "monthly",
-      "nextDate": "2026-12-02",
+      "nextDate": "2026-12-03",
       "usageNote": "Sett 2 t siste 30 d",
       "lowUse": true,
       "active": true,
@@ -172,17 +172,17 @@
       "perLabel": "/mnd",
       "cycleName": "Månedlig",
       "status": "low_use",
-      "chargeDay": 2,
+      "chargeDay": 3,
       "category": "Underholdning",
       "prevPrice": null,
       "priceChanged": null,
-      "billDay": 2,
+      "billDay": 3,
       "billMonth": 12,
       "state": "active",
       "logoUrl": null,
       "nextCharge": {
-        "date": "2026-12-02",
-        "label": "Neste trekk 2. desember, deretter hver måned"
+        "date": "2026-12-03",
+        "label": "Neste trekk 3. desember, deretter hver måned"
       },
       "ownerId": "owner",
       "mine": true,
@@ -305,36 +305,36 @@
     {
       "id": 2,
       "name": "Spotify",
-      "date": "2026-11-20",
+      "date": "2026-11-21",
       "amount": 239
     }
   ],
   "month": "2026-11",
   "thisMonth": [
     {
+      "id": 6,
+      "date": "2026-11-01",
+      "amount": 449
+    },
+    {
       "id": 1,
-      "date": "2026-11-02",
+      "date": "2026-11-03",
       "amount": 149
     },
     {
       "id": 5,
-      "date": "2026-11-04",
+      "date": "2026-11-05",
       "amount": 229
     },
     {
       "id": 8,
-      "date": "2026-11-08",
+      "date": "2026-11-09",
       "amount": 518
-    },
-    {
-      "id": 4,
-      "date": "2026-11-10",
-      "amount": 11
     }
   ],
   "monthTotal": 1634,
   "prevMonthTotal": 1634,
-  "today": "2026-11-15",
+  "today": "2026-11-16",
   "cycles": [
     {
       "id": "weekly",

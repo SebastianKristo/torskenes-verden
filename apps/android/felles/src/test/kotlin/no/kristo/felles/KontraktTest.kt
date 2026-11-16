@@ -90,9 +90,9 @@ class KontraktTest {
         assertTrue(i.bruker!!.erAdmin)
         assertTrue(i.glidende)
         assertTrue("finance:read" in i.scopes)
-        assertEquals(Instant.parse("2027-05-14T17:00:26.770Z"), i.utloper)
+        assertEquals(Instant.parse("2027-05-15T08:00:00Z"), i.utloper)
         assertFalse(i.utlopt(Instant.parse("2026-11-16T10:00:00Z")))
-        assertTrue(i.utlopt(Instant.parse("2027-05-14T17:00:26.770Z")))
+        assertTrue(i.utlopt(Instant.parse("2027-05-15T08:00:00Z")))
         assertEquals(null, Innlogging.fra(JSONObject("""{"user":{"username":"x"}}""")))
     }
 
@@ -123,8 +123,8 @@ class KontraktTest {
         assertEquals("Planlagte trekk", f.filter("planlagte")?.navn)
         val spotify = f.betalinger.first { it.navn == "Spotify" }
         assertEquals("abonnementer", spotify.filter)
-        assertEquals("Månedlig · neste trekk 20. nov.", spotify.label)
-        assertEquals("2026-11-20", spotify.nesteDato)
+        assertEquals("Månedlig · neste trekk 21. nov.", spotify.label)
+        assertEquals("2026-11-21", spotify.nesteDato)
         assertEquals(5, spotify.dagerIgjen)
         assertEquals(239.0, spotify.maned, 0.001)
         assertTrue(f.planlagte.isNotEmpty())

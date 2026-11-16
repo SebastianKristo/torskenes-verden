@@ -26,6 +26,19 @@ export function broadcast(type, payload = {}, userIds = null) {
 export const realtimeClients = () => clients.size;
 
 /**
+ * Ved nedstenging: lukker alle /api/ws-forbindelser med 1001 («going away»), så server.close() ikke venter på dem til
+ * tidsgrensen (AUDIT A §6 B7). Klientene kobler til igjen av seg selv når serveren er oppe.
+ */
+export function closeRealtime() {
+  for (const c of clients) {
+    try { c.ws.close(1001, 'Serveren starter på nytt'); } catch { /* lukkes under */ }
+    // Svarer ikke klienten på lukkingen, kuttes forbindelsen etter 200 ms.
+    setTimeout(() => { try { c.ws.terminate(); } catch { /* allerede lukket */ } }, 200).unref?.();
+  }
+  clients.clear();
+}
+
+/**
  * Kobler WebSocket-serveren til HTTP-serveren fra @hono/node-server.
  * authenticate(req, token) → userId | null (bruker cookie-headeren i req eller token fra ?token=).
  */

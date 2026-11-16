@@ -2,22 +2,30 @@
 
 [← Til README](../README.md)
 
-<img src="images/homelab-dashboard.webp" alt="Dashboard">
+<img src="images/homelab-dashboard.webp" alt="Oversikt">
 
-## Faner
+## Moduler og menyer
 
-| Fane | Rute | Innhold |
-|---|---|---|
-| Dashboard | `#/dash` | Ruter-avganger, søkebar, hilsen og klokke, vær, skolekalender, agenda, Trading 212, energi, økonomi, snarveier, «Kommer ut» |
-| Studie | `#/studie` | Lenker, karakterer (legg til, endre, slett), prøver, studielån |
-| Rom | `#/rom` | Starlink over Norge (CelesTrak TLE + satellite.js), NASA APOD og gallerier |
-| Økonomi | `/finans/` | Åpner [FinansHub](finanshub.md) i fullskjerm. Den runde × tar deg tilbake. |
-| Hjem | `#/hjem` | Home OS: bolig, lån, faste boutgifter og inventar med garanti |
-| Matplan | `#/matplan` | Ukemeny, kokker, handleliste og kalenderfeed |
-| Domener | `#/domener` | Trafikk, publikum med verdenskart, ytelse, sikkerhet og oppetid |
-| Nettverk | `#/nettverk` | Helsesjekk av tjenestene og lenker |
+Modulene, navnene, ikonene og rekkefølgen kommer fra modullisten
+[`shared/schemas/moduler.json`](../shared/schemas/moduler.json) (se [api.md](api.md#moduler-get-apimoduler-sesjon-eller-app-token)),
+så web, iPhone og Android viser det samme. Brukeren ser bare modulene hen har tilgang til.
 
-På mobil samles Rom, Hjem, Matplan, Domener og Nettverk under **Mer**. Hjem, Matplan og Domener er bare tilgjengelige for administratorer.
+| Gruppe | Moduler (adresse på web) |
+|---|---|
+| I dag | **Oversikt** (`#/oversikt`): avganger, søk og Glimt, vær, kalender, agenda, Trading 212, energi, økonomi, snarveier og «Kommer» · **Chat** (`#/chat`) · **Brief** (ark, `#/brief`) |
+| Hjemme | **Smarthjem** (`#/hjem`): bolig, lån, faste boutgifter og inventar med garanti · **Mat** (`#/matplan`) · **Gjøremål** (`#/gjoremal`) · **Familie** (`#/familie`, med fanen Kart) |
+| Tid | **Kalender** (`#/kalender`): visningene År … Liste og filtrene Familie, Bursdager og Skole |
+| Ute | **Vær** (`#/vaer`) · **Reise** (`#/reise`: Avganger og Kart) · **Sporing** (`#/sporing`) |
+| Økonomi | **Økonomi** (`/finans/`), se [finanshub.md](finanshub.md). «‹ Homelab» tar deg tilbake |
+| Fritid og læring | **Media** (`#/media`, egen tilgang) · **Nyheter** (ark) · **Studie** (`#/studie`): lenker, karakterer, prøver, studielån · **Rom** (`#/rom`): Starlink over Norge, NASA APOD og gallerier · **Bibel** (egen tilgang) |
+| Verksted | **Skjold Lab** (`#/skjold`) |
+| Drift | **Domener** (`#/domener`, admin): trafikk, verdenskart, ytelse, sikkerhet og oppetid · **Nettverk** (`#/nettverk`): helsesjekk av tjenestene og lenker |
+
+- **Toppmenyen (desktop):** de faste fanene Oversikt, Kalender, Økonomi, Media, Familie, Mat, Gjøremål og Skjold Lab, og
+  «Alle sider ▾» med alle modulene gruppert. Faner som ikke får plass, ligger under «Mer ▾». Rekkefølgen, navnene og hvilke
+  faner som vises, kan endres under Innstillinger → Utseende.
+- **Mobil:** bunnmenyen og **Mer**, der modulene står gruppert først og snarveiene nederst.
+- **Gamle adresser** (`#/dash`, `#/huskeliste`, `#/kart`, `#/familiekalender`, `#/bursdager` …) videresendes til den nye siden.
 
 ## Topplinje
 
@@ -30,7 +38,7 @@ På mobil samles Rom, Hjem, Matplan, Domener og Nettverk under **Mer**. Hjem, Ma
 
 ## Nyhetslinje
 
-«SISTE NYTT» fra NRK og VG, hentet på serveren og cachet i 5 minutter. Linja ruller kontinuerlig og sømløst.
+Nyhetslinja («NYHETER») fra NRK og VG, hentet på serveren og cachet i 5 minutter. Linja ruller kontinuerlig og sømløst.
 - **Hastighet 1–10:** én runde tar 350 s / hastighet (standard 5 gir 70 s). Endringen vises med en gang.
 - **Pause ved hover:** på som standard.
 - **Redusert bevegelse:** linja står stille når systemet ber om det.
@@ -43,9 +51,9 @@ På mobil samles Rom, Hjem, Matplan, Domener og Nettverk under **Mer**. Hjem, Ma
 - **Popup:** klikk på en kalenderdag, en agenda-rad, en aksje eller en plakat for å se detaljer. Lukkes med ×, Esc eller klikk utenfor.
 - **Lagring:** alt lagres per bruker. «Tilbakestill layout» i menyen nullstiller.
 
-## <img src="assets/icons/hjem.svg" width="24" align="top"> Hjem (Home OS)
+## <img src="assets/icons/hjem.svg" width="24" align="top"> Smarthjem
 
-<img src="images/homelab-hjem.webp" alt="Hjem">
+<img src="images/homelab-hjem.webp" alt="Smarthjem">
 
 - 4 nøkkeltall: boligverdi, restgjeld (bank, rente, måneder), faste boutgifter (spesifisert) og inventar (sum, antall).
 - Filter per rom og inventarliste med butikklogo, kjøpsdato og garanti. Garantien vises i oransje når det er under 60 dager igjen.

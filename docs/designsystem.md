@@ -5,8 +5,9 @@ Alle designverdier i Homelab (farger, skrift, avstander, radier, skygger, lag og
 
 > **Regelen:** aldri hex, px-størrelser eller egne skalaer i komponentkode. Finnes ikke verdien som token, legg til et token.
 
-Status (Fase 1): tokenene er generert, men ikke tatt i bruk ennå. Web lenker inn `tokens.css` i Fase 3, iOS bruker `DS` i Fase 4
-og Android `DsTheme` i Fase 5. Inntil da gir de ingen synlig endring.
+Tokenene er i bruk på alle plattformene: web lenker inn `tokens.css` først i `app.html` og i Økonomi, iOS og Mac bruker `DS`
+(også Kalender-appene og widgetene), og Android bruker `HomelabTheme`, som bygger på `DsTheme`. Farger som fortsatt er faste i
+koden, er merket `TODO(token)` til et token finnes.
 
 ## Hva er et token?
 
@@ -23,7 +24,7 @@ Da kan verdien endres ett sted, og mørk modus, glass og økt kontrast får hver
 
 - **Stil** er et appvalg (Papir eller Glass). **Modus** følger systemet eller brukerens valg (lys/mørk/system).
 - Glass har bare mørk modus i dag (Q13). `glass.lys` er et alias (`"$alias": "papir.lys"`), så lys modus i glass gir lyst papir.
-- Økonomi (FinansHub) følger Homelab-modusen (Q15): `mork` = Papir mørk, `glod` = Glass.
+- Økonomi følger Homelabs stil og modus (Q15): `mork` = Papir mørk, `glod` = Glass. Kalender på web følger også Homelab-modusen (Q14).
 - Fargene `textSecondary`, `textTertiary` og `line` har egne verdier ved **økt kontrast** (`highContrast`).
 
 ## Fargetokens
@@ -111,7 +112,7 @@ Verdiene velges av attributtene som allerede settes på `<html>` (av `hl-boot.js
 
 `data-kal-theme` (Kalenders eget lys/mørk) er ikke med: etter Q14 skal Kalender følge felles stil og modus.
 
-**iOS** (`apps/ios/Shared/DesignTokens.swift` + `DesignTokens.xcassets`, med i FinansHub og FinansHubWidgets via `Shared`):
+**iOS og Mac** (`apps/ios/Shared/DesignTokens.swift` + `DesignTokens.xcassets`, med i FinansHub, FinansHubWidgets, Kalender, KalenderWidgets, KalenderMac og KalenderMacWidgets):
 
 ```swift
 Text("Saldo")
@@ -124,7 +125,8 @@ Text("Saldo")
 
 Fargesettene heter `DS<Stil><Token>` (f.eks. `DSPapirSurface`, `DSGlassSurface`) og har Any (lys), Dark og High Contrast.
 Modus følger `colorScheme`; stilen velges i kode. `Font.ds(_:custom:)` gir en egen font (f.eks. Manrope) i tokenstørrelsen med `relativeTo:`.
-`DS.Motion.animation(DS.Motion.fast, reduce: reduceMotion)` gir `nil` når «Reduser bevegelse» er på.
+`DS.Motion.animation(DS.Motion.fast, reduce: reduceMotion)` gir `nil` når «Reduser bevegelse» er på. Med fargesettene følger
+fargene også «Øk kontrast». Ikoner er SF Symbols (ikke tekstglyfer som «›» og «✕»), og trykkflater er minst 44 × 44 pt.
 
 **Android** (`ui/designsystem/DesignTokens.kt` i `app`, `kalender` og `wear`):
 
@@ -139,6 +141,11 @@ DsTheme(stil = DsStil.Papir) {               // MaterialTheme + LocalDsColors, m
 `DsSchemes` har M3-skjemaene (`lightColorScheme`/`darkColorScheme`) for Papir og Glass; flater med alfa er lagt over `surface`
 så ark blir ugjennomsiktige. Dynamic color brukes ikke (Q16). `DsPalette` har alle semantiske farger, også de M3 mangler
 (`success`, `warning`, `category` …). Wear har ikke Material 3 og får `DsWearColors` (Wear Compose Material) i stedet.
+
+Skjermene i `app` leser fra `HomelabTheme` (`ui/designsystem/HomelabTheme.kt`): `HomelabTheme.colors`, `.space`, `.radius`,
+`HomelabType` og `HomelabTypography`. Kalender-appen har `KTok`/`KType`, som er bygget av de samme tokenene. Tabellen fra gamle
+farge- og skriftnavn til roller står i [utvikling.md](utvikling.md#android-felles-moduler-tema-og-skall). Ikoner er
+`Icon(Icons.…)` med `contentDescription`, og trykkflater er minst 48 dp.
 
 ## Felles UI-komponenter på web
 

@@ -2,6 +2,62 @@
 
 Alle merkbare endringer i Homelab OS, FinansHub og mobilappene. Nyeste øverst. Versjonene med APK og IPA ligger under [Releases](https://github.com/SebastianKristo/torskenes-verden/releases).
 
+## [5.0.0] – 16.11.2026 · Opprydding og kvalitetsløft
+- **Viktig før du oppdaterer (Android):** Homelab, Kalender og Wear-appen på klokka har fått en ny signatur. **Avinstaller alle tre appene én gang** før du installerer den nye versjonen, ellers nekter Android å installere den. Bytt alle tre samtidig, så virker «Logg inn med Homelab-appen» i Kalender. Dataene dine ligger på serveren og er der fortsatt; du må logge inn igjen og sette opp widgets og lokale valg på nytt. Se [docs/android-signering.md](docs/android-signering.md).
+- **Nye navn, samme på alle plattformer:** startsiden heter **Oversikt**, og smarthjemsiden **Smarthjem**. Appen heter **Homelab** overalt, og økonomidelen **Økonomi** (ikke lenger FinansHub). Ellers: **Faste betalinger** (Subscription OS er nå filteret Abonnementer), **Reise** (med Avganger og Kart), **Nyheter** (Nyhetsleser er en del av Nyheter), **Brief** (ikke Now Brief), **Gjøremål** (ikke Huskeliste) og **Konto og sikkerhet**. Navn du har gitt lister og faner selv, endres ikke.
+- **Ny navigasjon:**
+  - Toppmenyen (web) har de faste fanene Oversikt, Kalender, Økonomi, Media, Familie, Mat, Gjøremål og Skjold Lab, og «Alle sider ▾» med alle modulene gruppert. Faner som ikke får plass, ligger under «Mer ▾», så alle modulene kan nås på alle skjermbredder. Menyen brekker ikke lenger over to linjer i Glass.
+  - Menyene, fanelinja, Mer og modulvelgeren har samme navn, ikoner og rekkefølge på web, iPhone, Mac og Android, og viser bare modulene du har tilgang til.
+  - Familie og Bursdager er filtre i Kalender, Kart er en fane i Familie, og kalendervisningene (År, Måned, Uke, 3 dager, Dag, Liste) står i samme rekkefølge overalt.
+  - Media-fanene er Nå, Kommer, Bibliotek, Nedlastinger og Kilder.
+  - Innstillinger har de samme sidene i samme rekkefølge overalt: Konto og sikkerhet, Utseende, Varsler, Husstand, Glimt og AI, Tilkoblinger, Moduler, Enheter og widgets og Server.
+  - Den lagrede rekkefølgen, navnene og de skjulte fanene dine flyttes over én gang.
+- **Gamle lenker virker:** bokmerker, snarveier og lenker med de gamle adressene (`#/dash`, `#/huskeliste`, `#/familiekalender`, `#/bursdager`, `#/kart`, `#/sub`, `#/planlegging` …) sendes til den nye siden. `homelab://`-lenker åpner nå appen på riktig side (iPhone og Android), og en lenke åpnes rett på siden i stedet for bak velkomststegene.
+- **Økonomi er en modul i Homelab:**
+  - Økonomi bruker samme skall og meny som resten. På mobil er fanelinja Økonomis egen meny (Oversikt, Transaksjoner, Budsjett, Faste betalinger og Mer), og «‹ Homelab» øverst går tilbake. `/finans/` og snarveien på hjemskjermen virker som før.
+  - **Faste betalinger** er én side med filtrene Abonnementer, Faste utgifter og Planlagte trekk (web, iPhone og Android). Alt fra Subscription OS og Planlegging er med. Et abonnement som også står som fast utgift, telles bare én gang.
+  - Neste trekk, beløp per måned og dager igjen kommer fra serveren, så alle enhetene viser det samme. Ukentlige abonnementer beholder syklusen sin i stedet for å gjøres om til månedlige.
+  - Økonomi følger Homelab-temaet (stil og lys/mørk), så du velger bare ett sted.
+  - Nye regnskap får kategoriene «Bolig» (faste boutgifter) og «Hjem og interiør» (innkjøp), og ingen egen kategori «Abonnementer».
+- **Flytt til nye kategorier (admin):** Økonomi → Innstillinger → Kategorier har en ny handling som flytter eksisterende data til de nye kategoriene. Du ser først hvor mange rader som endres, bekrefter, og kan angre etterpå. Ingenting flyttes uten at admin ber om det.
+- **Design bygget på felles tokens:** farger, skriftstørrelser, radier og avstander kommer fra én kilde på web, iPhone, Mac og Android, så Papir og Glass ser like ut overalt.
+  - Mørk modus er rettet mange steder: dashbordkortene i Glass, Bursdager, Mat (dagens kort er mørkt), Media, Skjold Lab og Økonomi.
+  - Kalender på web følger lys/mørk-valget i Homelab; knappen i Kalender er en snarvei til samme valg.
+  - Riktig stil og modus fra første bilde, også på en ny enhet eller i en privat fane. Før startet siden i Glass og hoppet over til Papir.
+  - Tekst og ikoner følger Dynamic Type og «Øk kontrast» (iPhone og Mac).
+  - Knapper i Wear-appen har Homelab-fargen, og krona ruller i listene (Wear OS).
+- **Tilgjengelighet:**
+  - Kontrastfeil er rettet i skallet, Innstillinger, Domener, Økonomi og modulene. Antall kontrastbrudd gikk fra 515 til 176 (web).
+  - Pilene, kryssene og hakene er ekte ikoner som skjermleseren ikke leser som tegn, og trykkflatene er minst 44 pt (iPhone og Mac) og 48 dp (Android).
+  - Flere kort og fliser leses som knapper med VoiceOver og TalkBack, og brytere og valg sier «På»/«Av» og «Valgt».
+- **Ytelse:**
+  - Web laster bare modulene for siden du åpner, i stedet for rundt 3 MB ved hver oppstart. Nabofanene hentes i forkant.
+  - Svarene fra serveren komprimeres (kalenderen for en måned gikk fra 57 til 4 KB).
+  - Lange lister (transaksjoner, kvitteringer) tegnes i porsjoner mens du blar, og mobilstilene i Økonomi lastes bare på mobil.
+  - Homelab virker uten nett fra første besøk (web).
+  - Periodisk henting stopper når appen eller fanen ikke vises, så batteriet varer lenger (web, Android og Wear).
+  - Raskere databaseoppslag med nye indekser.
+- **Sikkerhet:**
+  - Utlogging i Kalender-appene logger nå ut på serveren også. Før virket app-tokenet videre (iPhone, Mac og Android).
+  - Innloggingen lagres i Nøkkelringen og blir på enheten, ikke i appinnstillingene eller i ukrypterte sikkerhetskopier (iPhone).
+  - Ny signeringsnøkkel som bare finnes i GitHub (Android). Se punktet øverst.
+  - Sertifikater du har installert selv, godtas bare for lokale adresser (`.local`, `.lan`, `.home.arpa`, `.internal`), ikke for servere på internett (Android).
+  - Innloggingen tåler en ødelagt krypteringsnøkkel uten å krasje, og tokenet lagres aldri ukryptert (Android).
+  - App Links for innlogging og QR virker med standardadressen `os.smarthjemeksperten.no` (Android).
+  - Innlogginger fra appene, Kalender, QR og invitasjoner utløper etter 180 dager uten bruk. Bruker du appen, flyttes fristen fram, så du merker ingenting.
+  - Sporing av PostNord-pakker uten egen nøkkel later ikke lenger som den er en nettleser på postnord.no. Avviser PostNord oppslaget, står det «PostNord svarer ikke akkurat nå» en stund. Med egen PostNord-nøkkel (Tilkoblinger) brukes det offisielle API-et.
+  - Sanntid fra Android-appen sender innloggingen i en header, ikke i adressen, så den havner ikke i logger.
+- **Mac:** Kalender for Mac krever nå macOS 14. Sidemenyen er systemets, kan gjøres bredere og skjules, og tannhjulet «Server» finnes også på Mac.
+- **Feilrettinger:**
+  - Datoer du skriver («i morgen kl. 10», «neste fredag») tolkes likt på web og i appene, fordi serveren tolker dem. Helligdagene kommer også fra serveren.
+  - «I dag» er alltid Oslo-datoen, også når telefonen står i en annen tidssone (Android).
+  - Skann-knappen dekker ikke lenger beløpene, og «Oversikt» kuttes ikke i fanelinja (Økonomi på mobil).
+  - «Hva skal vi se i kveld?» er synlig på Media igjen (web).
+  - Skjold Lab: knappeteksten er lesbar og menyene er ugjennomsiktige i Glass. Standardkategoriene er de samme overalt.
+  - Brukere uten Media-tilgang får en forklaring i stedet for tomme bilder.
+  - Eksport av transaksjoner til CSV går raskere og fryser ikke appen (Android).
+  - Feilmeldinger i AI-kontroll er på norsk i stedet for teknisk tekst (Android).
+
 ## [4.73.1] – 14.11.2026 · Gjenopprett fra fil og tofaktor etter gjenoppretting
 - **Gjenopprett fra fil:** Innstillinger → Backup → «Gjenopprett fra fil …» laster opp en systembackup fra PC-en (`.tar.gz`, `.tar.zst` eller `.enc`) og gjenoppretter hele systemet eller valgte moduler. Virker også på en ny installasjon (lenke i førstegangsoppsettet).
 - **Tofaktor etter gjenoppretting:** en 2FA-nøkkel som ikke kan leses gir en forklaring på norsk i stedet for en teknisk feil. Backupen husker hvilken serverhemmelighet den ble laget med, og nøkler krypteres om ved gjenoppretting når det er mulig; ellers varsles det før du gjenoppretter, med valg om å slå av 2FA for de berørte.

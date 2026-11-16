@@ -30,9 +30,9 @@ skallet ble revet ned og bygget opp igjen, at alt ble tonet inn fra blankt, og a
 - **Homelab (`public/js/app.js`, `swapView`)**: fotovinduet regnes som en del av skallet. Mellom sider med lavt vindu byttes
   bare kicker og tittel; innholdet under byttes. Til og fra Dashboard (høyt vindu) overtar det nye vinduet bildelaget som
   allerede er malt.
-- **Overgang (`public/js/web52.js`)**: bare innholdet tones og skyves inn, 220 ms. Ved `prefers-reduced-motion` er den av.
+- **Overgang (`public/js/startup.js`)**: bare innholdet tones og skyves inn, 220 ms. Ved `prefers-reduced-motion` er den av.
 - **Topplinjen (`public/js/hltheme.js`)**: bakgrunnsmenyen tegnes bare når innholdet er endret.
-- **Oslo-bakgrunnen (`public/js/web41.js`)**: tidsrommet (morgen/dag/kveld/natt) regnes på nytt når været kommer med
+- **Oslo-bakgrunnen (`public/js/shell.js`)**: tidsrommet (morgen/dag/kveld/natt) regnes på nytt når været kommer med
   soloppgang og solnedgang, ikke ved første fanebytte.
 - **FinansHub (`public/finans/js/desktop.js`, `paintShell87`)**: sidemenyen og toppen flettes inn i elementene som står
   (bare det som er endret, f.eks. `aria-current`), og bare innholdet under toppen byttes.

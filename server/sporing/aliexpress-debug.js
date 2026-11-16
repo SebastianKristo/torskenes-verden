@@ -115,7 +115,7 @@ const debugOut = (r) => {
   const no = normNo(r.tracking_no);
   const variants = pnVariants42(no).map((v) => ({ ...v, url: `${POSTNORD_WEB_URL}?${v.param ?? 'id'}=${encodeURIComponent(v.id)}&locale=${v.locale}` }));
   return { shipment: trk42.view(r), trackingNo: no, carrier: r.carrier_override ?? r.carrier, lastError: r.last_error, via: r.via ?? null, variants, calls: pnDebugOf42(no), health: postnordHealth41(),
-    curl: `curl -sS '${variants[0].url}' -H 'x-bap-key: ${PN_HEADERS42['x-bap-key']}' -H 'Accept: application/json' -H 'Origin: ${PN_HEADERS42.Origin}' -H 'Referer: ${PN_HEADERS42.Referer}' -A '${PN_HEADERS42['User-Agent']}'`,
+    curl: `curl -sS '${variants[0].url}' -H 'x-bap-key: ${PN_HEADERS42['x-bap-key']}' -H 'Accept: application/json'`,
     title: 'Detaljer for feilsøking' };
 };
 const mine = (c) => q('SELECT * FROM hl_shipments WHERE id=? AND user_id=?').get(+c.req.param('id'), c.get('user'));

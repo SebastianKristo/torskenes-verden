@@ -179,3 +179,12 @@ test('mediebilder: bruker uten Media-tilgang får 403, ikke tomt svar', async ()
   assert.equal(r.json?.restricted, true);
   assert.equal((await N('/api/media/bilde/serie/1/poster')).status, 401);
 });
+
+test('media-webhook: riktig token godtas, feil eller manglende token gir 401 (sammenlignes i konstant tid)', async () => {
+  const hooks = (await A('/api/media/status')).json.hooks;
+  const t = new URL(hooks.qbit, 'http://x').searchParams.get('token');
+  assert.ok(t);
+  assert.equal((await N(`/api/media/hook/qbit?token=${encodeURIComponent(t)}`, 'POST', {})).status, 200);
+  const feil = (t[0] === 'A' ? 'B' : 'A') + t.slice(1);
+  for (const q of [`?token=${feil}`, '?token=', '?token=kort', '']) assert.equal((await N(`/api/media/hook/qbit${q}`, 'POST', {})).status, 401, q);
+});

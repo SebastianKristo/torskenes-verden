@@ -116,7 +116,7 @@ Fra Mac-en selv får du 403 (Mac-en står ikke på tillatelseslista) – det er 
 
 ## Begrensninger og åpne punkter
 
-- AI-kontroll viser Neutrino, men den kan ikke velges i rutingen for oppgaver (Glimt, søk, brief …): `server/ai-run.js` kjenner
+- AI-kontroll viser Neutrino, men den kan ikke velges i rutingen for oppgaver (Glimt, søk, brief …): `server/ai/run.js` kjenner
   bare Ollama og skymodeller, og den fila skal ikke endres i denne runden. Neutrino brukes derfor bare i Chat foreløpig.
 - Neutrino leser ikke bilder. Bilder i en samtale med Neutrino avvises med en forklaring (velg en bildemodell).
 - Ikke testet på ekte maskinvare i denne runden: `fermion serve`, modellvektene (Hugging Face var blokkert), MLX og

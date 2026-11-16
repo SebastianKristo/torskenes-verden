@@ -1,5 +1,25 @@
 # Beslutninger
 
+De eldre valgene står under, i rekkefølgen de ble tatt. Der et valg er endret senere, står det i teksten.
+
+## Opprydding (5.0, november 2026)
+
+Kartleggingen står i [docs/opprydding/AUDIT.md](docs/opprydding/AUDIT.md), og hvert valg med begrunnelse i
+[docs/opprydding/BESLUTNINGER.md](docs/opprydding/BESLUTNINGER.md). Arbeidsreglene som følger av dem, står i [CLAUDE.md](CLAUDE.md).
+
+- **Navn (Q1–Q12):** Homelab, Økonomi, Oversikt, Smarthjem, Faste betalinger, Reise, Nyheter, Brief, Gjøremål og Konto og
+  sikkerhet, likt på alle plattformer ([ordlisten](docs/ordliste.md)). Modullisten `shared/schemas/moduler.json` er kilden, og
+  gamle adresser videresendes.
+- **Økonomi er en modul (Q3):** samme skall og meny som resten. `/finans/` beholdes som adresse og som egen PWA.
+- **Ett designsystem (Q13–Q16):** stil (Papir, Glass) × modus (lys, mørk) fra `shared/design/tokens.json`. Glass har bare mørk
+  modus. Økonomi og Kalender følger Homelab-modusen. Ingen dynamiske farger på Android.
+- **Logikk på serveren (Q17–Q21, Q40):** datoer, «i dag» i Oslo, neste trekk, beløp per måned, prøveperioder, helligdager og
+  «brukt». Appene regner bare selv det som må virke uten nett, med felles testvektorer.
+- **Kontrakt (Q19, Q23, Q29):** JSON Schema i `shared/schemas`, `minClient` i `/api/version`, app-tokens som utløper etter
+  180 dager uten bruk, og eldre aliaser samlet og tellet før de kan fjernes.
+- **Plattform (Q24, Q25, Q28):** ny Android-signeringsnøkkel som bare ligger i GitHub-hemmelighetene (appene må avinstalleres én
+  gang), enhetstester på iOS (XCTest) og Android (JUnit) mot `shared/testvektorer`, og Kalender for Mac krever macOS 14.
+
 ## Hosting: A – Docker-container på homelab bak Cloudflare Tunnel
 
 **Valg:** Én Node 22-container (Hono + SQLite via better-sqlite3) kjørt med `docker-compose` på Proxmox (LXC/VM), eksponert gjennom `cloudflared` (Cloudflare Tunnel). Anbefalt: Cloudflare Access foran alt unntatt `/cv`.
@@ -12,14 +32,14 @@
 
 ## Andre valg
 - **Ingen byggesteg i frontend:** vanilla ES-moduler. Det gir færre avhengigheter å vedlikeholde og raskere oppstart. Visningene er delt opp per fane i `public/js/`.
-- **Responsiv layout i stedet for en egen mobilapp:** under 768 px byttes pillenavigasjonen ut med bunnmenyen (Hjem · Studie · Økonomi · Mer), slik det er vist i `Homelab Mobil.dc.html`. Rom og Nettverk ligger under «Mer».
-- **Sesjoner:** tilfeldig 256-bit ID i en httpOnly-, Secure- og SameSite=Lax-cookie. Databasen lagrer bare en HMAC av ID-en. Passordet hashes med scrypt. Innlogging begrenses til 5 feil per IP per 15 min (bruker `CF-Connecting-IP`).
+- **Responsiv layout i stedet for en egen mobilapp:** under 768 px byttes toppmenyen ut med bunnmenyen og «Mer». Fanene og rekkefølgen kommer nå fra `toppmeny` og `bunnmeny` i modullisten (5.0); de native appene kom senere i tillegg.
+- **Sesjoner:** tilfeldig 256-bit ID i en httpOnly-, Secure- og SameSite=Lax-cookie. Databasen lagrer bare en HMAC av ID-en. Innlogging begrenses til 5 feil per IP per 15 min (bruker `CF-Connecting-IP`). Passordet: se Prompt 05.
 - **Hemmeligheter** leses bare på serveren. Nettleseren snakker kun med `/api/*`. CSP-en tillater `connect-src 'self'`.
 - **Miniatyrbilder** lages i nettleseren (canvas → JPEG) før opplasting. Det sparer en native avhengighet som sharp.
 - **Trading 212 har ikke dagsendring i API-et.** Serveren lagrer første totalverdi hver dag og regner endringen ut fra den. Innskudd samme dag telles med.
 - **Energi:** den daglige sensoren antas å nullstilles ved midnatt. Høyeste verdi per dag er dagens forbruk.
 - **Bakgrunnsbilder** hentes fra Wikimedia Commons (`Special:FilePath`). Disse bildene er CC0/PD eller CC BY(-SA). Sjekk krediteringskravet per fil, eller last dem ned til `public/` for egen hosting.
-- **OCR av kvitteringer** (valgfritt i spesifikasjonen) er ikke implementert ennå.
+- **OCR av kvitteringer** (valgfritt i spesifikasjonen) kom senere og gjøres bare lokalt: på telefonen, med Apple Vision på en Mac i huset eller med Tesseract på serveren.
 
 ## Distribusjon
 - **Tre måter å kjøre på:** `docker compose` manuelt, `deploy/proxmox/install.sh` (lager en LXC automatisk) og en Unraid-mal (`deploy/unraid/homelab-os.xml`).
@@ -43,7 +63,7 @@
 - **Beløp lagres i øre (heltall)** for å unngå avrundingsfeil.
 - **Jobbkø:** en enkel kø i prosessen i stedet for ARQ/Redis. Bilag som avbrytes av en omstart, gjenopptas ved oppstart.
 - **Bildebehandling i nettleseren:** EXIF-rotasjon, nedskalering til 1600 px og miniatyrbilde gjøres med canvas før opplasting. Pillow/sharp trengs ikke, og originalen lagres urørt.
-- **Mobil:** PWA-en med to temaer finnes fortsatt. I tillegg finnes native apper i `apps/`: iOS i SwiftUI og Android i Jetpack Compose. Appene logger inn med passord og får et token med bare finans-tilganger (`POST /finans/api/auth/token`, samme rate limiting som nettinnloggingen).
+- **Mobil:** PWA-en finnes fortsatt (temaet følger Homelab fra 5.0). I tillegg finnes native apper i `apps/`: iOS i SwiftUI og Android i Jetpack Compose. Appene logger inn med passord og får et token med bare finans-tilganger (`POST /finans/api/auth/token`, samme rate limiting som nettinnloggingen).
 - **Få avhengigheter i appene:** Android bruker plattformens HttpURLConnection og org.json, iOS bruker URLSession og Codable. iOS-prosjektet genereres med XcodeGen, så det ikke trengs en `.pbxproj` i repoet. Begge bygges i GitHub Actions.
 - **Mobil-tokens** har egne tilganger (`finance:read`, `finance:write`, `receipts:write`). Tokenet lagres som HMAC og gir ikke tilgang til `/api/*` i homelab.
 - **Den gamle Økonomi-fanen er fjernet.** Eksisterende kvitteringer flyttes automatisk til FinansHub ved første oppstart (bilder kopieres til `data/receipts/migrert/`).
@@ -66,7 +86,7 @@
 ## Prompt 05
 - **Stack beholdes** (Node 22 + Hono + SQLite + vanilla JS) i stedet for FastAPI/React fra prompten: alt fungerer allerede, deploy (Docker/Proxmox/Unraid) er etablert, og en omskriving ville ikke gi brukeren noe nytt.
 - **Passord**: scrypt (N=2^16) i stedet for argon2 – Node har ikke innebygd argon2 før v24, og npm-pakken krever native bygging.
-- **Brukere**: én felles brukertabell (admin/bruker). Regnskapet i FinansHub tilhører eieren; andre brukere ser bare Delte mapper de er medlem av. Hjem, Matplan og Domener er kun for administratorer.
-- **2FA**: TOTP (RFC 6238, ±1 vindu) med AES-256-GCM-kryptert hemmelighet og 10 gjenopprettingskoder. Nødreset: `npm run reset-password -- <bruker>`.
+- **Brukere**: én felles brukertabell (admin/bruker). Først tilhørte regnskapet eieren, og andre brukere så bare Delte mapper. Senere fikk alle sitt eget regnskap (alt er per bruker, unntatt Boliger og Matplan, se [sikkerhet](docs/sikkerhet.md#brukere-og-roller)). Smarthjem og Domener er kun for administratorer.
+- **2FA**: TOTP (RFC 6238, ±1 vindu) med AES-256-GCM-kryptert hemmelighet og 10 gjenopprettingskoder. Nødreset: `npm run reset-password -- <bruker>`, eller bare 2FA med `npm run reset-2fa -- <bruker>`.
 - **AI-søk**: SQLite FTS5 (BM25) + valgfrie embeddings; svar med tall som ikke finnes i treffene forkastes.
 - **Backup**: tar.gz + AES-256-GCM via `smbclient` (gzip i stedet for zstd). Excel skrives med innebygd xlsx-skriver.

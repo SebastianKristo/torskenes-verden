@@ -29,7 +29,7 @@ import iconsApi from './icons.js';
 import tilesApi, { hasMapTest, testMap } from './tiles.js';
 import { mountGjoremal } from './gjoremal/index.js'; // Gjøremål: /api/tasks og /api/huske
 import notifyApi, { appMeta } from './notify.js';
-import { attachRealtime } from './realtime.js';
+import { attachRealtime, closeRealtime } from './realtime.js';
 import { revokeUserTokens } from './finans/routes.js';
 import { startBirthdayWorker } from './kalender/birthdays.js';
 import { mountBirthdays, mountKalenderFront, mountKalender } from './kalender/index.js'; // Kalender og Bursdager (server/kalender/)
@@ -456,8 +456,8 @@ registerLegacyReceipts(authed, { upload, saveFile, removeFile });
 authed.get('/grades', (c) => c.json(db.prepare('SELECT id, subject, grade, tests FROM grades WHERE user=? ORDER BY sort, id').all(c.get('user'))));
 authed.post('/grades', async (c) => {
   const b = await c.req.json();
-  const r = db.prepare('INSERT INTO grades(user,subject,grade,tests,sort) VALUES(?,?,?,?,(SELECT COALESCE(MAX(sort),0)+1 FROM grades)) RETURNING id, subject, grade, tests')
-    .get(c.get('user'), String(b.subject || 'Nytt fag').slice(0, 60), gradeVal(b.grade), String(b.tests ?? '').slice(0, 100));
+  const r = db.prepare('INSERT INTO grades(user,subject,grade,tests,sort) VALUES(?,?,?,?,(SELECT COALESCE(MAX(sort),0)+1 FROM grades WHERE user=?)) RETURNING id, subject, grade, tests')
+    .get(c.get('user'), String(b.subject || 'Nytt fag').slice(0, 60), gradeVal(b.grade), String(b.tests ?? '').slice(0, 100), c.get('user'));
   return c.json(r);
 });
 const gradeVal = (g) => { const n = parseInt(g, 10); return n >= 1 && n <= 6 ? n : null; };
@@ -644,6 +644,7 @@ if (process.env.NODE_ENV !== 'test') {
       process.exit(0);
     };
     setTimeout(done, 5000).unref();
+    closeRealtime(); // åpne /api/ws-forbindelser holdt ellers server.close() til tidsgrensen (AUDIT A §6 B7)
     server.close(done);
     server.closeIdleConnections?.();
   };

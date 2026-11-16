@@ -6,29 +6,31 @@
 
 ```mermaid
 flowchart TB
+  subgraph shared["shared/"]
+    SCH[schemas/<br/>kontrakt · moduler.json]
+    TOK[design/tokens.json]
+    TV[testvektorer/]
+  end
   subgraph public["public/ (ingen byggesteg)"]
-    APP[app.html + js/*.js<br/>Homelab]
-    FH[finans/index.html<br/>core · desktop · modules · mobile]
-    LOG[login.html · cv.html]
+    APP[app.html + js/*.js<br/>Homelab-skallet, rutene ved behov]
+    CSS[css/ tokens · base · layout<br/>components · pages]
+    FH[finans/<br/>Økonomi: desktop og mobil]
   end
   subgraph server["server/"]
-    IDX[index.js<br/>ruter, CSP, statiske filer]
-    AUTH[auth.js · totp.js · password.js]
-    SET[settings.js · ui.js]
-    INT[integrations.js · cache.js · mock.js]
-    HOS[home.js · mat.js · domains.js<br/>homeos-common.js]
-    subgraph finans["finans/"]
-      R[routes.js]
-      DB[(db.js)]
-      AI[ai.js · enrich.js · search.js]
-      IO[csv.js · importer.js · xlsx.js · backup.js]
-      ST[stocks.js · finn.js · demo.js]
-    end
+    IDX[index.js<br/>CSP, statiske filer, monterer domenene]
+    HTTP[http/<br/>feilform · komprimering · aliaser]
+    JOBS[jobs/<br/>planleggeren]
+    DOM[auth/ · kalender/ · media/ · glimt/ · ai/<br/>familie/ · sporing/ · skjold/ · system/ …]
+    MOD[moduler/<br/>GET /api/moduler]
+    FIN[finans/<br/>/finans/api]
+    DB[(db.js · SQLite)]
   end
-  APP & LOG --> IDX
-  FH --> R
-  IDX --> AUTH & SET & INT & HOS & R
-  R --> DB & AI & IO & ST
+  APP & FH --> IDX
+  IDX --> HTTP --> DOM & MOD & FIN
+  DOM & FIN --> DB
+  JOBS --> DOM & FIN
+  SCH --> MOD
+  TOK -. npm run tokens .-> CSS
 ```
 
 | Valg | Hvorfor |
@@ -52,30 +54,48 @@ npm test                    # node --test "test/**/*.test.js"
 
 ## Mappestruktur
 
+Én mappe per domene på serveren, og én fil per skjerm eller komponent på alle plattformer, med beskrivende navn (CLAUDE.md).
+
 ```
 server/
-  index.js            ruter, sikkerhetshoder, statiske filer, oppstart
-  auth.js totp.js     brukere, sesjoner, enheter, rate limiting, TOTP og QR
-  password.js         scrypt-hashing
-  db.js               SQLite-skjema for homelab (users, sessions, devices, kv …)
-  settings.js ui.js   integrasjonsoppsett og innstillinger per bruker
-  integrations.js     Entur, MET, iCal, HA, T212, Sonarr/Radarr, RSS, NASA, CelesTrak
-  home.js mat.js domains.js   Hjem, Matplan og Domener
-  finans/             FinansHub (se tabellen under)
+  index.js            sikkerhetshoder, statiske filer, oppstart, monterer domenene (mount<Domene>(app))
+  db.js               SQLite-skjema for homelab (users, sessions, devices, kv …) og statement-cache q(sql)
+  http/               felles feilform {error, code}, brotli/gzip, eldre API-aliaser (tellet), grenser for anonyme forespørsler
+  jobs/               planleggeren for bakgrunnsjobber
+  auth/               innlogging, økter, enheter, 2FA, passkeys, QR, app-tokens, invitasjoner, serveradressen
+  ai/                 AI-gaten (gate.js, run.js), AI-kontroll, minne, Chat og de lokale motorene
+  glimt/              Glimt: motoren, samtalen, minnet og Brief
+  kalender/ media/ familie/ sporing/ gjoremal/ mat/ vaer/ reise/ nyheter/ studie/ rom/ bibel/ skjold/ domener/
+                      ett domene per mappe, med index.js som monterer rutene
+  moduler/            modullisten (GET /api/moduler) og grupperingen av tilkoblinger
+  system/             backup, oppdatering, drift, søk i innstillinger, tema
+  dates/              datotolking, «i dag» i Oslo og helligdager
+  finans/             Økonomi (se tabellen under)
+  settings.js ui.js integrations.js mock.js   integrasjonsoppsett, innstillinger per bruker og eksempeldata
 public/
-  app.html js/ css/   homelab, én modul per fane (dash, study, space, home, mat, domains, net …)
-  finans/             FinansHub: core.js (felles), desktop.js + modules.js, mobile*.js, sw.js
-apps/android/ apps/ios/   native apper
+  app.html js/        Homelab-skallet og én modul per side (rutene i app.js lastes med import())
+  js/lib/             felles hjelpere for Homelab og Økonomi (poll, chunks, dates, viewport)
+  css/                tokens.css (generert), base.css, layout.css, papir-mork.css, components/, pages/
+  finans/             Økonomi: core.js (felles), desktop.js, js/ og css/, mobile*.js, sw.js
+shared/
+  schemas/            API-kontrakten (JSON Schema), eksempler, moduler.json og tilkoblinger.json
+  design/             tokens.json, kilden til CSS, Swift og Kotlin (npm run tokens)
+  testvektorer/       felles fasit for regler som også appene har
+apps/ios/             SwiftUI (XcodeGen, project.yml), HomelabTests
+apps/android/         Compose: app, kalender, wear, felles (ren Kotlin) og felles-android
 deploy/               proxmox/install.sh, proxmox/update.sh, unraid/homelab-os.xml
-scripts/              hash-password.js, reset-password.js
-test/                 node --test
+scripts/              hash-password.js, reset-password.js, reset-2fa.js, rekey-secrets.js, design-tokens.mjs, android-nokkel.sh
+test/                 node --test, e2e51/ (ende-til-ende), a11y51/ (tilgjengelighet), visuelle tester og ytelse
 docs/                 dokumentasjon, bilder (images/) og ikoner (assets/)
 ```
 
 | `server/finans/` | Ansvar |
 |---|---|
+| `index.js` | Monterer `/finans/api` og jobbene via planleggeren |
 | `db.js` | Tabeller (`fh_*`), migreringer, innstillinger og krypterte hemmeligheter |
-| `routes.js` | Hele `/finans/api`, tilgangskontroll og tokens |
+| `routes.js` | Det meste av `/finans/api`, tilgangskontroll og tokens |
+| `faste-betalinger.js` / `cycles.js` / `subs.js` | Faste betalinger, neste trekk og beløp per måned (Oslo-tid) |
+| `category-migration.js` | «Flytt til nye kategorier» (admin): forhåndsvisning, utføring og angring |
 | `ai.js` | Ollama og Gemini med JSON-skjema, reserve og nytt forsøk |
 | `enrich.js` | ✦ sammendrag, domene og logo per butikk |
 | `search.js` | AI-søk: FTS5 og embeddings, med tallsjekk av svaret |
@@ -93,26 +113,26 @@ docs/                 dokumentasjon, bilder (images/) og ikoner (assets/)
 
 APK-en og `.ipa`-filen lastes ned under **Actions → Mobilapper → Artifacts**.
 
-**iOS-enhetstester** (`apps/ios/HomelabTests`, Fase 4): kjører `shared/testvektorer/*.json` mot det som fortsatt er lokal logikk i
+**iOS-enhetstester** (`apps/ios/HomelabTests`): kjører `shared/testvektorer/*.json` mot det som fortsatt er lokal logikk i
 appene (serveradresse, «i dag», Kalenders forhåndsvisning av datoer) og dekoder eksemplene i `shared/schemas/eksempler` med
 DTO-ene i `apps/ios/SharedNet/APIModels.swift`. Eksemplene lages på nytt med `npm run kontrakt:eksempler` når et skjema endres
 (`test/kontrakt-eksempler.test.js` sjekker at de følger skjemaene). Lokalt: `xcodegen` i `apps/ios/`, så
 `xcodebuild test -scheme HomelabTests -destination 'platform=iOS Simulator,name=iPhone 16'`.
 
-**Android-enhetstester** (Fase 5, Q25): `./gradlew :felles:test :kalender:testDebugUnitTest` i `apps/android` (CI-steget
+**Android-enhetstester** (Q25): `./gradlew :felles:test :kalender:testDebugUnitTest` i `apps/android` (CI-steget
 «Enhetstester (JUnit)» i «Mobilapper»). `:felles` er ren Kotlin og kjører `serveradresse.json`, `idag.json` og
 `shared/schemas/eksempler` uten Android SDK; `:kalender` kjører `datoer.json` mot den lokale hurtigtolkingen (ikke streng, se under).
 
-## Android: API for bølge 2
+## Android: felles moduler, tema og skall
 
-Fase 5 bølge 1 la grunnmuren. Skjermene flyttes over til den én og én i bølge 2; de gamle API-ene (`C.*`, `P.*`,
-`PaperPal.current`, `tc()`/`Tone.map()`, `paperType`) virker som tynne adaptere til alle skjermene er flyttet.
+Ny kode bruker modulene og API-ene under. De gamle API-ene (`C.*`, `P.*`, `PaperPal.current`, `tc()`/`Tone.map()`,
+`paperType`) finnes fortsatt som tynne adaptere der en skjerm ikke er flyttet; flytt skjermen når du endrer den.
 
 **Moduler** (`apps/android/settings.gradle.kts`, versjoner i `gradle/libs.versions.toml`):
 
 | Modul | Hva | Bruk |
 |---|---|---|
-| `:felles` (ren Kotlin, `no.kristo.felles`) | `nett/LokaltNett`, `URL.openSikker()`, `UsikretHttp`, `Klartekstvakt` (http bare hjemme, S3) · `nett/ServerAdresse` (normalisering, lokal, «pålitelig enhet») · `nett/Feilsvar`, `HttpFeil`, `Nettfeil` (feilform og norske tekster) · `nett/HttpKlient` · `kontrakt/Bruker`, `Innlogging` (tokenutløp), `Serverversjon` · `tid/OsloDato` · `navigasjon/Tilbakestabel` | Alle tre appene. Ny ren regel (uten Android) legges her, med JUnit-test mot `shared/testvektorer` |
+| `:felles` (ren Kotlin, `no.kristo.felles`) | `nett/LokaltNett`, `URL.openSikker()`, `UsikretHttp`, `Klartekstvakt` (http bare hjemme, S3) · `nett/ServerAdresse` (normalisering, lokal, «pålitelig enhet») · `nett/Feilsvar`, `HttpFeil`, `Nettfeil` (feilform og norske tekster) · `nett/HttpKlient` · `kontrakt/Bruker`, `Innlogging` (tokenutløp), `Serverversjon` · `tid/OsloDato` · `navigasjon/Tilbakestabel` | Alle tre appene. Ny ren regel (uten Android) legges her, med JUnit-test mot `shared/testvektorer`. Også `moduler/` (modullisten, innebygd fra `shared/schemas/moduler.json`) og `moduler/Dyplenker` |
 | `:felles-android` (`no.kristo.felles.android`) | `SikkerLagring.prefs(ctx, navn, gammelKlartekst?)`: kryptert lagring som tåler ødelagt Keystore (B4), aldri ukryptert | Alle tokens og hemmeligheter. Ikke kall `EncryptedSharedPreferences.create` direkte |
 
 **Nettverk.** Alle HTTP-kall går via `URL.openSikker()` (eller `Api` i `:app`, `HttpKlient` i Wear/Kalender), alltid fra en
@@ -174,17 +194,17 @@ Bildene i `docs/images/` er tatt med Playwright mot en server med `MOCK_DATA=1`,
 
 ## Web: lasting, henting og service workere
 
-Fase 3 (ytelse, B §3). Hjelperne ligger i `public/js/lib/` og brukes av både Homelab og FinansHub (`/assets/js/lib/…`).
+Hjelperne ligger i `public/js/lib/` og brukes av både Homelab og Økonomi (`/assets/js/lib/…`). Ytelsen måles med `npm run test:perf`.
 
 | Hva | Hvordan |
 |---|---|
-| **Rutene** | `app.js` laster rutemodulen med `import()` når ruten åpnes. Skallet (topplinje, meny, søk, temaer) er statisk. Nabofanene forhåndslastes når nettleseren er ledig, og en fane lastes når pekeren er over den. `settings.js` er en lett inngang; selve vinduet (`settings-view.js` med sidene) lastes når innstillingene åpnes. En ny rute legges i `MODS`/`ROUTES` i `app.js`, ikke som statisk import. |
+| **Rutene** | `app.js` laster rutemodulen med `import()` når ruten åpnes. Skallet (topplinje, meny, søk, temaer) er statisk. Nabofanene forhåndslastes når nettleseren er ledig, og en fane lastes når pekeren er over den. `settings.js` er en lett inngang; selve vinduet (`settings-view.js` med sidene) lastes når innstillingene åpnes. En ny rute legges i `MODS`/`ROUTES` i `app.js`, ikke som statisk import, og modulen med navn og meny i `shared/schemas/moduler.json` (menyene, titlene og Mer bygges fra `public/js/moduler.js`). |
 | **Periodisk henting** | `lib/poll.js`: `poll(fn, ms, { visible, first })`. Pauser når fanen er skjult eller `visible()` er falsk, og tar igjen hentingen når siden vises (`wakePolls()` etter rutebytte). Ikke bruk `setInterval` for henting. Sanntid går over `/api/ws` (`realtime.js` `onLive`). |
 | **Layout** | Les fra DOM-en før du skriver. `lib/viewport.js` (`vw()`, `vh()`) i stedet for `innerWidth`/`innerHeight` i tegnekode. Mål etter layout (ResizeObserver, `requestAnimationFrame`) i stedet for rett etter `innerHTML`. |
 | **Lange lister** | `lib/chunks.js` `appendChunks(beholder, antall, (fra, n) => html)`: tegn de første radene, resten ved scroll eller når nettleseren er ledig. Transaksjonene har også `?limit&cursor` → `nextCursor` på serveren. |
 | **Datoer** | `lib/dates.js`: forhåndsvisningen av raske avtaler er serverens tolkning (`POST /api/kalender/quick/parse`); dager i spørsmål tolkes med `POST /api/dates/parse`, helligdager kommer fra `GET /api/dates/holidays`. Web regner ikke ut datoer selv. |
 
-**Service workere.** Det er to, fordi Homelab og FinansHub er to installerbare apper med hver sin scope og hvert sitt push-abonnement: `/sw.js` (scope `/`) og `/finans/sw.js` (scope `/finans/`). Å slå dem sammen ville flytte FinansHubs registrering og push-abonnement, så de holdes adskilt, men strategien er den samme:
+**Service workere.** Det er to, fordi Homelab og Økonomi er to installerbare apper med hver sin scope og hvert sitt push-abonnement: `/sw.js` (scope `/`) og `/finans/sw.js` (scope `/finans/`). Å slå dem sammen ville flytte Økonomis registrering og push-abonnement, så de holdes adskilt, men strategien er den samme:
 
 | Forespørsel | Strategi |
 |---|---|
@@ -192,7 +212,7 @@ Fase 3 (ytelse, B §3). Hjelperne ligger i `public/js/lib/` og brukes av både H
 | `/assets/…?v=<build>` | Cachen først (filene endres aldri). Uten nett og uten treff: samme fil uten `?v` fra cachen |
 | `/assets/…` uten `v` | Nettet først (`no-cache`), cachen uten nett |
 | API | Aldri via cachen, unntatt noen lese-API-er i Homelab (`api51-les`, nettet først) og bildene (plakater, bakgrunner: cachen først) |
-| Forhåndscache | Homelab: skallet `/` og de statiske modulene og stilarkene det laster (følger importene ved installasjon). FinansHub: `SHELL`-lista |
+| Forhåndscache | Homelab: skallet `/` og de statiske modulene og stilarkene det laster (følger importene ved installasjon). Økonomi: `SHELL`-lista |
 
 Øk cachenavnet (`os-vNN`, `finanshub-vNN`) når strategien eller forhåndscachen endres.
 
@@ -200,6 +220,7 @@ Fase 3 (ytelse, B §3). Hjelperne ligger i `public/js/lib/` og brukes av både H
 
 - **Språk:** all tekst i grensesnittet er norsk bokmål.
 - **Formater:** tall skrives `1 234,56`, minus `−` og dato `dd.mm.åååå`.
-- **Beløp** lagres i øre (heltall) i FinansHub.
-- **Hemmeligheter** forlater aldri serveren. Nye nøkler legges i `SCHEMA` (homelab) eller som `secret()` (FinansHub).
-- **Integrasjoner:** en ny integrasjon skal ha en mock i `mock.js` og en forklaring i kortet når den ikke er satt opp.
+- **Beløp** lagres i øre (heltall) i Økonomi.
+- **Hemmeligheter** forlater aldri serveren. Nye nøkler legges i `SCHEMA` (homelab) eller som `secret()` (Økonomi).
+- **Integrasjoner:** en ny integrasjon skal ha en mock i `mock.js`, en gruppe i `shared/schemas/tilkoblinger.json` og en forklaring i kortet når den ikke er satt opp.
+- **Navn i UI** følger [ordlisten](ordliste.md) og modullisten. Arbeidsreglene står i [CLAUDE.md](../CLAUDE.md).

@@ -195,10 +195,10 @@ test('okonomi-ruter: skriving og tilgangskrav', async () => {
   }
 });
 
-test('okonomi-jobber: backup, prøveperioder og skattemeldingen går via den felles planleggeren (ikke aktive i test)', async () => {
+test('okonomi-jobber: backup, e-postimport, prøveperioder og skattemeldingen går via den felles planleggeren (ikke aktive i test)', async () => {
   const { listJobs } = await import('../server/jobs/index.js');
   const jobs = listJobs().filter((j) => j.name.startsWith('finans.'));
-  assert.deepEqual(jobs.map((j) => [j.name, j.everyMs]).sort(), [['finans.provetider', 60_000], ['finans.skattemelding', 3 * 3600_000], ['finans.smb-backup', 5 * 60_000]]);
+  assert.deepEqual(jobs.map((j) => [j.name, j.everyMs]).sort(), [['finans.epost', 60_000], ['finans.provetider', 60_000], ['finans.skattemelding', 3 * 3600_000], ['finans.smb-backup', 5 * 60_000]]);
   assert.ok(jobs.every((j) => !j.active));
 });
 
