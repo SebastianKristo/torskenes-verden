@@ -103,7 +103,7 @@ object Kal26WidgetStore {
             .apply { if (acct != null) putString("acct", acct) }.apply()
         events.value = keep
         Kal26Widgets.scheduleTick(app)
-        Thread { runCatching { kotlinx.coroutines.runBlocking { Kal26Widgets.redraw(app) } } }.start()
+        WidgetJobs.launch { Kal26Widgets.redraw(app) }
     }
 
     /** Brukerskille: ny konto eller utlogging tømmer kalenderen i widgetene. */

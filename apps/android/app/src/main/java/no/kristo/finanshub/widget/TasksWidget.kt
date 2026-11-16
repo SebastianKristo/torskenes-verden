@@ -96,14 +96,12 @@ object TasksWidgetSync {
     /** Henter de neste oppgavene og tegner widgeten på nytt (kalles fra appen, sanntid og WidgetWorker). */
     fun refresh(ctx: Context) {
         val app = ctx.applicationContext
-        Thread {
-            runCatching {
-                val api = FamilyPrefs.api(app) ?: return@runCatching
-                val raw = kotlinx.coroutines.runBlocking { api.hlGet("/tasks/next?n=6", timeout = 8_000) }
-                TasksStore.save(app, raw)
-            }
-            runCatching { kotlinx.coroutines.runBlocking { redraw(app) } }
-        }.start()
+        // P85 H: korutine i stedet for Thread { runBlocking }. Fra en mottaker brukes WidgetSync.refresh (WorkManager).
+        WidgetJobs.launch {
+            val api = FamilyPrefs.api(app)
+            if (api != null) runCatching { TasksStore.save(app, api.hlGet("/tasks/next?n=6", timeout = 8_000)) }
+            redraw(app)
+        }
     }
 
     suspend fun redraw(ctx: Context) {
@@ -190,6 +188,7 @@ class TasksReceiver : GlanceAppWidgetReceiver() {
     override fun onEnabled(context: Context) {
         super.onEnabled(context)
         WidgetSync.schedule(context)
-        TasksWidgetSync.refresh(context)
+        // P85 H: hentingen går via WorkManager (WidgetWorker henter også /tasks/next), ikke en tråd i mottakeren.
+        WidgetSync.refresh(context)
     }
 }

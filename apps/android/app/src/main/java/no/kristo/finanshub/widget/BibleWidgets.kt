@@ -91,7 +91,7 @@ object Bible37Store {
         }.apply()
         data.value = v
         if (was != on || !p.getBoolean("fixed", false)) { p.edit().putBoolean("fixed", true).apply(); setReceivers(app, on) }
-        Thread { runCatching { kotlinx.coroutines.runBlocking { Bible37Widgets.redraw(app) } } }.start()
+        WidgetJobs.launch { Bible37Widgets.redraw(app) }
     }
 
     /** Mottakerne slås av for brukere uten modulen (og Samsung-varianten på andre telefoner). */

@@ -116,7 +116,7 @@ object Trials32bStore {
         val app = ctx.applicationContext
         sp(app).edit().putString("json", toJson(l).toString()).apply { if (acct != null) putString("acct", acct) }.apply()
         data.value = l
-        Thread { runCatching { kotlinx.coroutines.runBlocking { Trials32bWidgets.redraw(app) } } }.start()
+        WidgetJobs.launch { Trials32bWidgets.redraw(app) }
     }
 
     fun remove(ctx: Context, id: String) {

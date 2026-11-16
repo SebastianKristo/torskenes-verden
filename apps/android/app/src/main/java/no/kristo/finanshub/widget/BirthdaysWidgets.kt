@@ -104,7 +104,7 @@ object Bd24WidgetStore {
         val a = JSONArray().apply { bdSort(l).take(8).forEach { put(it.toJson()) } }
         sp(app).edit().putString("json", JSONObject().put("items", a).toString()).apply()
         items.value = bdSort(l)
-        Thread { runCatching { kotlinx.coroutines.runBlocking { S24.redraw(app) } } }.start()
+        WidgetJobs.launch { S24.redraw(app) }
     }
 
     fun saveRaw(ctx: Context, raw: String) {

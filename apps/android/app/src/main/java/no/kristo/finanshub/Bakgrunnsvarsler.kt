@@ -29,7 +29,6 @@ import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.runBlocking
 import org.json.JSONArray
 import org.json.JSONObject
 import java.net.URLEncoder
@@ -328,20 +327,15 @@ class Trial31Receiver : BroadcastReceiver() {
                 val keep = intent.action == Notify31.ACT_KEEP
                 Notify31.cancel(ctx, tag + "-" + title.hashCode())
                 if (!keep) Notify31.snoozeTrial(ctx, id, title, body, url)
-                val pr = goAsync()
-                Thread {
-                    runCatching {
-                        runBlocking {
-                            for (api in Notify31.api(ctx)) {
-                                val ok = runCatching {
-                                    api.patch("/subscriptions/trials/" + URLEncoder.encode(id, "UTF-8"), if (keep) JSONObject().put("status", "kept") else JSONObject().put("snooze", "tomorrow"))
-                                }.isSuccess
-                                if (ok) break
-                            }
-                        }
+                // P85 H: goAsync() + korutine i stedet for Thread { runBlocking }.
+                no.kristo.finanshub.widget.WidgetJobs.launchAsync(this) {
+                    for (api in Notify31.api(ctx)) {
+                        val ok = runCatching {
+                            api.patch("/subscriptions/trials/" + URLEncoder.encode(id, "UTF-8"), if (keep) JSONObject().put("status", "kept") else JSONObject().put("snooze", "tomorrow"))
+                        }.isSuccess
+                        if (ok) break
                     }
-                    pr.finish()
-                }.start()
+                }
             }
         }
     }

@@ -94,7 +94,7 @@ object Brief34Store {
         val app = ctx.applicationContext
         sp(app).edit().putString("json", toJson(b).toString()).putString("kind", b.kind).apply { if (acct != null) putString("acct", acct) }.apply()
         data.value = b
-        Thread { runCatching { kotlinx.coroutines.runBlocking { Brief34Widgets.redraw(app) } } }.start()
+        WidgetJobs.launch { Brief34Widgets.redraw(app) }
     }
 
     /** Kontobytte eller utlogging tømmer briefen i widgetene. */
@@ -106,7 +106,7 @@ object Brief34Store {
     }
 
     /** Prompt 35: tegn widgetene på nytt i bakgrunnen (ny figur valgt). */
-    fun redrawAsync(ctx: Context) { val app = ctx.applicationContext; Thread { runCatching { kotlinx.coroutines.runBlocking { Brief34Widgets.redraw(app) } } }.start() }
+    fun redrawAsync(ctx: Context) { val app = ctx.applicationContext; WidgetJobs.launch { Brief34Widgets.redraw(app) } }
 
     fun notifyOn(ctx: Context): Boolean = sp(ctx).getBoolean("notify", true)
 
