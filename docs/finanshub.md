@@ -1,10 +1,10 @@
-# <img src="assets/icons/finans.svg" width="32" align="top"> FinansHub
+# <img src="assets/icons/finans.svg" width="32" align="top"> Økonomi
 
 [← Til README](../README.md)
 
-FinansHub er økonomidelen, og ligger på `/finans/`. På PC vises desktop-grensesnittet, og på telefon og nettbrett vises mobil-PWA-en (iOS- eller Android-tema). De native appene snakker med det samme API-et, se [apps/README.md](../apps/README.md).
+Økonomi er en modul i Homelab (internt «FinansHub»), og ligger på `/finans/`. Den bruker samme stil og lys/mørk-modus som resten av Homelab. På PC vises desktop-grensesnittet med sidemeny, og på telefon og nettbrett vises mobilvisningen, der fanelinja er Økonomis egen meny (Oversikt, Transaksjoner, Budsjett, Faste betalinger og Mer). «‹ Homelab» øverst går tilbake. De native appene snakker med det samme API-et, se [apps/README.md](../apps/README.md).
 
-<img src="images/finanshub-oversikt.webp" alt="FinansHub oversikt">
+<img src="images/finanshub-oversikt.webp" alt="Økonomi, Oversikt">
 
 ## Sider
 
@@ -14,15 +14,14 @@ FinansHub er økonomidelen, og ligger på `/finans/`. På PC vises desktop-grens
 | **Transaksjoner** | Søk og filter, detaljpanel med ✦ AI-beskrivelse og varelinjer, «Lag regel», ny transaksjon og CSV |
 | **Kvitteringer** | Last opp (flere filer, dra og slipp), AI-utlesing i kø, bekreftelsespanel med bankmatch, «Les på nytt», avvis og bokfør |
 | **Budsjett** | Månedsbudsjett per kategori, varsel ved 80 % og 100 % |
-| **Faste utgifter** | Regninger og trekk, med automatisk oppdagelse |
-| **Kontoer** | Saldo per konto og sparemål |
-| **Aksjer** | Trading 212: portefølje, fordeling, posisjoner, ordrer og utbytte |
+| **Faste betalinger** | Én side med filtrene **Abonnementer**, **Faste utgifter** (regninger og trekk, med automatisk oppdagelse) og **Planlagte trekk** (trekkene de neste dagene med saldoprognose). Neste trekk og beløp per måned kommer fra serveren |
+| **Sparing og planer** | Sparemål, skatt, priser og abonnementsjeger |
+| **Kontoer og aksjer** | Saldo per konto, og fanen Aksjer med Trading 212: portefølje, fordeling, posisjoner, ordrer og utbytte |
 | **Rapporter** | Måned eller år, fordeling per kategori, mest brukt hos, CSV og PDF |
-| **Subscription OS** | Abonnementer, månedlig, årlig eller hvert 2. år |
 | **Delte mapper** | Dashboard per bolig, delt mellom brukere |
 | **Finn-handler** | Kjøp og salg via Finn (Trygg betaling, Fiks ferdig, Tillit) |
-| **Import** | CSV, XLSX og innlimt tekst |
-| **Innstillinger** | Se [konfigurasjon.md](konfigurasjon.md#finanshub--innstillinger) |
+| **Import** | Under Innstillinger → Import: CSV, XLSX og innlimt tekst |
+| **Innstillinger** | Se [konfigurasjon.md](konfigurasjon.md#finanshub--innstillinger). Under Kategorier kan admin flytte gamle data til de nye kategoriene («Flytt til nye kategorier»: forhåndsvisning, bekreft og angre) |
 
 **Sidemeny:** trykk **Endre** ved siden av «Generelt», dra punktene eller bruk ▲▼, og trykk **Ferdig**. «Tilbakestill rekkefølge» gir standard tilbake. Rekkefølgen lagres per bruker.
 
@@ -141,13 +140,14 @@ docker compose --profile mail up -d
 - **Finn-handler:** fyll inn en egen Finn-mappe (f.eks. `Folders/Finn`), så leses Finn-e-postene fra samme postkasse inn som handler.
 - **Bridge-data** ligger i `./proton` – ta den med i backupen.
 
-## Subscription OS
+## Faste betalinger → Abonnementer
 
-<img src="images/finanshub-abonnementer.webp" alt="Subscription OS">
+<img src="images/finanshub-abonnementer.webp" alt="Abonnementer i Faste betalinger">
 
 - **Nøkkeltall:** per måned, per år og «lite brukt, kan sies opp».
 - **Legg til:** som nytt abonnement, fra en kvittering (AI fyller ut feltene) eller fra en transaksjon.
-- **Trekk-intervall:** månedlig, årlig eller **hvert 2. år**, med *kr per trekk*. 1 200 kr hvert 2. år gir 50 kr/mnd og 600 kr/år.
+- **Trekk-intervall:** ukentlig, hver 2. uke, månedlig, kvartalsvis, halvårlig, årlig eller hvert 2. år, med *kr per trekk*. 1 200 kr hvert 2. år gir 50 kr/mnd og 600 kr/år. Serveren regner neste trekk (Oslo-tid) og beløpet per måned.
+- **Samme tjeneste to steder:** et abonnement som også står som fast utgift, telles bare én gang.
 - **Status:** Aktiv → Si opp → Sagt opp.
 
 ## Delte mapper (bolig)
@@ -160,7 +160,7 @@ En mappe er hovedsakelig et **dashboard for en bolig**: enebolig, leilighet, hyt
 - **Faste regninger:** hvem som betaler, frekvens, sist betalt og neste.
 - **Fordeling:** likt delt eller egen nøkkel, med saldo per medlem (betalt − andel).
 - **Deling:** med andre brukere, med rollene **Eier**, **Kan redigere** og **Kan se**. Eiere deler og endrer roller, medlemmer kan forlate mappen, og den siste eieren kan ikke forlate den.
-- **Andre brukere** enn admin ser bare Delte mapper der de er medlem. Resten av regnskapet tilhører eieren.
+- **Regnskapet er per bruker.** En delt mappe er det eneste andre ser, og bare når de er medlem.
 
 ## Finn-handler
 
@@ -178,9 +178,9 @@ En mappe er hovedsakelig et **dashboard for en bolig**: enebolig, leilighet, hyt
 
 ## Mobil
 
-<img src="images/mobil-ios.webp" alt="FinansHub på iPhone">
+<img src="images/mobil-ios.webp" alt="Økonomi på iPhone">
 
-- **Fanelinje:** Hjem, Liste og Budsjett. **Andre OS** (Matplan, Domener, Subscription OS, Delte mapper, Finn-handler) og **Innstillinger** ligger bak profilbildet.
+- **Fanelinje:** Oversikt, Transaksjoner, Budsjett og Faste betalinger, og **Mer** med Sparing og planer, Kontoer og aksjer, Kvitteringer, Boliger, Finn-handler, Rapporter, Glimt og Innstillinger. Homelab-modulene nås fra Homelab-skallet («‹ Homelab»).
 - **Skann:** et trykk åpner kameraet, og et langt trykk viser valgene Ta bilde, Bilder og Filer.
 - **Opplasting:** kø med status per fil og en fremdriftspille på forsiden.
 - **Brettbar:** navigasjonsrail med profilbildet nederst til venstre, og liste og detaljer side om side.

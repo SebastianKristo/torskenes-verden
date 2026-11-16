@@ -2,7 +2,7 @@
 
 [oMLX](https://github.com/jundot/omlx) (Apache-2.0) er en MLX-server for Apple silicon med OpenAI-kompatibelt API. Den har tiered
 KV-cache (RAM + SSD) med prefiks-deling, continuous batching, LRU-utkasting og minnevakt. I Homelab er den en **tredje backend i
-AI-gaten** (`server/ai-gate.js`), ved siden av Ollama og Open WebUI. Den er ikke en egen klient. Køen, tidsgrensene, nye forsøk,
+AI-gaten** (`server/ai/gate.js`), ved siden av Ollama og Open WebUI. Den er ikke en egen klient. Køen, tidsgrensene, nye forsøk,
 telemetrien og jobbloggen er de samme.
 
 **Ollama er fortsatt standard.** Ingenting bytter motor før du velger oMLX for en oppgave i AI-kontroll. Gjør det først når eval har
@@ -59,7 +59,7 @@ launchctl bootout gui/$(id -u)/com.local.omlx58             # stopp oMLX helt (t
    Test sender «Svar bare med ordet: ok» gjennom gaten. Kortet viser modellene oMLX har. Lastede modeller vises bare hvis oMLX oppgir
    det i `/v1/models`; ellers står det at det er ukjent. Tekst- og bildemodell (MLX-ID) kan endres her.
 2. **AI-kontroll › Valg › «Motor per oppgave»**: Ollama · oMLX for Glimt (kalender og planlegger), AI-søk, brief, Finans · spør,
-   Domener og Dokumenter (bilde, rc). Disse går gjennom `ai-run.run()`. Embeddings og Chat går alltid til Ollama, og Chat har sin egen
+   Domener og Dokumenter (bilde, rc). Disse går gjennom `run()` i `server/ai/run.js`. Embeddings og Chat går alltid til Ollama, og Chat har sin egen
    modellvelger. Kategorisering og strekkoder går også til Ollama, fordi de kaller gaten direkte via `finans/ai.js`.
 3. **«Bruk Ollama hvis oMLX ikke svarer»** er på som standard. Ved ingen kontakt, 5xx, tidsavbrudd under innlasting eller minnefeil går
    samme spørsmål til Ollama med Ollama-ruten for oppgaven. Svaret og jobben merkes «via Ollama: oMLX svarte ikke (…)». En 4xx-feil
@@ -116,7 +116,7 @@ npm run eval -- --backend omlx --url http://127.0.0.1:18040 --key "$KEY" --ollam
   og bilde `mlx-community/Qwen2.5-VL-7B-Instruct-4bit`. `--model` og `--vision-model` overstyrer MLX-ID-ene.
 - Ollama-reserven er **av** i eval, så tallene er rene oMLX. `--omlx-fallback` slår den på.
 - Disse delene bruker fortsatt Ollama: Chat (case 17–19), kvitteringenes tekststeg (`finans/receipts/engines/llm.js`, case 11) og
-  embeddings. De går ikke gjennom rutingen i `ai-run.run()`. Uten `--ollama-url` får de status «env: trenger Ollama». Kjør
+  embeddings. De går ikke gjennom rutingen i `run()` i `server/ai/run.js`. Uten `--ollama-url` får de status «env: trenger Ollama». Kjør
   `--case 01,02,03,04,05,06,07,08,09,10,12,13,14,15,16` for en ren oMLX-sammenligning.
 - `/api/ps`-sjekken gjelder Ollama. Med oMLX ser eval etter lastede modeller i `/v1/models`, når oMLX oppgir det, og på
   `--ollama-url` sin `/api/ps`. Den advarer hvis Ollama holder en modell samtidig.
@@ -133,5 +133,5 @@ omlx …`. Det viser bare at riggen virker. Kvaliteten måles den ikke på.
   senere uten endringer i oMLX-delen.
 - Støtten for `json_schema strict` varierer per modell i oMLX. Validering og nytt forsøk i planleggeren gjelder som for Ollama.
 - Tre veier kaller fortsatt gaten med en Ollama-modell direkte og følger ikke motorvalget: kvitteringenes tekststeg, `finans/ai.js`
-  (`textJson`/`extract`: kategorisering, strekkoder) og abonnement-skjermbilder. De bruker Ollama til de flyttes til `ai-run.run()`.
+  (`textJson`/`extract`: kategorisering, strekkoder) og abonnement-skjermbilder. De bruker Ollama til de flyttes til `run()` i `server/ai/run.js`.
 - Lisens: se `docs/lisenser-tredjepart.md` (oMLX Apache-2.0, Qwen Apache-2.0).
