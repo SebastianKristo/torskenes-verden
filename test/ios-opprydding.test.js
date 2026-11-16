@@ -121,6 +121,14 @@ test('Struktur: Domener er ute av Store (@Observable-modell med @Environment, St
   assert.match(code(raw('FinansHub/Sources/PaperDomains.swift')), /@Environment\(DomenerModell\.self\) private var dom/);
 });
 
+test('Struktur: Swift 6 – full samtidighetssjekk på klokka først (advarsler i Swift 5-modus), resten på 5.10', () => {
+  const yml = raw('project.yml');
+  const watch = yml.slice(yml.indexOf('  HomelabWatch:'));
+  assert.match(watch, /SWIFT_STRICT_CONCURRENCY: complete/);
+  assert.equal((yml.match(/SWIFT_STRICT_CONCURRENCY/g) || []).length, 1, 'bare klokka foreløpig');
+  assert.match(yml, /SWIFT_VERSION: "5\.10"/);
+});
+
 test('C-B5: én ruting for innst-sidene (InnstSide), brukt av både telefon og iPad', () => {
   const paper = code(raw('FinansHub/Sources/Paper.swift'));
   const wide = code(raw('FinansHub/Sources/SettingsWide.swift'));

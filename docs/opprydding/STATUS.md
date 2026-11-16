@@ -54,7 +54,7 @@ Dette dokumentet går gjennom alle funnene i [AUDIT.md](AUDIT.md) og detaljrappo
 | iOS: `id: \.offset` / `DateFormatter()` / `nonisolated(unsafe)` | 165 / ~50 / 17 | 165 / 95 / 17 | **162 / 71 / 18** | Lite endret |
 | iOS: `.system(size:)` | 645 | 645 | **482** | Dynamic Type via `relativeTo:` (4 → 13) |
 | iOS: `NavigationStack` / `NavigationSplitView` / `ContentUnavailableView` | – | 3 / 0 / 0 | **12 / 13 / 6** | – |
-| iOS: `Store.swift` | 1 686 linjer | 1 686 | **1 720** | Ikke delt opp |
+| iOS: `Store.swift` | 1 686 linjer | 1 686 | **1 681** | rest-ios: første domene (Domener) ute som `DomenerModell`; resten gjenstår |
 | Android: `Color(0x…)` (uten generert) | 1 164 (534 unike) | 1 282 (558) | **973 (484)** | – |
 | Android: `fontSize` | 3 713 | 3 716 | **1 638** | – |
 | Android: `MaterialTheme.colorScheme` / `.typography` | 2 / 11 | 2 / 17 | **4 / 19** | Tema og typeskjema fra tokens via `HomelabTheme` |
@@ -241,7 +241,7 @@ Status: **Rettet** (i fase N), **Delvis**, **Gjenstår** eller **Ingen feil** (v
 | Q31 | Widgeter fra én definisjon per widget | Gjenstår | 83 `<receiver>` i `app/AndroidManifest.xml` | Generering fra én definisjon er ikke gjort |
 | Q1–Q18, Q20–Q25, Q27–Q29, Q32, Q33, Q35–Q41 | Beslutningene | Gjennomført | Fase 1–6 (se commitene), testvektorene og `test/moduler*.test.js` | Q1/O1 og Q4: siste rester av gamle navn i Økonomi på mobil-web (se O1, O6) |
 | Struktur: filnavn | Filer med promptnummer | Delvis | §2.1: server 1, web-CSS 0, iOS 5, web-JS 34, Android 70, test 195 av 275 | Økonomi på mobil-web (`mobile-p16…p46.js`, 32 filer), Android (`Paper14–19`, `Models11–17`, `…51Plat` m.fl.) og testene. Forslag: egen runde per plattform, som i Fase 3–5 |
-| Struktur: iOS | `Store` på 1 686 linjer, Swift 5.10, `.searchable` 0 | Gjenstår | `Store.swift` 1 720 linjer; `project.yml:10` Swift 5.10; 258 `static let shared` | Fase 4 la grunnmuren (APIClient, `NavigationStack`/`SplitView`, Dynamic Type). Oppdeling per domene og Swift 6 gjenstår |
+| Struktur: iOS | `Store` på 1 686 linjer, Swift 5.10, `.searchable` 0 | Delvis (rest-ios) | Mønsteret for oppdelingen: `DomenerModell.swift` (`@MainActor @Observable`), eid av Store med videresendende egenskaper, injisert med `.homelabMiljo(store)` (`HomelabMiljo.swift`) alle 43 steder Store settes i miljøet, lest med `@Environment(DomenerModell.self)` i `PaperDomains`; `test/ios-opprydding.test.js`. Swift 6: `SWIFT_STRICT_CONCURRENCY: complete` på klokka (`HomelabWatch`), bare advarsler i Swift 5-modus | Igjen: de andre domenene i Store (Finans, Mat, Boliger, Finn, Sporing, Papir-tilstand, innlogging) etter samme mønster, ett per steg. Swift 6-modus mangler: 258 `static let shared` på ikke-`Sendable` typer, 18 `nonisolated(unsafe)`, 54 filer med `static var` (globalt muterbart), `[String: Any]`-JSON over aktørgrenser, og advarslene CI-loggen viser for klokka. Slå på `SWIFT_VERSION: 6` mål for mål når CI er uten advarsler |
 | Struktur: Android | `AppViewModel` på 3 855 linjer, egen navigasjon, gamle versjoner | Gjenstår | `AppViewModel.kt` 3 949 linjer; 0 `NavigationSuiteScaffold`, 0 `SavedStateHandle`; AGP 8.7.3, Kotlin 2.1.0 | Fase 5 la grunnmuren (`:felles`, tema fra tokens, tilbakestabel). Navigation Compose, ViewModel per skjerm og oppgradering gjenstår |
 
 ## 5. Sikkerhetsreglene i CLAUDE.md, sjekket mot koden

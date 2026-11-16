@@ -536,6 +536,10 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: no.kristo.finanshub.watchkitapp
+        # Struktur: iOS (Swift 6): klokka er det minste målet (Watch/Sources, SharedNet, SharedKeychain) og får full
+        # samtidighetssjekk først. I Swift 5-modus gir den bare advarsler, så bygget stopper ikke; advarslene i CI-loggen er
+        # listen over det som må rettes før målet kan gå over til SWIFT_VERSION 6.
+        SWIFT_STRICT_CONCURRENCY: complete
         PRODUCT_NAME: FinansHubWatch
         TARGETED_DEVICE_FAMILY: "4"
         WATCHOS_DEPLOYMENT_TARGET: "10.0"
