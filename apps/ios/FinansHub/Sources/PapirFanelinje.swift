@@ -84,10 +84,11 @@ struct PapirFaneEtikett: View {
         let showIcon: Bool = style != "text" || on
         let showLabel: Bool = style == "text" || (style == "icons_active_label" && on)
         let expand: Bool = style == "icons" || !on
+        let ikonStil: DS.Tekst = showLabel ? .callout : .headline
         HStack(spacing: 7) {
             if showIcon {
                 Image(systemName: tab.symbol)
-                    .font(.ds(showLabel ? .callout : .headline))
+                    .font(Font.ds(ikonStil))
                     .overlay(alignment: .topTrailing) {
                         if tab.badge > 0 { PapirFaneMerke(antall: tab.badge).offset(x: 10, y: -8) }
                     }
