@@ -66,6 +66,8 @@ curl -s https://os.dittdomene.no/finans/api/search/ai -H "Authorization: Bearer 
 | GET / PUT | `/api/config` | Integrasjoner (admin). Hemmeligheter returneres aldri. |
 | GET | `/api/state` | Alt dashboardet trenger ved oppstart |
 | GET | `/api/ruter` · `/weather` · `/school` · `/trading` · `/energy` · `/health` · `/upcoming` · `/news` | Widgetdata, cachet på serveren |
+| GET | `/api/weather/places?q=` | Stedsoppslag (geokoding): `[{name, sub, lat, lon, country, source, region}]`, maks 10, bosteder først (Open-Meteo og OpenStreetMap på serveren, bufret 24 t). Uten `q`: brukerens lagrede steder. Sesjon eller app-token. Appene slår opp steder her, ikke direkte hos Open-Meteo (L12) |
+| GET | `/api/weather/place?q=[&day=today\|tomorrow]` | Været for et hvilket som helst sted: `{place:{name, country, label, lat, lon, tz, norway}, now, today, tomorrow, days, text, plain, source}`. `404 {error:"Fant ikke stedet …", suggest?}` når stedet ikke finnes, `400` uten `q`. Sesjon eller app-token |
 | GET | `/api/space/tle` · `/space/apod` · `/space/gallery/:key` | Rom-fanen |
 | CRUD | `/api/grades`, `/api/tests` | Studie |
 | GET / PUT / DELETE | `/api/cv` | CV-en. Lesing er offentlig, endring krever admin. |
