@@ -193,7 +193,7 @@ async function trialSet(id, status) {
     try { await (TR.src === 'w' ? viaW() : viaF()); } catch (e) { if (e.status !== 404 && e.status !== 405) throw e; await (TR.src === 'w' ? viaF() : viaW()); }
   }
   TR.d = (TR.d ?? []).filter((x) => String(x.id) !== String(id));
-  const P31 = await import('./mobile-p31.js'); P31.G.trials = null;
+  const P31 = await import('./mobile-glimt.js'); P31.G.trials = null;
   trialsWLoad(true).then(draw).catch(() => {});
 }
 

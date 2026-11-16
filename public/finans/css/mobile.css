@@ -6691,7 +6691,7 @@ html.h40-ov,html.h40-ov body{overflow:hidden}
 .m.p44-as .p43-top,.m.p44-as .n31-top,.m.p44-as .p44-vtop{padding-top:calc(env(safe-area-inset-top,0px) + 52px)}
 .m .p44s-btn.red{color:#b23a2a!important}.m.papir.pd .p44s-btn.red{color:#f08a76!important}
 
-/* ===================== Prompt 45 (mobile-p45.js, mobile-helse.js m.fl.) ===================== */
+/* ===================== Prompt 45 (mobile-glimt-agent.js, mobile-helse.js m.fl.) ===================== */
 .m .p45-sw{flex:none;position:relative;width:48px;height:29px;border-radius:15px;background:var(--pp-line);transition:background .2s}
 .m .p45-sw i{position:absolute;top:2.5px;left:2.5px;width:24px;height:24px;border-radius:12px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25);transition:transform .2s}
 .m .p45-sw.on{background:#2f7a4f}.m .p45-sw.on i{transform:translateX(19px)}

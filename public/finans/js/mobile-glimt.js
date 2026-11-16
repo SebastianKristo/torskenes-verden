@@ -13,9 +13,9 @@ import { esc, hlApi, api } from './core.js';
 import { m, draw, flash } from './mobile.js';
 import { haptic } from './mobile-haptics.js';
 import { hsTimeout, NAV_T } from './mobile-sidefaner-og-sw.js'; // prompt 32: GLIMT I SØKEFELTET
-import * as P34 from './mobile-p34.js';
-import * as P35 from './mobile-p35.js';
-import * as P36 from './mobile-p36.js';
+import * as P34 from './mobile-glimt-brief.js';
+import * as P35 from './mobile-glimt-figurer.js';
+import * as P36 from './mobile-brief-og-oppstart.js';
 import * as P37B from './mobile-p37b.js'; // prompt 37: «hvor er X» // prompt 36: spørsmål vs. handling, dagslys lokalt // prompt 35: været for et sted i AI-søket // prompt 34: tydelige AI-feil i boblen
 
 const lsGet = (k, d = null) => { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch { return d; } };
@@ -136,7 +136,7 @@ export function hintToast(t) {
 export function ansBubble() {
   const A = G.ans; if (!A) return '';
   if (A.busy) return `<div class="p31-ans" data-p31="ansx" role="status">${glimt(22, 'think')}<span class="p31-at busy">Tenker på «${esc(A.q)}» …${globalThis.P41?.wxComplex?.(A.q) ? '<small class="p41-step">Leser værdata for uken …</small>' : ''}</span></div>`; // prompt 41
-  // Prompt 38: trykk i boblen lukker den ikke lenger (tekst kan markeres). ✕, sveip opp og trykk utenfor lukker (mobile-p38.js).
+  // Prompt 38: trykk i boblen lukker den ikke lenger (tekst kan markeres). ✕, sveip opp og trykk utenfor lukker (mobile-okt-og-qr.js).
   return `<div class="p31-ans ready p38-ans" role="status" aria-live="polite"><button type="button" class="p38-ax" data-p31="ansx" aria-label="Lukk svar">${svg('M6 6l12 12M18 6L6 18', 12, 2.8)}</button><span class="p31-at">${bold(A.text)}</span>${A.agent ? globalThis.P45?.agentExtra?.(A, 'home') ?? '' : '' /* prompt 45 */}${A.card ? cardHtml(A.card, true) : ''}
     ${A.err ? P34.errButtons(A.q) : ''}${A.open ? (A.open.route === 'familie' ? P37B.famOpenBtn(A.open) : P35.wxOpenBtn(A.open)) : ''}<div class="p31-af"><span class="m-ell">✦ ${esc(String(A.src || 'Glimt').replace(/^✦\s*/, ''))}</span>${A.apply?.count && !A.applied ? `<button type="button" data-p31="ansapply">Endre ${A.apply.count} ${A.apply.count === 1 ? 'avtale' : 'avtaler'} ›</button>` : ''}${A.src === 'Snarvei' ? '' : '<button type="button" data-p31="anschat">Fortsett i Chat ›</button>'}</div><span class="p38-ah" aria-hidden="true"></span></div>`;
 }
@@ -214,7 +214,7 @@ export async function ask(q, o = {}) {
   const timer = setTimeout(() => { if (G.aid === id) { moved = true; handoff(q, id, () => jobId, 'Dette tar litt tid.'); } }, hsTimeout() * 1000);
   // Prompt 45 (claude-code-glimt-intelligent-agent.md): Hjem-søket går til Glimt-agenten (POST /api/glimt/agent, module:'home').
   // Svaret (reply) beskriver bare det som faktisk skjedde; spørsmål (ask), bekreftelse (confirm) og treff (results) vises i
-  // boblen (mobile-p45.js). Eldre server (404): /api/assist som før.
+  // boblen (mobile-glimt-agent.js). Eldre server (404): /api/assist som før.
   if (globalThis.P45?.agentHome) {
     let A45 = null;
     try { A45 = await globalThis.P45.agentHome(q); }

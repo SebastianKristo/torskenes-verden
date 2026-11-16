@@ -10,10 +10,10 @@ import { haptic } from './mobile-haptics.js';
 import { paper } from './mobile-paper.js';
 import * as P27 from './mobile-p27.js';
 import { toJpeg, readShot, errCardHtml, installVision, SLOW_MS } from './sub-shot.js';
-import * as P31 from './mobile-p31.js';
+import * as P31 from './mobile-glimt.js';
 import * as P37B from './mobile-p37b.js'; // prompt 37: gratis prøveperioder, delte abonnementer, wiggle med skjul
 
-// Prompt 31: Gratis prøveperiode (arket og lagring ligger i mobile-p31.js). Etter Lagre lukkes arket.
+// Prompt 31: Gratis prøveperiode (arket og lagring ligger i mobile-glimt.js). Etter Lagre lukkes arket.
 P31.hooks31({ trialSaved: () => { SB.sheet = false; SB.mode = null; }, subsReload: () => subsLoad() });
 
 Object.assign(ICONS, { sins: 'M4 20V10M10 20V4M16 20v-7M22 20H2', shist: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 7v5l3 2', shome: 'M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z' });

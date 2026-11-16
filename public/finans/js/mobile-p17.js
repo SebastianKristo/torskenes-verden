@@ -4,7 +4,7 @@
 // via én felles WebSocket (/api/ws). Alt tåler en eldre server: data som mangler vises som en forklaring, ikke en feil.
 import * as P29 from './mobile-p29.js';
 import * as P30 from './mobile-p30.js';
-import * as P31 from './mobile-p31.js';
+import * as P31 from './mobile-glimt.js';
 import { S, api, esc, n0, ini, hlApi, icon } from './core.js';
 import { m, draw, flash, meName, avInner, avatarUrl, route, isIOS, domOk } from './mobile.js';
 import { haptic } from './mobile-haptics.js';
@@ -568,7 +568,7 @@ export function onRealtime(d) {
   if (d.type === 'calendar-quick') { P29.onQuickRealtime(d); return; } // Prompt 29: rask time ferdig/feilet (31: steg og felt)
   if (d.type === 'assist') { P31.onAssistRealtime(d); return; }
   if (/^(receipt-job|reanalyze|job)/.test(String(d.type))) { import('./mobile-p39.js').then((x) => x.onRt39(d)).catch(() => {}); } // Prompt 39: fremdrift for «✦ På nytt»
-  if (d.type === 'meal:changed' || d.type === 'meal') { import('./mobile-p36.js').then((x) => x.onMeal(d)).catch(() => {}); return; } // Prompt 36: matplanen er felles, oppdater uten refresh // Prompt 31: Glimt-jobber (svarboble, Chat)
+  if (d.type === 'meal:changed' || d.type === 'meal') { import('./mobile-brief-og-oppstart.js').then((x) => x.onMeal(d)).catch(() => {}); return; } // Prompt 36: matplanen er felles, oppdater uten refresh // Prompt 31: Glimt-jobber (svarboble, Chat)
   if (d.type === 'family') import('./mobile-familie.js').then((x) => x.live50(d)).catch(() => {}); // prompt 50 (FAMWEB50): Familie i nytt design, Ruter-skolen fra Steder
   clearTimeout(rtT);
   rtT = setTimeout(async () => {

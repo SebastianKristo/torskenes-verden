@@ -362,7 +362,7 @@ export async function bind34(e, t) {
     case 'gnext': { e.preventDefault(); const n = guide(brief()).length; gStep(BR.step >= n ? 99 : BR.step + 1); return true; }
     case 'gskip': e.preventDefault(); LS('fh_p34_tour', 'av'); gStep(99); return true;
     case 'gtap': e.preventDefault(); gStep(BR.step > 0 && BR.step < 99 ? 99 : 1); return true;
-    case 'airetry': { e.preventDefault(); haptic('tap'); const P31 = await import('./mobile-p31.js'); P31.ask(x.dataset.q || ''); return true; }
+    case 'airetry': { e.preventDefault(); haptic('tap'); const P31 = await import('./mobile-glimt.js'); P31.ask(x.dataset.q || ''); return true; }
     case 'aiopen': return false; // vanlig lenke til #/aictl/ov
     default: return false;
   }

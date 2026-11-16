@@ -124,7 +124,7 @@ test('Negative beløp beholder minustegnet (Total saldo, Spart, «igjen å bruke
   assert.equal(krS(0), '0 kr');
   assert.match(pages, /l: 'Total saldo', v: krS\(tot\)/);
   assert.match(pages, /l: 'Spart', v: krS\(inn - ut\)/);
-  assert.match(src('public/finans/js/mobile-p45.js'), /\$\{bal < 0 \? '−' : ''\}\$\{n0\(bal\)\} kr disponibelt/);
+  assert.match(src('public/finans/js/mobile-glimt-agent.js'), /\$\{bal < 0 \? '−' : ''\}\$\{n0\(bal\)\} kr disponibelt/);
   assert.match(src('public/finans/js/mobile-paper.js'), /\['FINANS', s \? neg0\(s\.left\)/);
   assert.match(src('public/finans/js/mobile-hl.js'), /\$\{neg0\(s\.left\)\} kr/);
 });

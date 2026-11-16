@@ -12,7 +12,7 @@ import { esc, hlApi, S, n0 } from './core.js';
 import { m, draw, flash } from './mobile.js';
 import { haptic } from './mobile-haptics.js';
 import { HK, tasksLoad } from './mobile-p17.js';
-import * as P31 from './mobile-p31.js';
+import * as P31 from './mobile-glimt.js';
 import * as P37 from './mobile-p37.js';
 import * as PA3 from './mobile-tilpassing.js';
 import { vw } from '/assets/js/lib/viewport.js'; // vindusstørrelsen uten tvungen layout

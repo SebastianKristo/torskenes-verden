@@ -14,11 +14,11 @@ import { m, draw, flash } from './mobile.js';
 import { haptic } from './mobile-haptics.js';
 import { hlData } from './mobile-hl.js';
 import * as KAL from './mobile-kal.js';
-import * as P34 from './mobile-p34.js';
-import * as P31 from './mobile-p31.js';
+import * as P34 from './mobile-glimt-brief.js';
+import * as P31 from './mobile-glimt.js';
 import { isAdmin } from './mobile-p29.js';
 import * as P37 from './mobile-p37.js'; // prompt 37: Gjøremål-kortet i briefen
-import * as P38 from './mobile-p38.js';
+import * as P38 from './mobile-okt-og-qr.js';
 import * as P39 from './mobile-p39.js'; // prompt 39: Forslag fra Glimt
 import * as P37B from './mobile-p37b.js'; // prompt 37: bibelvers i briefen
 
@@ -41,7 +41,7 @@ import('/assets/js/glimt-figs.js').then((x) => { GF = typeof x.fig === 'function
 /** fig(id, størrelse, humør) → HTML. humør: idle | glad | talk | sov. */
 export function fig(id, S0 = 56, mood = 'idle', o = null) {
   // Prompt 40 (claude-code-glimt-jul.md): julemodus legges på av figurbiblioteket selv (julOn); mangler det i en eldre
-  // glimt-figs.js, kler mobile-p40.js på figuren her. {noJul:true} = figurvelgeren.
+  // glimt-figs.js, kler mobile-jul-og-totrinn.js på figuren her. {noJul:true} = figurvelgeren.
   const h = GF ? GF.fig(IDS.includes(id) ? id : 'glimt', S0, mood, o ?? undefined) : P34.figure(S0, mood === 'talk' ? 'talk' : 'idle');
   return o?.noJul || typeof GF?.julOn === 'function' || typeof GF?.fig?.julOn === 'function' ? h : globalThis.P40?.dress?.(h, S0) ?? h;
 }

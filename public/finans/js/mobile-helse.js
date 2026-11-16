@@ -2,7 +2,7 @@
 // design/Helse Home Assistant.dc.html). Bare enheter fra integrasjonen mobile_app, Telefoner · Alle mobilapp, gruppert per person
 // («IKKE KOBLET» sist), personvelger (bunnark «Hvem bruker telefonen?»), sensorer som chips og fast «Lagre».
 // API: GET /api/family/health/ha?view=phones|all, PUT /api/family/health/ha {devices:[{id, personId, sensors}]} (bare admin).
-// Lastes fra mobile-p45.js (globalThis.P45H).
+// Lastes fra mobile-glimt-agent.js (globalThis.P45H).
 import { esc, hlApi } from './core.js';
 import { m, draw, flash } from './mobile.js';
 import { haptic } from './mobile-haptics.js';
@@ -83,7 +83,7 @@ async function save() {
   HH.saving = false; draw();
 }
 
-/* ---------- Krokene (fra mobile-p45.js) ---------- */
+/* ---------- Krokene (fra mobile-glimt-agent.js) ---------- */
 export function layer() { return pickSheet(); }
 export function after(root) { root.classList.toggle('p45-hapg', on()); if (!on()) HH.sheet = null; }
 export function load(scr, sub) { return scr === 'set' && sub === 'helseha' ? haLoad(true) : null; }

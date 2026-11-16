@@ -3,7 +3,7 @@
 //     kreditering i Innstillinger → Tilpass → Bakgrunn (claude-code-bakgrunn-oslo-dognet.md, -hjem-fjern-bildekreditering.md)
 //   · Skanneknapp på Hjem (papir_scan_home) i Tilpass og i «Rediger fanelinjen» (claude-code-hjem-skanneknapp-av.md)
 //   · Fold 1c: stort Glimt-kort til venstre, fanene Nå · I dag · Hjemme · Økonomi til høyre (claude-code-hjem-fold-ipad-oppsett.md)
-//   · Søkepillen: dra ned → animasjon inn i Chat (claude-code-sok-pille-dra-til-chat.md; gesten ligger i mobile-p38.js)
+//   · Søkepillen: dra ned → animasjon inn i Chat (claude-code-sok-pille-dra-til-chat.md; gesten ligger i mobile-okt-og-qr.js)
 //   · Huskeliste: Glimt deler opp med AI i bakgrunnen, «Laget med Glimt», og fra søket på Hjem (claude-code-huskeliste-glimt-ai-bakgrunn.md)
 //   · Innstillinger → Konto → SERVER (lokal/ekstern adresse, bytt automatisk) (claude-code-innlogging-uten-server.md)
 //   · 17. mai: rød topp, program, «Hipp hipp hurra!», bryter for vanlig Hjem, HØYTIDER i Tilpass (claude-code-17-mai.md)
@@ -19,7 +19,7 @@ import { haptic } from './mobile-haptics.js';
 import * as PAPER from './mobile-paper.js';
 import { edBlocks, edOn } from './mobile-tilpassing.js';
 import { hlData } from './mobile-hl.js';
-import * as P31 from './mobile-p31.js';
+import * as P31 from './mobile-glimt.js';
 import { grp } from './mobile-p17.js';
 import * as B from './mobile-p41b.js';
 import { DEF47, defaults47, probe47, canTry47 } from '/assets/js/serveradresser.js'; // prompt 47: standard serveradresser

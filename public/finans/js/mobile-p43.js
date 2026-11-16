@@ -3,8 +3,8 @@
 //   · Gjøremål: hold inne på en pille → «Rekkefølge på lister» (dra ≡ eller ▲▼, Tilbakestill), «+ Ny liste» alltid sist
 //   · Chat → AI-kontroll → Importer: minne og samtaler fra Claude (POST /api/chat/import/claude …)
 //   · Stor skjerm (iPad/Fold, ≥ 600 og bredde ≥ 0,9 × høyde): klasse p43-big på roten (sentrerte ark, kolonner)
-// Saldokortet (mobile-paper.js), månedstopp og Glimt-pillen (mobile-papir-sider.js/mobile-tilpassing.js), Domener-raden (mobile-p38.js),
-// send-knappen (mobile-chat.js), svarboblen (mobile-p31.js/-p41.js) og Integrasjoner MEDIA (mobile-p26.js) ligger der koden fra før bor.
+// Saldokortet (mobile-paper.js), månedstopp og Glimt-pillen (mobile-papir-sider.js/mobile-tilpassing.js), Domener-raden (mobile-okt-og-qr.js),
+// send-knappen (mobile-chat.js), svarboblen (mobile-glimt.js/-p41.js) og Integrasjoner MEDIA (mobile-p26.js) ligger der koden fra før bor.
 // Lastes med dynamisk import fra mobile.js (statiske importer herfra er trygge fordi resten allerede er evaluert).
 import { esc, hlApi } from './core.js';
 import { m, draw, flash } from './mobile.js';

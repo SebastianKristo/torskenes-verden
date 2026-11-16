@@ -12,9 +12,9 @@ import * as CHAT from './mobile-chat.js';
 import * as KAL from './mobile-kal.js';
 import { parseQuick, quickLabel } from '/assets/js/quick-time.js';
 import { quickParse, quickCached } from '/assets/js/lib/dates.js'; // Fase 3: dato og tid fra serveren (POST /api/kalender/quick/parse)
-import * as P31 from './mobile-p31.js';
+import * as P31 from './mobile-glimt.js';
 import * as P32 from './mobile-sidefaner-og-sw.js';
-import * as P36 from './mobile-p36.js'; // prompt 36: spørsmål med dato er ikke avtaler, én Glimt-visning, backup-kvittering
+import * as P36 from './mobile-brief-og-oppstart.js'; // prompt 36: spørsmål med dato er ikke avtaler, én Glimt-visning, backup-kvittering
 
 const svg = (d, s = 16, w = 2) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${d}"/></svg>`;
 const todayKey = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
@@ -25,7 +25,7 @@ const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch {} };
    1. Hjem: søkefelt med søkemotor
    ===================================================================== */
 const ENG = { ai: ['Glimt', 'Spør om været, eller skriv «time hos …»', 'Svarer her og legger til timer'], google: ['Google', 'Søk på Google', 'Åpner google.com'], ddg: ['DuckDuckGo', 'Søk med DuckDuckGo', 'Åpner duckduckgo.com'] };
-const GLOGO = (s) => P31.GLOGO(s); // prompt 39: lat (importrekkefølgen kan gi TDZ) // Prompt 31: logoene ligger i mobile-p31.js (ekte Google-G og DuckDuckGo-and)
+const GLOGO = (s) => P31.GLOGO(s); // prompt 39: lat (importrekkefølgen kan gi TDZ) // Prompt 31: logoene ligger i mobile-glimt.js (ekte Google-G og DuckDuckGo-and)
 // Prompt 31: Glimt-merket (Klar; Tenker mens svaret hentes) i stedet for ✦, ekte logoer for Google og DuckDuckGo.
 const engIcon = (k, big) => (k === 'google' ? GLOGO(big ? 22 : 20) : k === 'ddg' ? P31.DLOGO(big ? 22 : 20) : P31.glimt(big ? 24 : 24, !big && P31.G.ans?.busy ? 'think' : 'ready', 'p31-eng'));
 
@@ -199,7 +199,7 @@ async function undo() {
 /** Pille og banner øverst (alle sider). */
 export function quickLayer() {
   const n = QJ.jobs.length, T = QJ.toast;
-  const pill = ''; // Prompt 31: pillen er erstattet av Glimt-toasten (mobile-p31.js aiLayer)
+  const pill = ''; // Prompt 31: pillen er erstattet av Glimt-toasten (mobile-glimt.js aiLayer)
   const ban = T && !n ? `<div class="p29-ban" role="status"><span class="m-grow"><b>✓ ${esc(T.t)}</b><span>${esc(T.l)}${m.screen === 'hl' ? ' · lagt i kalenderen' : ''}</span>${T.w ? `<span>${esc(T.w)}</span>` : ''}</span><button data-p29="undo">Angre</button><button class="pri" data-p29="show">Vis</button></div>` : '';
   return pill + ban;
 }

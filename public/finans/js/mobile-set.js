@@ -1,6 +1,6 @@
 // Innstillinger i mobilappen: hovedside med gruppene Konto, App og System, og én underside per gruppe.
 // Valg som bare gjelder denne enheten lagres i localStorage (fh_mprefs); AI og varsler for kvitteringer/budsjett på serveren.
-import * as P36 from './mobile-p36.js'; // prompt 36: Konto med profilbilde
+import * as P36 from './mobile-brief-og-oppstart.js'; // prompt 36: Konto med profilbilde
 import * as P29 from './mobile-p29.js';
 import { S, api, esc, n0, ini, icon, loadBoot, loadSummary, hlApi } from './core.js';
 import { m, draw, flash, pref, setPref, theme, iosBg, isIOS, meName, avInner, avatarUrl, loadMe, startScr, domOk, HLTABS, FINTABS, FIXED_HL, FIXED_FIN, tabName } from './mobile.js';
@@ -22,7 +22,7 @@ import { p17SetMain, p17Modules, p17AiExtra, p17Varsler, aiLoad, notifyLoad, NT,
 import * as P27 from './mobile-p27.js';
 import * as P33 from './mobile-glimt-husker.js'; // prompt 33: GLIMT HUSKER
 import * as P32 from './mobile-sidefaner-og-sw.js'; // prompt 32: GLIMT I SØKEFELTET, fanelinje på andre sider
-import * as P38 from './mobile-p38.js'; // prompt 38: ØKT i Konto og Logg inn på ny enhet
+import * as P38 from './mobile-okt-og-qr.js'; // prompt 38: ØKT i Konto og Logg inn på ny enhet
 import { updLoad, updPage, updSummary, updAdmin, updBind } from './mobile-upd.js';
 
 const T = { f: {}, ai: null, bk: null, srch: null, tokens: null, devices: null, newTok: '', nt: { name: '', scopes: ['receipts:write'], exp: '90' }, ping: '', lastSync: null, usage: null };
@@ -157,7 +157,7 @@ const PAGE = {
         chips('lockAfter', 'Lås etter', [['0', 'Umiddelbart'], ['1', '1 min'], ['5', '5 min'], ['15', '15 min']], pref('lockAfter')),
         tog('appHide', 'Skjul beløp i appveksleren', 'Uskarpt bilde når du bytter app', pref('appHide'))])}
       ${globalThis.P40?.tfaGroup ? globalThis.P40.tfaGroup(G) : G('Tofaktor', [val(`2FA for ${m.me?.username ? '@' + esc(m.me.username) : 'kontoen'}`, tfa === undefined ? '–' : tfa ? '● På · TOTP' : '○ Av', tfa ? '#7BE3A0' : tfa === false ? '#F2B56B' : ''), link(tfa ? 'Administrer 2FA' : 'Sett opp 2FA', '/', 'Homelab → Innstillinger → Konto og sikkerhet')],
-        'Bruk en autentiseringsapp som 1Password, Google Authenticator eller Aegis.') /* prompt 40: oppsett i appen (mobile-p40.js) */}
+        'Bruk en autentiseringsapp som 1Password, Google Authenticator eller Aegis.') /* prompt 40: oppsett i appen (mobile-jul-og-totrinn.js) */}
       ${G('Pålitelige enheter', d?.devices?.length ? d.devices.map((x) => val(`${esc(x.name)}${x.current ? ' · denne' : ''}`, when(x.lastSeen), x.current ? '#7BE3A0' : '')) : [val('Ingen pålitelige enheter', '')],
         d ? (d.lan ? 'Du er på lokalt nett nå.' : 'Du er ikke på lokalt nett nå. Fra internett kreves alltid passord.') : '')}`;
   },

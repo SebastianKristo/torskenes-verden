@@ -2,7 +2,7 @@
 // fullskjerm uten fanelinje og FAB, profiler (Innstillinger → PROFIL), Boliger (toppbilde per bolig, domene-pille og
 // «Rediger bolig» med hold inne), søk og ✦ AI-søk i Innstillinger, alle integrasjoner via /api/integrations og
 // ikoner i Nyhetsleser som <img>. Endepunktene kommer fra serveren i samme prompt; mangler de (404), faller vi tilbake.
-import * as P36 from './mobile-p36.js'; // prompt 36: Hovedkalender og Vis også i Kalender (Google)
+import * as P36 from './mobile-brief-og-oppstart.js'; // prompt 36: Hovedkalender og Vis også i Kalender (Google)
 import * as P30 from './mobile-p30.js';
 import { api, esc, n0, ini, hlApi } from './core.js';
 import { m, draw, flash, domOk } from './mobile.js';

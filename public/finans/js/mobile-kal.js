@@ -13,7 +13,7 @@ import { BD, bdLoad } from './mobile-p24.js';
 import { quickParse, quickCached } from '/assets/js/lib/dates.js'; // Fase 3: dato og tid fra serveren (POST /api/kalender/quick/parse)
 import { LEARN_TYPES, typeName, loadMemory, memoryNow, addMemory, applyMemory, nameOfEvent, dinOf } from '/assets/js/glimt-memory.js'; // prompt 33
 import * as P29 from './mobile-p29.js';
-import { glimt } from './mobile-p31.js'; // prompt 32: Glimt-merket i søket og «Beskriv med Glimt»
+import { glimt } from './mobile-glimt.js'; // prompt 32: Glimt-merket i søket og «Beskriv med Glimt»
 import { vw } from '/assets/js/lib/viewport.js'; // vindusstørrelsen uten tvungen layout
 
 const MN = ['januar', 'februar', 'mars', 'april', 'mai', 'juni', 'juli', 'august', 'september', 'oktober', 'november', 'desember'], MS = MN.map((x) => x.slice(0, 3));

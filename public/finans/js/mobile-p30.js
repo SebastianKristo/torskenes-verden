@@ -12,8 +12,8 @@ import { haptic } from './mobile-haptics.js';
 import { updAdmin } from './mobile-upd.js';
 import * as P23 from './mobile-p23.js';
 import { U, loadUpdate, startUpdate, checkUpdate, running, state, watch, onUpdate } from '/assets/js/sysupdate.js';
-import { glimt } from './mobile-p31.js';
-import * as P36 from './mobile-p36.js'; // prompt 36: Sherlock-/snekker-Glimt, oppstartsside, tidligere versjoner
+import { glimt } from './mobile-glimt.js';
+import * as P36 from './mobile-brief-og-oppstart.js'; // prompt 36: Sherlock-/snekker-Glimt, oppstartsside, tidligere versjoner
 import { point52 } from './nytt-i-versjonen.js'; // prompt 52: «Nytt i» som punkter med overskrift, uten interne merknader
 
 const ls = {

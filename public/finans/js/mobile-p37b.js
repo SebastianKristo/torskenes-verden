@@ -9,8 +9,8 @@ import { esc, hlApi, api } from './core.js';
 import { m, draw, flash } from './mobile.js';
 import { haptic } from './mobile-haptics.js';
 
-import * as P38 from './mobile-p38.js'; // prompt 38: Glimt i prestedrakt
-import { TT as TT35 } from './mobile-p35.js';
+import * as P38 from './mobile-okt-og-qr.js'; // prompt 38: Glimt i prestedrakt
+import { TT as TT35 } from './mobile-glimt-figurer.js';
 const TTalk = () => TT35?.who != null;
 
 const pad = (n) => String(n).padStart(2, '0');
@@ -100,7 +100,7 @@ export function bibleBrief(place) {
   const p = h >= 5 && h < 17 ? 'm' : 'k';
   if (place === 'top' && BB.set && BB.set[p === 'm' ? 'morning' : 'evening'] === false) return '';
   const v = verse(p), L = look(p);
-  // Prompt 40 (claude-code-brief-bibel-trykk.md): hele kortet åpner Bibel-siden (mobile-p40.js tar trykket).
+  // Prompt 40 (claude-code-brief-bibel-trykk.md): hele kortet åpner Bibel-siden (mobile-jul-og-totrinn.js tar trykket).
   return `<div class="p37-bv p40-bvo" data-gb="bibel" data-p40="bibel" role="button" tabindex="0" aria-label="Åpne Bibel" style="background:${L.bg};color:${L.fg}"><i class="p37-bvg" style="background:${L.glow}"></i>
     <div class="p37-bvh p38-bvh"><span class="p38-bvk"><span style="color:${L.lab}">${L.kick}</span><span style="color:${L.mut}">${esc(dateLbl())}</span></span><span class="p38-bvf">${P38.priest(46, TTalk() ? 'talk' : 'idle') /* prompt 38: Glimt i prestedrakt */}</span></div>
     <span class="p37-bvt">«${esc(v.text)}»</span>
@@ -496,11 +496,11 @@ export async function submit37b(e, t) {
   try { await api('/subscriptions/trials', { method: 'POST', json: body }); }
   catch (err) { if (err.status !== 404 && err.status !== 405) { TRS.busy = false; flash(err.message, 'err'); draw(); return true; } const L = lsGet('papir_trials', []) || []; L.push({ id: `t${Date.now()}`, ...body, status: 'active', local: true }); lsSet('papir_trials', L); }
   TRS.busy = false; TRS.add = false; TRS.f = { n: '', end: '', p: '' };
-  const P31 = await import('./mobile-p31.js'); P31.G.trials = null; await P31.trialsLoad(true).catch(() => {});
+  const P31 = await import('./mobile-glimt.js'); P31.G.trials = null; await P31.trialsLoad(true).catch(() => {});
   flash(`${body.service} er lagt til · Glimt minner deg på dagen før ✓`); draw(); return true;
 }
 async function trialSet(id, status) {
-  const P31 = await import('./mobile-p31.js');
+  const P31 = await import('./mobile-glimt.js');
   try { await api(`/subscriptions/trials/${encodeURIComponent(id)}`, { method: 'PATCH', json: { status, res: status === 'kept' ? 'beholdt' : 'avsluttet' } }); }
   catch (e) { if (e.status === 404) { const L = (lsGet('papir_trials', []) || []).map((x) => (String(x.id) === String(id) ? { ...x, status } : x)); lsSet('papir_trials', L); } else { flash(e.message, 'err'); return; } }
   P31.G.trials = null; await P31.trialsLoad(true).catch(() => {});
@@ -538,7 +538,7 @@ export async function bind37b(e, t) {
     case 'obskip': OB.on = false; lsSet('p37_onb_done', true); draw(); return true;
     case 'obdone': OB.on = false; OB.checked = false; obCheck().catch(() => {}); if (location.hash !== '#/hl') location.hash = '#/hl'; else draw(); return true;
     case 'obopen': OB.checked = false; await obCheck(true); if (!OB.on) flash('Serveren har ikke profiler ennå'); return true;
-    case 'famopen': { const P31 = await import('./mobile-p31.js'), P16 = await import('./mobile-fanelinje.js'); P31.G.ans = null; if (x.dataset.k) P16.FM.sel = x.dataset.k; haptic('tap'); location.hash = '#/fam'; return true; }
+    case 'famopen': { const P31 = await import('./mobile-glimt.js'), P16 = await import('./mobile-fanelinje.js'); P31.G.ans = null; if (x.dataset.k) P16.FM.sel = x.dataset.k; haptic('tap'); location.hash = '#/fam'; return true; }
     case 'h2x': H2.open = false; draw(); return true;
     case 'h2auto': h2save({ auto: !h2opt().auto }); haptic('tab'); draw(); return true;
     case 'h2n': h2save({ n: +x.dataset.v }); haptic('tab'); draw(); return true;

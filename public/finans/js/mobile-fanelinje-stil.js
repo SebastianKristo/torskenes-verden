@@ -4,7 +4,7 @@
 import { api, esc, hlApi } from './core.js';
 import { m, draw, flash, startScr } from './mobile.js';
 import { haptic } from './mobile-haptics.js';
-import * as P34 from './mobile-p34.js'; // prompt 34: mål-id, scrollTo og pulserende ring
+import * as P34 from './mobile-glimt-brief.js'; // prompt 34: mål-id, scrollTo og pulserende ring
 import { vw } from '/assets/js/lib/viewport.js'; // vindusstørrelsen uten tvungen layout
 
 const LS = 'fh_p25';
@@ -118,7 +118,7 @@ function seek() {
 }
 function mark(scroll) {
   if (!HI?.sel) return;
-  // Prompt 34: rød pulserende ring (og boble for «Oppdater nå») i 6 s eller til første trykk – se mobile-p34.js ring().
+  // Prompt 34: rød pulserende ring (og boble for «Oppdater nå») i 6 s eller til første trykk – se mobile-glimt-brief.js ring().
   if (scroll) { P34.ringSel(HI.sel); HI = null; }
 }
 

@@ -4,7 +4,7 @@ import { api, esc, n0, n2, dd, dWeek, today, icon, aiLine, matApi, domApi, parse
 import { logo } from './mobile-p20.js'; // logoregisteret (prompt 20), ellers core.logo
 import { m, draw, flash, avatar, backBtn, pref } from './mobile.js';
 import { subsLoad, subsView, subsBind } from './mobile-subs.js';
-import * as P38 from './mobile-p38.js'; // prompt 38: Glimt-oppsummering og alt lastet ved åpning
+import * as P38 from './mobile-okt-og-qr.js'; // prompt 38: Glimt-oppsummering og alt lastet ved åpning
 
 export const MODS = [
   ['mat', 'Mat', 'Ukemeny, kokk og handleliste', 'mat'],

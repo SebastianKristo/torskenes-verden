@@ -9,8 +9,8 @@
 import { esc, hlApi } from './core.js';
 import { m, draw, flash } from './mobile.js';
 import { haptic } from './mobile-haptics.js';
-import { G as G31 } from './mobile-p31.js';
-import * as P35 from './mobile-p35.js';
+import { G as G31 } from './mobile-glimt.js';
+import * as P35 from './mobile-glimt-figurer.js';
 import { TR } from './mobile-track.js';
 import { BD } from './mobile-p24.js';
 import { logout } from './mobile-p21.js';

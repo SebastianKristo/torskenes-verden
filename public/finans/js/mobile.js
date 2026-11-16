@@ -37,16 +37,16 @@ import * as P28 from './mobile-mer.js';
 import * as P29 from './mobile-p29.js';
 import * as P30 from './mobile-p30.js';
 import * as P30B from './mobile-boliger-deling.js';
-import * as P31 from './mobile-p31.js';
+import * as P31 from './mobile-glimt.js';
 import * as P32 from './mobile-sidefaner-og-sw.js'; // prompt 32: fanelinje på Domener/Abonnement/Familie, GLIMT I SØKEFELTET, Prøveperioder, SW-oppdatering
 import * as CHAT from './mobile-chat.js';
-import * as P34 from './mobile-p34.js'; // prompt 34: haptikk tilbake, kvitteringer under AI-analyse, Glimt-brief, markering i Innstillinger
+import * as P34 from './mobile-glimt-brief.js'; // prompt 34: haptikk tilbake, kvitteringer under AI-analyse, Glimt-brief, markering i Innstillinger
 import * as P34AI from './mobile-ai-kontroll.js'; // prompt 34: AI-kontroll (#/aictl)
 import * as P37 from './mobile-p37.js'; // prompt 37: Gjøremål (uten fanelinje, detaljark, delte lister, Glimt i ✦-knappen)
 import * as P37B from './mobile-p37b.js'; // prompt 37: bibelvers, onboarding med profil, «hvor er X», Pakker-widget, prøveperioder
-import * as P38 from './mobile-p38.js'; // prompt 38: AI-svar lukk, nye brief-kort, prestedrakt, ØKT, QR-innlogging, Glimt i Domener
+import * as P38 from './mobile-okt-og-qr.js'; // prompt 38: AI-svar lukk, nye brief-kort, prestedrakt, ØKT, QR-innlogging, Glimt i Domener
 import * as P39 from './mobile-p39.js'; // prompt 39: sveip bort myk, Bibel uten fanelinje, wiggle-ark, Tilpass/Appprofil, Yr mot Storm 2a, ukas vær, kvittering på nytt
-let P40 = null; // prompt 40: mobile-p40.js (dynamisk import i bind())
+let P40 = null; // prompt 40: mobile-jul-og-totrinn.js (dynamisk import i bind())
 let P41 = null; // prompt 41: mobile-p41.js (dynamisk import i bind(); TDZ i sykliske importer)
 let P42 = null; // prompt 42: mobile-oversikt-knapp.js (dynamisk import i bind())
 let P43 = null; // prompt 43: mobile-p43.js (+ mobile-media.js for Media), dynamisk import i bind()
@@ -54,9 +54,9 @@ let P44 = null; // prompt 44: mobile-mer-og-gjoremal.js (+ p44l Logger, p44s Stu
 let P50F = null; // prompt 50 (FAMWEB50): mobile-familie.js – Familie i nytt design (/assets/js/family.js), dynamisk import i bind()
 let P46 = null; // prompt 46: mobile-p46.js (+ mobile-kart.js Kart), dynamisk import i bind()
 let P52 = null; // prompt 52 (WEB52F): mobile-saldokort.js – saldokortets utseende (hold inne) og avrundet månedslinje i Liste
-let P45 = null; // prompt 45: mobile-p45.js (+ p45f Familie, p45h Gjøremål/Helse/Logger/Import, p45m Media), dynamisk import i bind()
-import * as P36 from './mobile-p36.js'; // prompt 36: sveip bort brief, Sherlock/snekker-Glimt, oppstartsside, profilbilde, ikoner, temperatur trykk/hold
-import * as P35 from './mobile-p35.js'; // prompt 35: Glimt-familien, brief med venner og opplesning, Innstillinger → Glimt (#/glimt), vær for sted
+let P45 = null; // prompt 45: mobile-glimt-agent.js (+ p45f Familie, p45h Gjøremål/Helse/Logger/Import, p45m Media), dynamisk import i bind()
+import * as P36 from './mobile-brief-og-oppstart.js'; // prompt 36: sveip bort brief, Sherlock/snekker-Glimt, oppstartsside, profilbilde, ikoner, temperatur trykk/hold
+import * as P35 from './mobile-glimt-figurer.js'; // prompt 35: Glimt-familien, brief med venner og opplesning, Innstillinger → Glimt (#/glimt), vær for sted
 import { takeApp, HK, p17Bind, p17Sheets, huskeView, tasksLoad, posWidget, bolWidgetLoad, appLoad, applyIcon, ptrBind, wsConnect, onRealtime } from './mobile-p17.js';
 import { trkDown, trkMove, trkUp } from './mobile-papir-sider.js';
 import { take16, p16Bind, p16Pointer, p16Move, p16Up, tabSheet, avgView, avgLoad, avgSheet, famView, famLoad, famSheet, famAfterDraw, bolView, bolLoad, AV, BO } from './mobile-fanelinje.js';
@@ -496,7 +496,7 @@ async function load() {
     if (P45) { const j45 = P45.load45(scr, m.sub); if (j45) jobs.push(j45); } // prompt 45
     if (P46) { const j46 = P46.load46(scr, m.sub); if (j46) jobs.push(j46); } // prompt 46
     // Prompt 46: kjeden under hang tidligere på «if (P45)» som else-gren, så Nyheter, Vær, Ruter, Familie, Gjøremål osv.
-    // ikke ble lastet på nytt ved navigering når mobile-p45.js var lastet (bare ved første oppstart). Nå egen kjede.
+    // ikke ble lastet på nytt ved navigering når mobile-glimt-agent.js var lastet (bare ved første oppstart). Nå egen kjede.
     if (scr === 'nyheter') jobs.push(newsLoad());
     else if (scr === 'vaer') jobs.push(wxLoad());
     else if (scr === 'avg') jobs.push(avgLoad());
@@ -800,7 +800,7 @@ export function bind() {
   applyIcon(); appLoad().then(() => draw()).catch(() => {}); ptrBind(); wsConnect(onRealtime);
   wxBindScroll(); P23.icBoot(); P25.boot(); P26.boot26(); P27.boot27(); P28.boot28(); P30.boot30({ target: backTarget, cancel: cancelOthers }); P31.boot31(); P32.boot32(); P34.boot34(); P35.boot35(); P36.boot36(); P37.boot37(); P37B.boot37b(); P38.boot38(); P39.boot39();
   // Prompt 40: lastes lat (dynamisk import), så modulrekkefølgen ikke endres (TDZ i sykliske importer).
-  import('./mobile-p40.js').then((x) => { P40 = x; x.boot40(); if (document.documentElement.dataset.ui === 'mobile') draw(); }).catch((err) => console.warn('mobile-p40', err));
+  import('./mobile-jul-og-totrinn.js').then((x) => { P40 = x; x.boot40(); if (document.documentElement.dataset.ui === 'mobile') draw(); }).catch((err) => console.warn('mobile-jul-og-totrinn', err));
   // Prompt 41: også lat (dynamisk import). globalThis.P41 brukes av de andre modulene.
   import('./mobile-p41.js').then((x) => { P41 = x; x.boot41(); if (document.documentElement.dataset.ui === 'mobile') draw(); }).catch((err) => console.warn('mobile-p41', err));
   // Prompt 42: Hjem-knapp i fanelinja, Vel fremme, ikonsøk, PostNord-logo, Gjøremål-Glimt del opp (lat, som 40 og 41).
@@ -810,7 +810,7 @@ export function bind() {
   // Prompt 44: Mer ny, Gjøremål-infoside og deloppgaver, Logg inn som, Overfør eier, Tidligere versjoner, Logger, Studie, Glimt-tid (lat, som 40–43).
   import('./mobile-mer-og-gjoremal.js').then((x) => { P44 = x; x.boot44(); if (document.documentElement.dataset.ui === 'mobile') { draw(); load(); } }).catch((err) => console.warn('mobile-mer-og-gjoremal', err));
   // Prompt 45: Glimt-agenten, brettoppsett (skann, Hjem-knapp og wiggle i navbaren), Mer, Ruter, Vær, Familie, Gjøremål, Media m.m. (lat, som 40–44).
-  import('./mobile-p45.js').then((x) => { P45 = x; x.boot45(); if (document.documentElement.dataset.ui === 'mobile') { draw(); load(); } }).catch((err) => console.warn('mobile-p45', err));
+  import('./mobile-glimt-agent.js').then((x) => { P45 = x; x.boot45(); if (document.documentElement.dataset.ui === 'mobile') { draw(); load(); } }).catch((err) => console.warn('mobile-glimt-agent', err));
   // Prompt 46: Kart, Ruter-innstillinger i wiggle, Nyheter i Innstillinger, profilring, liquid glass i Vær (lat, som 40–45).
   import('./mobile-familie.js').then((x) => { P50F = x; x.boot50(); }).catch((err) => console.warn('mobile-familie', err)); // prompt 50 (FAMWEB50)
   import('./mobile-p46.js').then((x) => { P46 = x; x.boot46(); if (document.documentElement.dataset.ui === 'mobile') { draw(); load(); } }).catch((err) => console.warn('mobile-p46', err));

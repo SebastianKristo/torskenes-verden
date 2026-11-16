@@ -6,7 +6,7 @@ import * as P24 from './mobile-p24.js';
 import { S, api, hlApi, esc, n0, n2, dd, today, parseAmount, loadReceipts, loadBoot } from './core.js';
 import { m, draw, flash, loadJobs, ACTIVE_JOBS, retryUpload } from './mobile.js';
 import { haptic, hapBack } from './mobile-haptics.js';
-import * as P34 from './mobile-p34.js'; // prompt 34: ✦ ANALYSERES AV AI i Kvitteringer
+import * as P34 from './mobile-glimt-brief.js'; // prompt 34: ✦ ANALYSERES AV AI i Kvitteringer
 import { logo } from './mobile-p20.js';
 import { canSrv } from './mobile-p17.js';
 import { form48, via48, uncCls48, uncTag48, is48, flush48, bind48, setRedraw48, _e48 } from './kvittering-skjema.js'; // prompt 48: skjemaet for skannede kvitteringer
