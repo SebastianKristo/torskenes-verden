@@ -125,4 +125,10 @@ test('Widgetdata: prøveperiode-widgeten skjuler prisene, og Hjem-widgetene sier
   assert.equal(bh.body.hideAmounts, true);
   assert.doesNotMatch(JSON.stringify(bh.body), /\d\s?kr\b/, 'ingen beløp i tekstene');
   if (/149 kr/.test(bw.text)) assert.match(bh.text, /••• kr/);
+  // Hele briefen (reserven for Android-widgeten) skjuler beløp bare når enheten ber om det.
+  const bf = await A('/api/brief?hideAmounts=1');
+  assert.equal(bf.status, 200, bf.text);
+  assert.equal(bf.body.hideAmounts, true);
+  assert.doesNotMatch(JSON.stringify(bf.body), /\d\s?kr\b/, 'ingen beløp i /api/brief med hideAmounts=1');
+  assert.equal((await A('/api/brief')).body.hideAmounts, undefined, 'Brief-siden uten flagget er uendret');
 });

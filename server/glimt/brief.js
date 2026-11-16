@@ -367,7 +367,11 @@ api.get('/', async (c) => {
   // Prompt 43: fresh=1 starter ikke en ny oppsummering mens en kjører (den som kjører, gir den nye teksten).
   if (b.summarySource === 'mal' || c.req.query('fresh') === '1') { if (c.req.query('fresh') === '1' && !inFlight(briefKey(u, b.kind))) kv.del(u, cacheKey(b.kind, osloParts().date)); kickLlm(u, b.kind); }
   // Prompt 38: kortene (pakker, familie, skole og jobb, bursdager, nordlys) flettes inn her (før: en egen mellomvare foran ruten).
-  return c.json(await withBriefCards(u, b), 200, { 'Cache-Control': 'no-store' });
+  const full = await withBriefCards(u, b);
+  // F 12: en enhet med «Skjul beløp» på (widgeten) ber om ?hideAmounts=1, og får beløpene i tekstene som «•••».
+  // Brukerens eget valg gjelder varsler og widgeter, ikke Brief-siden, så det brukes ikke her.
+  const hide = c.req.query('hideAmounts') === '1' || c.req.query('hideAmounts') === 'true';
+  return c.json(hide ? { ...maskDeep(full), hideAmounts: true } : full, 200, { 'Cache-Control': 'no-store' });
 });
 // Prompt 38: «+ Gave til … i Gjøremål» → 201 {ok, created:true, item} | 200 {ok, created:false, item} (finnes fra før)
 api.post('/gift', async (c) => {
