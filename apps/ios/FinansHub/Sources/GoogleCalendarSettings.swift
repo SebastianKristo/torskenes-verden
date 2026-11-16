@@ -96,7 +96,7 @@ final class Gcal36Model {
             do {
                 let d: Data = try await api.callAt("/api", "PUT", "/kalender/calendars/google", json: body, timeout: 20)
                 Gcal36Model.shared.apply(d)
-                Task { await Cal26Model.shared.load(store, force: true) }
+                Task { await KalenderData.shared.load(store, force: true) }
             } catch let e as APIError {
                 Gcal36Model.shared.error = e.status == 400 ? "Den kalenderen kan ikke brukes som hovedkalender (bare lesing)." : e.message
                 Haptics.shared.error()

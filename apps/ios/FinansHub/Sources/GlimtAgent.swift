@@ -241,7 +241,7 @@ final class GlimtAgent45 {
         if done.isEmpty { return }
         let tools: [String] = done.compactMap { JS.str($0, "tool") }
         Task {
-            if tools.contains(where: { $0.hasPrefix("calendar") }) { await Cal26Model.shared.load(store, force: true) }
+            if tools.contains(where: { $0.hasPrefix("calendar") }) { await KalenderData.shared.load(store, force: true) }
             if tools.contains(where: { $0.hasPrefix("tasks") || $0.hasPrefix("huske") }) { await TasksModel.shared.load(store) }
             if tools.contains(where: { $0.hasPrefix("finance") || $0.hasPrefix("receipt") }) { await store.loadPaperFinance() }
         }

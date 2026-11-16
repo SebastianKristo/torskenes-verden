@@ -291,7 +291,7 @@ final class Quick29Model {
         handled.insert(j.id)
         showBanner(j)
         Haptics.shared.success()
-        Task { await Cal26Model.shared.load(store, force: true) }
+        Task { await KalenderData.shared.load(store, force: true) }
     }
 
     private func fail(_ j: Quick29Job, _ store: Store) {
@@ -389,7 +389,7 @@ final class Quick29Model {
         Task {
             do {
                 _ = try await store.api.callAt("/api", "POST", "/kalender/quick/" + API.pathPart(j.id) + "/undo", json: [:], timeout: 15)
-                await Cal26Model.shared.load(store, force: true)
+                await KalenderData.shared.load(store, force: true)
                 store.flash("Timen er fjernet")
             } catch let e as APIError {
                 store.flash("Kunne ikke angre: " + e.message)

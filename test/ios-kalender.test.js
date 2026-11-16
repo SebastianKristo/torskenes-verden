@@ -78,6 +78,22 @@ test('Q26: Ny hendelse har Gjenta, Merknad og «✦ Beskriv med Glimt» (POST /a
   assert.match(x, /presentNew46\(f\)/);
 });
 
+test('Q26: Homelabs egne kalenderdata (Oversikt, Mer, brief, Glimt, Chat, widgetbufferen) er en tynn fasade, KalenderData', () => {
+  const d = code('FinansHub/Sources/KalenderData.swift');
+  assert.match(d, /final class KalenderData \{/);
+  assert.match(d, /"\/kalender\?from=\\\(from\)&to=\\\(to\)"/);
+  assert.match(d, /WidgetShared\.defaults\.set\(d, forKey: Cal26\.cacheKey\)/);
+  assert.match(d, /static let prefix: String = "kal26-"/, 'samme prefiks, så planlagte påminnelser byttes ut');
+  // Ingen andre filer bruker den gamle kalendermodellen.
+  const users = swiftFiles(join(IOS, 'FinansHub', 'Sources')).map((f) => relative(IOS, f))
+    .filter((f) => !/\/HomelabKalender[^/]*\.swift$/.test(f) && /\bCal26Model\b/.test(code(f)));
+  assert.deepEqual(users, []);
+  // Oversikt-kortet og widget-forhåndsvisningene.
+  assert.match(code('FinansHub/Sources/PaperPages.swift'), /AnyView\(KalenderHjemkort\(\)\)/);
+  assert.match(code('FinansHub/Sources/KalenderInApp.swift'), /e\.widgetPreview = \{ AnyView\(KalenderWidgetVisning\(\)\) \}/);
+  assert.match(code('Kalender/Sources/KalOverview.swift'), /if let preview = KalEmbed84\.shared\.widgetPreview/);
+});
+
 test('Q34 (E-B12): appene viser «Slå sammen kalenderne: N → 4?» med ja/nei når serveren sender migration.proposed (iPhone, iPad, Mac)', () => {
   const core = code('SharedKal/Core/KalCalendarsCore.swift');
   assert.match(core, /out\.proposed = KalParse\.bool\(m, "proposed"\) \?\? false/);

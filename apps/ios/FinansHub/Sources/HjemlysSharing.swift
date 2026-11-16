@@ -559,7 +559,7 @@ final class Hjemlys41 {
     /// Forslag fra kalenderen: hendelsen som pågår (eller starter innen 1 t), «Bursdag hos Mari · Thorvald Meyers gate».
     static func calendarPlace() -> String {
         let now: Date = Date()
-        let evs: [CalEvent26] = Cal26Model.shared.events.filter { !$0.allDay && $0.start <= now.addingTimeInterval(3600) && $0.end >= now }
+        let evs: [CalEvent26] = KalenderData.shared.events.filter { !$0.allDay && $0.start <= now.addingTimeInterval(3600) && $0.end >= now }
         guard let e = evs.sorted(by: { $0.start < $1.start }).first else { return "" }
         return e.room.isEmpty ? e.title : e.title + " · " + e.room
     }

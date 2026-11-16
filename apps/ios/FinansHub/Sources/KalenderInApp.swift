@@ -78,6 +78,8 @@ final class Kal84Host {
     private func prepare() {
         let e: KalEmbed84 = KalEmbed84.shared
         if e.login == nil { e.login = { Kal84Host.shared.login(force: true) } }
+        // Q26: widget-forhåndsvisningene fra den gamle kalendersiden vises i Kalender → Oversikt → Widgets.
+        if e.widgetPreview == nil { e.widgetPreview = { AnyView(KalenderWidgetVisning()) } }
         e.notify = !KalLink33.installed
         if !e.notify { Kal84Host.clearReminders() }
         // Prompt 51: enhetsnøkkel på innlogging/token-kall og flagg (som KalApp.init).

@@ -86,7 +86,7 @@ extension Store {
         case "innst-hahelse": return "Helse fra Mobilapp-integrasjonen"
         case "huske": return "To-do for hele familien"
         case "bibel": return "Dagens vers, rekke og leseplan"
-        case "kalender": return Cal26Model.shared.kicker
+        case "kalender": return KalenderData.shared.kicker
         default:
             if paperTab.hasPrefix("innst-") { return PaperSettingsSub.title26(String(paperTab.dropFirst(6)))?.1 }
             return nil

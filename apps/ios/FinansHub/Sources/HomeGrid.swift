@@ -188,7 +188,7 @@ struct Home52LookTile: View {
 struct Home52CalTile: View {
     @Environment(Store.self) private var store
     @Environment(\.paper) private var p
-    @MainActor private var m: Cal26Model { Cal26Model.shared }
+    @MainActor private var m: KalenderData { KalenderData.shared }
 
     var body: some View {
         TimelineView(.everyMinute) { ctx in

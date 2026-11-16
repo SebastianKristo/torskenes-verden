@@ -97,7 +97,7 @@ struct PaperHome: View {
                 // Prompt 46: vises bare med minst én aktiv prøveperiode (eller i wiggle, så det kan flyttes/skjules) – se trials46.
                 PaperCardDef(key: "h11", label: "Prøveperioder", view: AnyView(Trial32bHomeCard())),
                 // Prompt 26: KALENDER etter Avganger (med lagret oppsett legger pageCards den nederst).
-                PaperCardDef(key: "h10", label: "Kalender", view: AnyView(Cal26HomeCard())),
+                PaperCardDef(key: "h10", label: "Kalender", view: AnyView(KalenderHjemkort())),
                 PaperCardDef(key: "h4", label: "Lenker", view: AnyView(shortcuts)), // prompt 46: «Snarveier» er nå h16
                 // Prompt 52: hele Siste nytt-kortet åpner nyhetsleseren, med haptikk (HomeGrid.swift).
                 PaperCardDef(key: "h5", label: "Siste nytt", view: AnyView(Home52NewsTile())),

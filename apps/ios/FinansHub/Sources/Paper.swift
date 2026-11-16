@@ -869,7 +869,7 @@ struct PaperPage: View {
         case "domener", "dpub", "dytl", "dinf": store.reloadDomain(); if store.domAllMode { await store.loadDomAll() }
         case "ftx": if let id = store.paperTxId { store.openPaperTx(id) }
         case "boliger": await Bol24Model.shared.load(store)
-        case "kalender": await Cal26Model.shared.load(store, force: true)
+        case "kalender": await KalenderData.shared.load(store, force: true)
         case "bibel": await Bible37Model.shared.load(store, force: true)
         default: await store.loadHome(); await store.loadPhotoWindow()
         }

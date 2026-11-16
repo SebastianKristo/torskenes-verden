@@ -155,7 +155,7 @@ final class Memory33Model {
                 let n: Int = try await apply(store, id)
                 self.learn = nil
                 Cal27Model.shared.flash(n == 0 ? "Ingen avtaler å endre" : "\(n) \(n == 1 ? "avtale" : "avtaler") fikk nytt navn")
-                await Cal26Model.shared.load(store, force: true)
+                await KalenderData.shared.load(store, force: true)
             } catch {
                 if var c = self.learn { c.busy = false; c.error = "Kunne ikke endre avtalene."; self.learn = c }
             }

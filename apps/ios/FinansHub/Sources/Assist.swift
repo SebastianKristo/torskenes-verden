@@ -250,7 +250,7 @@ final class Assist31 {
         if a.intent.hasPrefix("trial") {
             Task { await Trial31Model.shared.load(store.api) }
         } else if a.intent == "appointment.create" {
-            Task { await Cal26Model.shared.load(store, force: true) }
+            Task { await KalenderData.shared.load(store, force: true) }
         }
     }
 

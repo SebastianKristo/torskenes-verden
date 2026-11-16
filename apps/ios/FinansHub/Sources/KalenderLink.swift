@@ -62,7 +62,7 @@ enum KalLink33 {
         let parts: [String] = url.pathComponents.filter { (p: String) -> Bool in p != "/" }
         if let raw = parts.first, !raw.isEmpty {
             let id: String = raw.removingPercentEncoding ?? raw
-            if let e = Cal26Model.shared.events.first(where: { (x: CalEvent26) -> Bool in x.id == id }) { return event(e) }
+            if let e = KalenderData.shared.events.first(where: { (x: CalEvent26) -> Bool in x.id == id }) { return event(e) }
             return open("kalender://hendelse?id=" + enc(id) + "&from=homelab")
         }
         if let d = items.first(where: { (i: URLQueryItem) -> Bool in i.name == "date" })?.value, d.count >= 10 { return day(d) }

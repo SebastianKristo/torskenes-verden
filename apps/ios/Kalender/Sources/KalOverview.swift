@@ -484,6 +484,10 @@ struct KalWidgetsCard: View {
                  ? "Kalender-widgeten legges til fra Hjem-skjermen: hold inne, trykk + og velg Homelab. Den viser neste time og prøvene."
                  : "Kalender-widgetene legges til fra Hjem-skjermen: hold inne, trykk + og velg Kalender.")
                 .font(KalFont.ui(12.5)).foregroundStyle(t.mut).fixedSize(horizontal: false, vertical: true)
+            // Q26: i Homelab vises forhåndsvisningene av widgetene (som på den gamle kalendersiden).
+            if let preview = KalEmbed84.shared.widgetPreview {
+                preview()
+            }
             if !KalEmbed84.on {
                 Button(action: {
                     KalHaptic.tap()
