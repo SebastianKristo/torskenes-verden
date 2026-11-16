@@ -196,6 +196,8 @@ extension KalStore {
                 if made.id == id { replace44(made) }
             }
             if !invite.isEmpty { _ = await KalEv44.invite(id, invite) }
+            // Q26: ny tittel på en rask time → forslag om å huske avsenderen (lagres bare med «Husk», KalLearn.swift).
+            KalLearnModel.shared.suggest(o["suggestMemory"] as? [String: Any])
         } catch let e as KalNetError {
             if e.status == 409 || e.status == 412 {
                 var flat: [String: String] = [:]

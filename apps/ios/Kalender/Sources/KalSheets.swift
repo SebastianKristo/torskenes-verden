@@ -89,7 +89,8 @@ struct KalDetailSheet: View {
             HStack {
                 HStack(spacing: 6) {
                     Circle().fill(t.calColor(c)).frame(width: 10, height: 10)
-                    Text(c?.name ?? "").font(KalFont.ui(13, .bold)).foregroundStyle(t.calText(c))
+                    // Q26: «Skole · Prøve» / «Skole · Innlevering» (typen fra skolens iCal, som i Homelabs gamle kalender).
+                    Text(calLabel(c)).font(KalFont.ui(13, .bold)).foregroundStyle(t.calText(c))
                 }
                 Spacer()
                 // Prompt 44: Rediger ved siden av Ferdig (ikke for helligdager, trekk, Media og bursdager fra kontakter).
@@ -119,6 +120,8 @@ struct KalDetailSheet: View {
             if let att = e.att44, !att.isEmpty { KalAttList44(att: att) }
             KalFagPick37(e: e)
             if !e.allDay { reminders }
+            // Q26: rommet i MazeMap, «Kopier til Personlig» og «Lær Glimt hva dette er…» (KalDetailExtras.swift).
+            KalDetailExtras(e: e)
             Button(action: { s.delete(e) }) {
                 Text("Slett hendelse").font(KalFont.ui(14, .bold)).foregroundStyle(t.acc).frame(height: 44)
             }
@@ -131,6 +134,27 @@ struct KalDetailSheet: View {
 
     private func close() {
         withAnimation(.easeOut(duration: 0.22)) { s.detId = nil }
+    }
+
+    private func calLabel(_ c: KalCal?) -> String {
+        let n: String = c?.name ?? ""
+        let ty: String = KalSchool.typeName(e)
+        if ty.isEmpty { return n }
+        return n.isEmpty ? ty : n + " · " + ty
+    }
+
+    /// Merknaden (ikke Glimt-teksten, som har sin egen rad, og ikke Media-notatet).
+    private var noteText: String {
+        if e.media44 != nil { return "" }
+        let n: String = e.note.trimmingCharacters(in: .whitespacesAndNewlines)
+        if n.hasPrefix("Lagt til av Glimt") { return "" }
+        return n
+    }
+
+    /// Faget når det ikke allerede er tittelen (timene heter som faget).
+    private var subjectText: String {
+        guard let su = e.subject, e.serverType != "time" else { return "" }
+        return su == e.title ? "" : su
     }
 
     private var whenText: String {
@@ -148,6 +172,19 @@ struct KalDetailSheet: View {
                 KalInfoRow(label: "Sted", value: e.loc)
                 // Prompt 37: kart med pin, full adresse, «Åpne i Kart» og «Veibeskrivelse ›».
                 KalDetailMap37(e: e)
+            }
+            // Q26: lærer, fag, merknad og gjentakelse (feltene fra serveren, som i Homelabs gamle kalender).
+            if let te = e.teacher, !te.isEmpty {
+                KalInfoRow(label: "Lærer", value: te)
+            }
+            if !subjectText.isEmpty {
+                KalInfoRow(label: "Fag", value: subjectText)
+            }
+            if !noteText.isEmpty {
+                KalInfoRow(label: "Merknad", value: noteText)
+            }
+            if !KalSchool.repeatName(e.repeatRule).isEmpty {
+                KalInfoRow(label: "Gjentas", value: KalSchool.repeatName(e.repeatRule))
             }
             if let wx {
                 wxRow(wx)

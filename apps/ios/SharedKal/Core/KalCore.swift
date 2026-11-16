@@ -45,6 +45,15 @@ struct KalEvent: Identifiable, Hashable, Codable {
     var att44: [KalAtt44]? = nil
     var rec44: Bool? = nil
     var etag44: String? = nil
+    /// Q26 (fra Homelabs gamle kalender): lærer, fag og type (time | prove | innl …) fra skolens iCal, MazeMap-lenken til rommet,
+    /// gjentakelsen (daily | weekly | monthly) og nedtellingen serveren sender for prøver og frister (daysLeft).
+    /// Valgfrie, så bufferne fra før (Codable) fortsatt kan leses (KalSchoolCore.swift).
+    var teacher: String? = nil
+    var subject: String? = nil
+    var serverType: String? = nil
+    var mazemap: String? = nil
+    var repeatRule: String? = nil
+    var daysLeft: Int? = nil
 
     var allDay: Bool { s == nil }
     var startMin: Int { s ?? 0 }
@@ -520,6 +529,8 @@ enum KalParse {
         KalAb42.decorate(&ev, o)
         // Prompt 44: Media-status, deltakere, gjentakelse og etag.
         KalEv44.decorate(&ev, o)
+        // Q26: lærer, fag, type, MazeMap, gjentakelse og nedtelling (KalSchoolCore.swift).
+        KalSchool.decorate(&ev, o)
         return ev
     }
 

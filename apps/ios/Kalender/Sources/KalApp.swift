@@ -388,6 +388,15 @@ struct KalRoot: View {
                 .transition(drawerIn)
                 .zIndex(52)
         }
+        // Q26: «Lær Glimt hva dette er…» (KalLearn.swift).
+        if KalLearnModel.shared.form != nil {
+            KalDim { KalLearnModel.shared.close() }
+                .zIndex(55)
+            KalLearnSheet()
+                .ignoresSafeArea([.container, .keyboard], edges: .bottom)
+                .transition(sheetIn)
+                .zIndex(56)
+        }
         // Prompt 46: arket kom ikke fram – feilmelding med «Prøv igjen» i stedet for grå skjerm.
         if KalNew46Guard.shared.failed != nil {
             KalNewFail46()
