@@ -114,6 +114,18 @@ test('Q19: den gamle Familie-siden for servere uten people50 er borte; soneikone
   assert.match(raw(join(ROOT, 'server/familie/places.js')), /family50Api\.get\('\/people50'/);
 });
 
+test('Navigasjon: Kalender-appen bruker tilbakestabelen fra :felles med prediktiv tilbake, som Homelab-appen', () => {
+  const root = strip(raw(join(KAL, 'ui/KalRoot.kt')));
+  assert.match(root, /import no\.kristo\.felles\.navigasjon\.Tilbakestabel/);
+  assert.match(root, /PredictiveBackHandler\(stabel\.aktivt\(\) != null\) \{ progress ->\s*progress\.collect \{ \}\s*stabel\.tilbake\(\)/);
+  assert.doesNotMatch(root, /\bBackHandler\(/, 'ingen egen when-kjede ved siden av stabelen');
+  // Samme rekkefølge som før: nytt kalenderark øverst, søket nederst.
+  const navn = [...root.matchAll(/Tilbakesteg\("([a-z-]+)"/g)].map((m) => m[1]);
+  assert.deepEqual(navn, ['ny-kalender', 'innstillinger', 'sidemeny-legg-til', 'ny-hendelse', 'hendelse', 'glimt', 'sidemeny', 'sok']);
+  // Homelab-appen: hele appen har én PredictiveBackHandler over tilbakestabelen (Fase 5).
+  assert.match(strip(raw(join(APP, 'ui/Navigasjon.kt'))), /PredictiveBackHandler\(enabled\) \{ events ->/);
+});
+
 test('E-B12/Q34 Homelab-appen: kalenderen viser forslaget med «Slå sammen» og «Ikke nå», og «Angre» etterpå', () => {
   const k = strip(raw(join(APP, 'Kalender.kt')));
   assert.match(k, /hlGet\("\/kalender\/calendars", timeout = 12_000\)/, 'forslaget hentes når kalenderen åpnes');
