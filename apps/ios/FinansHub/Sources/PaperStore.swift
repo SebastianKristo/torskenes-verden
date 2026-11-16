@@ -116,9 +116,9 @@ extension Store {
         if t == "innst-oppdatering" { System31Model.shared.show(); return }
         // Prompt 46: Kart (Mer → Kart, Glimt «vis bussene rundt hjemme» → tkart / tkart:<sone>) i fullskjerm.
         if t == "tkart" || t.hasPrefix("tkart:") { Kart46.shared.show(self, zone: t.hasPrefix("tkart:") ? String(t.dropFirst(6)) : nil); return }
-        // Prompt 33: kalenderfanen, Mer → Kalender, varsler og Glimt åpner Kalender-appen når den er installert (KalenderLink.swift).
-        // Prompt 84: med «Kalender i appen» åpner Kalender også når Homelabs egen kalenderfane står åpen.
-        if t == "kalender" && (paperTab != "kalender" || Kal84.on) && KalLink33.today() { return }
+        // Prompt 33/84: kalenderfanen, Mer → Kalender, varsler og Glimt åpner Kalender – den innebygde (standard) eller Kalender-appen
+        // (KalenderLink.swift). Q26: Homelab har ikke lenger en egen kalenderside.
+        if t == "kalender" && KalLink33.today() { return }
         // Prompt 34: en tilbake-handling har allerede gitt én lett impuls (Haptic34) – ikke et valg-tikk i tillegg.
         if !Haptic34.recent { Haptics.shared.select() }
         // Prompt 38: husk hvor Abonnement ble åpnet fra, så ‹ går tilbake dit (NavSubsBack.swift).
@@ -166,7 +166,7 @@ extension Store {
         default: open(.homelab)
         }
         // open/go over setter module; Papir-fanen styrer selve visningen.
-        // Prompt 27: husk hvor Kalender og Chat ble åpnet fra (‹ går tilbake dit, Calendar27Model.swift).
+        // Prompt 27: husk hvor Chat ble åpnet fra (‹ går tilbake dit, ChatPage.swift).
         Nav27.note(from: paperTab, to: t)
         paperTab = t
         if Store.paperFinTabs.contains(t) || t == "mer" || t == "innst" || t == "hjem" { module = t == "hjem" || t == "mer" || t == "innst" ? .homelab : nil }
@@ -193,7 +193,7 @@ extension Store {
         if paperTab == "innst" { paperGo("mer"); return }
         if let t = nav26BackTarget() { paperGo(t); return }
         if paperTab.hasPrefix("innst-") || paperTab == "profil" { paperGo("innst"); return }
-        if paperTab == "kalender" || paperTab == "chat" { Nav27.back(self); return }
+        if paperTab == "chat" { Nav27.back(self); return }
         if paperTab == "huske" || paperTab == "bursdag" || paperTab == "kalender" { paperGo("mer"); return }
         if paperTab == "boliger" && folder != nil { folder = nil; return }
         if (paperTab == "aksjer" && !finNav.contains("aksjer")) || (paperTab == "boliger" && !finNav.contains("boliger")) { paperGo("fmer"); return }
@@ -250,7 +250,7 @@ extension Store {
         if paperTab == "boliger" && folder != nil { folder = nil; return }
         if let t = nav26BackTarget() { paperGo(t); return }
         if paperTab.hasPrefix("innst-") || paperTab == "profil" { paperGo("innst"); return }
-        if paperTab == "kalender" || paperTab == "chat" { Nav27.back(self); return }
+        if paperTab == "chat" { Nav27.back(self); return }
         // Prompt 40: sveip fra venstre kant i Gjøremål går også til Hjem.
         if paperTab == "huske" && paperClassic == nil && paperFin == nil { paperGo("hjem"); return }
         if paperTab == "huske" || paperTab == "bursdag" || paperTab == "kalender" { paperGo("mer"); return }

@@ -377,8 +377,8 @@ struct PaperShell: View {
             // Prompt 50: Familie i nytt design – fullskjerm med egen fanelinje (FamilyPage.swift).
             Family50Page().environment(\.colorScheme, p.dark ? .dark : .light)
         } else if store.full27 {
-            // Prompt 27: Kalender v2 og Chat i fullskjerm (Calendar27Page.swift, ChatPage.swift).
-            if store.paperTab == "chat" { Chat27Page() } else { Cal27Page() }
+            // Prompt 27: Chat i fullskjerm (ChatPage.swift). Q26: Kalender er den delte Kalenderen (KalenderInApp.swift).
+            Chat27Page()
         } else {
             PaperPage().environment(\.colorScheme, p.dark ? .dark : .light)
         }
@@ -840,7 +840,6 @@ struct PaperPage: View {
         // Prompt 44: Mer med levende kort, Store · Lave og wiggle uten «Rediger» (MorePage.swift).
         case "mer": PaperMore44()
         case "bursdag": BirthdaysPage24()
-        case "kalender": Cal26Page()
         case "innst": PaperSettings17()
         case "huske": PaperTasksView()
         // Prompt 37: Bibel-siden (Mer → Bibel, bare med modulen).
@@ -869,7 +868,6 @@ struct PaperPage: View {
         case "domener", "dpub", "dytl", "dinf": store.reloadDomain(); if store.domAllMode { await store.loadDomAll() }
         case "ftx": if let id = store.paperTxId { store.openPaperTx(id) }
         case "boliger": await Bol24Model.shared.load(store)
-        case "kalender": await KalenderData.shared.load(store, force: true)
         case "bibel": await Bible37Model.shared.load(store, force: true)
         default: await store.loadHome(); await store.loadPhotoWindow()
         }

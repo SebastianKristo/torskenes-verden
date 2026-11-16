@@ -94,6 +94,25 @@ test('Q26: Homelabs egne kalenderdata (Oversikt, Mer, brief, Glimt, Chat, widget
   assert.match(code('Kalender/Sources/KalOverview.swift'), /if let preview = KalEmbed84\.shared\.widgetPreview/);
 });
 
+test('Q26: den gamle kalenderen (HomelabKalender*.swift) er fjernet, og ingen kode bruker modellene dens', () => {
+  const src = join(IOS, 'FinansHub', 'Sources');
+  assert.deepEqual(readdirSync(src).filter((n) => n.startsWith('HomelabKalender')), []);
+  const gamle = /\b(Cal26Model|Cal27Model|Cal27Form|Cal27Calendar|Cal26Page|Cal27Page|Cal32b|Cal32bSearch|Cal27Choice|Cal27CloseButton|Cal29NowCard|Memory33LearnSheet|stayInHomelab)\b/;
+  const treff = swiftFiles().map((f) => relative(IOS, f)).filter((f) => gamle.test(code(f)));
+  assert.deepEqual(treff, []);
+  // Innganger: kalenderfanen, Mer, Oversikt-kortet, Chat, briefen og widget-lenkene går til Kalender (KalLink33).
+  const link = code('FinansHub/Sources/KalenderLink.swift');
+  assert.match(link, /if Kal84\.on \|\| !installed \{\n\s+Kal84Host\.shared\.show\(e\)/);
+  assert.match(code('FinansHub/Sources/PaperStore.swift'), /if t == "kalender" && KalLink33\.today\(\) \{ return \}/);
+  assert.doesNotMatch(code('FinansHub/Sources/Paper.swift'), /case "kalender":/);
+  // Hurtigregistreringen åpner det utfylte skjemaet i Kalender.
+  const q = code('FinansHub/Sources/QuickAddModel.swift');
+  assert.match(q, /KalLink33\.open\(Quick29Model\.formLink\(f, text: text, error: error\)\)/);
+  assert.match(q, /c\.host = "ny"/);
+  // Chat beholder fullskjerm og ‹ tilbake.
+  assert.match(raw('FinansHub/Sources/ChatPage.swift'), /\nenum Nav27 \{/);
+});
+
 test('Q34 (E-B12): appene viser «Slå sammen kalenderne: N → 4?» med ja/nei når serveren sender migration.proposed (iPhone, iPad, Mac)', () => {
   const core = code('SharedKal/Core/KalCalendarsCore.swift');
   assert.match(core, /out\.proposed = KalParse\.bool\(m, "proposed"\) \?\? false/);
