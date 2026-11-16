@@ -103,7 +103,7 @@ test('LL134336179NO (levert, e-post eldre enn 14 dager) → Levert, Arkiv, Poste
   assert.equal(s.timeline.length, 5);
   assert.ok(s.timeline[4].current && s.timeline[4].time);
   const fav = await app.request('/finans/api/logo/posten.no');
-  assert.equal(fav.status, 404, 'ikke favicon for Posten');
+  assert.equal(fav.status, 204, 'ikke favicon for Posten (E-B9: 204, ikke 404)');
 });
 
 test('manuell logo: kontrollert fil i files/manuell brukes; files/posten.png (favicon) ignoreres', async () => {

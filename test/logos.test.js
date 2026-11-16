@@ -94,3 +94,18 @@ test('endepunktene: registry med ETag, file/:id og match', async () => {
   assert.equal(m.id, 'ruter');
   assert.deepEqual(await (await fin.request('/logos/match?q=KIOSK%20HANSEN')).json(), { match: null });
 });
+
+// E-B9: en ukjent logo (eller ingen nett) gir 204 uten innhold, ikke 404. Klientene viser da bokstavmerket som før
+// (<img> får onerror, appene får tomme data), men loggen fylles ikke med 404-feil.
+test('GET /logo/:domain uten logo gir 204 (ikke 404), med kort cache', async () => {
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = async () => { throw new TypeError('fetch failed'); };
+  try {
+    for (const d of ['kiosk-hansen-finnes-ikke.no', 'ikke et domene', 'x']) {
+      const r = await fin.request(`/logo/${encodeURIComponent(d)}`);
+      assert.equal(r.status, 204, d);
+      assert.equal((await r.arrayBuffer()).byteLength, 0, d);
+      assert.match(r.headers.get('cache-control') ?? '', /max-age=\d+/, d);
+    }
+  } finally { globalThis.fetch = realFetch; }
+});

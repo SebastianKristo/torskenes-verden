@@ -443,7 +443,7 @@ test('sperren på · butikklogoer: ingen favicon-oppslag hos Google (klienten vi
   setup({ ollama: 'bad' });
   const m = mark();
   const r = await request('/finans/api/logo/snekkerbua-paa.no');
-  assert.equal(r.status, 404);
+  assert.equal(r.status, 204); // E-B9: ingen logo = 204, klienten viser bokstavikon
   assert.equal(await enrich.logo('snekkerbua-paa.no'), null);
   assertInside(m, 'favicon');
 });

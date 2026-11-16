@@ -141,7 +141,7 @@ Kalender og e-post, Media, Økonomi, Reise og pakker, AI, Varsler, Nettverk, Gen
 | Tokens | `GET/POST /tokens`, `DELETE /tokens/:id` (`{name,scopes,expires:'30d'\|'90d'\|'1y'\|'never'}`) |
 | Innstillinger | `PUT /settings`, `GET/PUT /prefs`, `GET /users` |
 | Backup | `GET /backup`, `GET /backup/export?format=json\|xlsx\|csv`, `PUT /backup/smb`, `POST /backup/smb/test`, `POST /backup/run`, `GET /backup/list`, `POST /backup/stage`, `POST /backup/restore`, `POST /firstrun` |
-| Diverse | `GET /logo/:domain` (offentlig), `GET /export.json`, `POST /demo`, `DELETE /all` |
+| Diverse | `GET /logo/:domain` (offentlig; 204 uten innhold når logoen ikke finnes, klienten viser bokstavmerket), `GET /export.json`, `POST /demo`, `DELETE /all` |
 
 ## Smarthjem, Matplan og Domener (admin)
 

@@ -511,12 +511,15 @@ async function tokenLogin(c) {
 api.post('/auth/token', tokenLogin);
 api.post('/login', tokenLogin); // alias for mobilappene (Mobil v2)
 // Logoer er offentlige favicons og trenger ingen innlogging (de vises også i <img> uten Authorization-header i appene).
+// E-B9: ingen logo (ukjent domene, sperren for eksterne oppslag eller ingen nett) gir 204 uten innhold, ikke 404. Klientene viser
+// bokstavmerket som før (<img> får onerror, appene får tomme data og faller tilbake). Svaret caches en dag.
+const NO_LOGO = { 'Cache-Control': 'public, max-age=86400' };
 api.get('/logo/:domain', async (c) => {
   const d = validDomain(c.req.param('domain'));
   const img = d ? await logo(d) : null;
-  if (!img) return c.body(null, 404, { 'Cache-Control': 'public, max-age=86400' });
+  if (!img) return c.body(null, 204, NO_LOGO);
   const type = img[0] === 0x89 ? 'image/png' : img[0] === 0xff ? 'image/jpeg' : img[0] === 0x3c ? 'text/plain' : 'image/x-icon';
-  if (type === 'text/plain') return c.body(null, 404);
+  if (type === 'text/plain') return c.body(null, 204, NO_LOGO);
   return c.body(img, 200, { 'Content-Type': type, 'Cache-Control': 'public, max-age=604800', 'X-Content-Type-Options': 'nosniff' });
 });
 // Logobiblioteket (prompt 20): /logos/registry, /logos/file/:id og /logos/match, offentlig som /logo/:domain.
