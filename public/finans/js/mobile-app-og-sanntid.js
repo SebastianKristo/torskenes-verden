@@ -12,7 +12,7 @@ import { iconColor, iconInk, FM, famLoad, BO, bolLoad, bolUpload } from './mobil
 import { listShareLine } from './mobile-konto-og-deling.js';
 import { currentUser } from './mobile-upq.js';
 import * as P25 from './mobile-fanelinje-stil.js';
-let P24N = null; import('./mobile-profiler-og-bursdager.js').then((x) => { P24N = x; }).catch(() => {}); // prompt 39: Appprofil-raden (lat, endrer ikke importrekkefølgen)
+let P24N = null; import('./mobile-profiler.js').then((x) => { P24N = x; }).catch(() => {}); // prompt 39: Appprofil-raden (lat, endrer ikke importrekkefølgen)
 import { updAdmin, updSummary } from './mobile-upd.js';
 
 const LS = 'fh_p17';

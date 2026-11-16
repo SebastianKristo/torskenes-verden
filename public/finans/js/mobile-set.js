@@ -13,7 +13,7 @@ import { tabEditor, iconThemeRow, iconColor, iconInk } from './mobile-fanelinje.
 import { navSettings } from './mobile-tilpassing.js';
 import { TR, trkLoad, trkPrefRows, setTrkPref } from './mobile-track.js';
 import * as P23 from './mobile-sveip.js';
-import * as P24 from './mobile-profiler-og-bursdager.js';
+import * as P24 from './mobile-profiler.js';
 import * as P26 from './mobile-integrasjoner.js';
 import { row, grp, appName, appIcon, ICONS } from './mobile-app-og-sanntid.js';
 import * as P25 from './mobile-fanelinje-stil.js'; // prompt 39: Fanelinje-stil i Tilpass

@@ -28,7 +28,8 @@ import { wx22Down, wx22Move, wx22Up } from './mobile-vaer-kart-og-steder.js';
 import * as P22 from './mobile-familie-soner.js';
 import * as P23 from './mobile-sveip.js';
 import * as KVT from './mobile-kvitteringer.js'; // Kvitteringer i Papir (skilt ut fra mobile-sveip.js)
-import * as P24 from './mobile-profiler-og-bursdager.js';
+import * as P24 from './mobile-profiler.js';
+import * as BDM from './mobile-bursdager.js'; // Bursdager (skilt ut fra mobile-profiler.js)
 import * as P25 from './mobile-fanelinje-stil.js';
 import * as P26 from './mobile-integrasjoner.js';
 import * as KAL from './mobile-kal.js';
@@ -411,7 +412,7 @@ export function draw() {
   const fold41 = pp && scr === 'hl' && !!P41?.foldOn?.(); // prompt 41: Fold 1c (stort Glimt-kort + faner)
   const ppMain = !pp ? null : scr === 'hl' ? (fold41 ? P41.foldHome() : paperHome()) : m.detail && !m.edit && m.sel != null && ['liste', 'sok', 'hjem'].includes(scr) ? paperTx(m.sel)
     : scr === 'hjem' && plain ? paperFin() : scr === 'mer' ? paperMer()
-    : scr === 'bd' ? P24.bdView() : scr === 'kal' ? KAL.kalView() : scr === 'fmer' ? finMerGrid() : scr === 'kv' && plain ? KVT.kvView() : fad ? P23.finnAdView() : scr === 'sok' && plain ? paperSearch() : scr === 'liste' && plain ? paperList() : scr === 'finn' && !m.sub ? paperFinn() : scr === 'spor' ? paperTrk() : scr === 'dir' ? bolView() : scr === 'avg' ? P24.ruterView() : scr === 'fam' ? P22.famView22() : null;
+    : scr === 'bd' ? BDM.bdView() : scr === 'kal' ? KAL.kalView() : scr === 'fmer' ? finMerGrid() : scr === 'kv' && plain ? KVT.kvView() : fad ? P23.finnAdView() : scr === 'sok' && plain ? paperSearch() : scr === 'liste' && plain ? paperList() : scr === 'finn' && !m.sub ? paperFinn() : scr === 'spor' ? paperTrk() : scr === 'dir' ? bolView() : scr === 'avg' ? P24.ruterView() : scr === 'fam' ? P22.famView22() : null;
   const v45 = P50F?.view50?.(scr) ?? P46?.view46?.(scr, m.sub, pp) ?? P45?.view45?.(scr, m.sub, pp) ?? null; // prompt 46: Kart, Innstillinger → Nyheter // prompt 45: Finans → Mer (Mer ny) m.fl.
   const main = v45 != null ? v45 : scr === 'studie' ? (P44 ? P44.studieView() : '<div class="m-spin"></div>') /* prompt 44 */ : scr === 'avspilling' ? (P44 ? P44.avsView(false) : '<div class="m-spin"></div>') : scr === 'aictl' ? P34AI.aiView() : scr === 'brief' ? P35.briefView() : scr === 'glimt' ? P35.glimtView() : scr === 'nordlys' ? P30.sysView() : scr === 'chat' ? CHAT.chatView() : scr === 'vaer' ? wxView() : scr === 'nyheter' ? newsView() : scr === 'bibel' ? P37B.bibleView() : scr === 'huske' ? (pp ? P37.huskeView37() : '<div class="m-row" style="padding:6px 4px 0"><div class="title">Gjøremål</div></div>' + huskeView()) : !pp && scr === 'avg' ? avgView() : !pp && scr === 'fam' ? famView()
     : scr === 'kal' && !pp ? KAL.kalView() : scr === 'media' ? (P43?.media?.() ? P43.media().mediaView43() : (pp ? '' : '<div class="m-row" style="padding:6px 4px 0"><div class="title">Media</div></div>') + mediaView()) // prompt 43: Sonarr, Radarr, qBittorrent og Prowlarr
@@ -482,7 +483,7 @@ async function load() {
       jobs.push(loadJobs());
     }
     if (PAGES.includes(scr)) jobs.push(pageLoad(scr, m.sub));
-    else if (scr === 'set') jobs.push(settingsLoad(m.sub), ...(String(m.sub).startsWith('integ') ? [P23.integLoad().catch(() => {}), P24.integLoad24(true).catch(() => {}), P24.bdLoad().catch(() => {})] : m.sub === 'kal' ? [P24.integLoad24(true).catch(() => {}), P24.bdLoad(true).catch(() => {})] : !m.sub ? [P24.integLoad24().catch(() => {})] : []));
+    else if (scr === 'set') jobs.push(settingsLoad(m.sub), ...(String(m.sub).startsWith('integ') ? [P23.integLoad().catch(() => {}), P24.integLoad24(true).catch(() => {}), BDM.bdLoad().catch(() => {})] : m.sub === 'kal' ? [P24.integLoad24(true).catch(() => {}), BDM.bdLoad(true).catch(() => {})] : !m.sub ? [P24.integLoad24().catch(() => {})] : []));
     else if (scr === 'hl') jobs.push(hlLoad());
     else if (scr === 'spor') jobs.push(trkLoad().then(() => trkWatch()));
     else if (scr === 'mat') jobs.push(matLoad());
@@ -497,7 +498,7 @@ async function load() {
     else if (scr === 'avg') jobs.push(avgLoad());
     else if (scr === 'fam') jobs.push(famLoad());
     else if (scr === 'huske') jobs.push(tasksLoad(true));
-    else if (scr === 'bd') jobs.push(P24.bdLoad(true));
+    else if (scr === 'bd') jobs.push(BDM.bdLoad(true));
     else if (scr === 'kal') jobs.push(KAL.kalLoad());
     else if (scr === 'chat') jobs.push(CHAT.chatLoad());
     else if (scr === 'aictl') jobs.push(P34AI.aiLoad());
@@ -512,7 +513,7 @@ async function load() {
     if (paper()) {
       jobs.push(regLoad().catch(() => {}));
       jobs.push(photoLoad().then(() => draw()).catch(() => {}));
-      if (scr === 'hl') jobs.push(P35.briefLoad().catch(() => {}), matLoad().catch(() => {}), loadSummary().catch(() => {}), newsLoad().catch(() => {}), tasksLoad().catch(() => {}), posLoad().catch(() => {}), bolWidgetLoad().catch(() => {}), P24.bdLoad().catch(() => {}), KAL.kalLoad().catch(() => {}));
+      if (scr === 'hl') jobs.push(P35.briefLoad().catch(() => {}), matLoad().catch(() => {}), loadSummary().catch(() => {}), newsLoad().catch(() => {}), tasksLoad().catch(() => {}), posLoad().catch(() => {}), bolWidgetLoad().catch(() => {}), BDM.bdLoad().catch(() => {}), KAL.kalLoad().catch(() => {}));
       if (scr === 'mer' || scr === 'hjem') jobs.push(loadSummary().catch(() => {}));
       if (scr === 'hjem') jobs.push(recentLoad().catch(() => {}), rcCount().catch(() => {}));
       if (m.detail && m.sel != null) jobs.push(txLoad(m.sel).catch(() => {}));

@@ -10,7 +10,7 @@
 import { esc, hlApi } from './core.js';
 import { m, draw, flash } from './mobile.js';
 import { haptic } from './mobile-haptics.js';
-import { BD, bdLoad } from './mobile-profiler-og-bursdager.js';
+import { BD, bdLoad } from './mobile-bursdager.js';
 import { swAdd } from './mobile-sveip-bort.js';
 import * as HM from './mobile-vel-fremme.js';
 import { AV } from './mobile-fanelinje.js'; // prompt 46: Ruter-redigering (wiggle)

@@ -9,7 +9,7 @@
 import { esc, hlApi } from './core.js';
 import { m, draw, flash } from './mobile.js';
 import { haptic } from './mobile-haptics.js';
-import { BD, bdLoad } from './mobile-profiler-og-bursdager.js';
+import { BD, bdLoad } from './mobile-bursdager.js';
 import { quickParse, quickCached } from '/assets/js/lib/dates.js'; // Fase 3: dato og tid fra serveren (POST /api/kalender/quick/parse)
 import { LEARN_TYPES, typeName, loadMemory, memoryNow, addMemory, applyMemory, nameOfEvent, dinOf } from '/assets/js/glimt-memory.js'; // prompt 33
 import * as P29 from './mobile-sok-og-backup.js';

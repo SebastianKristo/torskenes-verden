@@ -3,7 +3,7 @@
 // mobile-kvitteringer.js (importeres først, der Kvitteringer-modulene sto før, så evalueringsrekkefølgen er den samme).
 // Fasit: design/Mobil Papir App.dc.html, Nyhetsleser.dc.html og prompts/prompt-23-pakke/*.
 import { KV, kvBind } from './mobile-kvitteringer.js';
-import * as P24 from './mobile-profiler-og-bursdager.js';
+import * as P24 from './mobile-profiler.js';
 import { S, api, hlApi, esc, n0, n2, dd, loadBoot } from './core.js';
 import { m, draw, flash } from './mobile.js';
 import { haptic, hapBack } from './mobile-haptics.js';
