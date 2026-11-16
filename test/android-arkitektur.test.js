@@ -186,3 +186,31 @@ test('Struktur: Sporing har egen ViewModel med StateFlow og repository; AppViewM
   assert.match(vm, /var trkSel by mutableStateOf<String\?>\(null\)/);
   assert.match(vm, /var trkFilter by mutableStateOf\("active"\)/);
 });
+
+test('Struktur: Mat har egen ViewModel med StateFlow og repository; AppViewModel sender bare videre', () => {
+  const mvm = strip(raw(join(APP, 'skjerm/MatViewModel.kt')));
+  assert.match(mvm, /class MatViewModel\([\s\S]*?\) : ViewModel\(\)/);
+  assert.match(mvm, /val tilstand: StateFlow<MatTilstand> = _tilstand\.asStateFlow\(\)/);
+  assert.doesNotMatch(mvm, /JSONObject\(|JSONArray\(|matGet\(|matPost\(|parseWeek\(/, 'ingen nett eller JSON i ViewModel-en');
+  assert.match(mvm, /fun nullstill\(\) \{\s*jobbPoll\?\.cancel\(\)/, 'skannekøen følges ikke etter utlogging');
+  const repo = strip(raw(join(APP, 'repository/MatRepository.kt')));
+  assert.match(repo, /return withContext\(Dispatchers\.Default\) \{[\s\S]{0,200}MatUke\(parseWeek\(raw\), mapper, raw\)/, 'JSON tolkes utenfor Main');
+  for (const sti of ['"/week"', '"/recipes/jobs"', '"/folders"', '"/plan"', '"/shopping"', '"/recipes/import"', '"/recipes/import/save"', '"/recipes/scan"']) assert.ok(repo.includes(sti), sti);
+  // Q19: mappene kommer alltid med i /week; ingen ekstra kall til /folders som reserve for eldre servere.
+  const uke = repo.slice(repo.indexOf('suspend fun uke()'), repo.indexOf('suspend fun jobber()'));
+  assert.doesNotMatch(uke, /"\/folders"/);
+  const vm = strip(raw(join(APP, 'AppViewModel.kt')));
+  for (const f of ['week', 'matFolders', 'recipeJobs', 'recipePreview', 'recipeBusy']) assert.doesNotMatch(vm, new RegExp(`var ${f} by mutableStateOf`), f);
+  assert.doesNotMatch(vm, /\bapi\.mat(Get|Post|Patch)\(|prefix = Api\.MAT/, 'Mat-kallene går via MatRepository');
+  assert.match(vm, /val week: Week\? get\(\) = matNa\(\)\.uke/);
+  assert.match(vm, /suspend fun loadWeek\(\) = mat\.last\(\)/);
+  assert.match(vm, /mat\.tilstand\.collect \{ matSpeil = it \}/);
+  assert.match(vm, /mat\.nullstill\(\); subs = null/, 'utlogging tømmer Mat');
+  // «Opptatt» og meldingen for ny ukeplan vises som før (i AppViewModel).
+  assert.match(vm, /try \{ mat\.planleggUka\(\); message = "Ny ukeplan klar ✦" \} finally \{ busy = false \}/);
+  // Q20: «Middag i dag» på Hjem bruker serverens Oslo-dato (today i /week), ikke telefonens klokke.
+  assert.match(vm, /todayMeal = runCatching \{ matRepo\.uke\(\)\.uke\.days\.firstOrNull \{ it\.today \}\?\.name \}\.getOrNull\(\)/);
+  // Valgt dag, mappe og åpen rett er navigasjon og blir i AppViewModel.
+  assert.match(vm, /var matDay by mutableStateOf<Int\?>\(null\)/);
+  assert.match(vm, /var dishOpen by mutableStateOf<String\?>\(null\)/);
+});

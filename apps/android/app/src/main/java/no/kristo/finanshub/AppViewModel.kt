@@ -29,11 +29,14 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.ViewModelStore
 import no.kristo.finanshub.repository.DomenerRepository
+import no.kristo.finanshub.repository.MatRepository
 import no.kristo.finanshub.repository.NyheterRepository
 import no.kristo.finanshub.repository.NySending
 import no.kristo.finanshub.repository.SporingRepository
 import no.kristo.finanshub.skjerm.DomenerTilstand
 import no.kristo.finanshub.skjerm.DomenerViewModel
+import no.kristo.finanshub.skjerm.MatTilstand
+import no.kristo.finanshub.skjerm.MatViewModel
 import no.kristo.finanshub.skjerm.NyheterTilstand
 import no.kristo.finanshub.skjerm.NyheterViewModel
 import no.kristo.finanshub.skjerm.SporingTilstand
@@ -135,6 +138,19 @@ class AppViewModel(app: Application, private val lagret: SavedStateHandle) : And
     private var sporingSpeil by mutableStateOf<SporingTilstand?>(null)
     private fun sporingNa(): SporingTilstand = sporingSpeil.let { sporing.tilstand.value }
 
+    /** Repository mot /mat/api (også «Middag i dag» på Hjem). */
+    private val matRepo = MatRepository { api }
+
+    /** Mat-siden (skjerm/MatViewModel.kt). «Endret av …» under uka lages fra rå-svaret (domene/Mat.kt). */
+    val mat: MatViewModel = ViewModelProvider(
+        skjermer,
+        MatViewModel.fabrikk(matRepo, { flash(it) }, { visFeil(it) }, { raw -> p36.mealNote = runCatching { mealNote36(raw) }.getOrNull() }),
+    )[MatViewModel::class.java]
+
+    /** Speil av MatViewModel.tilstand, som for Domener: skjermer som leser vm.week osv. tegnes på nytt. */
+    private var matSpeil by mutableStateOf<MatTilstand?>(null)
+    private fun matNa(): MatTilstand = matSpeil.let { mat.tilstand.value }
+
     /* ---------- Kontoer ---------- */
 
     var accounts by mutableStateOf(store.load())
@@ -231,7 +247,8 @@ class AppViewModel(app: Application, private val lagret: SavedStateHandle) : And
 
     /* ---------- Moduler ---------- */
 
-    var week by mutableStateOf<Week?>(null)
+    /** Uka i Mat: tilstanden ligger i MatViewModel (skjerm/MatViewModel.kt). */
+    val week: Week? get() = matNa().uke
     var subs by mutableStateOf<SubList?>(null)
     var folders by mutableStateOf<List<Folder>?>(null)
     var folder by mutableStateOf<FolderDetail?>(null)
@@ -524,13 +541,13 @@ class AppViewModel(app: Application, private val lagret: SavedStateHandle) : And
 
     private fun clearData() {
         boot = null; summary = null; me = null; txs = null; receipts = null; jobs = emptyList(); selectedTx = null; selectedReceipt = null
-        week = null; subs = null; folders = null; folder = null; finn = null; tokens = null; domener.nullstill()
+        mat.nullstill(); subs = null; folders = null; folder = null; finn = null; tokens = null; domener.nullstill()
         mobileHome = null; homeError = null; history = emptyList(); suggestions = emptyList(); todayMeal = null; domainToday = null; avatar = null
         ai = null; aiHistory = emptyList(); editing = null; original = null; detail = null; detailTx = null
         recurring = null; stocks = null; report = null; importResult = null; importUris = emptyList(); importText = ""
         editHome = false; domainManager = false; matDay = null; matFull = false; aiNote = null; suggestGroups = emptyList()
-        nyheter.nullstill(); homeNews = emptyList(); newsOpen = false; photo = null; media = null; matFolders = emptyList(); recipeJobs = emptyList()
-        recipePreview = null; dishOpen = null; paperPage = null
+        nyheter.nullstill(); homeNews = emptyList(); newsOpen = false; photo = null; media = null
+        dishOpen = null; paperPage = null
         logos.clear()
         // Prompt 21 (brukerskille): alt som tilhører brukeren tømmes ved kontobytte og utlogging.
         tasks = null; taskNext = emptyList(); tasksOpen = false; family = null; famTrack = emptyList(); famSel = null; familyOpen = false
@@ -984,10 +1001,8 @@ class AppViewModel(app: Application, private val lagret: SavedStateHandle) : And
             }
         }
         history = runCatching { parseStrings(api.hlGet("/search/history")) }.getOrDefault(history)
-        todayMeal = runCatching {
-            val w = parseWeek(api.matGet("/week"))
-            w.days.firstOrNull { it.date == LocalDate.now().toString() }?.name
-        }.getOrNull()
+        // Q20: «i dag» er serverens Oslo-dato (today i /week), ikke telefonens klokke.
+        todayMeal = runCatching { matRepo.uke().uke.days.firstOrNull { it.today }?.name }.getOrNull()
         domainToday = runCatching {
             val d = domenerRepo.domener().firstOrNull() ?: return@runCatching null
             val a = domenerRepo.analyse(d.name, "today")
@@ -1497,31 +1512,22 @@ class AppViewModel(app: Application, private val lagret: SavedStateHandle) : And
 
     /* ---------- Mat ---------- */
 
-    suspend fun loadWeek() {
-        val raw = api.matGet("/week")
-        week = parseWeek(raw)
-        p36.mealNote = runCatching { mealNote36(raw) }.getOrNull()
-        // Mapper og skannekø finnes bare på nyere servere; feil her stopper ikke uka. /week har også «folders».
-        val inWeek = runCatching { org.json.JSONObject(raw).optJSONArray("folders")?.let { parseMatFolders(it.toString()) } }.getOrNull()
-        matFolders = inWeek?.takeIf { it.isNotEmpty() } ?: runCatching { parseMatFolders(api.matGet("/folders")) }.getOrDefault(matFolders)
-        recipeJobs = runCatching { parseRecipeJobs(api.matGet("/recipes/jobs")) }.getOrDefault(recipeJobs)
-    }
+    /* Tilstanden og kallene ligger i MatViewModel; her står videresendingene og det som trenger «opptatt» eller meldingen. */
+
+    suspend fun loadWeek() = mat.last()
 
     fun planWeek() = launch {
         busy = true
-        try { api.matPost("/plan", JSONObject().put("scope", "week")); loadWeek(); message = "Ny ukeplan klar ✦" } finally { busy = false }
+        try { mat.planleggUka(); message = "Ny ukeplan klar ✦" } finally { busy = false }
     }
-    fun planDay(date: String) = launch { api.matPost("/plan", JSONObject().put("scope", "day").put("date", date)); loadWeek() }
-    fun setCook(date: String, cook: String) = launch { api.matPatch("/day/$date", JSONObject().put("cook", cook)); loadWeek() }
-    fun toggleFixed(d: Day) = launch { api.matPatch("/day/${d.date}", JSONObject().put("fixed", !d.fixed)); loadWeek() }
-    fun toggleShop(id: String) = launch { api.matPost("/shopping/$id/toggle"); loadWeek() }
+    fun planDay(date: String) = mat.planleggDag(date)
+    fun setCook(date: String, cook: String) = mat.settKokk(date, cook)
+    fun toggleFixed(d: Day) = mat.vekslFast(d)
+    fun toggleShop(id: String) = mat.vekslHandel(id)
     /** Legger ingrediensene som mangler i handlelisten. */
     fun addToShop(items: List<String>) = launch {
-        val have = week?.shopping?.map { it.text.lowercase() }?.toSet() ?: emptySet()
-        val add = items.filter { it.lowercase() !in have }
-        for (i in add) api.matPost("/shopping", JSONObject().put("text", i).apply { week?.start?.takeIf(String::isNotBlank)?.let { put("start", it) } })
-        loadWeek()
-        message = if (add.isEmpty()) "Alt står allerede i handlelisten" else "${add.size} lagt i handlelisten"
+        val n: Int = mat.leggIHandlelisten(items)
+        message = if (n == 0) "Alt står allerede i handlelisten" else "$n lagt i handlelisten"
     }
 
     /* ---------- Subscription OS ---------- */
@@ -2008,102 +2014,52 @@ class AppViewModel(app: Application, private val lagret: SavedStateHandle) : And
 
     /* ---------- Mat: mapper, skann oppskrift, import fra nettside, lenker og filer ---------- */
 
-    var matFolders by mutableStateOf<List<MatFolder>>(emptyList())
+    val matFolders: List<MatFolder> get() = matNa().mapper
     /** Valgt mappe i rettlisten (null = Alle). */
     var matFolderSel by mutableStateOf<String?>(null)
-    var recipeJobs by mutableStateOf<List<RecipeJob>>(emptyList())
-    var recipePreview by mutableStateOf<RecipePreview?>(null)
-    var recipeBusy by mutableStateOf(false)
+    val recipeJobs: List<RecipeJob> get() = matNa().jobber
+    var recipePreview: RecipePreview?
+        get() = matNa().forhandsvisning
+        set(v) { mat.settForhandsvisning(v) }
+    val recipeBusy: Boolean get() = matNa().oppskriftOpptatt
     /** Åpen rett (detaljark med oppskrift, mappe, lenker og filer). */
     var dishOpen by mutableStateOf<String?>(null)
     /** Skann fra «+»: «receipt» (kvittering) eller «recipe» (oppskrift på Mat-siden). */
     var scanTarget by mutableStateOf("receipt")
-    private var recipePoll: kotlinx.coroutines.Job? = null
 
     /** Kamera/filer fra skannearket: kvittering eller oppskrift etter hvor brukeren er. */
     fun scanUris(uris: List<Uri>) { if (scanTarget == "recipe") scanRecipes(uris) else uploadUris(uris) }
 
-    fun importRecipe(url: String) = launch {
-        val u = url.trim().let { if (it.startsWith("http")) it else "https://$it" }
-        recipeBusy = true
-        try { recipePreview = parseRecipePreview(api.request("POST", "/recipes/import", JSONObject().put("url", u), prefix = Api.MAT, read = 90_000)) }
-        finally { recipeBusy = false }
-    }
+    fun importRecipe(url: String) = mat.importerOppskrift(url)
 
-    fun saveRecipe(folderId: String?) = launch {
-        val p = recipePreview ?: return@launch
-        recipeBusy = true
-        try {
-            api.matPost("/recipes/import/save", JSONObject().put("preview", JSONObject(p.raw)).put("folderId", folderId ?: JSONObject.NULL))
-            recipePreview = null
-            loadWeek()
-            flash("${p.name.ifBlank { "Retten" }} er lagret")
-        } finally { recipeBusy = false }
-    }
+    fun saveRecipe(folderId: String?) = mat.lagreOppskrift(folderId)
 
     /** Skann oppskrift: bilder skaleres ned lokalt (HEIC blir JPEG), PDF sendes som den er. */
     fun scanRecipes(uris: List<Uri>) = launch {
         if (uris.isEmpty()) return@launch
         val ctx = getApplication<Application>()
+        val deler = mutableListOf<Api.Part>()
         for (u in uris) {
             val mime = ctx.contentResolver.getType(u) ?: "image/jpeg"
             val data = withContext(Dispatchers.IO) { ctx.contentResolver.openInputStream(u)?.use { it.readBytes() } } ?: continue
             val pdf = mime.contains("pdf")
             val bytes = if (pdf) data else withContext(Dispatchers.Default) { scaled(data, 2400, 85) } ?: data
-            api.upload("/recipes/scan", listOf(Api.Part("file", if (pdf) "oppskrift.pdf" else "oppskrift.jpg", if (pdf) "application/pdf" else "image/jpeg", bytes)), prefix = Api.MAT)
+            deler += Api.Part("file", if (pdf) "oppskrift.pdf" else "oppskrift.jpg", if (pdf) "application/pdf" else "image/jpeg", bytes)
         }
-        flash(if (uris.size == 1) "✦ Oppskriften leses i bakgrunnen" else "✦ ${uris.size} oppskrifter leses i bakgrunnen")
-        recipeJobs = runCatching { parseRecipeJobs(api.matGet("/recipes/jobs")) }.getOrDefault(recipeJobs)
-        pollRecipes()
+        if (deler.isNotEmpty()) mat.skannOppskrifter(deler)
     }
 
-    private fun pollRecipes() {
-        if (recipePoll?.isActive == true) return
-        recipePoll = viewModelScope.launch {
-            repeat(60) {
-                delay(3000)
-                val j = runCatching { parseRecipeJobs(api.matGet("/recipes/jobs")) }.getOrNull() ?: return@launch
-                val before = recipeJobs.count { it.active }
-                recipeJobs = j
-                if (j.count { it.active } < before) runCatching { loadWeek() }
-                if (j.none { it.active }) return@launch
-            }
-        }
-    }
+    fun retryRecipeJob(id: String) = mat.provJobbIgjen(id)
+    fun removeRecipeJob(id: String) = mat.fjernJobb(id)
 
-    fun retryRecipeJob(id: String) = launch {
-        api.matPost("/recipes/jobs/" + URLEncoder.encode(id, "UTF-8") + "/retry")
-        recipeJobs = parseRecipeJobs(api.matGet("/recipes/jobs"))
-        pollRecipes()
-    }
-    fun removeRecipeJob(id: String) = launch {
-        api.request("DELETE", "/recipes/jobs/" + URLEncoder.encode(id, "UTF-8"), prefix = Api.MAT)
-        recipeJobs = parseRecipeJobs(api.matGet("/recipes/jobs"))
-    }
-
-    fun addMatFolder(name: String) = launch {
-        val n = name.trim().takeIf { it.isNotEmpty() } ?: return@launch
-        api.matPost("/folders", JSONObject().put("name", n.take(40)))
-        matFolders = parseMatFolders(api.matGet("/folders"))
-    }
-    fun renameMatFolder(id: String, name: String) = launch {
-        api.matPatch("/folders/" + URLEncoder.encode(id, "UTF-8"), JSONObject().put("name", name.trim().take(40)))
-        matFolders = parseMatFolders(api.matGet("/folders"))
-    }
+    fun addMatFolder(name: String) = mat.nyMappe(name)
+    fun renameMatFolder(id: String, name: String) = mat.endreMappe(id, name)
     fun deleteMatFolder(id: String) = launch {
-        api.request("DELETE", "/folders/" + URLEncoder.encode(id, "UTF-8"), prefix = Api.MAT)
+        mat.slettMappe(id)
         if (matFolderSel == id) matFolderSel = null
-        loadWeek()
     }
-    fun setDishFolder(dishId: String, folderId: String?) = launch {
-        api.matPatch("/dishes/" + URLEncoder.encode(dishId, "UTF-8"), JSONObject().put("folderId", folderId ?: JSONObject.NULL))
-        loadWeek()
-    }
-    fun addDishLink(dishId: String, title: String, url: String) = launch {
-        val u = url.trim().let { if (it.startsWith("http")) it else "https://$it" }
-        api.matPost("/dishes/" + URLEncoder.encode(dishId, "UTF-8") + "/links", JSONObject().put("title", title.trim().ifBlank { u }).put("url", u))
-        loadWeek()
-    }
+    fun setDishFolder(dishId: String, folderId: String?) = mat.settRettensMappe(dishId, folderId)
+    fun addDishLink(dishId: String, title: String, url: String) = mat.leggTilLenke(dishId, title, url)
     fun uploadDishFile(dishId: String, uri: Uri) = launch {
         val ctx = getApplication<Application>()
         val mime = ctx.contentResolver.getType(uri) ?: "application/octet-stream"
@@ -2111,21 +2067,16 @@ class AppViewModel(app: Application, private val lagret: SavedStateHandle) : And
         val data = withContext(Dispatchers.IO) { ctx.contentResolver.openInputStream(uri)?.use { it.readBytes() } } ?: return@launch
         busy = true
         try {
-            api.upload("/dishes/" + URLEncoder.encode(dishId, "UTF-8") + "/links",
-                listOf(Api.Part("file", name, mime, data), Api.Part.text("title", name.substringBeforeLast('.'))), prefix = Api.MAT)
-            loadWeek()
+            mat.lastOppFil(dishId, listOf(Api.Part("file", name, mime, data), Api.Part.text("title", name.substringBeforeLast('.'))))
             flash("$name er lagt til")
         } finally { busy = false }
     }
-    fun removeDishLink(dishId: String, linkId: String) = launch {
-        api.request("DELETE", "/dishes/" + URLEncoder.encode(dishId, "UTF-8") + "/links/" + URLEncoder.encode(linkId, "UTF-8"), prefix = Api.MAT)
-        loadWeek()
-    }
+    fun removeDishLink(dishId: String, linkId: String) = mat.fjernLenke(dishId, linkId)
 
     /** Åpner en lagret fil (krever token): lastes ned og vises i en app som kan åpne filtypen. */
     fun openDishFile(l: DishLink) = launch {
         val path = l.fileUrl ?: return@launch
-        val data = api.bytes(if (path.startsWith("/")) path else "/mat/api/" + path)
+        val data = mat.fil(path)
         val ctx = getApplication<Application>()
         val ext = l.title.substringAfterLast('.', "").ifBlank { when (l.kind) { "pdf" -> "pdf"; "sheet" -> "xlsx"; "doc" -> "docx"; "image" -> "jpg"; else -> "bin" } }
         val f = File(File(ctx.cacheDir, "scans").apply { mkdirs() }, "mat-${l.id}.$ext").apply { writeBytes(data) }
@@ -3988,6 +3939,7 @@ class AppViewModel(app: Application, private val lagret: SavedStateHandle) : And
         viewModelScope.launch { domener.tilstand.collect { domenerSpeil = it } }
         viewModelScope.launch { nyheter.tilstand.collect { nyheterSpeil = it } }
         viewModelScope.launch { sporing.tilstand.collect { sporingSpeil = it } }
+        viewModelScope.launch { mat.tilstand.collect { matSpeil = it } }
         // P85 F: siden og søket fra før prosessdød (lastes av refresh), og lagringen til neste gang.
         runCatching { gjenopprettNavigasjon() }
         lagret.setSavedStateProvider(NAV_LAGRET, object : SavedStateRegistry.SavedStateProvider {
