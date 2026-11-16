@@ -2428,7 +2428,7 @@ html[data-ui=mobile]:has(#app > .m.papir),html[data-ui=mobile] body:has(#app > .
 .m .ak23-seg button{flex:none;height:40px;padding:0 18px;border-radius:20px;border:1px solid var(--pp-line);background:var(--pp-card);color:var(--pp-ink);font:500 14px Manrope;white-space:nowrap;cursor:pointer}
 .m .ak23-seg button[aria-pressed=true]{background:var(--pp-ink);border-color:var(--pp-ink);color:var(--pp-bg)}
 .ak23-h{display:flex;justify-content:space-between;align-items:baseline}.ak23-h b,.ak23-t{font-size:18px;font-weight:600}.ak23-h>span{font-size:13px}
-.ak23-tx{color:var(--pp-ink);font-size:13.5px;font-weight:600;text-decoration:none}
+.ak23-tx{color:var(--pp-ink);font-size:13.5px;font-weight:600;text-decoration:none;padding:3px 0} /* E-B8: 24 px berøringsflate uten å flytte linja */
 .ak23-tops{flex:none;display:flex;gap:12px;overflow-x:auto;scrollbar-width:none;margin:0 -16px;padding:0 16px 4px}
 .ak23-top{flex:none;width:200px;padding:16px;border-radius:24px;display:flex;flex-direction:column;gap:10px;position:relative;overflow:hidden;box-sizing:border-box}
 .ak23-deco{position:absolute;right:-26px;top:-26px;width:90px;height:90px;border-radius:45px;background:rgba(127,127,127,.1)}
