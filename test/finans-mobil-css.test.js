@@ -43,5 +43,12 @@ test('kategorifargene fra serveren blir papirfarger i JS, ikke med !important mo
 
 test('antall !important i mobile.css går bare ned', () => {
   const n = (utenKommentarer.match(/!important/g) || []).length;
-  assert.ok(n <= 577, `${n} !important (maks 577; 861 før oppryddingen)`);
+  assert.ok(n <= 576, `${n} !important (maks 576; 861 før oppryddingen)`);
+});
+
+test('butikkfargen bak logoen i Papir-radene er en CSS-variabel (--ti), så hvit bunn under logoen trenger ikke !important', () => {
+  assert.match(js('mobile-posisjon-og-logoer.js'), /class="pp-ti\$\{ov \? ' p20-lg' : ''\}" style="--ti:/);
+  assert.doesNotMatch(js('mobile-posisjon-og-logoer.js'), /class="pp-ti[^"]*" style="background:/);
+  assert.match(utenKommentarer, /\.pp-ti\{[^}]*background:var\(--ti\)/);
+  assert.match(utenKommentarer, /\.pp-ti\.p20-lg\{[^}]*background:#fff;/);
 });
