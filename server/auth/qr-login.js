@@ -241,7 +241,7 @@ qrAuthApi.post('/qr/session', async (c) => {
   const srv = originOf46(c);
   const qr = `papir://login?s=${sid}&c=${nonce}${srv ? `&srv=${encodeURIComponent(srv)}` : ''}`;
   return c.json({ sessionId: sid, code: nonce, expiresAt: new Date(s.exp).toISOString(), ttl: QR46_TTL_MS / 1000, qr, server: srv || null, clientKey: key, app, platform: s.platform,
-    hint: 'Skann med Papir Finans på mobilen' }, 201, { 'Cache-Control': 'no-store' });
+    hint: 'Skann med Homelab på mobilen' }, 201, { 'Cache-Control': 'no-store' });
 });
 qrAuthApi.get('/qr/session/:id', (c) => {
   const ip = clientIp(c), now = Date.now();
@@ -322,7 +322,7 @@ qrAuthApi.post('/qr/scan', scanner46, async (c) => {
   if (!m) { scanFailed(user); return bad(c, 'Det er ikke en Homelab-innloggingskode'); }
   const s = live(m[1]);
   if (!s || !same(sha(m[2]), s.nonceHash)) { scanFailed(user); return bad(c, 'Ukjent eller utløpt kode. Be om en ny QR-kode.', 404); }
-  if (!mayApprove46(c.get('scanner46'), s)) return bad(c, 'Kalender kan bare godkjenne innlogging i Kalender. Skann med Papir Finans.', 403, { code: 'SCANNER_SCOPE' });
+  if (!mayApprove46(c.get('scanner46'), s)) return bad(c, 'Kalender kan bare godkjenne innlogging i Kalender. Skann med Homelab.', 403, { code: 'SCANNER_SCOPE' });
   if (s.state === 'expired') return bad(c, 'Koden er utløpt. Den fornyes automatisk på den andre skjermen.', 410, { state: 'expired' });
   if (s.state !== 'pending') return bad(c, 'Koden er allerede brukt', 409, { state: s.state });
   setState(s, 'scanned', { user, exp: Date.now() + QR_SCANNED_MS });
@@ -342,12 +342,12 @@ qrAuthApi.post('/qr/approve', scanner46, async (c) => {
     const p = parseQrCode46(b);
     const x = p ? live(p[0]) : null;
     if (!x || !same(sha(p[1]), x.nonceHash)) { scanFailed(user); return bad(c, 'Ukjent eller utløpt kode. Be om en ny QR-kode.', 404); }
-    if (!mayApprove46(c.get('scanner46'), x)) return bad(c, 'Kalender kan bare godkjenne innlogging i Kalender. Skann med Papir Finans.', 403, { code: 'SCANNER_SCOPE' });
+    if (!mayApprove46(c.get('scanner46'), x)) return bad(c, 'Kalender kan bare godkjenne innlogging i Kalender. Skann med Homelab.', 403, { code: 'SCANNER_SCOPE' });
     if (x.state === 'pending') setState(x, 'scanned', { user, exp: Date.now() + QR_SCANNED_MS });
     s = x;
   }
   if (!s || s.user !== user) return bad(c, 'Fant ikke innloggingen', 404);
-  if (!mayApprove46(c.get('scanner46'), s)) return bad(c, 'Kalender kan bare godkjenne innlogging i Kalender. Skann med Papir Finans.', 403, { code: 'SCANNER_SCOPE' });
+  if (!mayApprove46(c.get('scanner46'), s)) return bad(c, 'Kalender kan bare godkjenne innlogging i Kalender. Skann med Homelab.', 403, { code: 'SCANNER_SCOPE' });
   if (s.state !== 'scanned') return bad(c, s.state === 'expired' ? 'Innloggingen er utløpt' : 'Innloggingen er allerede behandlet', 409, { state: s.state });
   if (b.approve === false) {
     setState(s, 'denied', { exp: Date.now() });

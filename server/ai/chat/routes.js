@@ -250,11 +250,11 @@ function huskeSummary(u) {
 /** Korte sammendrag fra egne funksjoner (ikke rå tabeller ut til modellen), per bruker. */
 export async function myData(u) {
   const safe = async (fn, d) => { try { return await withTimeout(Promise.resolve().then(fn), 5000, d); } catch { return d; } };
-  const [finans, kalender, huske] = await Promise.all([safe(() => finansSummary(u, 30), 'Finans: ikke tilgjengelig.'), safe(() => kalenderSummary(u), 'Kalender: ikke tilgjengelig.'), safe(() => huskeSummary(u), 'Huskeliste: ikke tilgjengelig.')]);
+  const [finans, kalender, huske] = await Promise.all([safe(() => finansSummary(u, 30), 'Økonomi: ikke tilgjengelig.'), safe(() => kalenderSummary(u), 'Kalender: ikke tilgjengelig.'), safe(() => huskeSummary(u), 'Gjøremål: ikke tilgjengelig.')]);
   return { finans, kalender, huske };
 }
-const LEAVES = { finans: 'Sammendrag av Finans (siste 30 dager)', kalender: 'Sammendrag av Kalender (neste 7 dager)', huske: 'Sammendrag av Gjøremål' };
-const USED = { finans: 'Finans', kalender: 'Kalender', huske: 'Gjøremål' };
+const LEAVES = { finans: 'Sammendrag av Økonomi (siste 30 dager)', kalender: 'Sammendrag av Kalender (neste 7 dager)', huske: 'Sammendrag av Gjøremål' };
+const USED = { finans: 'Økonomi', kalender: 'Kalender', huske: 'Gjøremål' };
 
 /** Språket brukeren har valgt (SERVER-A eier feltet; vi leser de stedene det kan ligge). */
 function langOf(u) {
@@ -414,7 +414,7 @@ async function geminiStream(model, sys, msgs, s, { onDelta, signal, webSearch })
 function mockAnswer(text, data, facts = null) {
   const t = String(text ?? '').toLowerCase();
   if (facts?.length) return factsAnswer(facts); // prompt 41: svar på alle delene ut fra faktaene
-  if (data && /mat|brukte|penger|kr|finans|økonomi/.test(t)) return `Ut fra Finans-dataene dine: ${data.finans.split('. ').slice(0, 2).join('. ')}. Vil du at jeg setter opp et forslag til matbudsjett for neste måned?`;
+  if (data && /mat|brukte|penger|kr|finans|økonomi/.test(t)) return `Ut fra Økonomi-dataene dine: ${data.finans.split('. ').slice(0, 2).join('. ')}. Vil du at jeg setter opp et forslag til matbudsjett for neste måned?`;
   if (/hei|hallo/.test(t)) return 'Hei! Jeg er Homelab-assistenten. Jeg kan hjelpe med økonomi, kalender, gjøremål eller oppsett av serveren. Hva lurer du på?';
   return 'Her er et kort svar: Docker Compose samler tjenestene dine i én fil, så du kan starte alt med `docker compose up -d`. '
     + 'Legg Ollama og Open WebUI på samme nettverk, og bruk et volum for modellene, så slipper du å laste dem ned på nytt. Si fra hvis du vil ha et eksempel.';
@@ -452,7 +452,7 @@ async function runEngineRaw53(m, ctx) {
   if (m.provider === 'gemini') return { ...(await geminiStream(m.id.replace(/^gemini:/, ''), sys, msgs, s, { onDelta, signal, webSearch })), engine: 'gemini' };
   if (m.provider === 'groq') {
     const key = secret('groqKey');
-    if (!key) throw new Error('Groq-nøkkel mangler (Innstillinger → AI)');
+    if (!key) throw new Error('Groq-nøkkel mangler (Innstillinger → Glimt og AI → AI)');
     let model = groqModelOf(m.id.replace(/^groq:/, ''));
     if (msgs.some((x) => x.images?.length) && !/llama-4|scout/.test(model)) model = GROQ_VISION_DEFAULT;
     return { ...(await openaiStream('Groq', 'https://api.groq.com/openai/v1/chat/completions', { Authorization: `Bearer ${key}` },

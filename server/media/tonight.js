@@ -161,6 +161,6 @@ export async function tonight51(v, o = {}, now = Date.now()) {
     who: { people, source, note: source === 'meg' ? auto.note ?? 'Fant ingen hjemme nå – forslag for deg' : source === 'familie' ? `${join(people.map((p) => p.name))} er hjemme` : null },
     items, count: items.length, genres: [...new Set(allGenres.values())].sort((a, b) => a.localeCompare(b, 'nb')).map((g) => ({ id: g, label: g })),
     filters: { minutes, genre: genre || null, kind }, configured: lib.configured, ...(lib.errors.length ? { errors: lib.errors } : {}), phrased, ...(model ? { model } : {}),
-    empty: !items.length ? (lib.configured ? 'Fant ingenting som passer – prøv en annen sjanger eller lengde' : 'Koble til Radarr eller Sonarr under Innstillinger → Integrasjoner → Media') : null,
+    empty: !items.length ? (lib.configured ? 'Fant ingenting som passer – prøv en annen sjanger eller lengde' : 'Koble til Radarr eller Sonarr under Innstillinger → Tilkoblinger → Media') : null,
   };
 }

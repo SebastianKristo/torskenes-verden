@@ -663,7 +663,7 @@ const fail = (c, e) => (e?.status === 409 ? c.json({ error: e.message, reconnect
 /** Lager en hendelse i Privat/Familie (Google når koblet, ellers lokal i MOCK_DATA=1). v fra eventInput (+ origin). Brukes også av rask time (prompt 29). */
 export async function createEvent(user, v) {
   const mode = writeMode(user);
-  if (mode === 'reconnect' || mode === 'none') throw Object.assign(new Error(mode === 'none' ? 'Logg inn med Google (Innstillinger → Kalendere) for å lagre i Privat eller Familie.' : 'Google-koblingen mangler skrivetilgang til kalenderen. Logg inn med Google på nytt.'), { status: 409, reconnect: true });
+  if (mode === 'reconnect' || mode === 'none') throw Object.assign(new Error(mode === 'none' ? 'Logg inn med Google (Innstillinger → Tilkoblinger → Kalender og gjøremål) for å lagre i Privat eller Familie.' : 'Google-koblingen mangler skrivetilgang til kalenderen. Logg inn med Google på nytt.'), { status: 409, reconnect: true });
   if (mode === 'local') {
     const e = { id: `loc-${randomBytes(5).toString('hex')}`, ...v, created: new Date().toISOString() };
     const list = localList(user);

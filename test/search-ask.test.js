@@ -40,7 +40,7 @@ test('/search/ask svarer «plain» for korte søk uten å kalle AI', async () =>
 test('/search/ask gir feilmelding med årsak når AI-motoren ikke svarer', async () => {
   const r = await withFetch(async () => { throw Object.assign(new Error('fetch failed'), { cause: { code: 'ECONNREFUSED' } }); }, () => call('/search/ask', 'POST', { q: 'hvordan virker en varmepumpe?' }));
   assert.equal(r.status, 502);
-  assert.match(r.body.error, /✦ AI svarte ikke: .+\. Sjekk AI-motor/);
+  assert.match(r.body.error, /✦ AI svarte ikke: .+\. Sjekk modellene under Innstillinger → Glimt og AI → AI/);
   assert.ok(r.body.reason);
 });
 

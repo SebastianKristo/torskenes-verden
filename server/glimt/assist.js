@@ -382,7 +382,7 @@ async function toolDepartures(user, text) {
   const line = m ? m[1].toUpperCase() : null;
   const h = await homeDeparturesOf(user);
   const stops = (h.mine?.length ? h.mine : []).slice(0, 3);
-  if (!stops.length) return { text: 'Du har ingen stopp ennå. **Legg til et stopp** under Avganger.', source: 'Entur', tool: 'Avganger' };
+  if (!stops.length) return { text: 'Du har ingen stopp ennå. **Legg til et stopp** under Reise → Avganger.', source: 'Entur', tool: 'Avganger' };
   const res = await Promise.all(stops.map(async (s) => { try { return { s, d: await ext.getStopDepartures(s.id, 30) }; } catch { return { s, d: null }; } }));
   const now = Date.now();
   const all = res.flatMap(({ s, d }) => (d?.departures ?? []).filter((x) => !x.cancelled && Date.parse(x.time) > now - 60_000).map((x) => ({ ...x, stop: d.stop?.name ?? s.name, stopId: s.id })))
@@ -640,7 +640,7 @@ function huskeGlimt41(user, text) {
   const q0 = text.replace(/^(?:legg (?:til )?i huskelist(?:a|en)|legg til i gjøremål|ny oppgave|nytt gjøremål)\s*:?\s*/i, '').trim() || text;
   const j = startJob41(user, q0, { origin: 'home_search' });
   return { text: 'Glimt deler opp beskjeden i **punkter i Gjøremål** …', source: 'Gjøremål', tool: 'Gjøremål', engine: 'tool',
-    huske: { jobId: j.jobId, placeholder: j.placeholder, title: 'Legger til i Gjøremål', steps: ['Leser beskjeden', 'Deler opp i punkter', 'Finner rekkefølge og steder', 'Lagrer i Huskeliste'],
+    huske: { jobId: j.jobId, placeholder: j.placeholder, title: 'Legger til i Gjøremål', steps: ['Leser beskjeden', 'Deler opp i punkter', 'Finner rekkefølge og steder', 'Lagrer i Gjøremål'],
       fields: [{ k: 'Beskjed', v: q0 }, { k: 'Liste', v: 'Gjøremål' }, { k: 'Original', v: text }], done: '✓ Glimt lagde {n} punkter i Gjøremål', background: '✦ Glimt deler opp i bakgrunnen …' } };
 }
 

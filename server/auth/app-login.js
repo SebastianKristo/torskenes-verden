@@ -59,7 +59,7 @@ export function issueCompanion41(user, app, device, scopes, expires, parent) { /
     revokeTokenOf(user, old.token_id);
     cq('DELETE FROM fh_companion_tokens WHERE token_id=?').run(old.token_id);
   }
-  if (companionsOf(user).length >= 10) throw Object.assign(new Error('Maks 10 app-tokens. Trekk tilbake et under Innstillinger → Enheter.'), { status: 409 });
+  if (companionsOf(user).length >= 10) throw Object.assign(new Error('Maks 10 app-tokens. Trekk tilbake et under Innstillinger → Enheter og widgets.'), { status: 409 });
   const t = issueToken(user, { name: `${CLIENTS[app]} (${device})`, scopes, expires });
   cq('INSERT INTO fh_companion_tokens(token_id,user_id,app,device,parent,created) VALUES(?,?,?,?,?,?)').run(t.fullId, user, app, device, parent, Date.now());
   const u = userInfo(user);

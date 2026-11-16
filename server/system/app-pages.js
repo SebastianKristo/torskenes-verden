@@ -22,7 +22,7 @@ export const PAGES40 = [
   ['kalender', 'kalender', 'Kalender', '▦', 'calendar', 'calendar_month', '/kalender'],
   ['bursdag', 'bursdager', 'Bursdager', '✿', 'gift', 'cake', '/bursdager'],
   ['brief', 'brief', 'Brief', '✧', 'sun.horizon', 'wb_twilight', '/brief', 'sheet'],
-  ['rss', 'nyhetsleser', 'Nyhetsleser', '≣', 'list.bullet.rectangle', 'rss_feed', '/nyhetsleser', 'sheet'],
+  ['rss', 'nyhetsleser', 'Nyheter', '≣', 'list.bullet.rectangle', 'rss_feed', '/nyhetsleser', 'sheet'],
   ['bibel', 'bibel', 'Bibel', '✝', 'book.closed', 'menu_book', '/bibel', 'page', 'bible'],
   ['aksjer', 'aksjer', 'Aksjer', '↗', 'chart.line.uptrend.xyaxis', 'trending_up', '/aksjer'],
   ['nordlys', 'nordlys', 'Nordlys', '≈', 'sparkle', 'auto_awesome_motion', '/nordlys'],

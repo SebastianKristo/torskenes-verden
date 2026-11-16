@@ -9,7 +9,7 @@
 //   GET  /api/admin/impersonate/notice → {notice:{by, at, changes, text}|null} · POST …/notice/seen → {ok}   (for X selv)
 //   Tokenet er et vanlig app-token (fh_pat_…, finance:read + finance:write) for X, kortlevd: 30 min, fornyes ved aktivitet.
 //   Admin-tokenet/-økten røres ikke. Mens det brukes: ikke passord, 2FA, rolle, eierskap, sletting, tokens eller oppdatering;
-//   Chat, Finans og Helse er skrivebeskyttet (403 {readOnly:true}). Alt som skriver logges «[imp] actor=<admin> as=<X> …».
+//   Chat, Økonomi og Helse er skrivebeskyttet (403 {readOnly:true}). Alt som skriver logges «[imp] actor=<admin> as=<X> …».
 // Oppsett (bare admin, ikke mens man er logget inn som en annen):
 //   GET  /api/users/:id/layout → {userId, name, home, nav, mer, locked, lockedBy, updatedBy, updatedAt, layout}
 //   PUT  /api/users/:id/layout {…samme nøkler som PUT /api/me/layout (+ home/nav/mer)} → samme form som GET
@@ -65,7 +65,7 @@ function blocked(c, imp) {
   if (m === 'GET' || m === 'HEAD' || m === 'OPTIONS') return null;
   if (DENY.some(([mm, re]) => (mm === '*' || mm === m) && re.test(p))) return { error: `Ikke mulig mens du er logget inn som ${nameOf(imp.target)}. Gå ut først.`, impersonating: true };
   if (m === 'PATCH' && /^\/api\/users\/[^/]+$/.test(p)) return { error: `Rolle, passord og 2FA for ${nameOf(imp.target)} kan ikke endres mens du er logget inn som ${nameOf(imp.target)}.`, impersonating: true };
-  if (READONLY.some((re) => re.test(p))) return { error: `Du ser dette som admin. Chat, Finans og Helse er skrivebeskyttet mens du er logget inn som ${nameOf(imp.target)}.`, readOnly: true, impersonating: true };
+  if (READONLY.some((re) => re.test(p))) return { error: `Du ser dette som admin. Chat, Økonomi og Helse er skrivebeskyttet mens du er logget inn som ${nameOf(imp.target)}.`, readOnly: true, impersonating: true };
   return null;
 }
 

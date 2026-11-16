@@ -264,7 +264,7 @@ export function rekeyMessages91(st, cmp, { disable2fa = false } = {}) {
   if (st.values.unreadable + st.domains.unreadable) m.push(`${n(st.values.unreadable + st.domains.unreadable, 'lagret nøkkel', 'lagrede nøkler')} (integrasjoner, innstillinger) kan ikke leses og må legges inn på nytt.`);
   // Uten fingeravtrykk (eldre backup): hemmeligheten er trolig byttet når en 2FA-nøkkel måtte krypteres på nytt eller ikke kunne leses.
   const changed = cmp ? cmp.hmacChanged : !!(st.totp.rekeyed || st.totp.unreadable.length);
-  if (st.recoveryUsers.length && changed) m.push(`Gjenopprettingskodene for tofaktor (${list(st.recoveryUsers)}) er laget med den gamle hemmeligheten og virker trolig ikke lenger. Lag nye under Innstillinger → Innlogging → Tofaktor.`);
+  if (st.recoveryUsers.length && changed) m.push(`Gjenopprettingskodene for tofaktor (${list(st.recoveryUsers)}) er laget med den gamle hemmeligheten og virker trolig ikke lenger. Lag nye under Innstillinger → Konto og sikkerhet → Totrinnsbekreftelse (2FA).`);
   if (st.tokens && changed) m.push(`App-innlogginger (${n(st.tokens, 'token', 'tokens')}) er laget med den gamle hemmeligheten og virker ikke lenger. Logg inn på nytt i appene.`);
   return m;
 }

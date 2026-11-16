@@ -164,7 +164,7 @@ function financeSentence(a, r, today) {
 }
 const NAV_LABEL = { kalender: 'Kalender', huskeliste: 'Gjøremål', finans: 'Finans', kvitteringer: 'Kvitteringer', budsjett: 'Budsjett', abonnement: 'Abonnement', vaer: 'Vær', familie: 'Familie', mat: 'Mat', bursdager: 'Bursdager', chat: 'Chat', innstillinger: 'Innstillinger', sporing: 'Sporing', domener: 'Domener', rom: 'Rom', nordlys: 'Nordlys OS' };
 const NAV_WEB = { kalender: '/#/kalender', huskeliste: '/#/huskeliste', finans: '/finans/', kvitteringer: '/finans/#/kv', budsjett: '/finans/#/budsjett', abonnement: '/finans/#/abonnement', vaer: '/#/vaer', familie: '/#/familie', mat: '/#/matplan', bursdager: '/#/bursdager', chat: '/#/chat', innstillinger: '/#/innstillinger', sporing: '/#/sporing', domener: '/#/domener', rom: '/#/rom', nordlys: '/#/innstillinger/system' };
-const FAIL_TEXT = { 'calendar.create': 'Fikk ikke lagt inn avtalen', 'calendar.update': 'Fikk ikke flyttet avtalen', 'calendar.delete': 'Fikk ikke slettet avtalen', 'tasks.create': 'Fikk ikke lagt inn gjøremålet', 'tasks.complete': 'Fikk ikke krysset av', 'finance.search': 'Fikk ikke søkt i Finans', 'finance.summary': 'Fikk ikke regnet ut forbruket', 'calendar.list': 'Fikk ikke lest kalenderen', 'calendar.search': 'Fikk ikke søkt i kalenderen', 'tasks.list': 'Fikk ikke lest Gjøremål' };
+const FAIL_TEXT = { 'calendar.create': 'Fikk ikke lagt inn avtalen', 'calendar.update': 'Fikk ikke flyttet avtalen', 'calendar.delete': 'Fikk ikke slettet avtalen', 'tasks.create': 'Fikk ikke lagt inn gjøremålet', 'tasks.complete': 'Fikk ikke krysset av', 'finance.search': 'Fikk ikke søkt i Økonomi', 'finance.summary': 'Fikk ikke regnet ut forbruket', 'calendar.list': 'Fikk ikke lest kalenderen', 'calendar.search': 'Fikk ikke søkt i kalenderen', 'tasks.list': 'Fikk ikke lest Gjøremål' };
 Object.assign(FAIL_TEXT, FAIL_TEXT46, FAIL_TEXT47);
 const QUIP_KIND = { 'calendar.create': 'calendar', 'calendar.update': 'calendar', 'tasks.create': 'tasks', 'tasks.complete': 'done', 'calendar.list': 'list', 'tasks.list': 'list', 'calendar.search': 'search' };
 
@@ -402,7 +402,7 @@ export function clarifyPlan55(text, local, legacyIntent, failed, module = 'home'
   if (tools.includes('calendar.create') || legacyIntent === 'appointment.create' || module === 'calendar') add('calendar', 'Legg det i kalenderen', 'Legg i kalenderen');
   if (tools.includes('tasks.create') || module === 'tasks') add('task', 'Lag et gjøremål', 'Lag et gjøremål');
   if (tools.some((x) => /^calendar\.(search|next|list)$/.test(x))) add('calendar_query', 'Søk i kalenderen', 'Søk i kalenderen etter');
-  if (tools.some((x) => /^finance\./.test(x))) add('finance', 'Se i Finans', 'Svar fra Finans');
+  if (tools.some((x) => /^finance\./.test(x))) add('finance', 'Se i Økonomi', 'Svar fra Økonomi');
   if (tools.includes('weather.get')) add('weather', 'Sjekk været', 'Hvordan er været');
   add('calendar', 'Legg det i kalenderen', 'Legg i kalenderen');
   add('task', 'Lag et gjøremål', 'Lag et gjøremål');
@@ -560,7 +560,7 @@ async function executePlan(user, plan, ctxT, base, t0) {
       const s = sentence(c, r, today); if (s) lines.push(s);
       rememberCtx(user, c, r, ctxT.module);
       if (!quipOutcome && QUIP_KIND[c.tool] && !r.result?.existing && r.result?.count !== 0) quipOutcome = { kind: QUIP_KIND[c.tool], ok: true, title: c.args.title ?? r.result?.event?.title ?? r.result?.task?.title ?? '' };
-    } else { anyFail = true; lines.push(c.tool === 'weather.get' ? `${r.error}${/[.?!]$/.test(r.error ?? '') ? '' : '.'}` : `${FAIL_TEXT[c.tool] ?? 'Det gikk ikke'}: ${r.error}.${r.reconnect ? ' Koble til Google på nytt under Innstillinger → Kalendere.' : ''}`); }
+    } else { anyFail = true; lines.push(c.tool === 'weather.get' ? `${r.error}${/[.?!]$/.test(r.error ?? '') ? '' : '.'}` : `${FAIL_TEXT[c.tool] ?? 'Det gikk ikke'}: ${r.error}.${r.reconnect ? ' Koble til Google på nytt under Innstillinger → Tilkoblinger → Kalender og gjøremål.' : ''}`); }
   }
   // Prompt 47 Steg F: prat og nettsøk formuleres av svarsteget (bare verktøydata + kontekst; nettsøk-regelen først).
   // Tekstmønsteret for aktuelle fakta («hvem er statsminister …», nyheter) er et hint: planla modellen bare prat, søkes det likevel.

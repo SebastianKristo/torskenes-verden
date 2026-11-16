@@ -426,7 +426,7 @@ async function llmText(u, prompt, rows) {
 }
 const withTimeout = (p, ms) => Promise.race([p, new Promise((_, rej) => { setTimeout(() => rej(Object.assign(new Error("Tidsavbrudd"), { timeout: true })), ms); })]);
 function llmPrompt(text, rows, sum) {
-  return `Du er Glimt i FinansHub. Svar kort på norsk (1–3 setninger) ut fra radene under. Ikke finn på tall.\nSpørsmål: «${text}»\n`
+  return `Du er Glimt i Økonomi i Homelab. Svar kort på norsk (1–3 setninger) ut fra radene under. Ikke finn på tall.\nSpørsmål: «${text}»\n`
     + `Sammendrag: ${rows.length} rader, til sammen ${krN(sum)} kr.\n` + rows.slice(0, 40).map((r) => `${r.date} · ${r.merchant_display ?? ''} · ${r.item_text ?? ''} · ${krN(r.amount ?? 0)}`).join('\n');
 }
 

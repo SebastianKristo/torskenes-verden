@@ -455,7 +455,7 @@ gscApi.get('/auth', async (c, next) => {
   return adminGuard(c, next);
 }, (c) => {
   const client = googleClient();
-  if (!client.id && !mockGsc()) return c.html('<!doctype html><meta charset="utf-8"><title>Google Search Console</title><p>Google er ikke satt opp. En administrator må legge inn klient-ID og hemmelighet under Innstillinger → Integrasjoner → Google.</p>', 409);
+  if (!client.id && !mockGsc()) return c.html('<!doctype html><meta charset="utf-8"><title>Google Search Console</title><p>Google er ikke satt opp. En administrator må legge inn klient-ID og hemmelighet under Innstillinger → Tilkoblinger → Google.</p>', 409);
   const verifier = b64u(randomBytes(32)), state = b64u(randomBytes(18));
   // Google godtar bare registrerte omdirigerings-URI-er. Er Kalenderens faste URI satt (offentlig https-adresse), brukes samme vert,
   // så innlogging startet fra lokal IP også treffer en adresse som står i Google Cloud. Ellers adressen serveren nås på.

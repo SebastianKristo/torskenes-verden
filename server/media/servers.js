@@ -412,7 +412,7 @@ media44Api.put('/servers/:id', ...A, H(async (c) => {
   const id = c.req.param('id'), b = await M.mediaBody43(c);
   if (id === DEFAULT_SITE) {
     if (b.name !== undefined) { const n = String(b.name ?? '').trim().slice(0, 30); if (!n) throw new M.MediaError('Gi serveren et navn', 400); kv.set(OWNER, 'media44_default_name', n); }
-    return { server: { id, name: kv.get(OWNER, 'media44_default_name', 'Hjemme'), builtin: true, note: 'Tjenestene for Hjemme endres under Innstillinger → Integrasjoner → MEDIA.' } };
+    return { server: { id, name: kv.get(OWNER, 'media44_default_name', 'Hjemme'), builtin: true, note: 'Tjenestene for Hjemme endres under Innstillinger → Tilkoblinger → Media.' } };
   }
   const list = sitesRaw(), i = list.findIndex((x) => x.id === id);
   if (i < 0) throw new M.MediaError('Ukjent server', 404);

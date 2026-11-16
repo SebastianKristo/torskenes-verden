@@ -65,7 +65,7 @@ export const _resetChain48 = () => { macDown.until = 0; macDown.why = null; macD
 /** Status for Mac-OCR slik kjeden ser den: {down_until, last_error}. */
 /** Helsesvaret → samme feiltekst som /ocr ville gitt (uten nøkkelen). */
 const probeErr51 = (h, url) => (h.status === 401 || h.status === 403 ? `Mac-OCR avviste forespørselen (${h.status}: ${h.status === 401 ? 'feil nøkkel' : 'serverens IP-adresse er ikke på tillatelseslista'})`
-  : h.configured === false ? (h.error === 'Nøkkelen er ikke satt' ? 'Mac-OCR-nøkkelen er ikke satt (Innstillinger → AI → Mac-OCR)' : 'Mac-OCR-adressen er ikke satt')
+  : h.configured === false ? (h.error === 'Nøkkelen er ikke satt' ? 'Mac-OCR-nøkkelen er ikke satt (Innstillinger → Glimt og AI → AI → Mac-OCR)' : 'Mac-OCR-adressen er ikke satt')
   : /Svarte ikke innen/.test(h.error ?? '') ? `Mac-OCR svarte ikke innen ${MAC_PROBE_MS51 / 1000} s (helsesjekk)`
   : h.status ? `Mac-OCR svarte ${h.status} på helsesjekken` : `Mac-OCR kan ikke nås på ${url} (${String(h.error ?? '').replace(/^Kan ikke nås \(|\)$/g, '')})`);
 export const macState51 = () => ({ down_until: macDown.until > Date.now() ? new Date(macDown.until).toISOString() : null, last_error: macDown.why });

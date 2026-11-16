@@ -87,7 +87,7 @@ async function states() { const { url, token } = haConf(); if (!url || !token) {
 export async function haHealthOut42(viewer) {
   let st;
   try { st = await states(); } catch (e) { return { connected: false, error: e.code ?? 'connect', message: e.message, devices: [], persons: persons(), people: persons() }; }
-  if (!st) return { connected: false, message: 'Home Assistant er ikke koblet til (Innstillinger → Integrasjoner)', devices: [], persons: persons(), people: persons() };
+  if (!st) return { connected: false, message: 'Home Assistant er ikke koblet til (Innstillinger → Tilkoblinger)', devices: [], persons: persons(), people: persons() };
   const L = links();
   let devices = devicesFromStates42(st.states).map((d) => ({ ...d, personId: L[d.id]?.personId ?? null, suggestedPersonId: suggest(d.name), selected: L[d.id]?.sensors ?? DEFAULT_SEL.filter((k) => d.sensors.some((x) => x.key === k)),
     healthCount: d.sensors.length, subtitle: `${d.entities} entiteter · ${d.sensors.length} helsesensorer` }))

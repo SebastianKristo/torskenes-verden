@@ -9,7 +9,7 @@ import { kv, OWNER } from '../../db.js';
 export const KEYS60 = ['state', 'entities', 'choices'];
 export const LABELS60 = { state: 'Samtaletilstand', entities: 'Entitetsregister', choices: 'Valgknapper ved usikkerhet' };
 export const HELP60 = {
-  state: 'Glimt husker forrige spørsmål i samtalen, så «og i Bergen?» og «flytt den til 11» forstås. Utløper etter 30 min i søket på Hjem og 12 t i Chat.',
+  state: 'Glimt husker forrige spørsmål i samtalen, så «og i Bergen?» og «flytt den til 11» forstås. Utløper etter 30 min i søket på Oversikt og 12 t i Chat.',
   entities: 'Personer, steder, butikker, abonnementer og faste hendelser med aliaser («hytta», «jobben»), brukt i minne, kalendersøk, vær og finans.',
   choices: 'Glimt spør med konkrete valg («Mener du A eller B?») i stedet for å gjette, og forstår «den første».',
 };

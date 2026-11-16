@@ -250,7 +250,7 @@ function timelineOf(r, labels, step, events) {
 /** Prompt 42: årsaken i stedet for «Kunne ikke oppdatere» (PostNord). */
 export function pnErrorText42(err, retry) {
   const e = String(err ?? '');
-  if (/krever nøkkel|nøkkelen ble avvist|\b40[13]\b/i.test(e) && !/svarer ikke/i.test(e)) return 'PostNord krever nøkkel for dette oppslaget. Legg inn nøkkel under Integrasjoner eller bruk ParcelsApp.';
+  if (/krever nøkkel|nøkkelen ble avvist|\b40[13]\b/i.test(e) && !/svarer ikke/i.test(e)) return 'PostNord krever nøkkel for dette oppslaget. Legg inn nøkkel under Tilkoblinger eller bruk ParcelsApp.';
   if (/fant ikke/i.test(e)) return 'Fant ikke nummeret hos PostNord. Sjekk nummeret eller velg en annen transportør.';
   if (/ikke skannet/i.test(e)) return `Ikke skannet hos PostNord ennå.${retry ? ` Prøver igjen ${retry}.` : ''}`;
   return `PostNord svarer ikke akkurat nå.${retry ? ` Prøver igjen ${retry}.` : ''}`;

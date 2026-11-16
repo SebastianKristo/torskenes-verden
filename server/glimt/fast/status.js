@@ -6,12 +6,12 @@ const TOOL_TEXT = {
   'calendar.search': 'Sjekker kalenderen …', 'calendar.next': 'Sjekker kalenderen …', 'calendar.list': 'Sjekker kalenderen …',
   'calendar.create': 'Legger inn i kalenderen …', 'calendar.update': 'Flytter avtalen …', 'calendar.delete': 'Sletter avtalen …',
   'tasks.create': 'Legger inn gjøremålet …', 'tasks.list': 'Sjekker gjøremålene …', 'tasks.complete': 'Krysser av …',
-  'finance.search': 'Ser i Finans …', 'finance.summary': 'Regner på forbruket …', 'finance.subscriptions': 'Ser på abonnementene …', 'finance.fixed': 'Ser på de faste utgiftene …',
+  'finance.search': 'Ser i Økonomi …', 'finance.summary': 'Regner på forbruket …', 'finance.subscriptions': 'Ser på abonnementene …', 'finance.fixed': 'Ser på de faste utgiftene …',
   'subscriptions.trial': 'Ser på prøveperioden …', 'weather.get': 'Henter været …', 'web.search': 'Søker på nettet …', 'memory.save': 'Husker det …',
   'media.episode': 'Spør Sonarr …', 'nav.open': 'Åpner siden …', 'chat.answer': 'Tenker på svaret …', 'app.answer': 'Finner svaret …',
 };
 const LEGACY_TEXT = { weather: 'Henter været …', departures: 'Sjekker avgangene …', packages: 'Sporer pakken …', 'sun.daylight': 'Regner ut dagslyset …', 'family.where': 'Ser hvor familien er …',
-  'calendar.day': 'Sjekker kalenderen …', 'calendar.next': 'Sjekker kalenderen …', 'finance.spent': 'Ser i Finans …', tasks: 'Sjekker gjøremålene …', 'memory.add': 'Husker det …', nav: 'Åpner siden …' };
+  'calendar.day': 'Sjekker kalenderen …', 'calendar.next': 'Sjekker kalenderen …', 'finance.spent': 'Ser i Økonomi …', tasks: 'Sjekker gjøremålene …', 'memory.add': 'Husker det …', nav: 'Åpner siden …' };
 /** Status for ett verktøykall. → {stage:'tool', tool, text} */
 export function toolStatus59(call) {
   const a = call?.args ?? {};

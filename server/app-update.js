@@ -150,7 +150,7 @@ api.get('/apk/:version', async (c) => {
   if (!VERSION_RE.test(v)) return c.json({ error: 'Ugyldig versjon' }, 400);
   let rel = (await latestRelease()).value;
   if (rel?.version !== v) rel = (await load(`v${v}`)).value;
-  if (rel?.version !== v || !rel._asset) return c.json({ error: `Fant ikke FinansHub ${v}` }, 404);
+  if (rel?.version !== v || !rel._asset) return c.json({ error: `Fant ikke Homelab ${v}` }, 404);
   let up;
   try { up = await ghFetch(rel._asset, 'application/octet-stream', 120_000); } catch (e) {
     return c.json({ error: `Nedlastingen feilet: ${e.name === 'TimeoutError' ? 'GitHub svarte ikke' : e.message}` }, 502);

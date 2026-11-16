@@ -116,7 +116,7 @@ export function placeOut50(z, v, members = F.members(v)) {
   return {
     ...zo, areaCount: n, areaText: n === 1 ? '1 område' : `${n} områder`, chips: zo.areas.map((a) => a.label).join(' · '),
     here, hereCount: here.length, hereText: here.length ? `${here.length} her nå` : 'Ingen her nå',
-    notifyText: nt, usedBy, usedByText: usedBy.length ? `Brukes av ${joinNames50(usedBy.map((u) => (u === 'ruter' ? 'Ruter (Min reise)' : 'varsler')))}` : null,
+    notifyText: nt, usedBy, usedByText: usedBy.length ? `Brukes av ${joinNames50(usedBy.map((u) => (u === 'ruter' ? 'Reise (Min reise)' : 'varsler')))}` : null,
     canEdit: zo.mine, canRemoveArea: zo.mine && n > 1,
   };
 }

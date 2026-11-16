@@ -90,7 +90,7 @@ test('B: vanlig bruker – RSS mot loopback, private nett, metadata-adressen, IP
     assert.ok(r.body.error.includes(L.LOCAL_MSG86), `${url}: ${r.body.error}`);
     assert.deepEqual(calls.filter((u) => !/favicon|\.ico/.test(u)), [], `${url} skal aldri hentes`);
   }
-  assert.equal(L.LOCAL_MSG86, 'Lokale adresser må godkjennes av en administrator (Innstillinger → Sikkerhet).');
+  assert.equal(L.LOCAL_MSG86, 'Lokale adresser må godkjennes av en administrator (Innstillinger → Konto og sikkerhet).');
   assert.deepEqual(await hosts(), [], 'en vanlig bruker godkjenner ingenting');
 });
 

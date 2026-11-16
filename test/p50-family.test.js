@@ -91,7 +91,7 @@ test('Steder: sted med flere områder, brikker, endre radius, siste område kan 
   assert.equal(skole.chips, 'Skolen 150 m · Idrettshallen 80 m');
   assert.equal(skole.areaText, '2 områder');
   assert.deepEqual(skole.usedBy, ['ruter']);
-  assert.equal(skole.usedByText, 'Brukes av Ruter (Min reise)');
+  assert.equal(skole.usedByText, 'Brukes av Reise (Min reise)');
   assert.deepEqual(pl.radius, { min: 25, max: 1000 });
   const add = await I(`/api/family/places/${skole.id}/areas`, 'POST', { name: 'Biblioteket', ...BIBL, radius_m: 60 });
   assert.equal(add.status, 201);

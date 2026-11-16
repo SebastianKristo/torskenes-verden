@@ -387,7 +387,7 @@ const errText = (e) => e?.message ?? String(e);
 export async function syncAll() {
   if (!T || !conf().enabled) { setStatus('off'); return { ok: false, status: 'off' }; }
   const t = transport();
-  if (!t.configured()) { setStatus('error', 'Home Assistant er ikke satt opp (URL og token under Integrasjoner → Home Assistant).'); return { ok: false }; }
+  if (!t.configured()) { setStatus('error', 'Home Assistant er ikke satt opp (URL og token under Tilkoblinger → Home Assistant).'); return { ok: false }; }
   if (state.status !== 'ok') setStatus('connecting', state.error);
   try {
     await ensureSubscribed();
@@ -489,7 +489,7 @@ export function onLocal(kind, before, after) {
 let entCache = { at: 0, list: null, error: null };
 async function entities(force = false) {
   const t = transport();
-  if (!t.configured()) return { list: [], error: 'Home Assistant er ikke satt opp (URL og token under Integrasjoner → Home Assistant).' };
+  if (!t.configured()) return { list: [], error: 'Home Assistant er ikke satt opp (URL og token under Tilkoblinger → Home Assistant).' };
   if (!force && entCache.list && Date.now() - entCache.at < 30_000) return entCache;
   try { entCache = { at: Date.now(), list: (await t.entities()).map((x) => ({ entity_id: x.entity_id, name: x.name })), error: null }; }
   catch (e) { entCache = { at: Date.now(), list: entCache.list ?? [], error: errText(e) }; }
@@ -604,7 +604,7 @@ export function mountHa(api) {
     const name = String((await body(c)).name ?? '').trim().replace(/[\u0000-\u001f]/g, ' ').slice(0, 60);
     if (!name) return c.json({ error: 'Gi listen et navn' }, 400);
     const t = transport();
-    if (!t.configured()) return c.json({ error: 'Home Assistant er ikke satt opp (URL og token under Integrasjoner → Home Assistant).' }, 409);
+    if (!t.configured()) return c.json({ error: 'Home Assistant er ikke satt opp (URL og token under Tilkoblinger → Home Assistant).' }, 409);
     try {
       const ent = await t.createList(name);
       entCache.at = 0;
@@ -623,7 +623,7 @@ export function initHa(ctx) {
 /** Felt til itemOut i routes.js: om oppgaven er synket med HA. */
 export const haInfo = (r) => (r.ha_uid ? { ha: true } : {});
 
-/* ---------------- Synk-raden i Innstillinger → Gjøremål (prompt 45) ---------------- */
+/* ---------------- Synk-raden i Innstillinger → Tilkoblinger → Kalender og gjøremål (prompt 45) ---------------- */
 // GET /api/tasks/ha/summary → {enabled, linked, lists, syncedAt, syncedText, text, settings, canEdit}  (alle innloggede; endring fortsatt bare admin)
 const authOrToken = (c, next) => authOrToken0(c, next); // sen binding
 
@@ -636,7 +636,7 @@ export function tasksHaSummary45(u) {
   const sameDay = synced && new Date(synced).toLocaleDateString('sv-SE', { timeZone: 'Europe/Oslo' }) === new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Oslo' });
   const syncedText = synced ? `Synket ${sameDay ? hm(synced) : new Date(synced).toLocaleDateString('nb-NO', { timeZone: 'Europe/Oslo', day: 'numeric', month: 'short' })}` : conf.enabled ? 'Ikke synket ennå' : 'Av';
   return { enabled: !!conf.enabled, linked: rows.length, lists: rows.map((r) => ({ listId: r.list_id, name: r.name ?? null, entityId: r.entity_id })), syncedAt: synced ? new Date(synced).toISOString() : null, syncedText,
-    text: `Synk med Home Assistant · ${conf.enabled ? syncedText : 'av'}`, hint: 'endres i Innstillinger → Gjøremål', settings: { web: '#/innstillinger/gjoremal', mobile: '#/set/huske', detail: 'huske', event: 'papir-open-settings' }, canEdit: isAdmin(u),
+    text: `Synk med Home Assistant · ${conf.enabled ? syncedText : 'av'}`, hint: 'endres i Innstillinger → Tilkoblinger → Kalender og gjøremål', settings: { web: '#/innstillinger/gjoremal', mobile: '#/set/huske', detail: 'huske', event: 'papir-open-settings' }, canEdit: isAdmin(u),
     integrationText: rows.length ? `Gjøremål: ${rows.length} ${rows.length === 1 ? 'liste' : 'lister'} koblet` : 'Gjøremål: ingen lister koblet' };
 }
 export const haSummaryApi = new Hono();

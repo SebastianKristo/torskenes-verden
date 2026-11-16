@@ -1001,7 +1001,7 @@ function checkManifest({ manifest, files, dbHead }) {
   let m = manifest;
   if (typeof m === 'string') { try { m = JSON.parse(m); } catch { throw badUpload('manifest.json i backupen er ikke gyldig JSON'); } }
   if (m == null) throw badUpload('Fant ikke manifest.json. Dette er ikke en systembackup fra Homelab.');
-  if (!m || typeof m !== 'object' || m.format !== 'homelab-system-backup') throw badUpload('Ukjent backupformat. Bruk en fil fra Innstillinger → Backup → Last ned.');
+  if (!m || typeof m !== 'object' || m.format !== 'homelab-system-backup') throw badUpload('Ukjent backupformat. Bruk en fil fra Innstillinger → Server → Backup → Last ned.');
   if (m.formatVersion != null && !(Number(m.formatVersion) >= 1 && Number(m.formatVersion) <= 1)) throw badUpload(`Backupformat ${m.formatVersion} er laget av en nyere versjon. Oppdater serveren først.`);
   const listed = Array.isArray(m.modules) ? m.modules.map(String) : [];
   const modules = MODULE_IDS.filter((x) => listed.includes(x));

@@ -730,7 +730,7 @@ api.post('/search/ask', authOrToken, async (c) => {
       searchQuery: String(data.searchQuery ?? '').trim().slice(0, 200) || q });
   } catch (e) {
     const why = e.name === 'TimeoutError' ? 'AI-motoren svarte ikke i tide' : e.message;
-    return c.json({ error: `✦ AI svarte ikke: ${why}. Sjekk AI-motor under FinansHub → Innstillinger → AI-motor.`, reason: why }, 502);
+    return c.json({ error: `✦ AI svarte ikke: ${why}. Sjekk modellene under Innstillinger → Glimt og AI → AI.`, reason: why }, 502);
   }
 });
 // Prompt 32: samme historikk speiles i tabellen search_history (server/search-history.js, /api/search-history) med enhet,

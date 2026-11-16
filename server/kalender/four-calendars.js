@@ -405,7 +405,7 @@ googleMap39Api.get('/mapping', async (c) => {
 googleMap39Api.get('/mapping/jobs/:id', (c) => { const j = jobs.get(c.req.param('id')); return j && j.user === c.get('user') ? c.json(jobOut(j)) : bad(c, 'Fant ikke jobben', 404); });
 googleMap39Api.put('/mapping', async (c) => {
   const u = c.get('user');
-  if (!googleConnected(u)) return bad(c, 'Logg inn med Google først (Innstillinger → Kalendere)', 409);
+  if (!googleConnected(u)) return bad(c, 'Logg inn med Google først (Innstillinger → Tilkoblinger → Kalender og gjøremål)', 409);
   const b = await c.req.json().catch(() => null);
   const map = b?.map;
   if (!map || typeof map !== 'object' || Array.isArray(map)) return bad(c, 'Forventet {map:{googleId:"p"|"b"|null}}');

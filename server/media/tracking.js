@@ -68,7 +68,7 @@ const qbErrKind = (e) => (e?.upstream === 401 || /passord|sperret|innlogging/i.t
 const ACT = {
   manual: (t) => ({ id: 'manual', label: 'Velg manuelt', ...(t.movieIds.length ? { movieId: t.movieIds[0] } : t.episodeIds.length ? { episodeId: t.episodeIds[0] } : { seriesId: t.seriesId, seasonNumber: t.seasonNumber }) }),
   start: (hash) => ({ id: 'start', label: 'Start', hash, method: 'POST', path: `/api/media/torrents/${hash}/start` }),
-  settings: () => ({ id: 'settings', label: 'Innstillinger → Media', route: 'innstillinger/media', hash: '#/innstillinger/media' }),
+  settings: () => ({ id: 'settings', label: 'Innstillinger → Moduler → Media', route: 'innstillinger/media', hash: '#/innstillinger/media' }),
   retry: (t) => ({ id: 'retry', label: 'Søk igjen', method: 'POST', path: '/api/media/command', body: t.movieIds.length ? { name: 'MoviesSearch', movieIds: t.movieIds } : { name: 'EpisodeSearch', episodeIds: t.episodeIds } }),
 };
 const TONE = { searching: 'mut', checking: 'mut', sent: 'dl', downloading: 'dl', starting: 'dl', queued: 'wait', delayed: 'wait', importing: 'ok', done: 'ok', stopped: 'warn', stalled: 'warn', none: 'bad', rejected: 'bad', not_grabbed: 'bad',
@@ -208,12 +208,12 @@ async function timed(fn) { const t0 = Date.now(); try { return { v: await fn(), 
 export async function diagnose50({ service = null, episodeId = null, movieId = null } = {}) {
   const steps = [], cats = new Set();
   const svcs = (service ? [service] : ['sonarr', 'radarr']).filter((s) => M.svcConf43(s).on);
-  if (!svcs.length) steps.push(step('arr', 2, 'Sonarr/Radarr', 'fail', 'Verken Sonarr eller Radarr er satt opp.', { hint: 'Innstillinger → Integrasjoner → Media.' }));
+  if (!svcs.length) steps.push(step('arr', 2, 'Sonarr/Radarr', 'fail', 'Verken Sonarr eller Radarr er satt opp.', { hint: 'Innstillinger → Tilkoblinger → Media.' }));
   for (const svc of svcs) {
     const N = SVC_NAME[svc];
     // Ledd 2: tjenesten og siste søkekommando.
     const st = await timed(() => M.arr43(svc, 'GET', '/system/status'));
-    if (st.e) { steps.push(step(`${svc}:arr`, 2, `${N} og kommandoen`, 'fail', st.e.message, { ms: st.ms, hint: `Sjekk adressen og API-nøkkelen til ${N} (Innstillinger → Integrasjoner → Media).` })); continue; }
+    if (st.e) { steps.push(step(`${svc}:arr`, 2, `${N} og kommandoen`, 'fail', st.e.message, { ms: st.ms, hint: `Sjekk adressen og API-nøkkelen til ${N} (Innstillinger → Tilkoblinger → Media).` })); continue; }
     const cmds = await M.arr43(svc, 'GET', '/command').catch(() => []);
     const last = (Array.isArray(cmds) ? cmds : []).filter((c) => /Search$/.test(c.name ?? c.commandName ?? '')).sort((a, b) => Date.parse(b.queued ?? b.started ?? 0) - Date.parse(a.queued ?? a.started ?? 0))[0];
     const cmdTxt = last ? ` · siste søk: ${last.commandName ?? last.name} ${last.status}${last.message ? ` («${short(last.message, 80)}»)` : ''}` : '';
@@ -273,7 +273,7 @@ export async function diagnose50({ service = null, episodeId = null, movieId = n
   }
   // Ledd 6: qBittorrent (Homelabs egen tilkobling).
   const qc = M.svcConf43('qbit');
-  if (!qc.on) steps.push(step('qbit', 6, 'qBittorrent', 'skip', 'qBittorrent er ikke satt opp i Homelab, så køen kan ikke leses herfra.', { hint: 'Innstillinger → Integrasjoner → Media → qBittorrent.' }));
+  if (!qc.on) steps.push(step('qbit', 6, 'qBittorrent', 'skip', 'qBittorrent er ikke satt opp i Homelab, så køen kan ikke leses herfra.', { hint: 'Innstillinger → Tilkoblinger → Media → qBittorrent.' }));
   else {
     const t = await M.mediaTest43('qbit');
     if (!t.ok) {

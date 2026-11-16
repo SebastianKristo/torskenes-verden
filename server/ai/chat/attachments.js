@@ -15,7 +15,7 @@
 //        imageMode:'ocr' i forespørselen tvinger OCR.
 //   Kvittering i chat («les kvitteringen og skriv det i en tabell»): samme kvitteringskjede som Finans (prompt 48, server/receipts48),
 //        som respekterer «Finansdata forlater aldri huset». Svaret er en markdown-tabell (Vare | Antall | Pris) + meta.receipt med
-//        action {label:'Legg i Finans ›', method:'POST', url:'/api/chat/files/:id/finans'}. Ingen sky-modell ser kvitteringen.
+//        action {label:'Legg i Økonomi ›', method:'POST', url:'/api/chat/files/:id/finans'}. Ingen sky-modell ser kvitteringen.
 //   GET /api/chat/models: vision fra Ollama /api/show (capabilities inneholder «vision»), lagret i chat_model_caps50.
 import { randomUUID } from 'node:crypto';
 import { readFile, writeFile, mkdir, unlink } from 'node:fs/promises';
@@ -112,14 +112,14 @@ export function mountFiles50(api) {
   api.post('/files/:id/finans', async (c) => {
     const r = fileRow50(c.get('user'), c.req.param('id'));
     if (!r) return c.json({ error: 'Fant ikke vedlegget' }, 404);
-    if (!/^image\/|^application\/pdf$/.test(r.mime ?? '')) return c.json({ error: 'Bare bilder og PDF kan legges i Finans' }, 400);
+    if (!/^image\/|^application\/pdf$/.test(r.mime ?? '')) return c.json({ error: 'Bare bilder og PDF kan legges i Økonomi' }, 400);
     let buf; try { buf = await readFile(r.path); } catch { return c.json({ error: 'Originalbildet finnes ikke lenger', kode: 'bilde_mangler' }, 404); }
     const fd = new FormData();
     fd.append('file', new Blob([buf], { type: r.mime }), r.name);
     const { default: finansApi } = await import('../../finans/routes.js');
     const res = await finansApi.request('/receipts', { method: 'POST', headers: { cookie: c.req.header('cookie') ?? '', authorization: c.req.header('authorization') ?? '' }, body: fd });
     const j = await res.json().catch(() => ({}));
-    if (!res.ok) return c.json({ error: j.error ?? `Finans svarte ${res.status}` }, res.status === 401 || res.status === 403 ? res.status : 502);
+    if (!res.ok) return c.json({ error: j.error ?? `Økonomi svarte ${res.status}` }, res.status === 401 || res.status === 403 ? res.status : 502);
     return c.json({ ok: true, receiptId: j.id ?? null, receipt: j, url: '/finans/#/kv' }, 201);
   });
 }
@@ -265,7 +265,7 @@ export async function receiptChat50(u, row, { signal = null, text = '' } = {}) {
       receipt: { merchant: rc.merchant ?? null, date: rc.date ?? null, total: rc.total ?? null, currency: rc.currency ?? 'NOK', items: (rc.items ?? []).map((l) => ({ description: l.description, quantity: l.quantity ?? null, amount: l.amount })),
         confidence: res.confidence, label: res.label, engine: res.engine, model: res.model, fileId: row.id,
         merchant_source: res.merchant51?.source ?? null, org_number: res.merchant51?.org_number ?? rc.org_number ?? null, ocr_engine: res.ocr?.source ?? null, ocr_rows: res.ocr?.rows?.length ?? 0, // prompt 51
-        action: { label: 'Legg i Finans ›', method: 'POST', url: `/api/chat/files/${row.id}/finans` } },
+        action: { label: 'Legg i Økonomi ›', method: 'POST', url: `/api/chat/files/${row.id}/finans` } },
       readWith: { route: 'receipt', engine: 'receipt', ocr_engine: res.ocr?.source ?? null, model: res.model ?? null, label: res.model && !label.includes(res.model) ? `${label} · ${res.model}` : label },
     },
   };

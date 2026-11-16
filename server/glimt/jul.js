@@ -53,7 +53,7 @@ export const JUL_DEFAULTS = { jul: 'auto', julPhase: null, snow: true, julSound:
 export const LUKER = [
   'Sett opp julelysene i dag – helgen er fri for regn.', 'Lag en julegaveliste i Gjøremål, så glemmer du ingen.', 'Sjekk siste frist for pakker til utlandet.',
   'Bestill juletre tidlig – de fine går først.', 'Ta en tur på julemarkedet i kveld.', 'Bak den første sorten i dag.', 'Sjekk lysene på hytta før det blir kaldt.',
-  'Sett av en kveld til juleverksted.', 'Legg julekort i postkassen innen den 15.', 'Rydd i boden og finn julepynten.', 'Lag en budsjettpost for jul i Finans.',
+  'Sett av en kveld til juleverksted.', 'Legg julekort i postkassen innen den 15.', 'Rydd i boden og finn julepynten.', 'Lag en budsjettpost for jul i Økonomi.',
   'Kjøp frimerker til julekortene.', 'Luciadagen – lussekatter til frokost?', 'Planlegg julemiddagen og hvem som kommer.', 'Bestill ribbe eller pinnekjøtt nå.',
   'Pakk inn gavene du allerede har.', 'Sjekk at julegavene fra nett er på vei i Sporing.', 'Lag en rolig kveld med julefilm.', 'Kjøp inn til grøten.', 'Vask og gjør klart gjesterommet.',
   'Vintersolverv – i morgen blir dagene lengre.', 'Siste handledag før helgen – lag handleliste.', 'Lillejulaften: pynt treet og senk skuldrene.', 'God jul! Ingenting må gjøres i dag.',

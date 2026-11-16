@@ -19,7 +19,7 @@ const sTxt = (d) => ({ type: 'string', description: d });
 const pad = (n) => String(n).padStart(2, '0');
 const iso = (ms) => (ms == null ? null : new Date(ms).toISOString());
 const J = (s, d) => { if (s == null) return d; try { return JSON.parse(s) ?? d; } catch { return d; } };
-const OFF = 'Planlagte oppgaver er slått av (Innstillinger → AI-kontroll → Valg)';
+const OFF = 'Planlagte oppgaver er slått av (Innstillinger → Glimt og AI → AI → Oppgaver)';
 export const OPEN62 = { web: '/#/innstillinger/faste-oppgaver', deepLink: 'finanshub://faste-oppgaver' };
 
 /** «Nå» for verktøyene: motorens (ev. fryste) dag og minutt, ellers klokka. */
@@ -108,7 +108,7 @@ export const createTool62 = {
   async verify(r, ctx) { return !!rowOf62(ctx.user, r.result?.schedule?.id); },
 };
 const dayNow = (today) => (today ? osloToUtc62(today, '12:00') : Date.now());
-SENTENCES46['schedule.create'] = (a, r, today) => `Lagret. ${r.result.schedule.summary ?? a.summary} Første gang ${relWhen(Date.parse(r.result.schedule.nextRunAt ?? '') || null, dayNow(today))}. Du finner den under Innstillinger → Faste oppgaver.`;
+SENTENCES46['schedule.create'] = (a, r, today) => `Lagret. ${r.result.schedule.summary ?? a.summary} Første gang ${relWhen(Date.parse(r.result.schedule.nextRunAt ?? '') || null, dayNow(today))}. Du finner den under Innstillinger → Glimt og AI → Faste oppgaver.`;
 FAIL_TEXT46['schedule.create'] = 'Fikk ikke lagret den faste oppgaven';
 
 /* ---------------- schedule.list ---------------- */
@@ -183,7 +183,7 @@ async function validateChange(args, ctx, kind) {
   if (action === 'delete') return { args: base, summary: `Slette den faste oppgaven «${row.title}» (${row.label}) og loggen? Stemmer det?` };
   if (action === 'stop' || action === 'pause') {
     if (row.status !== 'active') return { error: `«${row.title}» er allerede stoppet` };
-    return { args: { ...base, action: 'pause' }, summary: `Stoppe «${row.title}» (${row.label})? Den settes på pause og kan slås på igjen under Innstillinger → Faste oppgaver. Stemmer det?` };
+    return { args: { ...base, action: 'pause' }, summary: `Stoppe «${row.title}» (${row.label})? Den settes på pause og kan slås på igjen under Innstillinger → Glimt og AI → Faste oppgaver. Stemmer det?` };
   }
   if (action === 'resume') {
     if (row.status === 'active') return { error: `«${row.title}» er allerede på` };
@@ -253,7 +253,7 @@ const changeSentence = (a, r, today) => {
   const s = r.result.schedule ?? {};
   if (a.builtin) return a.action === 'move' ? `${a.title}en kommer nå kl. ${a.to.at}.` : a.to.on ? `${a.title}en er slått på (kl. ${a.to.at}).` : `${a.title}en er slått av.`;
   if (r.result.deleted) return `Slettet den faste oppgaven «${a.title}».`;
-  if (r.result.stopped) return `Stoppet «${a.title}». Du kan slå den på igjen under Innstillinger → Faste oppgaver.`;
+  if (r.result.stopped) return `Stoppet «${a.title}». Du kan slå den på igjen under Innstillinger → Glimt og AI → Faste oppgaver.`;
   if (a.action === 'resume') return `«${a.title}» er på igjen. Neste gang ${relWhen(Date.parse(s.nextRunAt ?? '') || null, dayNow(today))}.`;
   return `Flyttet «${a.title}» til ${String(s.when?.label ?? a.to?.label ?? '').replace(/^./, (c) => c.toLowerCase())}. Neste gang ${relWhen(Date.parse(s.nextRunAt ?? '') || null, dayNow(today))}.`;
 };

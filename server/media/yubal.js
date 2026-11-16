@@ -28,7 +28,7 @@ import { mediaAllowed43 } from './arr.js';
 import { cfg } from '../settings.js';
 import { guardedGet46 } from '../bilder/gphoto.js';
 
-const IKKE_SATT = 'Musikk er ikke satt opp. Innstillinger → Integrasjoner → Musikk (yubal).';
+const IKKE_SATT = 'Musikk er ikke satt opp. Innstillinger → Tilkoblinger → Musikk (yubal).';
 const BARE_YT = 'Bare lenker fra music.youtube.com, youtube.com eller youtu.be.';
 const KO_FULL = 'Køen i yubal er full. Vent til noe er ferdig, og prøv igjen.';
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;

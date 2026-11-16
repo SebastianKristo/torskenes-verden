@@ -8,7 +8,7 @@
 //   GET   /api/kalender/abonnementer.ics → iCal-feed (innlogget / app-token)
 //   Hendelsene kommer også med i alle vanlige hendelseslister (kalender/events.js eventsFor via addEventSource), med appCalendar:'abonnementer'.
 //   Hendelse: {id:'ab-<subId>-YYYYMMDD', title:'Netflix · 149 kr', allDay:true, date, kind:'trekk'|'trial'|'renewal', badge:'TREKK'|'PRØVE'|'ÅRLIG', subId, amount, currency,
-//              account, logo, interval:'Hver måned den 22.', deepLink:'finans://abonnement/<id>', openLabel:'Åpne i Finans ›', editable:false, note:'Endres i Finans → Abonnementer'}
+//              account, logo, interval:'Hver måned den 22.', deepLink:'finans://abonnement/<id>', openLabel:'Åpne i Økonomi ›', editable:false, note:'Endres i Økonomi → Faste betalinger'}
 import { Hono } from 'hono';
 import { kv } from '../db.js';
 import { db as fhDb, q } from './db.js';
@@ -28,7 +28,7 @@ export function abCalendar42(u, count = null) {
   const p = prefsOf(u);
   return { ...AB42, color: p.color, source: 'builtin', origin: 'finans', sourceLabel: 'Finans', src: 'Finans', badge: 'INNEBYGD', visible: p.visible !== false, hidMenu: !!p.hidMenu, notify: p.notify, notifySubscriptions: SN[p.notify] ?? 'prove-arlige', notifyLabel: NOTIFY[p.notify] ?? 'Av',
     notifyOptions: Object.entries(NOTIFY).map(([id, label]) => ({ id, label })), showInBrief: p.showInBrief !== false, builtin: true, writable: false, removable: false, virtual: true, kind: 'finans', backend: 'finans',
-    count: count ?? 0, shape39: true, note: 'Endres i Finans → Abonnementer' };
+    count: count ?? 0, shape39: true, note: 'Endres i Økonomi → Faste betalinger' };
 }
 
 /* ---------------- Hendelsene ---------------- */
@@ -55,11 +55,11 @@ export function abEvents42(u, from, to) {
       const real = bankDay42(d);
       if (real < from || real > to) continue;
       const title = yearly ? `${s.name} fornyes · ${krN(price)} kr` : `${s.name} · ${krN(price)} kr`;
-      out.push({ id: `ab-${s.id}-${real.replace(/-/g, '')}`, title, short: title.length > 18 ? `${title.slice(0, 17)}…` : title, subject: null, room: '', teacher: '', note: 'Endres i Finans → Abonnementer',
+      out.push({ id: `ab-${s.id}-${real.replace(/-/g, '')}`, title, short: title.length > 18 ? `${title.slice(0, 17)}…` : title, subject: null, room: '', teacher: '', note: 'Endres i Økonomi → Faste betalinger',
         start: real, end: addDays(real, 1), allDay: true, date: real, time: null, inAllDayRow: true, type: 'abonnement', color, source: 'abonnementer', calendar: 'abonnementer', editable: false, reminder: yearly ? 'week' : 'none',
         kind: 'trekk', renewal: yearly, badge: yearly ? 'ÅRLIG' : 'TREKK', cancelled: false, cancelUrl: null, nextCharge: nextCharge(seriesOf(s), osloDate()) ?? s.next_date, subId: s.id, amount: price, currency: 'NOK', account: s.acc ? `Trekkes fra ${s.acc}` : null, agreedDate: real !== d ? d : null,
         logo: s.logo_url || (s.domain ? `/finans/api/logo/${s.domain}` : null), domain: s.domain ?? null, interval: cycle, intervalText: cycle === 'monthly' ? `Hver måned den ${day}.` : INTERVAL_TEXT[cycle],
-        nextDate: nextCharge(seriesOf(s), osloDate()) ?? s.next_date, deepLink: `finans://abonnement/${s.id}`, url: `/finans/#/abonnement/${s.id}`, openLabel: 'Åpne i Finans ›', origin: 'Finans · Abonnementer', appCalendar: 'abonnementer', appColor: color });
+        nextDate: nextCharge(seriesOf(s), osloDate()) ?? s.next_date, deepLink: `finans://abonnement/${s.id}`, url: `/finans/#/abonnement/${s.id}`, openLabel: 'Åpne i Økonomi ›', origin: 'Økonomi · Faste betalinger', appCalendar: 'abonnementer', appColor: color });
     }
   }
   let trials = [];
@@ -67,9 +67,9 @@ export function abEvents42(u, from, to) {
   for (const t of trials) {
     const price = t.price_after ?? 0;
     const title = `${t.service}: prøveperioden slutter${price ? ` · ${krN(price)} kr fra i morgen` : ''}`;
-    out.push({ id: `ab-trial-${t.id}-${String(t.ends_at).replace(/-/g, '')}`, title, short: title.slice(0, 17) + '…', subject: null, room: '', teacher: '', note: 'Endres i Finans → Abonnementer',
+    out.push({ id: `ab-trial-${t.id}-${String(t.ends_at).replace(/-/g, '')}`, title, short: title.slice(0, 17) + '…', subject: null, room: '', teacher: '', note: 'Endres i Økonomi → Faste betalinger',
       start: t.ends_at, end: addDays(t.ends_at, 1), allDay: true, date: t.ends_at, time: null, inAllDayRow: true, type: 'abonnement', color, source: 'abonnementer', calendar: 'abonnementer', editable: false, reminder: 'day',
-      kind: 'trial', badge: 'PRØVE', trialId: t.id, amount: price, currency: 'NOK', deepLink: 'finans://abonnement', url: '/finans/#/abonnement', openLabel: 'Åpne i Finans ›', origin: 'Finans · Abonnementer', appCalendar: 'abonnementer', appColor: color });
+      kind: 'trial', badge: 'PRØVE', trialId: t.id, amount: price, currency: 'NOK', deepLink: 'finans://abonnement', url: '/finans/#/abonnement', openLabel: 'Åpne i Økonomi ›', origin: 'Økonomi · Faste betalinger', appCalendar: 'abonnementer', appColor: color });
   }
   return out.sort((a, b) => a.date.localeCompare(b.date) || a.title.localeCompare(b.title, 'nb'));
 }

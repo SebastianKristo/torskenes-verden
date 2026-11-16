@@ -75,7 +75,7 @@ export function interpret62(args = {}, { user, text = '', now = Date.now(), allo
     if (cond?.error) return { error: cond.error };
     if (!cond && aCond) return { ask: { question: `Jeg forstod ikke betingelsen «${aCond}». Kan du si det som f.eks. «hvis strømprisen går over 2 kr» eller «hvis temperaturen går under -5»?` } };
   }
-  if (cond && !allowConditions) return { error: 'Betingede varsler er slått av (Innstillinger → AI-kontroll → Valg)' };
+  if (cond && !allowConditions) return { error: 'Betingede varsler er slått av (Innstillinger → Glimt og AI → AI → Oppgaver)' };
   // Når (kode). Planleggerens råtekst først; har meldingen en gjentakelse eller et klokkeslett som råteksten mangler, vinner meldingen.
   const opt = { now, today };
   const pa = aWhen ? parseRecurrence62(aWhen, opt) : null;

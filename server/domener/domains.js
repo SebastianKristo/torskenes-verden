@@ -452,7 +452,7 @@ async function analytics(r, range) {
   let out;
   try {
     if (r.source === 'cloudflare' || r.source === 'tunnel') {
-      if (!tokenFor(r)) { out = blank(r); out.error = 'Mangler Cloudflare-token. Legg inn et token på domenet eller under Innstillinger → Integrasjoner → Cloudflare.'; }
+      if (!tokenFor(r)) { out = blank(r); out.error = 'Mangler Cloudflare-token. Legg inn et token på domenet eller under Innstillinger → Tilkoblinger → Cloudflare.'; }
       else out = await cfLoad(r, range);
     } else if (r.source === 'plausible') out = await plausible(r, range);
     else if (r.source === 'umami') out = await umami(r, range);
@@ -580,7 +580,7 @@ api.post('/token/verify', async (c) => {
   const token = given || cfg('cf_token');
   if (!token) {
     if (MOCK) return c.json({ ok: true, active: true, permissions: CF_PERMS.map((name) => ({ name, ok: true })), okCount: CF_PERMS.length, total: CF_PERMS.length, mock: true, message: `✓ Tokenet virker · ${CF_PERMS.length} av ${CF_PERMS.length} tillatelser (eksempeldata)` });
-    return c.json({ error: 'Lim inn et token, eller legg inn et standard-token under Integrasjoner → Cloudflare' }, 400);
+    return c.json({ error: 'Lim inn et token, eller legg inn et standard-token under Tilkoblinger → Cloudflare' }, 400);
   }
   return c.json({ ...(await verifyCfToken(token, str(b?.domain, 253))), source: given ? 'token' : 'default' });
 });
@@ -600,7 +600,7 @@ api.post('/domains', async (c) => {
   // Sjekk Cloudflare-tokenet før vi lagrer, så feil oppdages med en gang.
   if ((source === 'cloudflare' || source === 'tunnel') && !MOCK) {
     const t = token || cfg('cf_token');
-    if (!t) return c.json({ error: 'API-token mangler (eller legg inn et standard-token under Integrasjoner → Cloudflare)' }, 400);
+    if (!t) return c.json({ error: 'API-token mangler (eller legg inn et standard-token under Tilkoblinger → Cloudflare)' }, 400);
     try { await zoneFor(name, t); } catch (e) { return c.json({ error: `Cloudflare: ${e.message}` }, 400); }
   }
   const info = q('INSERT INTO hl_domains(name,source,url,token_enc,added_by,created) VALUES(?,?,?,?,?,?)').run(name, source, url, enc(token), auth.sessionUser(c) ?? 'token', Date.now());
@@ -794,7 +794,7 @@ export async function cloudflareZones39() {
 /** Lager TXT-posten for Google-bekreftelse i Cloudflare-sonen. → {created, recordId, zone} */
 export async function cloudflareTxt39(domain, content) {
   const token = cfg('cf_token');
-  if (!token) { if (MOCK) return { created: true, recordId: 'mock-txt', zone: domain.split('.').slice(-2).join('.'), mock: true }; throw Object.assign(new Error('Mangler Cloudflare-token med DNS:Edit (Integrasjoner → Cloudflare)'), { status: 409 }); }
+  if (!token) { if (MOCK) return { created: true, recordId: 'mock-txt', zone: domain.split('.').slice(-2).join('.'), mock: true }; throw Object.assign(new Error('Mangler Cloudflare-token med DNS:Edit (Tilkoblinger → Cloudflare)'), { status: 409 }); }
   const z = await zoneFor(domain, token);
   const existing = (await cfTry(`/zones/${z.id}/dns_records?type=TXT&name=${encodeURIComponent(domain)}&per_page=50`, token)).result ?? [];
   const hit = existing.find((r) => String(r.content).replace(/^"|"$/g, '') === content);

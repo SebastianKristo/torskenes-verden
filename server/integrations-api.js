@@ -282,9 +282,9 @@ const OWN_GUIDE = {
   bank: [['Eksporter fra banken', 'Last ned kontoutskriften som CSV fra nettbanken.'], ['Velg profil', 'Kolonnene finnes automatisk. Er filen tvetydig, velg banken under CSV-profil.']],
   imap: [
     ['Sjekk abonnementet', 'Proton Mail har ingen vanlig IMAP-server. Tilgang går gjennom Proton Mail Bridge, som bare finnes på betalte planer. Gmail og andre: bruk et app-passord.'],
-    ['Start Bridge på homelaben', 'Legg Bridge i samme docker-compose som FinansHub, på samme nettverk. Ikke åpne portene mot internett.', 'protonmail-bridge:\n  image: shenxn/protonmail-bridge\n  restart: unless-stopped\n  volumes:\n    - ./proton:/root'],
+    ['Start Bridge på homelaben', 'Legg Bridge i samme docker-compose som Homelab, på samme nettverk. Ikke åpne portene mot internett.', 'protonmail-bridge:\n  image: shenxn/protonmail-bridge\n  restart: unless-stopped\n  volumes:\n    - ./proton:/root'],
     ['Hent brukernavn og passord', 'Kjør info i Bridge. Brukernavn er Proton-adressen, og passordet er Bridge-passordet (ikke Proton-passordet ditt).', '>>> info'],
-    ['Finn vert og port', 'Fra FinansHub-containeren er verten protonmail-bridge og porten 143. Kjører Bridge-appen på samme maskin uten Docker, bruk 127.0.0.1 og 1143.'],
+    ['Finn vert og port', 'Fra Homelab-containeren er verten protonmail-bridge og porten 143. Kjører Bridge-appen på samme maskin uten Docker, bruk 127.0.0.1 og 1143.'],
     ['Fyll ut feltene og test', 'Lim inn verdiene og trykk Test tilkobling.'],
   ],
   finn: [['Varsler', 'Lagre søk på Finn med varsel til e-posten, og la et filter flytte Finn-e-postene til en egen mappe.'], ['Mappen', 'Skriv navnet på mappen (samme e-postkonto som Kvitteringer).']],

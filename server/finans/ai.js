@@ -338,7 +338,7 @@ export function pickGemini(names, want = '') {
   return pool.sort((a, b) => rank(b) - rank(a))[0] ?? null;
 }
 async function geminiGenerate(parts, { schema, timeout, temperature, model, startKey = null, signal = null }) {
-  if (!hasGemini()) throw Object.assign(new Error('Gemini-nøkkel mangler (Innstillinger → AI-motor)'), { noRetry: true });
+  if (!hasGemini()) throw Object.assign(new Error('Gemini-nøkkel mangler (Innstillinger → Glimt og AI → AI)'), { noRetry: true });
   const want = model || GEMINI_DEFAULT;
   let m = geminiResolved[want] ?? want;
   for (let round = 0; round < 3; round++) {
@@ -363,7 +363,7 @@ async function geminiGenerate(parts, { schema, timeout, temperature, model, star
       try { names = await listGemini(usableKeys()[0]?.key); } catch { /* bruk feilen under */ }
       const next = pickGemini(names.filter((n) => n !== m), want);
       if (next && next !== m) { console.warn(`[ai] Gemini-modellen «${m}» finnes ikke lenger, bruker «${next}»`); geminiResolved[want] = next; m = next; continue; }
-      throw Object.assign(new Error(`Gemini-modellen «${m}» finnes ikke lenger. Velg en annen modell under Innstillinger → AI-motor.`), { noRetry: true, status: 404 });
+      throw Object.assign(new Error(`Gemini-modellen «${m}» finnes ikke lenger. Velg en annen modell under Innstillinger → Glimt og AI → AI.`), { noRetry: true, status: 404 });
     }
     throw err;
   }
@@ -394,7 +394,7 @@ export async function geminiJson48(parts, schema, { timeout = 30_000, signal = n
 
 async function groqChat(content, schema, { timeout, temperature, model, signal = null }) {
   const key = secret('groqKey');
-  if (!key) throw Object.assign(new Error('Groq-nøkkel mangler (Innstillinger → AI-motor)'), { noRetry: true });
+  if (!key) throw Object.assign(new Error('Groq-nøkkel mangler (Innstillinger → Glimt og AI → AI)'), { noRetry: true });
   const sys = `Svar KUN med ett JSON-objekt, uten forklaring. Det skal følge dette JSON-skjemaet:\n${JSON.stringify(lowerTypes(schema))}`;
   let res;
   try { res = await fetch('https://api.groq.com/openai/v1/chat/completions', {

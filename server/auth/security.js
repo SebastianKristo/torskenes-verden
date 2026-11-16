@@ -218,7 +218,7 @@ export function gate51(c, user, { method, kind = 'web', remember = false, tokenN
     VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(id, user, kind, method, kh, fp, sha(pollKey), name, info.ip, info.country, remember ? 1 : 0, tokenName, now, now + APPROVAL_MS);
   audit51({ user, kind: 'device_pending', method, ip: info.ip, country: info.country, device: name, detail: { approval: id } });
   const where = `${name}${info.country ? ` · ${countryName51(info.country)}` : ''} · ${info.ip}`;
-  const bodyTxt = `${nameOf(user) ?? 'En bruker'} prøver å logge inn på en ny enhet: ${where}. Godkjenn eller avvis i Innstillinger → Sikkerhet.`;
+  const bodyTxt = `${nameOf(user) ?? 'En bruker'} prøver å logge inn på en ny enhet: ${where}. Godkjenn eller avvis i Innstillinger → Konto og sikkerhet.`;
   for (const to of new Set([user, ...admins()])) notifyUser(to, { title: 'Ny enhet vil logge inn', body: bodyTxt, tag: `sec51-approve-${id}`, category: 'system', url: '/#/innstillinger/sikkerhet', data: { kind: 'sec51.approval', approvalId: id, priority: 'high' } }).catch(() => {});
   const ap = db.prepare('SELECT * FROM sec51_approvals WHERE id=?').get(id);
   return { pending: { approval: ap, pollKey }, setCookie: setKd ? kdCookie(c, setKd) : null };
@@ -226,7 +226,7 @@ export function gate51(c, user, { method, kind = 'web', remember = false, tokenN
 const approvalOut = (a, now = Date.now()) => ({ id: a.id, user: a.user, userName: nameOf(a.user), kind: a.kind, method: a.method, methodLabel: METHODS51[a.method] ?? a.method, device: a.name, ip: a.ip, country: a.country,
   countryName: a.country ? countryName51(a.country) : null, createdAt: iso(a.created), expiresAt: iso(a.exp), state: a.state === 'pending' && a.exp <= now ? 'expired' : a.state,
   decidedBy: a.decided_by, decidedByName: nameOf(a.decided_by), decidedAt: iso(a.decided_at) });
-const pendingBody = (p) => ({ error: 'Ny enhet må godkjennes. Godkjenn innloggingen fra en enhet du allerede er logget inn på (Innstillinger → Sikkerhet), eller be en administrator om det.',
+const pendingBody = (p) => ({ error: 'Ny enhet må godkjennes. Godkjenn innloggingen fra en enhet du allerede er logget inn på (Innstillinger → Konto og sikkerhet), eller be en administrator om det.',
   code: 'DEVICE_APPROVAL_REQUIRED', pendingApproval: true, approvalId: p.approval.id, pollKey: p.pollKey, expiresAt: iso(p.approval.exp),
   device: p.approval.name, statusUrl: `/api/security51/approvals/${p.approval.id}/status`, finishUrl: `/api/security51/approvals/${p.approval.id}/finish` });
 
@@ -386,11 +386,11 @@ function secretsRaw(user = OWNER, { admin = true } = {}) {
       if (!v || v.length < 8 || ENV_SKIP.test(k) || !ENV_SECRET.test(k)) continue;
       add({ id: `env:${k}`, label: k, group: 'Miljøvariabler (.env)', source: 'env', value: v, rotate: 'manual',
         howTo: k === 'SESSION_SECRET' ? 'openssl rand -hex 32 → SESSION_SECRET i .env → docker compose up -d os' : ENV_HELP,
-        warning: k === 'SESSION_SECRET' ? 'Alle blir logget ut, og lagrede nøkler i Innstillinger (kryptert med SESSION_SECRET) må legges inn på nytt – med mindre SECRET_KEY er satt.' : k === 'SECRET_KEY' ? 'FinansHub-hemmelighetene er kryptert med denne – legg dem inn på nytt etterpå.' : null });
+        warning: k === 'SESSION_SECRET' ? 'Alle blir logget ut, og lagrede nøkler i Innstillinger (kryptert med SESSION_SECRET) må legges inn på nytt – med mindre SECRET_KEY er satt.' : k === 'SECRET_KEY' ? 'Hemmelighetene i Økonomi er kryptert med denne – legg dem inn på nytt etterpå.' : null });
     }
     for (const k of Object.keys(FH_LABELS)) {
       let v = ''; try { v = fhSecret(k, OWNER) || ''; } catch { v = ''; }
-      if (v) add({ id: `fh:${k}`, label: FH_LABELS[k], group: 'AI og FinansHub', source: 'app', value: v, rotate: 'paste' });
+      if (v) add({ id: `fh:${k}`, label: FH_LABELS[k], group: 'AI og Økonomi', source: 'app', value: v, rotate: 'paste' });
     }
     for (const [gname, meta, fields] of SCHEMA) {
       if (meta.scope === 'personal') continue;
@@ -574,7 +574,7 @@ export async function logScan51({ docker = true, now = Date.now() } = {}) {
     const last = kv.get(OWNER, 'sec51_logscan_notified', 0) ?? 0;
     if (now - last > 20 * 3600_000) {
       kv.set(OWNER, 'sec51_logscan_notified', now);
-      const body = `Logg-skanneren fant ${items.length === 1 ? 'en mulig nøkkel' : `${items.length} mulige nøkler`} i loggene (${items.slice(0, 2).map((f) => f.source).join(', ')}). Se Innstillinger → Sikkerhet, og roter nøkkelen.`;
+      const body = `Logg-skanneren fant ${items.length === 1 ? 'en mulig nøkkel' : `${items.length} mulige nøkler`} i loggene (${items.slice(0, 2).map((f) => f.source).join(', ')}). Se Innstillinger → Konto og sikkerhet, og roter nøkkelen.`;
       for (const id of admins()) notifyUser(id, { title: 'Nøkkel funnet i loggene', body, tag: 'sec51-logscan', category: 'system', url: '/#/innstillinger/sikkerhet' }).catch(() => {});
     }
   }
@@ -590,7 +590,7 @@ export function remindSecrets51(now = Date.now()) {
   if (!fresh.length) return 0;
   for (const s of fresh) sent[s.id] = now;
   kv.set(OWNER, 'sec51_secret_reminded', sent);
-  const body = fresh.length === 1 ? `${fresh[0].label} er ${fresh[0].ageDays} dager gammel. Roter den i Innstillinger → Sikkerhet.` : `${fresh.length} nøkler bør roteres (${fresh.slice(0, 3).map((s) => s.label).join(', ')}${fresh.length > 3 ? ' …' : ''}).`;
+  const body = fresh.length === 1 ? `${fresh[0].label} er ${fresh[0].ageDays} dager gammel. Roter den i Innstillinger → Konto og sikkerhet.` : `${fresh.length} nøkler bør roteres (${fresh.slice(0, 3).map((s) => s.label).join(', ')}${fresh.length > 3 ? ' …' : ''}).`;
   for (const id of admins()) notifyUser(id, { title: 'På tide å rotere nøkler', body, tag: 'sec51-rotate', category: 'system', url: '/#/innstillinger/sikkerhet' }).catch(() => {});
   return fresh.length;
 }
@@ -676,7 +676,7 @@ authed.get('/overview', (c) => {
   const pend = db.prepare(`SELECT * FROM sec51_approvals WHERE state='pending' AND exp>? ${adm ? '' : 'AND user=?'} ORDER BY created DESC LIMIT 50`).all(...(adm ? [now] : [now, u])).map((a) => approvalOut(a, now));
   const rp = rp51(c);
   return c.json({ me: { passkeys: passkeysOf51(u), devices: mine, countries: kv.get(u, 'sec51_countries', []) ?? [], audit: auditList51({ user: u, limit: 20 }).items },
-    pending: pend, passkeys: { available: !!rp, rpId: rp?.rpId ?? null, reason: rp ? null : 'Sett ekstern adresse (https) under Innstillinger → Server, eller PUBLIC_URL i .env, for å bruke passkeys.' },
+    pending: pend, passkeys: { available: !!rp, rpId: rp?.rpId ?? null, reason: rp ? null : 'Sett ekstern adresse (https) under Innstillinger → Konto og sikkerhet → Server, eller PUBLIC_URL i .env, for å bruke passkeys.' },
     policy: policy51(), admin: adm, secretWarning: adm ? secretStatus86().warning ?? undefined : undefined, limits: adm ? list51(now) : undefined, lastScan: adm ? kv.get(OWNER, 'sec51_logscan', null) : undefined }, 200, { 'Cache-Control': 'no-store' });
 });
 authed.get('/audit', (c) => {
@@ -747,7 +747,7 @@ authed.post('/passkeys/register/verify', async (c) => {
   db.prepare('INSERT INTO sec51_passkeys(id, user, name, jwk, alg, sign_count, transports, aaguid, fmt, backed_up, rp_id, created) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)')
     .run(r.credentialId, u, name, JSON.stringify(r.jwk), r.alg, r.signCount, JSON.stringify(r.transports), r.aaguid, r.fmt, r.backedUp ? 1 : 0, rp.rpId, Date.now());
   audit51({ user: u, kind: 'passkey_added', ip: info.ip, country: info.country, device: info.device, detail: { name } });
-  notifyUser(u, { title: 'Ny passkey', body: `Passkeyen «${name}» ble lagt til på kontoen din. Var det ikke deg? Fjern den i Innstillinger → Sikkerhet.`, tag: 'sec51-passkey', category: 'system', url: '/#/innstillinger/sikkerhet' }).catch(() => {});
+  notifyUser(u, { title: 'Ny passkey', body: `Passkeyen «${name}» ble lagt til på kontoen din. Var det ikke deg? Fjern den i Innstillinger → Konto og sikkerhet.`, tag: 'sec51-passkey', category: 'system', url: '/#/innstillinger/sikkerhet' }).catch(() => {});
   return c.json({ ok: true, passkey: passkeyOut(db.prepare('SELECT * FROM sec51_passkeys WHERE id=?').get(r.credentialId)) });
 });
 authed.patch('/passkeys/:id', async (c) => {

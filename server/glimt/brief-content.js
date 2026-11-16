@@ -22,7 +22,7 @@ export const CATALOG73 = [
   ['fokus', 'Dagens fokus', 'Det viktigste i dag, valgt av Glimt', true, 'focus', null],
   ['gjore', 'Gjøremål · 3 viktigste', 'Fra Gjøremål', true, 'todo', 'todos'],
   ['reise', 'Min reise', 'Ruter: neste avgang og når du må gå', true, 'trip', null],
-  ['regn', 'Regninger denne uka', 'Fra Finans', true, 'bills', null],
+  ['regn', 'Regninger denne uka', 'Fra Økonomi', true, 'bills', null],
   ['kveld', 'Nytt i kveld', 'Nye episoder og filmer fra Media', true, 'tonight', null],
   ['nyheter', 'Nyheter', 'Sammendrag fra Nyheter', true, null, 'news'],
   ['pakker', 'Pakker', 'Sporing på vei', false, null, 'packages'],
@@ -36,7 +36,7 @@ export const CATALOG73 = [
   ['skole', 'Skole og jobb', 'Prøver og frister neste 7 dager', true, null, 'school'],
   ['bursdager', 'Bursdager', 'Neste bursdager', true, null, 'birthdays'],
   ['nordlys', 'Nordlys i natt', 'Når Kp er høy nok', true, null, 'aurora'],
-  ['aksjer', 'Aksjer', 'Porteføljen fra Finans', false, 'stocks', null],
+  ['aksjer', 'Aksjer', 'Porteføljen fra Økonomi', false, 'stocks', null],
 ];
 export const KEYS73 = CATALOG73.map((x) => x[0]);
 const META = Object.fromEntries(CATALOG73.map(([key, title, sub, def, b52, c38]) => [key, { key, title, sub, def, b52, c38 }]));

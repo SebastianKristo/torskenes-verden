@@ -51,7 +51,7 @@ const ID = /^[a-f0-9]{12}$/;
 const NRK_HOST = /(^|\.)(nrk\.no|nrksuper\.no)$/i;
 const TYPER = new Set(['auto', 'tv', 'film', 'radio']);
 const KVAL = new Set(['best', '1080', '720', '540']);
-const IKKE_SATT = 'NRK-nedlasteren er ikke satt opp. Innstillinger → Integrasjoner → NRK-nedlaster.';
+const IKKE_SATT = 'NRK-nedlasteren er ikke satt opp. Innstillinger → Tilkoblinger → NRK-nedlaster.';
 
 let fetchImpl = (u, i) => fetch(u, i);
 /** Bare for tester. */
@@ -83,7 +83,7 @@ export async function nrkKall(sti, { method = 'GET', json, timeout = 10_000 } = 
     throw new NrkFeil(e?.name === 'TimeoutError' ? 'NRK-nedlasteren svarte ikke i tide' : `Får ikke kontakt med NRK-nedlasteren (${e?.cause?.code ?? e?.name ?? 'feil'})`);
   }
   const d = await r.json().catch(() => null);
-  if (r.status === 401) throw new NrkFeil('NRK-nedlasteren avviste tokenet. Sjekk tokenet under Innstillinger → Integrasjoner → NRK-nedlaster.', 502);
+  if (r.status === 401) throw new NrkFeil('NRK-nedlasteren avviste tokenet. Sjekk tokenet under Innstillinger → Tilkoblinger → NRK-nedlaster.', 502);
   if (!r.ok) throw Object.assign(new NrkFeil(tekstFeil(d?.feil) ?? `NRK-nedlasteren svarte ${r.status}`, r.status >= 400 && r.status < 500 ? r.status : 502), { fraNrk: tekstFeil(d?.feil) != null, nrkStatus: r.status });
   return d ?? {};
 }

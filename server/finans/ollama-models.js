@@ -22,7 +22,7 @@ export const CATALOG = [
 
 const base = () => String(settings().ollamaUrl ?? '').replace(/\/$/, '');
 // Prompt 86: uten adresse (ingen OLLAMA_URL, ingenting lagret) er Ollama ikke satt opp – si det, i stedet for å prøve en tom adresse.
-const NOT_SET = 'Ollama er ikke satt opp (adresse mangler). Legg inn adressen under Innstillinger → AI.';
+const NOT_SET = 'Ollama er ikke satt opp (adresse mangler). Legg inn adressen under Innstillinger → Glimt og AI → AI.';
 const needBase = () => { if (!base()) throw Object.assign(new Error(NOT_SET), { status: 501, code: 'ollama_not_configured' }); };
 const same = (a, b) => a === b || a === `${b}:latest` || `${a}:latest` === b;
 

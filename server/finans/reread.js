@@ -33,7 +33,7 @@ export const KODER50 = {
   modell_utilgjengelig: { status: 503, text: 'Glimt er ikke tilgjengelig akkurat nå. Prøv igjen om litt.' },
   tidsavbrudd: { status: 504, text: 'Glimt brukte for lang tid på bildet. Prøv igjen, eller les en mindre versjon.' },
   ulesbar: { status: 422, text: 'Glimt fikk ikke lest kvitteringen. Prøv igjen, eller les en mindre versjon.' },
-  gemini_mangler: { status: 400, text: 'Legg inn en Gemini-nøkkel under Innstillinger → AI-motor for å analysere på nytt.' },
+  gemini_mangler: { status: 400, text: 'Legg inn en Gemini-nøkkel under Innstillinger → Glimt og AI → AI for å analysere på nytt.' },
   opptatt: { status: 409, text: 'Kvitteringen leses allerede.' },
   ukjent: { status: 500, text: 'Noe gikk galt.' },
 };

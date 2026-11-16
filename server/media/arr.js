@@ -106,7 +106,7 @@ async function errorOf(c, r) {
   if (r.status === 401 || (r.status === 403 && c.id !== 'qbit')) return new MediaError(`${c.name}: feil API-nøkkel (${r.status})`, 502, { service: c.id, upstream: r.status });
   return new MediaError(`${c.name} svarte ${r.status}${msg ? `: ${msg}` : ''}`, r.status === 404 ? 404 : r.status === 400 ? 400 : 502, { service: c.id, upstream: r.status, detail: msg });
 }
-const notSetUp = (id) => new MediaError(`${SERVICES43[id].name} er ikke satt opp. Innstillinger → Integrasjoner → Media.`, 409, { service: id, configured: false });
+const notSetUp = (id) => new MediaError(`${SERVICES43[id].name} er ikke satt opp. Innstillinger → Tilkoblinger → Media.`, 409, { service: id, configured: false });
 
 /** Sonarr/Radarr (v3) og Prowlarr (v1): JSON med X-Api-Key. */
 async function arr(id, method, path, { query, body, conf, timeout } = {}) {
@@ -1231,7 +1231,7 @@ const fail = (c, e) => {
 };
 const H = (fn) => async (c) => { try { return c.json(await fn(c)); } catch (e) { return fail(c, e); } };
 /** GET-lister: ikke satt opp → 200 {configured:false, items:[]}, så klientene viser en tomtilstand. */
-const L = (svc, fn) => async (c) => { if (!svcConf43(svc).on) return c.json({ configured: false, service: svc === 'qbit' ? 'qbittorrent' : svc, items: [], message: `${SERVICES43[svc].name} er ikke satt opp. Innstillinger → Integrasjoner → Media.` }); return H(fn)(c); };
+const L = (svc, fn) => async (c) => { if (!svcConf43(svc).on) return c.json({ configured: false, service: svc === 'qbit' ? 'qbittorrent' : svc, items: [], message: `${SERVICES43[svc].name} er ikke satt opp. Innstillinger → Tilkoblinger → Media.` }); return H(fn)(c); };
 const guard = async (c, next) => { if (!mediaAllowed43(c.get('user'))) return c.json({ error: 'Du har ikke tilgang til Media. Be en administrator om tilgang.', restricted: true }, 403); await next(); };
 const admin = async (c, next) => { if (!isAdmin(c.get('user'))) return c.json({ error: 'Bare administratorer kan gjøre dette i Media', restricted: true }, 403); await next(); };
 const G = [authOrToken, guard], A = [authOrToken, guard, admin];

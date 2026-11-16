@@ -165,7 +165,7 @@ export async function addHa(u, b) {
   for (const v of Object.values(colors)) if (!COLOR.test(String(v))) return { error: 'Farge må være #rrggbb' };
   let ents;
   try { ents = await haEntities(u); } catch (e) { return { error: e.message, status: 502 }; }
-  if (!ents.connected) return { error: 'Home Assistant er ikke koblet til (Innstillinger → Integrasjoner)', status: 409 };
+  if (!ents.connected) return { error: 'Home Assistant er ikke koblet til (Innstillinger → Tilkoblinger)', status: 409 };
   const s = store(u), used = [], added = [];
   for (const e of want) {
     const ent = ents.list.find((x) => x.entity_id === e);

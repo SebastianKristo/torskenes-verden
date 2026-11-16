@@ -134,7 +134,7 @@ export async function searchImages77(user, q, { enabled = true } = {}) {
       catch (e) {
         errs.push(e?.name === 'TimeoutError' ? 'Wikimedia Commons svarte ikke i tide' : String(e?.message ?? e).slice(0, 120));
         const noSx = !searxngConfigured77();
-        return { error: `Fant ingen bildetjeneste: ${noSx ? 'SearXNG er ikke satt opp (Innstillinger → AI → SearXNG-adresse)' : errs[0]}, og Wikimedia Commons svarte ikke. Prøv igjen senere, eller last opp et bilde selv.`, code: 'unavailable', status: 502, details: errs };
+        return { error: `Fant ingen bildetjeneste: ${noSx ? 'SearXNG er ikke satt opp (Innstillinger → Glimt og AI → AI → SearXNG-adresse)' : errs[0]}, og Wikimedia Commons svarte ikke. Prøv igjen senere, eller last opp et bilde selv.`, code: 'unavailable', status: 502, details: errs };
       }
     }
   }

@@ -354,7 +354,7 @@ export async function myTrip41(u, { dir = 'auto', delay = null, now = Date.now()
   const routes = routesOf41(u);
   const s = settingsOf41(u);
   const base = { dir: d, from: d === 'toHome' ? 'Skole' : 'Amagerveien', to: d === 'toHome' ? 'Amagerveien' : 'Skole', label: d === 'toHome' ? 'Skole → Amagerveien' : 'Amagerveien → Skole', homeCard: s.homeCard, recoCount: s.recoCount, updatedAt: iso(now) };
-  if (!routes.length) return { ...base, options: [], empty: true, text: 'Legg inn egne ruter under Innstillinger → Ruter → Mine ruter.' };
+  if (!routes.length) return { ...base, options: [], empty: true, text: 'Legg inn egne ruter under Innstillinger → Moduler → Reise.' };
   const zone = zonesOf41(u)[0];
   const school = zone ? { name: zone.name, lat: zone.lat, lon: zone.lon } : PLACES41.skole;
   let opts, source = 'Entur', alert = null;

@@ -169,7 +169,7 @@ test('sky-modell: 409 needsConfirm bare når mine data/vedlegg er med, og «Ikke
   assert.equal(r.status, 409);
   assert.equal(r.body.needsConfirm, true);
   assert.equal(r.body.model, 'Gemini 2.5 Flash');
-  assert.ok(r.body.leaves.includes('Sammendrag av Finans (siste 30 dager)'));
+  assert.ok(r.body.leaves.includes('Sammendrag av Økonomi (siste 30 dager)'));
   // Lokal modell spør aldri.
   assert.equal((await S('/api/chat/send', 'POST', { model: 'qwen3:8b', myData: true, messages: [{ role: 'user', content: 'Hva brukte jeg?' }] })).status, 200);
   // Send uten mine data → ingen spørsmål.
@@ -181,7 +181,7 @@ test('sky-modell: 409 needsConfirm bare når mine data/vedlegg er med, og «Ikke
   const evs = sse(r.text);
   const id = evs[0].data.chatId;
   assert.equal(evs.filter((e) => e.event === 'delta').map((e) => e.data.text).join(''), 'Du brukte mest på mat.');
-  assert.deepEqual(evs.find((e) => e.event === 'done').data.used.slice(0, 1), ['Finans']);
+  assert.deepEqual(evs.find((e) => e.event === 'done').data.used.slice(0, 1), ['Økonomi']);
   const g = calls.find((x) => x.url.includes(':streamGenerateContent'));
   assert.equal(g.headers['x-goog-api-key'], 'gemini-test-key');
   assert.match(g.body.systemInstruction.parts[0].text, /Finans siste 30 dager/);

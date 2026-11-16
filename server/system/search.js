@@ -55,7 +55,7 @@ db.exec(`CREATE VIRTUAL TABLE IF NOT EXISTS search51_fts USING fts5(type UNINDEX
 
 export const TYPES51 = {
   action: ['Handlinger', 'bolt'], page: ['Sider', 'gear'], task: ['Gjøremål', 'check'], shopping: ['Handleliste', 'cart'], list: ['Lister', 'list'],
-  event: ['Familiekalender', 'calendar'], receipt: ['Kvitteringer', 'receipt'], line: ['Varelinjer', 'receipt'], transaction: ['Transaksjoner', 'card'],
+  event: ['Kalender · Familie', 'calendar'], receipt: ['Kvitteringer', 'receipt'], line: ['Varelinjer', 'receipt'], transaction: ['Transaksjoner', 'card'],
   place: ['Steder', 'pin'], person: ['Folk', 'person'], package: ['Pakker', 'box'], study: ['Studie', 'book'], chat: ['Chat', 'chat'], birthday: ['Bursdager', 'cake'],
   article: ['Lagrede artikler', 'book'], // prompt 73
   part: ['Deler', 'tool'], // prompt 76: Skjold Lab
@@ -325,12 +325,12 @@ function resultOf(h, u, qtext) {
 /* ---------------- Sider og hurtighandlinger ---------------- */
 
 const PAGES51 = [
-  ['dash', 'Hjem', 'forside dashbord oversikt', '/#/dash'], ['gjoremal', 'Gjøremål', 'huskeliste oppgaver todo', '/#/gjoremal'], ['kalender', 'Kalender', 'avtaler uke måned', '/#/kalender'],
-  ['familiekalender', 'Familiekalender', 'hvem kjører henting bringing', '/#/familiekalender'], ['familie', 'Familie', 'posisjon kart folk helse', '/#/familie'],
+  ['dash', 'Oversikt', 'forside dashbord oversikt hjem', '/#/oversikt'], ['gjoremal', 'Gjøremål', 'huskeliste oppgaver todo', '/#/gjoremal'], ['kalender', 'Kalender', 'avtaler uke måned', '/#/kalender'],
+  ['familiekalender', 'Hvem kjører?', 'familiekalender hvem kjører henting bringing', '/#/kalender/familie'], ['familie', 'Familie', 'posisjon kart folk helse', '/#/familie'],
   ['sjekk', 'Sjekk inn', 'innsjekk hent meg trygg fremme', '/#/familie/sjekk'], ['media', 'Media', 'film serier plex jellyfin', '/#/media'], ['mediakveld', 'Hva skal vi se i kveld?', 'film kveld anbefaling', '/#/mediakveld'],
   ['vaer', 'Vær', 'yr regn temperatur', '/#/vaer'], ['sporing', 'Sporing', 'pakker post bring', '/#/sporing'], ['chat', 'Chat', 'glimt ai samtale', '/#/chat'],
   ['studie', 'Studie', 'karakterer vitnemål', '/#/studie'], ['bursdager', 'Bursdager', 'fødselsdag gratulerer', '/#/bursdager'], ['matplan', 'Matplan', 'middag oppskrifter', '/#/matplan'],
-  ['kart', 'Kart', 'steder', '/#/kart'], ['skjold', 'Skjold Lab', 'deler sorteringsskap skuffer komponenter', '/#/skjold'], ['finans', 'Finans', 'penger budsjett økonomi', '/finans/'], ['kvitteringer', 'Kvitteringer', 'kvittering skann', '/finans/#/kv'],
+  ['kart', 'Kart', 'steder', '/#/kart'], ['skjold', 'Skjold Lab', 'deler sorteringsskap skuffer komponenter', '/#/skjold'], ['finans', 'Økonomi', 'penger budsjett økonomi finans', '/finans/'], ['kvitteringer', 'Kvitteringer', 'kvittering skann', '/finans/#/kv'],
   ['planlegging', 'Planlegging', 'sparemål faste utgifter skatt abonnement', '/finans/plan51'], ['innstillinger', 'Innstillinger', 'konto oppsett', '/#/innstillinger/konto'],
   ['utseende', 'Utseende og tema', 'tema mørk lys modus farger', '/#/innstillinger/look'], ['sikkerhet', 'Sikkerhet', 'passkey enheter passord', '/#/innstillinger/sikkerhet'],
 ];

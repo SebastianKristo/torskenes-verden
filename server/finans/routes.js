@@ -903,7 +903,7 @@ const MIME = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'i
 const asList = (v) => (Array.isArray(v) ? v : v ? [v] : []).filter((x) => x instanceof File);
 // Én eller flere filer. Hver fil blir en jobb i køen; svaret kommer straks (felt fra første kvittering + jobs).
 // scan/thumb (nedskalert av klienten) pares med filene i samme rekkefølge når antallet stemmer.
-// E-post som kvittering (Subscription OS «Fra kvittering»): vedlegget leses hvis det er et bilde eller en PDF, ellers e-postteksten.
+// E-post som kvittering (Faste betalinger «Fra kvittering»): vedlegget leses hvis det er et bilde eller en PDF, ellers e-postteksten.
 const isMail = (f) => /^(message\/rfc822|text\/plain)$/.test(f.type) || /\.(eml|txt)$/i.test(f.name ?? '');
 async function mailReceipt(f, target) {
   const buf = Buffer.from(await f.arrayBuffer());
@@ -1725,7 +1725,7 @@ api.get('/health/ai', R, async (c) => c.json(await health()));
 // «Test tilkobling» per motor (ollama | gemini | groq) og for Roboflow-nøkkelen.
 api.post('/ai/test', R, adminOnly, async (c) => { const b = await c.req.json().catch(() => ({})); return c.json(await testEngine(String(b.provider ?? settings().provider))); });
 api.post('/ai/roboflow/test', R, adminOnly, async (c) => c.json(await testRoboflow()));
-// Siste AI-kall (oppgave, motor, modell, ms, status) for feilsøking under Innstillinger → AI.
+// Siste AI-kall (oppgave, motor, modell, ms, status) for feilsøking under Innstillinger → Glimt og AI → AI.
 // Prompt 25: tidsgrensene klientene bruker (sekunder). clientTimeoutS = maks(motor) × (forsøk + 1) + 10.
 api.get('/ai/limits', R, (c) => c.json(aiLimits()));
 api.get('/ai/log', R, (c) => c.json({ items: aiLog(+c.req.query('limit') || 50) }));
@@ -1812,7 +1812,7 @@ export { SCOPES as TOKEN_SCOPES };
 export const _tokenKeyForTest = (t) => tokenKey(t);
 api.delete('/tokens/:id', tokenAdmin, (c) => { q('DELETE FROM fh_tokens WHERE substr(id,1,12)=? AND COALESCE(user_id, ?)=?').run(c.req.param('id'), OWNER, c.get('user')); return ok(c); });
 
-/* --- Subscription OS --- */
+/* --- Faste betalinger --- */
 
 // Pris lagres per trekk. Syklusene, neste trekk og omregningen per måned kommer fra cycles.js (Q40, abonnement.json).
 const monthlyOre = (s) => perMonth(s.price, s.cycle);
@@ -2319,7 +2319,7 @@ api.post('/folders/:id/members', async (c) => {
   const users = listUsers();
   const many = Array.isArray(b.userIds);
   const picked = many ? [...new Set(b.userIds.map(String))].slice(0, 50).map((id) => users.find((x) => x.id === id)) : [users.find((x) => x.id === b.userId || (b.username && x.username === b.username))];
-  if (!picked.length || picked.some((u) => !u)) return bad(c, 'Fant ikke brukeren. Nye brukere legges til av admin under Innstillinger → Innlogging i Homelab.');
+  if (!picked.length || picked.some((u) => !u)) return bad(c, 'Fant ikke brukeren. Nye brukere legges til av admin under Innstillinger → Konto og sikkerhet.');
   if (b.role !== undefined && !ROLE_IN[b.role]) return bad(c, 'Ugyldig rolle');
   const role = ROLE_IN[b.role] ?? 'editor';
   const fresh = picked.filter((u) => u.id !== c.get('user') && !memberOf(f.id, u.id));

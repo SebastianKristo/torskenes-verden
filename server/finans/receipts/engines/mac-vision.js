@@ -16,7 +16,7 @@ const err = (message, extra = {}) => Object.assign(new Error(message), extra);
 /** Bildet → felles OCR-format. Kaster med {unavailable:true} når tjenesten ikke svarer, er avslått eller avviser oss. */
 export async function macOcr48(image, mime, { url, key, timeoutS = 30, signal = null } = {}) {
   if (!url) throw err('Mac-OCR-adressen er ikke satt', { unavailable: true });
-  if (!key) throw err('Mac-OCR-nøkkelen er ikke satt (Innstillinger → AI → Mac-OCR)', { unavailable: true });
+  if (!key) throw err('Mac-OCR-nøkkelen er ikke satt (Innstillinger → Glimt og AI → AI → Mac-OCR)', { unavailable: true });
   const t0 = Date.now();
   // Tjenesten krever Content-Length (ikke chunked), så multipart-kroppen bygges som én buffer.
   const boundary = `----r48${Date.now().toString(36)}${Math.random().toString(36).slice(2)}`;

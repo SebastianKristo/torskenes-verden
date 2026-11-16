@@ -88,7 +88,7 @@ export const SCHEMA = [
     ['radarr_root', 'Rotmappe for filmer', e('RADARR_ROOT', '/data/media/film')], // prompt 43: Media
     ['radarr_profile', 'Standard kvalitetsprofil', e('RADARR_PROFILE', 'Ultra-HD')],
   ]],
-  ['Plex', { id: 'plex', scope: 'personal', domain: 'plex.tv', help: 'Plex må være tilgjengelig fra serveren som kjører dashbordet.', guide: [
+  ['Plex', { id: 'plex', scope: 'personal', domain: 'plex.tv', help: 'Plex må være tilgjengelig fra serveren som kjører Homelab.', guide: [
     ['Finn adressen', 'Adressen er IP-en til serveren med port 32400, for eksempel http://192.168.1.20:32400. Du finner IP-en i Plex under Innstillinger → Fjerntilgang, eller i ruteren.'],
     ['Finn X-Plex-Token', 'Åpne Plex i nettleseren og logg inn. Velg en film eller episode → ⋯ → Hent info → Vis XML. Adressen som åpnes slutter med X-Plex-Token=…, og det som står etter = er tokenet.', 'http://192.168.1.20:32400/library/metadata/123?X-Plex-Token=AbCdEf123456'],
     ['Eller hent det fra serveren', 'Tokenet står også i filen Preferences.xml som PlexOnlineToken. I Docker ligger den i config-mappen til Plex.', 'grep -o \'PlexOnlineToken="[^"]*"\' Preferences.xml'],
@@ -97,7 +97,7 @@ export const SCHEMA = [
     ['plex_url', 'URL', e('PLEX_URL', 'http://192.168.1.20:32400')],
     ['plex_token', 'X-Plex-Token', e('PLEX_TOKEN'), true],
   ]],
-  ['Jellyfin', { id: 'jellyfin', scope: 'personal', domain: 'jellyfin.org', help: 'Jellyfin må være tilgjengelig fra serveren som kjører dashbordet.', guide: [
+  ['Jellyfin', { id: 'jellyfin', scope: 'personal', domain: 'jellyfin.org', help: 'Jellyfin må være tilgjengelig fra serveren som kjører Homelab.', guide: [
     ['Finn adressen', 'Adressen er IP-en til serveren med port 8096, for eksempel http://192.168.1.20:8096.'],
     ['Lag en API-nøkkel', 'I Jellyfin: Kontrollpanel → Avansert → API-nøkler → +. Gi den navnet Homelab og kopier nøkkelen.'],
     ['Skriv brukernavnet', '«Nylig lagt til» hentes for én bruker. Skriv brukernavnet du logger inn med i Jellyfin. Tomt felt bruker den første brukeren.'],

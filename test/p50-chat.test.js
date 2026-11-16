@@ -238,7 +238,7 @@ test('kvittering i chat: kvitteringskjeden (lokalt), markdown-tabell + «Legg i 
   const done = sse(r.text).find((e) => e.event === 'done')?.data;
   assert.ok(done, r.text);
   assert.equal(done.engine, 'receipt');
-  assert.equal(done.receipt.action.label, 'Legg i Finans ›');
+  assert.equal(done.receipt.action.label, 'Legg i Økonomi ›');
   assert.equal(done.receipt.action.url, `/api/chat/files/${imgId}/finans`);
   assert.match(done.readWith.label, /^Lest med Glimt \(Tesseract\)/);
   const text = sse(r.text).filter((e) => e.event === 'delta').map((e) => e.data.text).join('');

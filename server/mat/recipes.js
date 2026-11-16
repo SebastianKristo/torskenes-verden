@@ -327,7 +327,7 @@ async function visionJson(buf, mime, prompt, schema) {
   for (const p of order) {
     try {
       if (p === 'gemini') {
-        if (!hasGemini()) throw new Error('Gemini-nøkkel mangler (FinansHub → Innstillinger → AI-motor)');
+        if (!hasGemini()) throw new Error('Gemini-nøkkel mangler (Innstillinger → Glimt og AI → AI)');
         const res = await geminiFetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(st.geminiModel)}:generateContent`, {
           method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(90_000),
           body: JSON.stringify({ contents: [{ parts: [{ inline_data: { mime_type: mime, data: buf.toString('base64') } }, { text: prompt }] }],

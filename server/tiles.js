@@ -145,7 +145,7 @@ api.get('/tiles/:style/:z/:x/:file', tileAuth, async (c) => {
   const m = c.req.param('file').match(/^(\d+)(@2x)?\.png$/);
   const z = Number(c.req.param('z')), x = Number(c.req.param('x'));
   if (!STYLES[style] || !m || !/^\d+$/.test(c.req.param('z')) || !/^\d+$/.test(c.req.param('x'))) return c.json({ error: 'Ukjent kartflis' }, 404);
-  if (!availableStyles().includes(style)) return c.json({ error: 'Kartstilen krever en nøkkel (Innstillinger → Integrasjoner → Kart)' }, 404);
+  if (!availableStyles().includes(style)) return c.json({ error: 'Kartstilen krever en nøkkel (Innstillinger → Tilkoblinger → Kart)' }, 404);
   const y = Number(m[1]), retina = !!m[2], n = 2 ** z;
   if (z > STYLES[style].max || x >= n || y >= n) {
     return c.body(grayTile(style, retina), 200, { 'Content-Type': 'image/png', 'Cache-Control': LONG, 'X-Tile-Source': 'fallback' });

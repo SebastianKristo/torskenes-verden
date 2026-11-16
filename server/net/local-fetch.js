@@ -20,7 +20,7 @@ import { db, kv, OWNER } from '../db.js';
 import { isAdmin } from '../auth/session.js';
 import { _onIcsSet86, userCfg } from '../settings.js';
 
-export const LOCAL_MSG86 = 'Lokale adresser må godkjennes av en administrator (Innstillinger → Sikkerhet).';
+export const LOCAL_MSG86 = 'Lokale adresser må godkjennes av en administrator (Innstillinger → Konto og sikkerhet).';
 export const MAX_LOCAL_HOSTS86 = 50;
 const KEY = 'local_fetch_hosts86', MIGRATED = 'local_fetch_migrated86', MAX_REDIRECTS = 5;
 const LOCAL_NAME = /^(localhost|.*\.localhost|.*\.local|.*\.internal|.*\.lan|.*\.home\.arpa)$/i;
@@ -159,7 +159,7 @@ export async function migrateLocalHosts86({ force = false } = {}) {
     try { if (await isLocalHost86(host) && addLocalHost86(host)) added.push(host); } catch { /* neste */ }
   }
   kv.set(OWNER, MIGRATED, Date.now());
-  if (added.length) console.log(`[localfetch] Oppgradering: ${added.length} lokale verter fra administratorenes RSS-/iCal-abonnementer er godkjent (${added.join(', ')}). Se Innstillinger → Sikkerhet.`);
+  if (added.length) console.log(`[localfetch] Oppgradering: ${added.length} lokale verter fra administratorenes RSS-/iCal-abonnementer er godkjent (${added.join(', ')}). Se Innstillinger → Konto og sikkerhet.`);
   return { skipped: false, added };
 }
 

@@ -269,7 +269,7 @@ addEventSource(async (u, from, to) => {
       const title = e.needsDriver ? `${e.title} · trenger sjåfør` : e.title;
       return { id: `famcal51-${e.id}`, title, short: title.length > 18 ? `${title.slice(0, 17)}…` : title, subject: null, room: e.place?.name ?? '', teacher: '', note: [e.note, drivers].filter(Boolean).join('\n'),
         start: e.allDay ? e.date : iso(ev.start), end: e.allDay ? ymd(ev.end) : iso(ev.end), allDay: e.allDay, date: e.date, time: e.allDay ? null : e.time, inAllDayRow: e.allDay,
-        type: 'familie', color: e.color, source: 'familie51', calendar: 'familie51', editable: false, url: '/#/familiekalender', openLabel: 'Åpne i Familiekalender ›', origin: 'Familiekalender', appCalendar: 'familie51', appColor: e.color };
+        type: 'familie', color: e.color, source: 'familie51', calendar: 'familie51', editable: false, url: '/#/familiekalender', openLabel: 'Åpne i Kalender ›', origin: 'Familiekalender', appCalendar: 'familie51', appColor: e.color };
     }),
   };
 });

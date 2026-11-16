@@ -567,7 +567,7 @@ async function fetchStatus0(carrier, no, { allowParcelsapp: allow0 = false, over
     try { return await postenWeb(n); } catch (e) {
       console.debug?.(`[sporing] posten-web: ${e.message}`);
       if (e.status === 404) err404 = e;
-      else err ??= new CarrierError(`Fikk ikke status fra Postens offentlige sporing (${e.message}). Logg inn med Posten-kontoen eller legg inn Mybring-nøkkel under Integrasjoner → Sporing.`, e.status);
+      else err ??= new CarrierError(`Fikk ikke status fra Postens offentlige sporing (${e.message}). Logg inn med Posten-kontoen eller legg inn Mybring-nøkkel under Tilkoblinger → Reise og pakker.`, e.status);
     }
   }
   // PostNord uten nøkkel: den offentlige sporingssiden (uoffisielt). Feil logges stille, og reservene prøves.

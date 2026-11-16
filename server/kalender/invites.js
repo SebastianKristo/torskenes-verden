@@ -193,7 +193,7 @@ async function sendMail(u, msg) {
     if (fakeSmtp) { await fakeSmtp({ ...msg, from: f.addr, raw }); via = 'smtp'; }
     else if (smtpReady44(u)) await smtpSend(smtpConf(u), { from: f.addr, to: msg.to, raw });
     else if (MOCK()) via = 'mock';
-    else throw new Error('E-post er ikke satt opp. Innstillinger → Integrasjoner → E-post (SMTP).');
+    else throw new Error('E-post er ikke satt opp. Innstillinger → Tilkoblinger → E-post (SMTP).');
     q('INSERT INTO mail44_outbox(user_id, to_addr, subject, via, status, ics, created) VALUES(?,?,?,?,?,?,?)').run(u, msg.to, msg.subject, via, 'sent', msg.ics, Date.now());
     console.log(`mail.send to=${msg.to} via=${via} status=sent`);
     return { via };

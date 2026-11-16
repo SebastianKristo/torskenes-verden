@@ -528,7 +528,7 @@ const fakeHaWs = async (cmd) => {
 async function haRest(method, path, body) {
   if (haT) return haT.rest(method, path, body);
   if (mockHa()) return fakeHaRest(method, path, body);
-  if (!haBase() || !haToken()) throw Object.assign(new Error('Home Assistant er ikke satt opp (Integrasjoner → Home Assistant)'), { status: 409 });
+  if (!haBase() || !haToken()) throw Object.assign(new Error('Home Assistant er ikke satt opp (Tilkoblinger → Home Assistant)'), { status: 409 });
   const r = await fetch(`${haBase()}${path}`, { method, headers: { authorization: `Bearer ${haToken()}`, 'content-type': 'application/json' }, body: body ? JSON.stringify(body) : undefined, signal: AbortSignal.timeout(10_000) });
   return { status: r.status, json: await r.json().catch(() => null) };
 }
@@ -755,7 +755,7 @@ api.get('/google/auth', async (c, next) => {
   return auth(c, next);
 }, (c) => {
   const client = googleClient();
-  if (!client.id && !mockGoogle()) return c.html('<!doctype html><meta charset="utf-8"><title>Bursdager</title><p>Google Kalender er ikke satt opp. En administrator må legge inn klient-ID og hemmelighet under Innstillinger → Integrasjoner → Google Kalender.</p>', 409);
+  if (!client.id && !mockGoogle()) return c.html('<!doctype html><meta charset="utf-8"><title>Bursdager</title><p>Google Kalender er ikke satt opp. En administrator må legge inn klient-ID og hemmelighet under Innstillinger → Tilkoblinger → Google Kalender.</p>', 409);
   const verifier = b64u(randomBytes(32)), state = b64u(randomBytes(18));
   const redirect = redirectUri(c);
   let ret = c.get('ret') ?? safeReturn(c.req.query('return'), originOf(c));

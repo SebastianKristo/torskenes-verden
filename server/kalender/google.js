@@ -50,7 +50,7 @@ googleKalApi.get('/', async (c) => {
 
 googleKalApi.put('/', async (c) => {
   const user = c.get('user');
-  if (!googleConnected(user)) return bad(c, 'Logg inn med Google først (Innstillinger → Kalendere)', 409);
+  if (!googleConnected(user)) return bad(c, 'Logg inn med Google først (Innstillinger → Tilkoblinger → Kalender og gjøremål)', 409);
   const b = await c.req.json().catch(() => null);
   if (!b || typeof b !== 'object') return bad(c, 'Ugyldig forespørsel');
   let list;

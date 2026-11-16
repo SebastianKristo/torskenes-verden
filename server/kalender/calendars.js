@@ -505,7 +505,7 @@ companionApi.post('/', async (c) => {
     if (old.token_id !== r.tokenId) revokeTokenOf(r.user, old.token_id);
     cq('DELETE FROM fh_companion_tokens WHERE token_id=?').run(old.token_id);
   }
-  if (companionsOf(r.user).length >= MAX_COMPANIONS) return bad(c, `Maks ${MAX_COMPANIONS} app-tokens. Trekk tilbake et under Innstillinger → Enheter.`, 409);
+  if (companionsOf(r.user).length >= MAX_COMPANIONS) return bad(c, `Maks ${MAX_COMPANIONS} app-tokens. Trekk tilbake et under Innstillinger → Enheter og widgets.`, 409);
   const t = issueToken(r.user, { name: `${APPS[app]} (${device})`, scopes: r.scopes, expires: r.expires });
   cq('INSERT INTO fh_companion_tokens(token_id,user_id,app,device,parent,created) VALUES(?,?,?,?,?,?)').run(t.fullId, r.user, app, device, r.tokenId, Date.now());
   const u = userInfo(r.user);

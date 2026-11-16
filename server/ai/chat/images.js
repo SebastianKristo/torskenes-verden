@@ -114,7 +114,7 @@ export function friendlyError51(msg) {
     if (/model .*not found|not found, try pulling|pull model/i.test(detail)) return `Modellen er ikke installert i ${who === 'Ollama' ? 'Ollama' : 'Open WebUI'}. Installer den under AI-kontroll, eller velg en annen modell.`;
     if (/context|too long|num_ctx|exceeds/i.test(detail)) return 'Samtalen ble for lang for modellen. Start en ny samtale, eller korte ned meldingen.';
     if (/out of memory|cuda|memory|insufficient/i.test(detail)) return 'Maskinen har ikke nok minne til modellen akkurat nå. Prøv igjen om litt, eller velg en mindre modell.';
-    if (code === '401' || code === '403') return `${who} avviste forespørselen (${code}: sjekk nøkkelen under Innstillinger → AI).`;
+    if (code === '401' || code === '403') return `${who} avviste forespørselen (${code}: sjekk nøkkelen under Innstillinger → Glimt og AI → AI).`;
     if (+code >= 500) return `Den lokale modellen svarte med en feil (${code}). Prøv igjen om litt.`;
     return `Modellen kunne ikke svare på denne meldingen (feil ${code}). Prøv igjen, eller velg en annen modell.`;
   }
