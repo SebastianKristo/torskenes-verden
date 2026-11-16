@@ -37,6 +37,7 @@ import { decorateRows } from './settings-ikoner.js';
 import { kontoAvatar, avatarRow } from './avatar.js'; // prompt 36: profilbilde i Konto // prompt 36: ikon på hver rad
 import { TAB_IC, icBox, loadIndex, sideResults, wantsAi, ask, resetAsk, byId, routeOf, topHit, SQ, ANCHORS, anchorOf, anchorFor, routeForAnchor, setNormTab65 } from './settings-search.js';
 import { sheetBtn } from './util.js';
+import { appName } from './appicon.js'; // E-B10: fanetittelen «Side · Innstillinger · Appnavn»
 import { loadServer41, serverGroup41 } from './settings-server.js'; // prompt 41: Konto → Server (lokal/ekstern adresse)
 import { glimtSettingsHtml, loadGlimt, glimtClick, glimtChange, glimtSubmit } from './glimt-settings.js'; // prompt 35: GLIMT → Glimt
 import { TABS44, modeGroup44, loggerView44, huskeView44, usersGroups44, click44 } from './settings-utseende-logger.js'; // prompt 44
@@ -758,6 +759,7 @@ const subScroll = new Map(); // fane → scrollTop i listen før en underside bl
 function render() {
   if (!TABS.some(([k]) => k === tab)) tab = ALIAS[tab] ?? TABS[0][0];
   const [, tName, tSub] = tabOf(tab);
+  document.title = `${tName} · Innstillinger · ${appName()}`; // E-B10: fanetittelen følger siden som er åpen
   const body = modal().querySelector('.set-body'), key = `${tab}|${sub}|${q ? 'q' : ''}`;
   // Prompt 23: åpnes en underside, huskes posisjonen i listen; går man tilbake, havner man der man var. Nye undersider åpner øverst.
   let keep = body?.dataset.key === key ? body.scrollTop : 0;
@@ -935,8 +937,10 @@ export function closeSettings() {
   modal().hidden = true;
   document.body.classList.remove('set-open');
   resetAsk();
+  // E-B10: siden under setter fanetittelen tilbake (etter at adressen er tilbake på den).
+  const title = () => document.dispatchEvent(new Event('hl:title'));
   // Prompt 30: adressen var #/innstillinger/<fane> mens innstillingene var åpne. Tilbake til siden under.
-  if (history.state?.hlSet) { noteUrlBack(); history.back(); }
+  if (history.state?.hlSet) { addEventListener('popstate', title, { once: true }); noteUrlBack(); history.back(); } else title();
 }
 
 /* Prompt 30: #/innstillinger/<fane> i adressefeltet mens innstillingene er åpne (pushState, så siden under ikke tegnes på nytt). */
@@ -974,7 +978,7 @@ function openFromHash() {
   const mm = location.hash.match(/^#\/innstillinger(?:\/([\w-]+))?(?:\/([\w:-]+))?\/?$/);
   if (!mm) {
     // Tilbake (nettleserknapp eller sveip) fra #/innstillinger/…: lukk innstillingene.
-    if (!modal().hidden && !history.state?.hlSet) { modal().hidden = true; document.body.classList.remove('set-open'); resetAsk(); }
+    if (!modal().hidden && !history.state?.hlSet) { modal().hidden = true; document.body.classList.remove('set-open'); document.dispatchEvent(new Event('hl:title')); resetAsk(); }
     return;
   }
   if (history.state?.hlSet && !modal().hidden) return; // vår egen adresse

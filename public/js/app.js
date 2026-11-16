@@ -164,7 +164,9 @@ function swapView(html) {
 
 // Fanetittelen: «Side · Appnavn» (appnavnet fra Innstillinger → Utseende, standard «Homelab»). Navnet på siden kommer fra modullisten
 // (moduler.js tittel): undersiden når den har egen adresse (Bursdager, I kveld, Kart), ellers modulen. Oversikt har bare appnavnet.
+// Mens Innstillinger er åpne, eier de tittelen (settings-view.js); når de lukkes, sendes hl:title og tittelen settes her igjen.
 function setTitle() {
+  if (document.body.classList.contains('set-open')) return;
   const t = route === 'mer' ? 'Mer' : route === 'dash' ? null : tittel(location.hash);
   document.title = KAL_APP ? 'Kalender' : t ? `${t} · ${appName()}` : appName();
 }
@@ -241,6 +243,7 @@ function bindShell() {
   // Prompt 40: julemodus endret (figurbiblioteket) → siden tegnes på nytt, så Glimt får lua med en gang. Ikke i Chat (strømmer).
   window.addEventListener('glimt-jul', () => { if (route !== 'chat') { route = null; renderRoute(); } });
   document.addEventListener('hl:app', () => { setTitle(); applyHlTheme(); }); // nytt appnavn eller ikon
+  document.addEventListener('hl:title', setTitle); // Innstillinger ble lukket (E-B10)
   window.addEventListener('resize', () => { if (isMobile() !== wasMobile) { wasMobile = isMobile(); renderRoute(); weatherPill(); } });
 }
 
