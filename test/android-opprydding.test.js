@@ -131,10 +131,12 @@ test('P85 H: widgetene tegnes og hentes med korutine (og goAsync i mottakere), a
   assert.match(strip(raw(join(APP, 'Bakgrunnsvarsler.kt'))), /WidgetJobs\.launchAsync\(this\)/);
 });
 
-test('L12: stedsoppslag og vær for et sted går via serveren, aldri direkte til Open-Meteos stedssøk', () => {
+test('L12: stedsoppslag, vær for et sted og skiføret går via serveren, aldri direkte til Open-Meteo', () => {
   for (const p of [...ktFiles(join(AND, 'app/src/main')), ...ktFiles(join(AND, 'kalender/src/main'))]) {
     assert.doesNotMatch(strip(raw(p)), /geocoding-api\.open-meteo\.com/, relative(AND, p));
+    assert.doesNotMatch(strip(raw(p)), /api\.open-meteo\.com/, relative(AND, p));
   }
+  assert.match(strip(raw(join(APP, 'domene/Vaer.kt'))), /api41 \{ hlGet\("\/weather\/ski", timeout = 10_000\) \}/, 'skiføret i Nordmarka (GET /api/weather/ski)');
   const g = strip(raw(join(APP, 'Glimt.kt')));
   assert.doesNotMatch(g, /openMeteo35/);
   assert.match(g, /hlGet\("\/weather\/place\?q="/);

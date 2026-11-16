@@ -20,7 +20,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
-import no.kristo.felles.nett.openSikker
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -59,23 +58,23 @@ fun AppViewModel.setVaerLay41(l: VaerLay41) {
 
 fun AppViewModel.skiShow41(): Boolean { loadSki41(); return vaerLay41().ski && p41.ski?.has == true }
 
-/** Open-Meteo for Nordmarka (59.99, 10.67): snødybde, snøfall siste 3 dager, temperatur, fukt og maks-temp (tining). Hver 30. min. */
+/**
+ * Skiføret i Nordmarka fra serveren (GET /api/weather/ski, L12): snødybde, snøfall siste 3 dager, temperatur, fukt og tining.
+ * Serveren henter fra Open-Meteo; appen spør aldri Open-Meteo selv. Hver 30. min.
+ */
 fun AppViewModel.loadSki41() {
     val s = p41
     if (System.currentTimeMillis() - s.skiAt < 30 * 60_000L) return
     s.skiAt = System.currentTimeMillis()
     launch41 {
         runCatching {
-            val body = withContext(Dispatchers.IO) {
-                val c = java.net.URL("https://api.open-meteo.com/v1/forecast?latitude=59.99&longitude=10.67&current=temperature_2m,relative_humidity_2m,snow_depth&daily=snowfall_sum,temperature_2m_max,temperature_2m_min&past_days=3&forecast_days=1&timezone=auto").openSikker()
-                c.connectTimeout = 6000; c.readTimeout = 8000
-                try { c.inputStream.bufferedReader().use { it.readText() } } finally { c.disconnect() }
+            val body: String = api41 { hlGet("/weather/ski", timeout = 10_000) }
+            val ski: Ski41 = withContext(Dispatchers.Default) {
+                val o = JSONObject(body)
+                // depth i meter (som før), fresh i cm.
+                Ski41(o.optDouble("snowCm", 0.0) / 100.0, o.optDouble("newCm", 0.0), o.optDouble("tempC", -4.0), o.optDouble("humidity", 0.0), o.optBoolean("thaw", false), System.currentTimeMillis())
             }
-            val o = JSONObject(body); val cur = o.getJSONObject("current"); val d = o.getJSONObject("daily")
-            val sf = d.optJSONArray("snowfall_sum"); val mx = d.optJSONArray("temperature_2m_max")
-            val fresh = (0 until minOf(4, sf?.length() ?: 0)).sumOf { sf!!.optDouble(it, 0.0).let { v -> if (v.isNaN()) 0.0 else v } }
-            val max = (0 until minOf(4, mx?.length() ?: 0)).maxOfOrNull { mx!!.optDouble(it, 0.0) } ?: 0.0
-            s.ski = Ski41(cur.optDouble("snow_depth", 0.0), fresh, cur.optDouble("temperature_2m", -4.0), cur.optDouble("relative_humidity_2m", 0.0), max > .5, System.currentTimeMillis())
+            s.ski = ski
         }
     }
 }
