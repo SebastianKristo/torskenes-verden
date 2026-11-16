@@ -98,3 +98,22 @@ Når du finner et begrep som mangler eller brukes ulikt, legg det til her i samm
 | **Hvem kjører?** (henting og bringing, under filteret Familie i Kalender) | Familiekalender | iOS: Mer og dyplenken `#/kalender/familie` (Q5) |
 | **‹ Økonomi** (tilbake til Økonomis Oversikt) og **‹ Oversikt** (tilbake til startsiden) | ‹ Finans, ‹ Hjem | Q1, Q2 |
 | **Homelab** på klokka, i widgetene og i systemtekstene (Innstillinger → Homelab, Helse → Apper → Homelab) | FinansHub | Q2. Widgeten med saldo heter **Økonomi** |
+
+## Avgjort i Fase 7 (stier i brukertekst)
+
+Feilmeldinger, hint, hjelpetekster, Glimt-svar og varsler peker på sidene slik de heter i modullisten. `test/brukertekst-navn.test.js` stopper de gamle stiene og navnene i tekst (ikke i kommentarer, nøkler eller ruter), med bevisste unntak.
+
+| Bruk | Ikke bruk | Merknad |
+|---|---|---|
+| **Innstillinger → Konto og sikkerhet** (… → Profil, … → Server, … → Totrinnsbekreftelse (2FA)) | Innstillinger → Sikkerhet, → Innlogging, → Konto, → Kontoer og brukere | Kalender-appen har sin egen «Innstillinger → Sikkerhet», den beholdes |
+| **Innstillinger → Tilkoblinger** (… → Media, … → Home Assistant, … → Reise og pakker …) | Innstillinger → Integrasjoner, Integrasjoner → Media | Siden «Integrasjoner» ligger under Tilkoblinger |
+| **Innstillinger → Tilkoblinger → Kalender og gjøremål** | Innstillinger → Kalendere, Innstillinger → Gjøremål | På iPhone: Innstillinger → Tilkoblinger |
+| **Innstillinger → Glimt og AI → AI** (modeller og nøkler), **… → Glimt**, **… → Faste oppgaver** | Innstillinger → AI, → AI-motor, → AI-kontroll, → Glimt, → Faste oppgaver | «AI og tolkning» er Økonomis egen side og beholdes |
+| **Innstillinger → Enheter og widgets** (… → Widgets, … → Logg inn på annen enhet) | Innstillinger → App, → Enheter, → Widgets, → API-tokens | |
+| **Innstillinger → Husstand** (… → Helse) | Innstillinger → Brukere, → Familie, → Helse, Brukere og familie | |
+| **Innstillinger → Server → System** og **Server → Backup** | Innstillinger → System, → Oppdatering, → Backup | «Backup og data» er Økonomis egen side |
+| **Innstillinger → Moduler → Reise / Nyheter / Media / Domener / Studie** | Innstillinger → Ruter, → Nyheter, → Media … | |
+| **Avganger-kortet** (på Oversikt) | Ruter-kortet | Ruter er selskapet |
+| **Økonomi-backup** (SMB-veiviseren) | FinansHub-backup | |
+| **Homelab** (appen på telefonen, også i QR-innlogging) | Papir Finans | |
+| **Økonomi → Faste betalinger** (der trekkene endres) | Finans → Abonnementer | Kalender og Kalender-appen |
