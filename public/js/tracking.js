@@ -252,13 +252,12 @@ async function add() {
   S.adding = false; paint();
 }
 
-// «Sjekk nå» og dra-for-å-oppdatere: POST /tracking/refresh (prompt 22), /check på en eldre server.
+// «Sjekk nå» og dra-for-å-oppdatere: POST /tracking/refresh (prompt 22).
 async function check() {
   if (S.busy) return;
   S.busy = true; paint();
   try {
-    let r;
-    try { r = await T('/refresh', { method: 'POST' }); } catch (e) { if (e.status !== 404) throw e; r = await T('/check', { method: 'POST' }); }
+    const r = await T('/refresh', { method: 'POST' });
     if (r?.items) { const ark = (S.d?.items ?? []).filter((t) => t.archived && !r.items.some((x) => x.id === t.id)); S.d = { ...S.d, ...r, items: [...r.items, ...ark] }; } else await load();
     flash(r?.message ?? 'Status er oppdatert');
   } catch (e) { flash(e.message, true); }
@@ -285,7 +284,7 @@ function bindPull(view) {
   });
 }
 
-// Flere på en gang: POST /tracking/bulk. På en eldre server uten bulk gjøres det én og én.
+// Flere på en gang: POST /tracking/bulk.
 async function bulk(action) {
   if (action === 'none') { S.sel.clear(); S.bulkArm = false; return paint(); }
   if (action === 'all') {
@@ -296,11 +295,7 @@ async function bulk(action) {
   if (action === 'delete' && !S.bulkArm) { S.bulkArm = true; return paint(); }
   const ids = [...S.sel], n = ids.length;
   try {
-    try { await T('/bulk', { method: 'POST', json: { ids, action } }); }
-    catch (err) {
-      if (!/404|Not Found|finnes ikke/i.test(err.message)) throw err;
-      for (const id of ids) await T(`/${id}`, action === 'delete' ? { method: 'DELETE' } : { method: 'PATCH', json: { archived: action === 'archive' } });
-    }
+    await T('/bulk', { method: 'POST', json: { ids, action } });
     flash(`${n} ${n === 1 ? 'pakke' : 'pakker'} ${action === 'delete' ? 'slettet' : action === 'archive' ? 'arkivert' : 'gjenopprettet'}`);
   } catch (err) { flash(err.message, true); }
   S.sel.clear(); S.bulkArm = false;

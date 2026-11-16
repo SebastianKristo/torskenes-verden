@@ -1,13 +1,13 @@
 // Posisjonskortet på Hjem (prompt 20, claude-code-posisjon-kort.md): «POSISJON · FAMILIE» / «kart ›», to kolonner,
 // avatar i personens egen farge med to bokstaver og statusprikk, og sone, strøk eller «Sist sett» på linje 2.
-// Data fra /api/family/positions. Eldre server uten endepunktet: bygges fra /api/family.
+// Data fra /api/family/positions (Q19: serveren har alltid endepunktet, så reserven via /api/family er fjernet).
 import { api, esc, hm } from './util.js';
 import { store, widget, refresh, on, emit } from './store.js';
 import { hjemlysHtml, bindHjemlys } from './hjemlys.js';
 import { poll } from './lib/poll.js';
 
 const PALETTE = ['#b23a2a', '#2f5d8a', '#2f7a4f', '#c98a1b', '#6b4fa0', '#a03c8a', '#1f7a7a', '#8a5a2b'];
-const STALE_MS = 15 * 60_000, MAX = 4;
+const MAX = 4;
 const ACT = { walking: 'Går', running: 'Løper', cycling: 'Sykler', driving: 'I bil', still: null, går: 'Går', sykler: 'Sykler', 'i bil': 'I bil', stille: null };
 
 const hash = (s) => [...String(s)].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7);
@@ -26,29 +26,12 @@ export function line2(p) {
   return p.sted ?? `Oppdatert ${hm(new Date(p.oppdatert))}`;
 }
 
-// Eldre server: /api/family → samme form som /api/family/positions.
-function fromFamily(d) {
-  const seen = new Set(), used = new Set(), out = [];
-  // Stabil farge per person, men to personer på kortet skal ikke få samme farge.
-  const colorFor = (id) => { let i = hash(id) % PALETTE.length; for (let n = 0; n < PALETTE.length && used.has(PALETTE[i]); n++) i = (i + 1) % PALETTE.length; used.add(PALETTE[i]); return PALETTE[i]; };
-  const members = [...(d?.members ?? [])].sort((a, b) => (b.self === true) - (a.self === true));
-  for (const m of members) {
-    if (seen.has(m.userId)) continue;
-    seen.add(m.userId);
-    const ts = m.last?.ts ?? null, sharing = m.self ? 'on' : m.sharing;
-    const status = !m.last || sharing !== 'on' ? 'off' : Date.now() - ts > STALE_MS ? 'stale' : 'fresh';
-    out.push({ id: m.userId, navn: m.self ? 'Du' : m.name, farge: m.color ?? colorFor(m.userId), bilde: m.avatarUrl ?? null, sone: m.last?.place ?? null, aktivitet: m.last?.activity ?? null, sted: null, oppdatert: ts, status, self: !!m.self });
-  }
-  return out;
-}
-
 let loading = false, timer = null;
 export async function loadPositions() {
   if (loading) return;
   loading = true;
   try {
-    let list = await api('/family/positions').catch(() => null);
-    if (!Array.isArray(list)) list = Array.isArray(list?.items) ? list.items : fromFamily(await api('/family'));
+    const r = await api('/family/positions'), list = Array.isArray(r) ? r : r?.items ?? [];
     // «Du» først og bare én gang, selv om serveren skulle gi duplikater.
     const seen = new Set();
     store.data.positions = list.filter((p) => !seen.has(p.id) && seen.add(p.id)).sort((a, b) => !!b.self - !!a.self);

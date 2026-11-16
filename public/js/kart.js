@@ -78,34 +78,24 @@ async function loadPrefs() {
   const src = v ?? lsGet();
   return { ...normPrefs(src), fresh: !src };
 }
-let layoutOk = true; // eldre server avviser ukjente felt i /me/layout (400): da prøves det ikke igjen
 function savePrefs() {
   clearTimeout(saveT);
   saveT = setTimeout(async () => {
     const v = { z: S.p.z, c: S.p.c, show: S.p.show, md: S.p.md, vz: S.p.vz ?? {} };
     lsSet(v);
-    try { await api(EP.prefs, { method: 'PUT', json: toSrv(S.p) }); } catch { if (layoutOk) api('/me/layout', { method: 'PUT', json: { kart_v1: v } }).catch((e) => { if (e.status === 400) layoutOk = false; }); }
+    try { await api(EP.prefs, { method: 'PUT', json: toSrv(S.p) }); } catch { /* lagret lokalt; prøves igjen ved neste endring */ }
   }, 400);
 }
 
 /* ---------------- Data ---------------- */
 const normZones = (L) => (L ?? []).filter((z) => Number.isFinite(+z.lat) && Number.isFinite(+z.lon)).map((z, i) => ({ id: String(z.id ?? `z${i}`), n: z.name ?? 'Sone', lat: +z.lat, lon: +z.lon, r: Math.round(+z.radius || 150), c: HEX.test(z.color ?? '') ? z.color : ZCOL[i % ZCOL.length] }));
 async function loadFamily(fresh) {
-  // Fra /api/kart (samme delingsregler som Familie, avgjort på serveren). Eldre server: /api/family med samme filter her.
+  // Fra /api/kart (samme delingsregler som Familie, avgjort på serveren). Q19: reserven via /api/family er fjernet.
   try {
     const d = fresh || !state0 ? await api(EP.state) : state0; state0 = null;
     if (!Array.isArray(d?.zones) || !Array.isArray(d?.people)) throw new Error('mangler');
     S.zones = normZones(d.zones);
     S.ppl = d.people.filter((m) => Number.isFinite(+m.lat)).map((m, i) => ({ id: m.userId, me: !!m.self, n: m.self ? (m.fullName || 'Du') : (m.fullName || m.name || 'Ukjent'), c: HEX.test(m.color ?? '') ? m.color : PCOL[i % PCOL.length], la: +m.lat, lo: +m.lon, ts: Date.parse(m.updatedAt ?? '') || null, photo: m.photoUrl ?? null }));
-    if (!S.p.vz) { S.p.vz = {}; const h = S.zones.find((z) => /^hjem/i.test(z.n)) ?? S.zones[0]; if (h) S.p.vz[h.id] = true; }
-    return;
-  } catch { /* faller tilbake til Familie */ }
-  try {
-    const d = await api('/family');
-    S.zones = normZones(d?.zones);
-    // Samme regler som Familie: du selv, og andre bare når de deler med deg (sharing «on»). Pauset/av vises ikke.
-    S.ppl = (d?.members ?? []).filter((m) => m.last && Number.isFinite(+m.last.lat) && (m.self || m.sharing === 'on')).map((m, i) => ({
-      id: m.userId, me: !!m.self, n: m.name || m.username || 'Ukjent', c: HEX.test(m.color ?? '') ? m.color : PCOL[i % PCOL.length], la: +m.last.lat, lo: +m.last.lon, ts: m.last.ts, photo: m.photoUrl ?? m.avatarUrl ?? null }));
   } catch { S.zones = []; S.ppl = []; }
   if (!S.p.vz) { S.p.vz = {}; const h = S.zones.find((z) => /^hjem/i.test(z.n)) ?? S.zones[0]; if (h) S.p.vz[h.id] = true; }
 }
