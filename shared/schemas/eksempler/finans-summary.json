@@ -2,17 +2,17 @@
   "month": "2026-11",
   "from": "2026-11-01",
   "to": "2026-12-01",
-  "daysLeft": 16,
+  "daysLeft": 15,
   "inn": 41200,
-  "ut": 15573.6,
+  "ut": 15960.1,
   "prevInn": 41200,
   "prevUt": 37068,
-  "budgetTotal": 24550,
-  "budgetUsed": 15573.6,
-  "left": 8976.4,
-  "savedYear": 67170.4,
+  "budgetTotal": 23800,
+  "budgetUsed": 15960.1,
+  "left": 7839.9,
+  "savedYear": 66783.9,
   "yearGoal": 120000,
-  "balance": 182770.4,
+  "balance": 182383.9,
   "balanceSeries": [
     120600,
     120600,
@@ -57,7 +57,7 @@
       "categoryId": 1,
       "category": "Mat og dagligvarer",
       "color": "#FF9F5A",
-      "amount": 1387.2,
+      "amount": 1773.7,
       "budget": 6000
     },
     {
@@ -68,11 +68,11 @@
       "budget": 1500
     },
     {
-      "categoryId": 8,
-      "category": "Skole",
-      "color": "#C9E265",
-      "amount": 649,
-      "budget": 1000
+      "categoryId": 6,
+      "category": "Fritid og hobby",
+      "color": "#5FD3A8",
+      "amount": 749,
+      "budget": 1500
     }
   ],
   "budgets": [
@@ -81,8 +81,8 @@
       "category": "Mat og dagligvarer",
       "color": "#FF9F5A",
       "budget": 6000,
-      "used": 1387.2,
-      "count": 2,
+      "used": 1773.7,
+      "count": 3,
       "topMerchant": "Meny Bislett",
       "prevUsed": 14505.7
     },
@@ -125,7 +125,44 @@
   ],
   "recent": [
     {
-      "id": 2,
+      "id": 1,
+      "date": "2026-11-16",
+      "amount": -386.5,
+      "amountOre": -38650,
+      "description": "REMA 1000 Bislett",
+      "merchant": "REMA 1000 Bislett",
+      "note": "",
+      "source": "csv",
+      "categoryId": 1,
+      "category": "Mat og dagligvarer",
+      "color": "#FF9F5A",
+      "kind": "expense",
+      "accountId": 1,
+      "account": "Brukskonto",
+      "receipt": null,
+      "receiptId": null,
+      "type": "expense",
+      "folderId": null,
+      "hasBankRow": true,
+      "aiShort": "Mat og dagligvarer",
+      "aiLong": "Kjøp hos REMA 1000 Bislett på 386,50 kr. Kategorisert som mat og dagligvarer.",
+      "domain": "rema.no",
+      "lines": [],
+      "folder": null,
+      "tags": [],
+      "added": {
+        "at": "2026-11-16T08:00:00.000Z",
+        "by": "owner",
+        "byName": "Sebastian",
+        "source": "import",
+        "via": null,
+        "sourceLabel": "bankimport fra DNB",
+        "text": "Lagt til 16.11.2026 kl. 09.00 · bankimport fra DNB",
+        "edited": null
+      }
+    },
+    {
+      "id": 3,
       "date": "2026-11-15",
       "amount": -612.4,
       "amountOre": -61240,
@@ -151,18 +188,18 @@
       "folder": null,
       "tags": [],
       "added": {
-        "at": "2026-11-15T17:00:26.230Z",
+        "at": "2026-11-16T08:00:00.000Z",
         "by": "owner",
         "byName": "Sebastian",
         "source": "import",
         "via": null,
         "sourceLabel": "bankimport fra Bank Norwegian",
-        "text": "Lagt til 15.11.2026 kl. 18.00 · bankimport fra Bank Norwegian",
+        "text": "Lagt til 16.11.2026 kl. 09.00 · bankimport fra Bank Norwegian",
         "edited": null
       }
     },
     {
-      "id": 1,
+      "id": 2,
       "date": "2026-11-15",
       "amount": -349,
       "amountOre": -34900,
@@ -171,7 +208,7 @@
       "note": "",
       "source": "csv",
       "categoryId": 5,
-      "category": "Hjem",
+      "category": "Hjem og interiør",
       "color": "#8FD3FF",
       "kind": "expense",
       "accountId": 2,
@@ -197,18 +234,18 @@
       "folder": null,
       "tags": [],
       "added": {
-        "at": "2026-11-15T17:00:26.230Z",
+        "at": "2026-11-16T08:00:00.000Z",
         "by": "owner",
         "byName": "Sebastian",
         "source": "import",
         "via": null,
         "sourceLabel": "bankimport fra Bank Norwegian",
-        "text": "Lagt til 15.11.2026 kl. 18.00 · bankimport fra Bank Norwegian",
+        "text": "Lagt til 16.11.2026 kl. 09.00 · bankimport fra Bank Norwegian",
         "edited": null
       }
     },
     {
-      "id": 3,
+      "id": 4,
       "date": "2026-11-14",
       "amount": -1284,
       "amountOre": -128400,
@@ -234,50 +271,13 @@
       "folder": null,
       "tags": [],
       "added": {
-        "at": "2026-11-15T17:00:26.231Z",
+        "at": "2026-11-16T08:00:00.000Z",
         "by": "owner",
         "byName": "Sebastian",
         "source": "import",
         "via": null,
         "sourceLabel": "bankimport fra DNB",
-        "text": "Lagt til 15.11.2026 kl. 18.00 · bankimport fra DNB",
-        "edited": null
-      }
-    },
-    {
-      "id": 4,
-      "date": "2026-11-13",
-      "amount": -89,
-      "amountOre": -8900,
-      "description": "Kaffebrenneriet",
-      "merchant": "Kaffebrenneriet",
-      "note": "",
-      "source": "csv",
-      "categoryId": 2,
-      "category": "Restaurant og kafé",
-      "color": "#F2C14E",
-      "kind": "expense",
-      "accountId": 2,
-      "account": "Kredittkort",
-      "receipt": null,
-      "receiptId": null,
-      "type": "expense",
-      "folderId": null,
-      "hasBankRow": true,
-      "aiShort": "Kaffe og bakst",
-      "aiLong": "Kjøp hos Kaffebrenneriet på 89,00 kr. Kategorisert som restaurant og kafé.",
-      "domain": "kaffebrenneriet.no",
-      "lines": [],
-      "folder": null,
-      "tags": [],
-      "added": {
-        "at": "2026-11-15T17:00:26.231Z",
-        "by": "owner",
-        "byName": "Sebastian",
-        "source": "import",
-        "via": null,
-        "sourceLabel": "bankimport fra Bank Norwegian",
-        "text": "Lagt til 15.11.2026 kl. 18.00 · bankimport fra Bank Norwegian",
+        "text": "Lagt til 16.11.2026 kl. 09.00 · bankimport fra DNB",
         "edited": null
       }
     }
@@ -294,7 +294,7 @@
       "date": "2026-11-15",
       "total": 349,
       "categoryId": 5,
-      "category": "Hjem",
+      "category": "Hjem og interiør",
       "accountId": 2,
       "account": "Kredittkort",
       "confidence": 0.97,
@@ -326,7 +326,7 @@
         }
       },
       "match": {
-        "id": 1,
+        "id": 2,
         "date": "2026-11-15",
         "amount": -349,
         "amountOre": -34900,
@@ -335,7 +335,7 @@
         "note": "",
         "source": "csv",
         "categoryId": 5,
-        "category": "Hjem",
+        "category": "Hjem og interiør",
         "color": "#8FD3FF",
         "kind": "expense",
         "accountId": 2,
@@ -345,24 +345,24 @@
         "type": "expense",
         "folderId": null,
         "hasBankRow": true,
-        "aiShort": "Til hjemmet",
-        "aiLong": "Kjøp hos Clas Ohlson på 349,00 kr. Kategorisert som hjem.",
+        "aiShort": "Hjem og interiør",
+        "aiLong": "Kjøp hos Clas Ohlson på 349,00 kr. Kategorisert som hjem og interiør.",
         "domain": "clasohlson.com",
         "lines": [],
         "folder": null,
         "tags": [],
         "added": {
-          "at": "2026-11-15T17:00:26.230Z",
+          "at": "2026-11-16T08:00:00.000Z",
           "by": "owner",
           "byName": "Sebastian",
           "source": "import",
           "via": null,
           "sourceLabel": "bankimport fra Bank Norwegian",
-          "text": "Lagt til 15.11.2026 kl. 18.00 · bankimport fra Bank Norwegian",
+          "text": "Lagt til 16.11.2026 kl. 09.00 · bankimport fra Bank Norwegian",
           "edited": null
         }
       },
-      "created": 1794762026240,
+      "created": 1794816000000,
       "name": null,
       "lines": [
         {
@@ -409,13 +409,13 @@
       "timeoutEngine": null,
       "retryAt": null,
       "added": {
-        "at": "2026-11-15T17:00:26.240Z",
+        "at": "2026-11-16T08:00:00.000Z",
         "by": "owner",
         "byName": "Sebastian",
         "source": "scan",
         "via": null,
         "sourceLabel": "skannet kvittering",
-        "text": "Lagt til 15.11.2026 kl. 18.00 · skannet kvittering · Sebastian",
+        "text": "Lagt til 16.11.2026 kl. 09.00 · skannet kvittering · Sebastian",
         "edited": null
       },
       "domain": "clasohlson.com",
@@ -458,7 +458,7 @@
         }
       },
       "match": {
-        "id": 2,
+        "id": 3,
         "date": "2026-11-15",
         "amount": -612.4,
         "amountOre": -61240,
@@ -484,17 +484,17 @@
         "folder": null,
         "tags": [],
         "added": {
-          "at": "2026-11-15T17:00:26.230Z",
+          "at": "2026-11-16T08:00:00.000Z",
           "by": "owner",
           "byName": "Sebastian",
           "source": "import",
           "via": null,
           "sourceLabel": "bankimport fra Bank Norwegian",
-          "text": "Lagt til 15.11.2026 kl. 18.00 · bankimport fra Bank Norwegian",
+          "text": "Lagt til 16.11.2026 kl. 09.00 · bankimport fra Bank Norwegian",
           "edited": null
         }
       },
-      "created": 1794762025241,
+      "created": 1794815999000,
       "name": null,
       "lines": [],
       "hasBoxes": false,
@@ -525,13 +525,13 @@
       "timeoutEngine": null,
       "retryAt": null,
       "added": {
-        "at": "2026-11-15T17:00:25.241Z",
+        "at": "2026-11-16T07:59:59.000Z",
         "by": "owner",
         "byName": "Sebastian",
         "source": "scan",
         "via": null,
         "sourceLabel": "skannet kvittering",
-        "text": "Lagt til 15.11.2026 kl. 18.00 · skannet kvittering · Sebastian",
+        "text": "Lagt til 16.11.2026 kl. 08.59 · skannet kvittering · Sebastian",
         "edited": null
       },
       "domain": "circlek.no",
@@ -557,11 +557,15 @@
       "month": null,
       "active": true,
       "detected": false,
-      "categoryId": 7,
-      "category": "Abonnementer",
-      "color": "#FF6B8B",
+      "categoryId": 8,
+      "category": "Annet",
+      "color": "#A0A0AA",
       "accountId": 1,
-      "next": "2026-11-20"
+      "next": "2026-11-20",
+      "nextDate": "2026-11-20",
+      "cycle": "monthly",
+      "cycleName": "Månedlig",
+      "label": "Månedlig · neste trekk 20. nov."
     },
     {
       "id": 5,
@@ -577,7 +581,11 @@
       "category": "Bolig",
       "color": "#B79CFF",
       "accountId": 1,
-      "next": "2026-11-25"
+      "next": "2026-11-25",
+      "nextDate": "2026-11-25",
+      "cycle": "monthly",
+      "cycleName": "Månedlig",
+      "label": "Månedlig · neste trekk 25. nov."
     },
     {
       "id": 6,
@@ -589,11 +597,15 @@
       "month": null,
       "active": true,
       "detected": false,
-      "categoryId": 7,
-      "category": "Abonnementer",
-      "color": "#FF6B8B",
+      "categoryId": 6,
+      "category": "Fritid og hobby",
+      "color": "#5FD3A8",
       "accountId": 1,
-      "next": "2026-11-28"
+      "next": "2026-11-28",
+      "nextDate": "2026-11-28",
+      "cycle": "monthly",
+      "cycleName": "Månedlig",
+      "label": "Månedlig · neste trekk 28. nov."
     },
     {
       "id": 1,
@@ -609,7 +621,11 @@
       "category": "Bolig",
       "color": "#B79CFF",
       "accountId": 1,
-      "next": "2026-12-01"
+      "next": "2026-12-01",
+      "nextDate": "2026-12-01",
+      "cycle": "monthly",
+      "cycleName": "Månedlig",
+      "label": "Månedlig · neste trekk 1. des."
     }
   ],
   "dailyOut": [
@@ -630,11 +646,11 @@
       "amount": 436
     }
   ],
-  "spentMonth": 15573.6,
-  "day": 15,
+  "spentMonth": 15960.1,
+  "day": 16,
   "daysInMonth": 30,
   "monthName": "november",
-  "spentLabel": "Brukt i november · dag 15 av 30",
-  "ring": 0.5,
-  "dayText": "15."
+  "spentLabel": "Brukt i november · dag 16 av 30",
+  "ring": 0.533,
+  "dayText": "16."
 }

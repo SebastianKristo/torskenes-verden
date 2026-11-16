@@ -31,3 +31,16 @@ test('eksemplene har ingen ekte tokens', () => {
     assert.doesNotMatch(raw, /eyJ[A-Za-z0-9_-]{10,}\./, f);
   }
 });
+
+// Fase 7: «npm run kontrakt:eksempler» skal gi de samme filene hver gang (fast klokke og faste tekster for tilfeldige verdier),
+// så en kjøring uten kontraktendring ikke gir en diff. Webhook-hemmeligheten i Media-adressene skal heller ikke ligge i repoet.
+test('eksemplene har fast klokke og ingen tilfeldige hemmeligheter', () => {
+  const tok = JSON.parse(readFileSync(join(DIR, 'auth-token.json'), 'utf8'));
+  assert.equal(tok.expiresAt, '2027-05-15T08:00:00.000Z', 'innloggingen er laget kl. 09:00 16.11.2026 (Oslo) + 180 dager');
+  for (const f of readdirSync(DIR)) {
+    const raw = readFileSync(join(DIR, f), 'utf8');
+    for (const m of raw.matchAll(/[?&]token=([^&"\s]+)/g)) assert.equal(m[1], 'EKSEMPEL', `${f}: token i adressen`);
+  }
+  const ids = JSON.parse(readFileSync(join(DIR, 'tokens.json'), 'utf8')).map((t) => t.id);
+  assert.ok(ids.every((id) => /^eksempel\d+$/.test(id)), `tokens.json: ${ids}`);
+});
