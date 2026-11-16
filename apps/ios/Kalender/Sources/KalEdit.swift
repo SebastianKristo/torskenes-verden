@@ -71,6 +71,9 @@ extension KalStore {
         f.lat = e.lat
         f.lon = e.lon
         f.att = e.att44 ?? []
+        // Q26: merknad og gjentakelse kan også endres (ikke Glimt-teksten, den har egen rad).
+        f.note = e.note.hasPrefix("Lagt til av Glimt") ? "" : e.note
+        f.repeatRule = e.repeatRule ?? "none"
         KalNew46Guard.shared.arm(f)
         withAnimation(.easeOut(duration: 0.22)) {
             detId = nil
@@ -105,6 +108,12 @@ extension KalStore {
         ev.cal = f.cal
         ev.rem = f.allDay ? nil : f.rem
         ev.att44 = f.att.isEmpty ? nil : f.att
+        let oldNote: String = old.note.hasPrefix("Lagt til av Glimt") ? "" : old.note
+        let noteChanged: Bool = f.note != oldNote
+        if noteChanged { ev.note = f.note }
+        let oldRepeat: String = old.repeatRule ?? "none"
+        let repeatChanged: Bool = f.repeatRule != oldRepeat
+        ev.repeatRule = f.repeatRule == "none" ? nil : f.repeatRule
         KalEdit44Model.shared.before[id] = old
         replace44(ev)
         KalHaptic.done()
@@ -115,7 +124,10 @@ extension KalStore {
         let inv: String = newAtt.isEmpty ? "" : " · invitasjon sendt til " + String(newAtt.count)
         showToast("Lagret «" + t + "»" + inv, undo: "e44:" + id)
         if ev.pending || id.hasPrefix("u") { return }
-        let body: [String: Any] = KalStore.patchBody44(ev, scope: scope, etag: old.etag44)
+        var body: [String: Any] = KalStore.patchBody44(ev, scope: scope, etag: old.etag44)
+        // Q26: merknad og gjentakelse sendes bare når de er endret (serveren tar bort «Lærer: …» fra merknaden).
+        if noteChanged { body["note"] = f.note }
+        if repeatChanged { body["repeat"] = f.repeatRule }
         Task { await self.patch44(id, body, title: t, invite: newAtt) }
     }
 
@@ -148,6 +160,8 @@ extension KalStore {
         ev.lon = f.lon
         if f.lat != nil { ev.address = loc }
         ev.att44 = f.att.isEmpty ? nil : f.att
+        ev.note = f.note.trimmingCharacters(in: .whitespacesAndNewlines)
+        ev.repeatRule = f.repeatRule == "none" ? nil : f.repeatRule
         pending.append(ev)
         savePending()
         rebuild()

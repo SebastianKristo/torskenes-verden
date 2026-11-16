@@ -55,3 +55,25 @@ test('Q26: «Lær Glimt hva dette er…» finnes i den delte Kalenderen (Glimt h
   assert.match(code('Kalender/Sources/KalApp.swift'), /KalLearnSheet\(\)/);
   assert.match(code('Kalender/Sources/KalDetailExtras.swift'), /KalLearnModel\.shared\.open\(e\)/);
 });
+
+test('Q26: Ny hendelse har Gjenta, Merknad og «✦ Beskriv med Glimt» (POST /api/kalender/describe), og et utfylt skjema fra lenke', () => {
+  const st = code('Kalender/Sources/KalStore.swift');
+  assert.match(st, /var note: String = ""\n\s+var repeatRule: String = "none"\n\s+var error: String = ""/);
+  assert.match(st, /if let r = ev\.repeatRule, r != "none" \{ body\["repeat"\] = r \}/);
+  assert.match(st, /else if !ev\.note\.isEmpty \{ body\["note"\] = ev\.note \}/);
+  const x = code('Kalender/Sources/KalNewExtras.swift');
+  assert.match(x, /KalLabel\(text: "GJENTA"\)/);
+  assert.match(x, /TextField\("Merknad", text: \$f\.note/);
+  assert.match(x, /KalNet\.send\("POST", "\/api\/kalender\/describe", json: \["text": text, "today": KalD\.todayKey\(\)\]/);
+  const sh = code('Kalender/Sources/KalSheets.swift');
+  assert.match(sh, /if !editing \{ KalDescribeBox\(f: \$f\) \}/);
+  assert.match(sh, /KalNewMore\(f: \$f\)/);
+  // Rediger: merknad og gjentakelse sendes bare når de er endret.
+  const ed = code('Kalender/Sources/KalEdit.swift');
+  assert.match(ed, /if noteChanged \{ body\["note"\] = f\.note \}/);
+  assert.match(ed, /if repeatChanged \{ body\["repeat"\] = f\.repeatRule \}/);
+  // kalender://ny?title=… åpner skjemaet utfylt (lagrer ingenting).
+  const l = code('Kalender/Sources/KalLinks.swift');
+  assert.match(l, /if let t = q\("title"\) \{\n\s+s\.openPrefilled\(title: t, date: q\("date"\)/);
+  assert.match(x, /presentNew46\(f\)/);
+});

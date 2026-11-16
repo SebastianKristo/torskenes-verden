@@ -27,6 +27,11 @@ struct KalNewForm: Equatable {
     var lat: Double? = nil
     var lon: Double? = nil
     var att: [KalAtt44] = []
+    /// Q26 (fra Homelabs gamle kalender): merknad, gjentakelse (none | daily | weekly | monthly) og en feilmelding
+    /// over skjemaet (f.eks. «Fant ikke dato. Velg dato og lagre.» når en rask time ikke kunne tolkes).
+    var note: String = ""
+    var repeatRule: String = "none"
+    var error: String = ""
 }
 
 @MainActor
@@ -602,7 +607,9 @@ final class KalStore {
                                    "remindMinutes": ev.rem ?? 0, "origin": ev.src.isEmpty ? "Kalender" : "Glimt · Kalender"]
         if let s = ev.s { body["start"] = KalD.hm(s) }
         if let e = ev.e { body["end"] = KalD.hm(Swift.min(e, 1439)) }
-        if !ev.src.isEmpty { body["note"] = "Lagt til av Glimt: «" + ev.src + "»" }
+        if !ev.src.isEmpty { body["note"] = "Lagt til av Glimt: «" + ev.src + "»" } else if !ev.note.isEmpty { body["note"] = ev.note }
+        // Q26: gjentakelse fra skjemaet (Gjenta).
+        if let r = ev.repeatRule, r != "none" { body["repeat"] = r }
         // Prompt 44: koordinater fra adresseforslaget og deltakere.
         if let la = ev.lat, let lo = ev.lon { body["geo"] = ["lat": la, "lon": lo] }
         if let att = ev.att44, !att.isEmpty { body["attendees"] = att.map { (a: KalAtt44) -> [String: Any] in a.json } }

@@ -305,11 +305,18 @@ struct KalNewSheet: View {
     private var fields: some View {
         VStack(alignment: .leading, spacing: 12) {
             KalNewTop44(editing: editing, ok: ok, cancel: { cancel() }, save: { save() })
+            // Q26: «✦ Beskriv med Glimt» fyller ut feltene (POST /api/kalender/describe), og feilmeldingen fra en rask time.
+            if !f.error.isEmpty {
+                Text(f.error).font(KalFont.ui(13, .semibold)).foregroundStyle(t.acc).fixedSize(horizontal: false, vertical: true)
+            }
+            if !editing { KalDescribeBox(f: $f) }
             titleField
             KalAddrField44(f: $f)
             KalNewWhen44(f: $f)
             KalNewCals44(cal: $f.cal)
             if !f.allDay { KalNewRem44(rem: $f.rem) }
+            // Q26: Gjenta og Merknad (KalNewExtras.swift).
+            KalNewMore(f: $f)
             KalPeople44(att: $f.att)
             if !editing { tip }
         }
