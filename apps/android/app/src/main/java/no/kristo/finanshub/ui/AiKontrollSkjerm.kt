@@ -348,7 +348,7 @@ private fun AcModels34(vm: AppViewModel, T: AcT34) {
             }
         }
     }
-    AcRecommend39(vm, T) // prompt 39: ✦ Glimt anbefaler (ui/AiRec39.kt)
+    AcRecommend39(vm, T) // prompt 39: ✦ Glimt anbefaler (ui/AiAnbefaling.kt)
     AcHead34(T, "LAST NED FRA OLLAMA")
     AcCard34(T) {
         val q = s.aiQ.trim().lowercase()

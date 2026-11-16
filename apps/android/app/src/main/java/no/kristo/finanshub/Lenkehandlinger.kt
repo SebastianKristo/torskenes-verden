@@ -12,7 +12,7 @@ import java.security.SecureRandom
  *  - appens egne varsler, widgeter og dynamiske snarveier: intentet bærer [EXTRA] med en tilfeldig nøkkel som bare ligger
  *    i appens private lagring ([intern86]). Ingen utenfor appen kan sette den. Handlingen utføres som før.
  *  - alt annet (ACTION_VIEW uten nøkkelen): [linkAsk86] avgjør om lenken endrer noe. Da vises «Vil du … ?» med
- *    Avbryt / Utfør (ui/Link86Ui.kt) før noe skjer. Lenker som bare åpner en side, åpnes som før.
+ *    Avbryt / Utfør (ui/Lenkehandlinger.kt) før noe skjer. Lenker som bare åpner en side, åpnes som før.
  */
 object Link86 {
     const val EXTRA = "no.kristo.finanshub.INTERN86"

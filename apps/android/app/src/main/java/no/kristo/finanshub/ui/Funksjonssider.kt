@@ -40,7 +40,7 @@ import java.text.NumberFormat
 import java.util.Locale
 
 /*
- * Prompt 51 (ANDFEAT51): skallet for sidene i Feat51.kt (Pages51) og felles byggeklosser.
+ * Prompt 51 (ANDFEAT51): skallet for sidene i Funksjonssider.kt (Pages51) og felles byggeklosser.
  *  - Sidene ligger i fullskjerm over Papir-skallet (som Familie og Media), med «‹ Tilbake», serif-tittel og egen melding nederst.
  *  - Fold/brett (LocalWide45): innholdet er sentrert med maks 980 dp, og sidene bruker to kolonner der det passer (Cols51).
  *  - Farger fra PaperPal (lys/mørk/glass). Berøringsflater ≥ 48 dp og TalkBack-etiketter på knapper uten tekst.

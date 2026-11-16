@@ -116,7 +116,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     var selectedReceipt by mutableStateOf<String?>(null)
     var busy by mutableStateOf(false)
     private var message73 by mutableStateOf<String?>(null)
-    /** Prompt 73 (ANDFIX73): meldingen i UI – avbrudd («StandaloneCoroutine was cancelled») droppes, rå exception-tekst byttes ut (AndFix73.kt). */
+    /** Prompt 73 (ANDFIX73): meldingen i UI – avbrudd («StandaloneCoroutine was cancelled») droppes, rå exception-tekst byttes ut (Feiltekst.kt). */
     var message: String?
         get() = message73
         set(v) { message73 = cleanErr73(v) }
@@ -377,7 +377,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                     if (pending != null && !code.isNullOrBlank()) message = e.message ?: "Feil kode"
                     pending = PendingLogin(srv, username, password); return@launch
                 }
-                // Prompt 51: ny enhet fra internett må godkjennes fra en kjent enhet (Sec51.kt, ui/Sec51Ui.kt).
+                // Prompt 51: ny enhet fra internett må godkjennes fra en kjent enhet (Enhetsgodkjenning.kt, ui/Enhetsgodkjenning.kt).
                 if (e.code == APPROVAL_CODE51) { pending = null; startApproval51(srv, e.body51); return@launch }
                 throw e
             }
@@ -711,14 +711,14 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /** «camera» eller «files»: FinansApp åpner kameraet eller filvelgeren når denne settes. */
     var pendingScan by mutableStateOf<String?>(null)
 
-    /** Prompt 86: lenken som venter på «Utfør» (kom utenfra og endrer noe) – ui/Link86Ui.kt. */
+    /** Prompt 86: lenken som venter på «Utfør» (kom utenfra og endrer noe) – ui/Lenkehandlinger.kt. */
     var link86 by mutableStateOf<Pair<Uri, Ask86>?>(null)
 
-    /** [outside86] = lenken kom utenfra (nettside/annen app), ikke fra appens egne varsler, widgeter eller knapper (Link86.kt). */
+    /** [outside86] = lenken kom utenfra (nettside/annen app), ikke fra appens egne varsler, widgeter eller knapper (Lenkehandlinger.kt). */
     fun deepLink(uri: Uri, outside86: Boolean = false) {
         // Prompt 38: homelab://login?c=… / https://<vert>/l/… (QR-innlogging på ny enhet).
         if (qrLink38(uri)) return
-        // Prompt 51 (ANDFEAT51): invitasjon for nytt familiemedlem (papir://join?…, https://…/join/…) – Onboard51.kt.
+        // Prompt 51 (ANDFEAT51): invitasjon for nytt familiemedlem (papir://join?…, https://…/join/…) – Invitasjon.kt.
         if (joinLink51(uri)) return
         // Prompt 41: homelab://app-auth / https://<vert>/app-auth (Kalender ber Homelab om å godkjenne innloggingen).
         if (appAuthLink41(uri)) return
@@ -788,9 +788,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             "faste-oppgaver", "glimt-husker", "kvalitet" -> settingsLink35((uri.host + (uri.path ?: "")).trim('/'))
             // Prompt 68: Innstillinger → Husstand → Brukere og familie (finanshub://familie er fortsatt Familie-siden, se familyLink50).
             "husstand", "brukere-og-familie" -> settingsLink35("brukere-og-familie")
-            // Prompt 51 (ANDPLAT51): app-snarveier og App Actions (Shortcuts51Plat.kt).
+            // Prompt 51 (ANDPLAT51): app-snarveier og App Actions (Snarveier.kt).
             "act51" -> act51Link(uri)
-            // Prompt 51 (ANDFEAT51): Planlegging, familiekalender, Media-kveld og felles søk (Feat51.kt).
+            // Prompt 51 (ANDFEAT51): Planlegging, familiekalender, Media-kveld og felles søk (Funksjonssider.kt).
             "plan", "planlegging", "famcal", "familiekalender", "kveld", "mediakveld", "sok", "search51" -> deepLink51(uri)
         }
     }
@@ -1674,7 +1674,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         private set
     var photoMenu by mutableStateOf(false)
 
-    fun setPaperMode(m: String) { setPref(AppPrefs.PAPER_MODE, m); pushDesign(); runCatching { themeChanged51(m) } } // prompt 51: tema synkes (Theme51.kt)
+    fun setPaperMode(m: String) { setPref(AppPrefs.PAPER_MODE, m); pushDesign(); runCatching { themeChanged51(m) } } // prompt 51: tema synkes (TemaSynk.kt)
     fun setPhotoKind(k: String) { setPref(AppPrefs.PHOTO, k); photoMenu = false; loadPhoto(); pushDesign() }
 
     /** Papir-fanene: Hjem, Finans, Mat, Sporing og Mer. */
@@ -3287,7 +3287,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         taskNext = nextTasks(tasks!!)
         if (done) Haptics.success() else Haptics.select()
         launch {
-            // Prompt 51 (ANDPLAT51): uten nett legges avkryssingen i offline-køen (Offline51Plat.kt) og sendes senere.
+            // Prompt 51 (ANDPLAT51): uten nett legges avkryssingen i offline-køen (OfflineKo.kt) og sendes senere.
             if (!sendOrQueue51(appCtx, api, "PATCH", "/tasks/" + URLEncoder.encode(id, "UTF-8"), JSONObject().put("done", done), it0.title, "task", id)) {
                 flash("Uten nett – sendes når du er på nett igjen"); return@launch
             }
@@ -3654,7 +3654,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     internal suspend fun <T> api24b(f: suspend Api.() -> T): T = api.f()
     internal fun launch24b(block: suspend () -> Unit) = launch(block)
 
-    /* ---------- Prompt 24 (A): Bursdager (Birthdays24.kt), Ruter (Ruter24.kt) og app-ikon/navn (AppIcon24.kt) ---------- */
+    /* ---------- Prompt 24 (A): Bursdager (Birthdays24.kt), Ruter (Ruter24.kt) og app-ikon/navn (AppIkon.kt) ---------- */
     val bd24 = Bd24State()
     internal suspend fun <T> api24a(f: suspend Api.() -> T): T = api.f()
     internal fun launch24a(block: suspend () -> Unit) = launch(block)
@@ -3714,15 +3714,15 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     internal suspend fun <T> api30(f: suspend Api.() -> T): T = api.f()
     internal fun launch30(block: suspend () -> Unit) = launch(block)
 
-    /* ---------- Prompt 31 (ANDROID31): Glimt, Nordlys OS, prøveperioder og varsler når appen er lukket (P31.kt, Notify31.kt og ui-filene med 31) ---------- */
+    /* ---------- Prompt 31 (ANDROID31): Glimt, Nordlys OS, prøveperioder og varsler når appen er lukket (P31.kt, Bakgrunnsvarsler.kt og ui-filene med 31) ---------- */
     val p31 = P31State()
     internal suspend fun <T> api31(f: suspend Api.() -> T): T = api.f()
     internal fun launch31(block: suspend () -> Unit) = launch(block)
     internal fun launchJob31(block: suspend () -> Unit): kotlinx.coroutines.Job = launch(block)
 
-    /* ---------- Prompt 33 (GLIMT-MEMORY): «Glimt husker» – alias per bruker (Memory33.kt, ui/Memory33Ui.kt) ---------- */
+    /* ---------- Prompt 33 (GLIMT-MEMORY): «Glimt husker» – alias per bruker (GlimtHusker.kt, ui/GlimtHusker.kt) ---------- */
     val mem33 = Mem33State()
-    val g67 = G67State() // prompt 67 (ANDSET67): Glimt lærer, Faste oppgaver, Entitetsregister, Glimt husker 63 og Kvalitet (G67.kt)
+    val g67 = G67State() // prompt 67 (ANDSET67): Glimt lærer, Faste oppgaver, Entitetsregister, Glimt husker 63 og Kvalitet (GlimtInnstillingerSider.kt)
     internal suspend fun <T> api33(f: suspend Api.() -> T): T = api.f()
     internal fun launch33(block: suspend () -> Unit) = launch(block)
 
@@ -3772,7 +3772,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     internal fun launch38(block: suspend () -> Unit) = launch(block)
     internal suspend fun loadDomains38() = loadDomains()
 
-    /* ---------- Prompt 39 (ANDROID39): myk varsellyd, profilbilde, valgt modell i Chat, sveip bort, Glimt-varsel (P39.kt, Sound39.kt, ui/Ui39.kt) ---------- */
+    /* ---------- Prompt 39 (ANDROID39): myk varsellyd, profilbilde, valgt modell i Chat, sveip bort, Glimt-varsel (P39.kt, Varsellyd.kt, ui/Ui39.kt) ---------- */
     val p39 = P39State()
     internal suspend fun <T> api39(f: suspend Api.() -> T): T = api.f()
     internal fun launch39(block: suspend () -> Unit) = launch(block)
@@ -3901,7 +3901,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     internal val scope50: kotlinx.coroutines.CoroutineScope get() = viewModelScope
     internal val appCtx50: Context get() = appCtx
 
-    /* ---------- Prompt 51 (APPAND51): ny enhet godkjennes, krasjrapporter, feature flags, «Nytt i denne versjonen», ntfy (Sec51.kt, Qa51.kt, Ntfy51.kt, ui/Sec51Ui.kt) ---------- */
+    /* ---------- Prompt 51 (APPAND51): ny enhet godkjennes, krasjrapporter, feature flags, «Nytt i denne versjonen», ntfy (Enhetsgodkjenning.kt, Krasjrapporter.kt, Ntfy.kt, ui/Enhetsgodkjenning.kt) ---------- */
     val sec51 = Sec51State()
     val qa51 = Qa51State()
     val ntfy51 = Ntfy51State()
@@ -3912,7 +3912,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /** Godkjent innlogging (finishUrl) legges til som en vanlig innlogging. */
     internal fun addAccount51(srv: String, r: LoginResult) = addQrAccount46(srv, r)
 
-    /* ---------- Prompt 52 (AND52B): Ruter med en gang, Vær nå, kalenderkontekst, brief-kort, figur per bruker, logoer (P52B.kt, ui/Ui52B.kt, ui/Blekk52.kt) ---------- */
+    /* ---------- Prompt 52 (AND52B): Ruter med en gang, Vær nå, kalenderkontekst, brief-kort, figur per bruker, logoer (P52B.kt, ui/Ui52B.kt, ui/GlimtBlekksprut.kt) ---------- */
     val p52b = P52BState()
     internal suspend fun <T> api52b(f: suspend Api.() -> T): T = api.f()
     internal fun launch52b(block: suspend () -> Unit) = launch(block)
@@ -3938,7 +3938,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         runCatching { Jul40.ensure(appCtx) }
         // Prompt 44: pågående «Logg inn som» (stripa) eller avslutt den stille når tokenet har gått ut.
         runCatching { restoreAs44() }
-        // Prompt 51: enhetsnøkkel/-id, bufrede flagg, krasjkøen og ntfy-tjenesten (Qa51.kt).
+        // Prompt 51: enhetsnøkkel/-id, bufrede flagg, krasjkøen og ntfy-tjenesten (Krasjrapporter.kt).
         runCatching { start51() }
         if (loggedIn) refresh()
     }

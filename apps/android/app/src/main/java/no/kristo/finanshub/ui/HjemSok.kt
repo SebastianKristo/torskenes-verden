@@ -96,7 +96,7 @@ internal fun PaperSearch29(vm: AppViewModel, above45: Boolean = false) {
     // og kolonnen med pillen klipper ingenting.
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         if (above45) Box(Modifier.animateContentSize(tween(250))) { extras45() }
-        // Prompt 70: opptak → feltet blir et kort i samme farge (ui/Mic70.kt); ingen egen «Lytter …»-rad under lenger.
+        // Prompt 70: opptak → feltet blir et kort i samme farge (ui/Mikrofon.kt); ingen egen «Lytter …»-rad under lenger.
         if (mic70) Box(Modifier.searchRect70()) { MicCard70(vm) } else
         Row(
             Modifier.fillMaxWidth().searchRect70().height(46.dp).pillShadow80().clip(CircleShape).background(p.card).padding(start = 8.dp, end = 6.dp),
@@ -126,7 +126,7 @@ internal fun PaperSearch29(vm: AppViewModel, above45: Boolean = false) {
                 Modifier.size(30.dp).clip(CircleShape).background(p.line).clickable(role = Role.Button, onClickLabel = "Tøm") { vm.setHomeQuery29(""); no.kristo.finanshub.Glimt67.resetHomeConv() /* prompt 67: ny samtale */ },
                 contentAlignment = Alignment.Center,
             ) { WxIcon(H29_X, p.ink, 11.dp, stroke = 3.2f) }
-            SearchMic70(vm) // prompt 70: nytt mikrofonikon uten rød knapp (ui/Mic70.kt); motoren er Voice56 som før
+            SearchMic70(vm) // prompt 70: nytt mikrofonikon uten rød knapp (ui/Mikrofon.kt); motoren er Voice56 som før
             Box(
                 Modifier.height(34.dp).clip(CircleShape).background(p.bg)
                     .clickable(role = Role.Button, onClickLabel = "Åpne Chat") { Haptics.select(); fm.clearFocus(); vm.openChat() }
@@ -147,7 +147,7 @@ internal fun PaperSearch29(vm: AppViewModel, above45: Boolean = false) {
 internal fun Modifier.pillShadow80(): Modifier =
     this.shadow(elevation = 6.dp, shape = CircleShape, clip = false, ambientColor = Color.Black.copy(alpha = .18f), spotColor = Color.Black.copy(alpha = .30f))
 
-/** Prompt 70: søkefeltets ramme (uklippet) for «trykk utenfor» og pillen «Glimt svarte ↑» (ui/Home70.kt). */
+/** Prompt 70: søkefeltets ramme (uklippet) for «trykk utenfor» og pillen «Glimt svarte ↑» (ui/HjemRutenett.kt). */
 private fun Modifier.searchRect70(): Modifier = this.onGloballyPositioned { c ->
     Ans70.searchRect = androidx.compose.ui.geometry.Rect(c.positionInRoot(), androidx.compose.ui.geometry.Size(c.size.width.toFloat(), c.size.height.toFloat()))
 }
@@ -165,7 +165,7 @@ private fun Search29Extras45(vm: AppViewModel, text: String, above: Boolean, go:
         if (vm.p31.ans != null && text.isBlank()) {
             if (above) Box(Modifier.fillMaxWidth().heightIn(max = 220.dp).verticalScroll(rememberScrollState())) { HomeAnswer31(vm) } else HomeAnswer31(vm)
         }
-        Search51Hint(vm, text) // prompt 51 (ANDFEAT51): treff fra felles søk og «Søk i alt ›» (ui/Search51Ui.kt)
+        Search51Hint(vm, text) // prompt 51 (ANDFEAT51): treff fra felles søk og «Søk i alt ›» (ui/FellesSok.kt)
         if (appt == null && text.isNotBlank() && vm.qpPending52(text)) Text("✦ Glimt tolker …", color = p.mut, fontSize = 12.5.sp, modifier = Modifier.padding(horizontal = 14.dp)) // prompt 52
         if (appt != null && text.isNotBlank()) {
             Row(

@@ -12,7 +12,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 /*
- * Sporing: kode som lå i blandingsfilene (P37.kt, P42.kt, Models11.kt, Models22.kt, Models14.kt, Mod26B.kt) og ble flyttet hit uendret i Fase 5.
+ * Sporing: kode som lå i blandingsfilene (P37.kt, P42.kt, Models.kt, Models22.kt, Models.kt, Mod26B.kt) og ble flyttet hit uendret i Fase 5.
  * Navnene er de samme. Fila eies av MODULER-Android.
  */
 

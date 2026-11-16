@@ -20,7 +20,7 @@ import javax.net.ssl.SSLException
 
 /** Feil fra serveren. needsTotp = innloggingen krever en 6-sifret kode (2FA). */
 /** Prompt 28: code og canGemini fra serverens feilsvar ({error, code, canGemini}), f.eks. «Fra skjermbilde». */
-/** Prompt 51: body51 = hele feilsvaret ved 403 (DEVICE_APPROVAL_REQUIRED: approvalId, pollKey, statusUrl, finishUrl – Sec51.kt). */
+/** Prompt 51: body51 = hele feilsvaret ved 403 (DEVICE_APPROVAL_REQUIRED: approvalId, pollKey, statusUrl, finishUrl – Enhetsgodkjenning.kt). */
 class ApiException(message: String, val status: Int = 0, val needsTotp: Boolean = false, val code: String? = null, val canGemini: Boolean = false, val body51: JSONObject? = null) : Exception(message)
 
 /** Resultat av innlogging: token og hvem som er logget inn. */

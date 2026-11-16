@@ -12,9 +12,9 @@ uten nedskalering) og lagt i en `LruCache` som talte *antall* bilder (48), ikke 
 OutOfMemoryError eller «Canvas: trying to draw too large bitmap» (over 100 MB) i tegningen, og det kan ikke fanges. Appen krasjer.
 
 Rettet:
-- `P50Fam.kt` `photo50`: dekoder med `inSampleSize` til maks 2 × største visning (52 dp, maks 400 px) via `decodeScaled52` (`And52A.kt`).
+- `P50Fam.kt` `photo50`: dekoder med `inSampleSize` til maks 2 × største visning (52 dp, maks 400 px) via `decodeScaled52` (`ChatTenking.kt`).
   Cachen telles nå i byte (8 MB).
-- Krasjgrense per kort (`ui/And52AUi.kt` `famGuard52`/`FamCardErr52`): kartdata (Folk-stripa, Kart, Personside, Sted) og «På vei hjem» i
+- Krasjgrense per kort (`ui/ChatTenking.kt` `famGuard52`/`FamCardErr52`): kartdata (Folk-stripa, Kart, Personside, Sted) og «På vei hjem» i
   Sjekk inn. Feiler et kort, vises «Kunne ikke laste …», og resten av siden virker. Kartet hadde allerede sin egen feilgrense (`FamilyMapSafe`).
 
 Sjekket uten funn (allerede trygt):

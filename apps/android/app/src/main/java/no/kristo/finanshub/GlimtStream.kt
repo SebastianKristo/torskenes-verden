@@ -32,7 +32,7 @@ import java.util.UUID
  *  - conversationId / conversationKind / choice i body; valgknapper fra `choices` (maks 5).
  *  - Tommel opp/ned: POST /api/glimt/recipes/feedback {traceId, vote}.
  *  - Chat: verktøysvar som er strømmet lagres i samtalen med POST /api/glimt/agent/stream/save → {chatId}.
- * Grensesnittet ligger i ui/Convo67Ui.kt (statuslinje, valgknapper, tommel).
+ * Grensesnittet ligger i ui/GlimtSamtale.kt (statuslinje, valgknapper, tommel).
  */
 
 /* ======================= Typer ======================= */

@@ -17,9 +17,9 @@ const code = (f) => read(f).replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm
 
 /** Filene prompt 71 har rørt (animasjoner). */
 const TOUCHED = [
-  'ui/Anim71.kt', 'ui/Home70.kt', 'ui/Paper15.kt', 'ui/Paper14.kt', 'ui/Paper16.kt', 'ui/WeatherEdit.kt', 'ui/WeatherCompare.kt', 'ui/WeatherSheets.kt',
-  'ui/Glimt.kt', 'ui/GlimtFigurer.kt', 'ui/Mic70.kt', 'ui/Convo67Ui.kt', 'ui/Chat.kt', 'ui/VoiceInputUi.kt',
-  'ui/Brief.kt', 'ui/TasksPage.kt', 'ui/AiCtl34.kt',
+  'ui/Animasjon.kt', 'ui/HjemRutenett.kt', 'ui/PapirTilpassOgNavigasjon.kt', 'ui/PapirSider.kt', 'ui/PapirByggeklosser.kt', 'ui/WeatherEdit.kt', 'ui/WeatherCompare.kt', 'ui/WeatherSheets.kt',
+  'ui/Glimt.kt', 'ui/GlimtFigurer.kt', 'ui/Mikrofon.kt', 'ui/GlimtSamtale.kt', 'ui/Chat.kt', 'ui/VoiceInputUi.kt',
+  'ui/Brief.kt', 'ui/TasksPage.kt', 'ui/AiKontrollSkjerm.kt',
   // Fase 5: Ui34/38/46/52B er delt opp etter funksjon.
   'ui/GlobaleLag.kt', 'ui/Innlogging.kt', 'ui/Konto.kt', 'ui/AiKontroll.kt', 'ui/Komponenter.kt',
   'ui/HjemDeler.kt', 'ui/Fanelinje.kt', 'ui/Innstillinger.kt', 'ui/Effekter.kt', 'ui/HjemFliser.kt',
@@ -68,18 +68,18 @@ test('animerte verdier går ikke inn i rotate/alpha/scale/offset(x.dp) i filene 
 });
 
 test('wiggle: vinkelen er State og leses i graphicsLayer (Hjem, Tilpass siden, Vær, Ruter)', () => {
-  const a = code('ui/Anim71.kt');
+  const a = code('ui/Animasjon.kt');
   assert.match(a, /internal fun wobble71\(on: Boolean, index: Int, amp: Float = 0\.2f\): State<Float>/);
   assert.match(a, /tween\(300, easing = FastOutSlowInEasing\), RepeatMode\.Reverse/, 'samme kurve og varighet som før');
-  const h = code('ui/Home70.kt');
+  const h = code('ui/HjemRutenett.kt');
   assert.match(h, /val angle = wobble71\(edit && !dragging && !sheet && !reduce, index, 0\.45f\)/);
   assert.match(h, /\} else rotationZ = angle\.value/);
   assert.match(h, /remember\(vis, sz\) \{ rows70\(vis, sz\) \}/, 'radene huskes');
-  assert.match(code('ui/Paper15.kt'), /rotationZ = angle\.value; translationY/);
+  assert.match(code('ui/PapirTilpassOgNavigasjon.kt'), /rotationZ = angle\.value; translationY/);
   assert.match(code('ui/WeatherEdit.kt'), /graphicsLayer \{ rotationZ = angle\.value \}/);
   assert.match(code('ui/WeatherCompare.kt'), /rotationZ = angle\.value/);
   // Fase 5: RuterPage i Paper16 var død kode (aldri kalt) og er slettet; Ruter-skjermen har ikke wiggle.
-  for (const f of ['ui/Home70.kt', 'ui/Paper15.kt', 'ui/WeatherEdit.kt', 'ui/WeatherCompare.kt', 'ui/Paper16.kt']) {
+  for (const f of ['ui/HjemRutenett.kt', 'ui/PapirTilpassOgNavigasjon.kt', 'ui/WeatherEdit.kt', 'ui/WeatherCompare.kt', 'ui/PapirByggeklosser.kt']) {
     assert.doesNotMatch(code(f).replace(/internal fun wobbleAngle[^\n]*/, ''), /wobbleAngle\(/, `${f} bruker wobble71`);
   }
 });
@@ -103,8 +103,8 @@ test('Glimt-svaret og mikrofonen: dra, inngang, prikker, markør og bølge uten 
   const g = code('ui/Glimt.kt');
   assert.match(g, /Modifier\.offset \{ IntOffset\(0, \(-3 \* v\)\.dp\.roundToPx\(\)\) \}/);
   assert.match(g, /val g = grow\.value; scaleX = g; scaleY = g/);
-  assert.match(code('ui/Mic70.kt'), /graphicsLayer \{ alpha = if \(\(a\?\.value \?: 1f\) > \.5f\) 1f else 0f \}/);
-  const a = code('ui/Anim71.kt');
+  assert.match(code('ui/Mikrofon.kt'), /graphicsLayer \{ alpha = if \(\(a\?\.value \?: 1f\) > \.5f\) 1f else 0f \}/);
+  const a = code('ui/Animasjon.kt');
   assert.match(a, /internal fun WaveBars71\(level: Float, color: Color, label: String\)/);
   assert.match(a, /drawRoundRect\(color/);
   assert.match(code('ui/Chat.kt'), /private fun Ch27Wave\(rms: Float\) = WaveBars71\(rms, CH27_SKY, "wave"\)/);
@@ -114,8 +114,8 @@ test('Glimt-svaret og mikrofonen: dra, inngang, prikker, markør og bølge uten 
 
 test('stabile typer for Hjem-radene', () => {
   assert.match(read('Hjem.kt'), /@androidx\.compose\.runtime\.Immutable[^\n]*\ndata class PageLay\(/);
-  assert.match(read('ui/Paper15.kt'), /@androidx\.compose\.runtime\.Immutable[^\n]*\ndata class PSec\(/);
-  const h = read('ui/Home70.kt');
+  assert.match(read('ui/PapirTilpassOgNavigasjon.kt'), /@androidx\.compose\.runtime\.Immutable[^\n]*\ndata class PSec\(/);
+  const h = read('ui/HjemRutenett.kt');
   assert.match(h, /@Immutable\ninternal sealed class Row70\(/);
   assert.match(h, /@Stable\ninternal class Home70State \{/);
 });
@@ -131,7 +131,7 @@ test('Baseline Profile: profileinstaller uten ny Gradle-plugin, baseline-prof.tx
   const f = join(APP, 'src/main/baseline-prof.txt');
   assert.ok(existsSync(f));
   const p = readFileSync(f, 'utf8');
-  for (const c of ['MainActivity', 'ui/Home70Kt', 'ui/PaperKt', 'ui/GlimtKt', 'ui/GlobaleLagKt', 'ui/ChatKt', 'androidx/compose/material3/ModalBottomSheet']) {
+  for (const c of ['MainActivity', 'ui/HjemRutenettKt', 'ui/PaperKt', 'ui/GlimtKt', 'ui/GlobaleLagKt', 'ui/ChatKt', 'androidx/compose/material3/ModalBottomSheet']) {
     assert.match(p, new RegExp(`^HSPL[\\w/]*${c.replace(/\//g, '\\/')}\\*;->\\*\\*\\(\\*\\*\\)\\*\\*$`, 'm'), c);
   }
   // Hver regel er på formen HSPL<klasse>*;->**(**)** eller L<klasse>*; (kommentarer med #).

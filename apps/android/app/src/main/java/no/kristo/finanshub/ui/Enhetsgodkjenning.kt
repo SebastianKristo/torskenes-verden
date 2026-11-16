@@ -25,7 +25,7 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 /*
- * Prompt 51 (APPAND51): skjermene for Sec51.kt, Qa51.kt og Ntfy51.kt.
+ * Prompt 51 (APPAND51): skjermene for Enhetsgodkjenning.kt, Krasjrapporter.kt og Ntfy.kt.
  *  - ApprovalWait51: «Venter på godkjenning» over innloggingen (PaperLogin) mens en ny enhet venter. Viser aldri token eller pollKey.
  *  - Sec51Section: Innstillinger → Sikkerhet → Enheter som venter (Godkjenn med biometri / Avvis) og Mine enheter.
  *  - Ntfy51Section: Innstillinger → Varsler → «Varsler via ntfy (hjemmeserver)».

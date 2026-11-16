@@ -8,7 +8,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import no.kristo.finanshub.AppViewModel
 
-/** Prompt 86 (AND86): «Vil du … ?» før en lenke utenfra (nettside, annen app) får utføre en handling. Se Link86.kt. */
+/** Prompt 86 (AND86): «Vil du … ?» før en lenke utenfra (nettside, annen app) får utføre en handling. Se Lenkehandlinger.kt. */
 @Composable
 internal fun Link86Dialog(vm: AppViewModel) {
     val l = vm.link86 ?: return

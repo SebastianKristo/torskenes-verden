@@ -50,9 +50,9 @@ internal val PAPER_SET_TITLES = mapOf(
     "huske" to "Gjøremål", // prompt 44: synk med Home Assistant
     "nyheter" to "Nyheter", // prompt 46: innstillingene fra Nyheter-siden (kilder, kategorier, For deg, sammendrag)
     "media" to "Media", // prompt 45: innstillingene fra Media (status per tjeneste, Integrasjoner, Rydd uovervåkede)
-    USERS68 to "Husstand", // prompt 68: HUSSTAND (ui/Users68Ui.kt)
+    USERS68 to "Husstand", // prompt 68: HUSSTAND (ui/Brukere.kt)
     "prog50" to "System", // prompt 50: egen side i høyre kolonne på brett · prompt 67: «System» under SERVER (bare admin)
-) + SET67_TITLES // prompt 67: Glimt og undersidene, App og Finans (ui/Set67Ui.kt)
+) + SET67_TITLES // prompt 67: Glimt og undersidene, App og Finans (ui/InnstillingerMeny.kt)
 
 /**
  * Innstillinger: profilkort øverst, og gruppene KONTO, FINANS, <APPNAVN>, APP og Logg ut, med versjon nederst.
@@ -109,7 +109,7 @@ private fun PaperSettings17Body(vm: AppViewModel, navBottom: Dp, onPrivacyChange
             "tokens" -> item { TokensPage(vm) }
             // Prompt 67: «AI og modeller» øverst; «Send til Chat etter» og Glimt husker er flyttet til Glimt (glimt67, g67mem).
             "ai" -> { item { Ai67Head(vm) }; item { VoiceSettings56(vm) } /* prompt 56 */; item { AiPage(vm) }; item { PrivacyLogos27(vm) }; item { ChatSettings27(vm) }; item { AiTimeouts23(vm) } }
-            // Prompt 67: Glimt-siden og undersidene (ui/Glimt67Ui.kt), App og Finans (ui/Set67Ui.kt).
+            // Prompt 67: Glimt-siden og undersidene (ui/Glimt67Ui.kt), App og Finans (ui/InnstillingerMeny.kt).
             "glimt67" -> item { Glimt67Page(vm) }
             "g67mem" -> item { G67MemPage(vm) }
             "g67ent" -> item { G67EntPage(vm) }
@@ -181,7 +181,7 @@ internal fun androidx.compose.foundation.lazy.LazyListScope.profileCard17(vm: Ap
 }
 
 private fun androidx.compose.foundation.lazy.LazyListScope.settingsGroups17(vm: AppViewModel) {
-    // Prompt 67 (prompt 50b/66): gruppene som på web – GENERELT, HUSSTAND, GLIMT OG AI, TILKOBLINGER, MODULER og SERVER (ui/Set67Ui.kt).
+    // Prompt 67 (prompt 50b/66): gruppene som på web – GENERELT, HUSSTAND, GLIMT OG AI, TILKOBLINGER, MODULER og SERVER (ui/InnstillingerMeny.kt).
     // De gamle radene (Finans, Appprofil, Skanning, Server og synk, App-oppdatering …) ligger på undersidene Finans og App.
     menu67(vm).forEach { g ->
         group(g.title) { i ->

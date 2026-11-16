@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Prompt 51 (ANDPLAT51): statiske app-snarveier (hold inne ikonet) og App Actions for Google Assistant.
-     Alle åpner dyplenker finanshub://act51/… i MainActivity (Shortcuts51Plat.kt). Ingen tokens i lenkene. -->
+     Alle åpner dyplenker finanshub://act51/… i MainActivity (Snarveier.kt). Ingen tokens i lenkene. -->
 <shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
 
     <!-- «Hey Google, åpne sjekk inn / saldo / bussen i Homelab» -->

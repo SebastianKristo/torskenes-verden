@@ -18,9 +18,9 @@ import java.net.URLEncoder
 
 /*
  * Prompt 51 (ANDFEAT51): appklienten for fase 2 og 4 og appfunksjonene i fase 5 – felles kjerne.
- *  - Sider i fullskjerm over Papir-skallet (ui/Feat51Ui.kt → Pages51): «plan» (Planlegging: sparemål, kalender med saldoprognose,
+ *  - Sider i fullskjerm over Papir-skallet (ui/Funksjonssider.kt → Pages51): «plan» (Planlegging: sparemål, kalender med saldoprognose,
  *    skatt, priser, abonnementsjeger – ui/Plan51Ui.kt), «famcal» (familiekalender med «hvem kjører?» – ui/FamCal51Ui.kt),
- *    «kveld», «lyd», «subs», «lagring» (Media – ui/Media51Ui.kt), «sok» (felles søk – ui/Search51Ui.kt) og «tema» (ui/Theme51Ui.kt).
+ *    «kveld», «lyd», «subs», «lagring» (Media – ui/Media51Ui.kt), «sok» (felles søk – ui/FellesSok.kt) og «tema» (ui/TemaSynk.kt).
  *  - Data hentes som rå JSON fra API-ene i $S/SERVER51-API.md (FIN51, MEDFAM51, WEBX51) og leses i grensesnittet med s43/i43/d43,
  *    samme felt som web (public/finans/js/plan51.js, public/js/mediakveld-familiekalender.js). Alt følger kontoen (nullstilles ved kontobytte).
  *  - Dyplenker: finanshub://plan[/spar|kal|skatt|pris|jakt], finanshub://famcal[/<taskId>], finanshub://kveld, finanshub://sok.

@@ -32,11 +32,11 @@ import java.security.SecureRandom
  *  - Fast, tilfeldig X-Device-Key (32 byte, base64url) og X-Device-Id (flagg, QA51), lagret i EncryptedSharedPreferences («sec51»).
  *    Nøkkelen sendes bare på innlogging/token-kall og på finish (Api.request → Sec51Http.apply), aldri ellers.
  *  - Innlogging fra internett på en ukjent enhet gir 403 {code:'DEVICE_APPROVAL_REQUIRED', approvalId, pollKey, statusUrl, finishUrl}.
- *    Da vises «Venter på godkjenning» (ui/Sec51Ui.kt), statusUrl polles hvert 2,5 s med X-Approval-Key, og finishUrl gir tokenet når
+ *    Da vises «Venter på godkjenning» (ui/Enhetsgodkjenning.kt), statusUrl polles hvert 2,5 s med X-Approval-Key, og finishUrl gir tokenet når
  *    en kjent enhet (eller admin) har godkjent. Avbryt stopper alt. pollKey og token vises aldri og logges aldri.
  *  - Godkjenning fra appen: Innstillinger → Sikkerhet → «Enheter som venter» (Godkjenn krever fingeravtrykk/ansikt/PIN via Bio31,
- *    Avvis gjør det ikke) og «Mine enheter». Varsel «Ny enhet vil logge inn» (data.kind sec51.approval) fra varselkøen (Notify31.kt)
- *    og som banner i appen (ui/Sec51Ui.kt).
+ *    Avvis gjør det ikke) og «Mine enheter». Varsel «Ny enhet vil logge inn» (data.kind sec51.approval) fra varselkøen (Bakgrunnsvarsler.kt)
+ *    og som banner i appen (ui/Enhetsgodkjenning.kt).
  */
 
 const val APPROVAL_CODE51 = "DEVICE_APPROVAL_REQUIRED"

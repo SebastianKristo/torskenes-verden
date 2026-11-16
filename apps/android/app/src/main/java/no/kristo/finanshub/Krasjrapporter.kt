@@ -20,7 +20,7 @@ import java.io.File
  *    feltinnhold, beløp eller e-post (sitater, tall og e-post fjernes fra meldingene før de lagres).
  *  - Feature flags: GET /api/flags med X-Device-Id (DeviceIds51, Sec51Http) ved oppstart, når appen kommer i forgrunnen og hver time.
  *    Bufret per konto i prefs, så Flags51.on("navn") virker uten nett. Ukjent flagg = av.
- *  - «Nytt i denne versjonen»: GET /api/whatsnew → kort når show = true (ui/Sec51Ui.kt), «Fint» → POST /api/whatsnew/seen {version}.
+ *  - «Nytt i denne versjonen»: GET /api/whatsnew → kort når show = true (ui/Enhetsgodkjenning.kt), «Fint» → POST /api/whatsnew/seen {version}.
  */
 
 /* ---------------- Krasjrapporter ---------------- */

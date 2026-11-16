@@ -15,7 +15,7 @@
     <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
-    <!-- Prompt 51: «Varsler via ntfy (hjemmeserver)» – forgrunnstjeneste som holder strømmen mot ntfy (Ntfy51.kt), startes igjen etter omstart. -->
+    <!-- Prompt 51: «Varsler via ntfy (hjemmeserver)» – forgrunnstjeneste som holder strømmen mot ntfy (Ntfy.kt), startes igjen etter omstart. -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_REMOTE_MESSAGING" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <!-- Prompt 89: Live Updates – forgrunnstjeneste som poller /api/live/aktiviteter mens noe er aktivt (ingen Firebase). -->
@@ -91,7 +91,7 @@
                 <data android:scheme="homelab" android:host="login" />
                 <!-- Prompt 46: papir://login?s=<sid>&amp;c=<kode>&amp;srv=<server> (QR-innlogging for Finans og Kalender). -->
                 <data android:scheme="papir" android:host="login" />
-                <!-- Prompt 51 (ANDFEAT51): invitasjon for nytt familiemedlem – papir://join?i=<id>&amp;c=<kode>&amp;srv=<server> (Onboard51.kt). -->
+                <!-- Prompt 51 (ANDFEAT51): invitasjon for nytt familiemedlem – papir://join?i=<id>&amp;c=<kode>&amp;srv=<server> (Invitasjon.kt). -->
                 <data android:scheme="papir" android:host="join" />
             </intent-filter>
             <intent-filter android:autoVerify="true">
@@ -440,7 +440,7 @@
             android:name=".Ntfy51Service"
             android:exported="false"
             android:foregroundServiceType="remoteMessaging" />
-        <!-- Prompt 89: Live Updates (Live89.kt): polling, knappene i varselet (uten å åpne appen) og «Vis rute». -->
+        <!-- Prompt 89: Live Updates (LiveAktiviteter.kt): polling, knappene i varselet (uten å åpne appen) og «Vis rute». -->
         <service
             android:name=".Live89Service"
             android:exported="false"
@@ -749,7 +749,7 @@
             <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_s37_bible" />
         </receiver>
-        <!-- Prompt 40: flere låseskjerm-widgets (små 1 × 1 og brede 4 × 1, home_screen|keyguard), RemoteViews i widget/Lock40Widgets.kt.
+        <!-- Prompt 40: flere låseskjerm-widgets (små 1 × 1 og brede 4 × 1, home_screen|keyguard), RemoteViews i widget/Laaseskjermwidgets.kt.
              Bibelvers-varianten er av til brukeren har modulen (Lock40.syncBible). -->
         <receiver android:name=".widget.LockSmallVaer40" android:exported="true" android:enabled="true" android:label="Vær · låseskjerm">
             <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
@@ -820,7 +820,7 @@
         <receiver android:name=".Geofence50Receiver" android:exported="false" />
         <receiver android:name=".Checkin50Receiver" android:exported="false" />
 
-        <!-- Prompt 51 (ANDPLAT51): widgets Planlegging · saldo og Sjekk inn (Glance, widget/Widgets51Plat.kt). -->
+        <!-- Prompt 51 (ANDPLAT51): widgets Planlegging · saldo og Sjekk inn (Glance, widget/PlanleggingWidgets.kt). -->
         <receiver android:name=".widget.Plan51SaldoReceiver" android:exported="true" android:label="Sparing og planer · saldo">
             <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_plan51" />
@@ -830,7 +830,7 @@
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_checkin51" />
         </receiver>
 
-        <!-- Prompt 51 (ANDPLAT51): Android Auto (Car App Library): Avganger, På vei hjem og Media (Car51Plat.kt). -->
+        <!-- Prompt 51 (ANDPLAT51): Android Auto (Car App Library): Avganger, På vei hjem og Media (AndroidAuto.kt). -->
         <service
             android:name=".Car51Service"
             android:exported="true">

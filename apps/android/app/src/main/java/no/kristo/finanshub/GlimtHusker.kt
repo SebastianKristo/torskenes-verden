@@ -12,7 +12,7 @@ import java.net.URLEncoder
  * API: GET/POST /api/glimt/memory {match, type, title?} → {item, matches}, DELETE /api/glimt/memory/:id,
  *      POST /api/glimt/memory/:id/apply {dryRun?} → {count}. Hendelsen som vises: GET /api/kalender/events/:id (konteksten for
  *      «det var frisør» i Glimt). PATCH /api/kalender/events/:id kan svare suggestMemory {match, name, type, title, text}.
- * Grensesnittet: ui/Memory33Ui.kt (Innstillinger → AI → GLIMT HUSKER, «Lær Glimt hva dette er…» i detaljarket og arket).
+ * Grensesnittet: ui/GlimtHusker.kt (Innstillinger → AI → GLIMT HUSKER, «Lær Glimt hva dette er…» i detaljarket og arket).
  */
 
 data class Mem33Item(val id: Int, val match: String, val type: String, val title: String)

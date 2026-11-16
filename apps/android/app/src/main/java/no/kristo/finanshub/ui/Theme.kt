@@ -116,7 +116,7 @@ object Tone {
     var light by mutableStateOf(true)
     /** Kveldspapir. */
     var paperDark by mutableStateOf(false)
-    /** Prompt 50: Liquid Glass (mørkt glass med fargeskyer, ui/Glass50.kt). paperDark er også true. */
+    /** Prompt 50: Liquid Glass (mørkt glass med fargeskyer, ui/GlassTema.kt). paperDark er også true. */
     var glass by mutableStateOf(false)
     private val cache = HashMap<Long, Color>()
     private var cacheKey: Any? = null

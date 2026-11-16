@@ -19,7 +19,7 @@ import no.kristo.finanshub.*
  *   MODULER       én rad per modul
  *   Enheter og widgets                                           (uten overskrift)
  *   SERVER        System · Backup · Logger (bare admin)
- * Navnene på sidene kommer fra modullisten (Moduler.innstilling). Samme liste brukes på telefon (Paper17.kt, med undertekst) og i
+ * Navnene på sidene kommer fra modullisten (Moduler.innstilling). Samme liste brukes på telefon (PapirInnstillinger.kt, med undertekst) og i
  * venstre kolonne på brett (Innstillinger.kt). Ingen funksjon er fjernet: Konto og sikkerhet er én side (Q12) med det som lå
  * på Konto og Sikkerhet, og Enheter og widgets har det som lå på App og API-tokens. De gamle sidene virker fortsatt (søk og lenker).
  */
@@ -57,7 +57,7 @@ internal fun menu67(vm: AppViewModel): List<Menu67Group> {
             Menu67Row("konto", setNavn("konto", "Konto og sikkerhet"), if (vm.me?.totp == true) "Profil, passord og økter · 2FA på" else "Profil, passord og økter · 2FA av", Icons.Filled.Person, go = page("konto")),
             Menu67Row("tilpass", setNavn("utseende", "Utseende"), "Navn, ikon, tema, farger, bakgrunn og fanelinje", Icons.Filled.Palette, go = page("tilpass")),
             Menu67Row("notify", setNavn("varsler", "Varsler"), "Lyd, stille timer, haptikk og test", Icons.Filled.Notifications, go = page("notify")),
-            // Prompt 68: brukerne og Logg inn som (admin), Glimt-figur per bruker, Familie, helse og posisjon (ui/Users68Ui.kt).
+            // Prompt 68: brukerne og Logg inn som (admin), Glimt-figur per bruker, Familie, helse og posisjon (ui/Brukere.kt).
             Menu67Row(USERS68, setNavn("husstand", "Husstand"), users68Sub(admin), Icons.Filled.Groups, go = page(USERS68)),
         )),
         Menu67Group(setNavn("glimt", "Glimt og AI"), listOf(

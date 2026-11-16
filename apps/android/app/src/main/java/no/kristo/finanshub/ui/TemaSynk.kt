@@ -14,7 +14,7 @@ import no.kristo.finanshub.*
 
 /*
  * Prompt 51 (ANDFEAT51): «Tema» – Papir · lys / mørk / følg systemet / automatisk (etter solnedgang eller faste klokkeslett),
- * synket mellom enhetene via /api/me/theme51 (Theme51.kt). Åpnes fra Innstillinger → Utseende → «Tema på alle enheter» og
+ * synket mellom enhetene via /api/me/theme51 (TemaSynk.kt). Åpnes fra Innstillinger → Utseende → «Tema på alle enheter» og
  * hurtighandlingen «Bytt tema» i søket. Theme51Effects holder auto-temaet oppdatert (hvert minutt) og henter temaet fra
  * serveren ved oppstart, kontobytte og hvert 15. minutt mens appen er åpen.
  */

@@ -17,7 +17,7 @@ import no.kristo.felles.tid.OsloDato
 /*
  * Prompt 29 (ANDROID29): rask time med AI (claude-code-kalender-rask-time.md), nytt Nå/Neste-kort i Kalender
  * (claude-code-kalender-na-kort.md) og søkemotor på Hjem (claude-code-hjem-sok-ai.md). Grensesnittet ligger i
- * ui/RaskTimeArk.kt og ui/Home29Ui.kt.
+ * ui/RaskTimeArk.kt og ui/HjemSok.kt.
  *
  * API (SERVER29): POST /api/kalender/quick/parse {text} → parseQuick (live forhåndsvisning), POST /api/kalender/quick {text}
  * → 202 {jobId}, GET /api/kalender/quick/jobs, POST /api/kalender/quick/:id/undo. Mangler endepunktene (404/405), tolkes

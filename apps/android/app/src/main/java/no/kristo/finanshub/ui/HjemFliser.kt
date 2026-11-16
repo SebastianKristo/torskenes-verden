@@ -110,11 +110,11 @@ internal fun LazyGridScope.homeGridSecs52(vm: AppViewModel, g52: Boolean, secs0:
     if (!edit) item(key = "hint-$page", span = { GridItemSpan(maxLineSpan) }) { EditHint() }
 }
 
-private val TILE_H52 = 101.dp // prompt 80: liten flis 101 dp (som SMALL73 i Home70.kt)
+private val TILE_H52 = 101.dp // prompt 80: liten flis 101 dp (som SMALL73 i HjemRutenett.kt)
 
 private val SHAPE52 = RoundedCornerShape(24.dp)
 
-/** Én flis i 3a. Prompt 70 (ANDHOME70): h = Dp.Unspecified → innholdets høyde (raden i Home70.kt strekker begge likt). */
+/** Én flis i 3a. Prompt 70 (ANDHOME70): h = Dp.Unspecified → innholdets høyde (raden i HjemRutenett.kt strekker begge likt). */
 @Composable
 internal fun Tile52(vm: AppViewModel, k: String, h: Dp, body: @Composable (String) -> Unit = {}) {
     val m = if (h == Dp.Unspecified) Modifier.fillMaxWidth().fillMaxHeight() else Modifier.fillMaxWidth().height(h)

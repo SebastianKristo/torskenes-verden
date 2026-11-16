@@ -20,7 +20,7 @@ import java.net.URLEncoder
  *  - Dynamisk snarvei «Legg til <siste vare>» (Shortcuts51.publish) så den vanligste varen er ett trykk unna.
  *  - Alt går som dyplenker finanshub://act51/<handling>[?item=…|?q=…|?feature=…] til MainActivity → AppViewModel.deepLink → [act51Link].
  *    Ingen tokens i lenkene; ukjent/uinnlogget → ingenting skjer (deepLink sjekker loggedIn).
- *  - Uten nett legges varen i offline-køen (Offline51Plat.kt) og sendes senere.
+ *  - Uten nett legges varen i offline-køen (OfflineKo.kt) og sendes senere.
  */
 
 object Shortcuts51 {

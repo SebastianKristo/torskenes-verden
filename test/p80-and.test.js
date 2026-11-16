@@ -21,14 +21,14 @@ function fn(src, name) {
 }
 
 test('A: søkepillen har skygge i pilleform (6 dp, CircleShape, clip = false) før clip og bakgrunn', () => {
-  const s = code('ui/Home29Ui.kt');
+  const s = code('ui/HjemSok.kt');
   assert.match(s, /internal fun Modifier\.pillShadow80\(\): Modifier =\s*this\.shadow\(elevation = 6\.dp, shape = CircleShape, clip = false, ambientColor = Color\.Black\.copy\(alpha = \.18f\), spotColor = Color\.Black\.copy\(alpha = \.30f\)\)/);
   assert.match(s, /\.height\(46\.dp\)\.pillShadow80\(\)\.clip\(CircleShape\)\.background\(p\.card\)/, 'rekkefølge: shadow(shape) → clip(shape) → background');
   assert.doesNotMatch(s, /\.shadow\(12\.dp, CircleShape\)/, 'den gamle 12 dp-skyggen er borte');
 });
 
 test('A: ingen klipping eller bakgrunn rundt pillen (animateContentSize bare på svar/forslag)', () => {
-  const s = code('ui/Home29Ui.kt');
+  const s = code('ui/HjemSok.kt');
   const f = fn(s, 'PaperSearch29');
   // animateContentSize klipper til rammen og skar skyggen av med rette kanter.
   assert.match(f, /Column\(verticalArrangement = Arrangement\.spacedBy\(6\.dp\)\) \{/);
@@ -41,7 +41,7 @@ test('A: ingen klipping eller bakgrunn rundt pillen (animateContentSize bare på
 });
 
 test('A: wiggle-boksen (graphicsLayer) har ingen skygge utenfor løft, og Søk løftes i pilleform', () => {
-  const h = code('ui/Home70.kt');
+  const h = code('ui/HjemRutenett.kt');
   const t = fn(h, 'Tile70');
   assert.match(t, /\.graphicsLayer \{\s*shadowElevation = 0f; shape = CircleShape; clip = false\s*if \(st\.dragKey == k\) \{/);
   assert.match(t, /shape = if \(k == "h1"\) CircleShape else RoundedCornerShape\(24\.dp\); clip = false/);
@@ -49,7 +49,7 @@ test('A: wiggle-boksen (graphicsLayer) har ingen skygge utenfor løft, og Søk l
 });
 
 test('B: tabellen – liten 101, høy 212 = 2 × 101 + 10, gap 10', () => {
-  const h = code('ui/Home70.kt');
+  const h = code('ui/HjemRutenett.kt');
   const num = (re) => Number(h.match(re)[1]);
   const small = num(/private val SMALL73 = (\d+)\.dp/);
   const tall = num(/private val TALL73 = (\d+)\.dp/);
@@ -73,7 +73,7 @@ test('B: tabellen – liten 101, høy 212 = 2 × 101 + 10, gap 10', () => {
 });
 
 test('B: høyden kommer aldri fra nabokortet eller weight', () => {
-  const h = code('ui/Home70.kt');
+  const h = code('ui/HjemRutenett.kt');
   assert.doesNotMatch(h, /aspectRatio|LazyVerticalGrid|FlowRow|StaggeredGrid/);
   // To halve: fast rad; blandet rad: flisen har likevel sin faste høyde.
   assert.match(h, /fixed = fixedH73\(r\.keys, SMALL73\), fl = tileH80\(r\.a, SMALL73\), fr = r\.b\?\.let \{ tileH80\(it, SMALL73\) \} \?: Dp\.Unspecified\)/);
@@ -85,7 +85,7 @@ test('B: høyden kommer aldri fra nabokortet eller weight', () => {
 });
 
 test('B: innholdet får plass i 101 / 212 dp og festes riktig', () => {
-  const t = code('ui/Tiles50.kt');
+  const t = code('ui/HjemMinifliser.kt');
   const av = fn(t, 'AvgangTile50');
   assert.match(av, /Spacer\(Modifier\.weight\(1f\)\)\s*Row\(/, '«5 min» og «Så …» festet nederst');
   assert.match(av, /PSerif\(r\?\.num \?: "", with\(LocalDensity\.current\) \{ 64\.dp\.toSp\(\) \}/, 'tallet følger ikke skriftstørrelsen');

@@ -32,7 +32,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 
 /*
- * Prompt 33 (GLIMT-MEMORY): grensesnittet for «Glimt husker» (tilstand og API i Memory33.kt).
+ * Prompt 33 (GLIMT-MEMORY): grensesnittet for «Glimt husker» (tilstand og API i GlimtHusker.kt).
  * - Memory33Settings: Innstillinger → AI → GLIMT HUSKER (liste, Slett, Legg til, «Endre tittel på N avtaler?»).
  * - Mem33LearnLink: «Lær Glimt hva dette er…» i detaljarket i Kalender.
  * - Mem33LearnBody: innholdet i arket (velg type + navn → lagre → «Endre tittel på N avtaler?»).

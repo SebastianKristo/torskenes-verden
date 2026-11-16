@@ -38,7 +38,7 @@ import java.net.URLEncoder
 
 /*
  * Prompt 51 (APPAND51), punkt 5 – ntfy (OBS51), bare FinansHub Android:
- *  - Valgfri bryter «Varsler via ntfy (hjemmeserver)» i Innstillinger → Varsler (ui/Sec51Ui.kt). På: GET /api/me/ntfy51, finn eller lag
+ *  - Valgfri bryter «Varsler via ntfy (hjemmeserver)» i Innstillinger → Varsler (ui/Enhetsgodkjenning.kt). På: GET /api/me/ntfy51, finn eller lag
  *    emnet for denne enheten (POST /api/me/ntfy51/topics {device}), lagre subscribeUrl kryptert (DeviceIds51.store) og start
  *    Ntfy51Service. Av: tjenesten stoppes og emnet slettes på serveren.
  *  - Ntfy51Service er en forgrunnstjeneste (type remoteMessaging på Android 14+) med et lavprioritets, varig varsel. Den holder én

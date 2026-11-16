@@ -36,7 +36,7 @@ import java.util.Locale
  *  - Folk (/family/people50), I DAG (/family/today50), Steder med flere områder (/family/places…), Helse (/family/health50…),
  *    Sjekk inn (/family/checkin…), Ruter › Min reise (/ruter/school50).
  *  - Geofencing: én region per område fra /family/places/regions (maks 20), registrert som nærhetsvarsler i LocationManager
- *    (samme mekanisme som skolesonene i Live41.kt, uten Play-tjenester) og som sonekanter for delingstjenesten (FamilyPrefs).
+ *    (samme mekanisme som skolesonene i LiveReise.kt, uten Play-tjenester) og som sonekanter for delingstjenesten (FamilyPrefs).
  *    Hentes på nytt ved WebSocket `family {kind:'places'}`.
  *  - Varsler for innsjekk/forespørsel med handlingene 👍 / Ring / Hent; «Hent meg» i egen kanal «sjekkinn-hast».
  * Eldre server (404 på people50): Familie faller tilbake til den gamle siden (Family22Screen).

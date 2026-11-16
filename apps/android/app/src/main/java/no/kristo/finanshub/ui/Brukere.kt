@@ -17,7 +17,7 @@ import no.kristo.finanshub.*
  *   - Familie: åpne Familie og kart, sonevarsler under Varsler
  *   - Helse og posisjon (alle)                                ← egen side «healthpos» (HealthPosPage, ui/Health20.kt)
  * Konto og Glimt viser bare en lenkerad hit. Lenker: finanshub://settings/{familie|husstand|brukere-og-familie|users|helse},
- * finanshub://husstand og finanshub://brukere-og-familie (alias67 i G67.kt), og gamle «healthpos»-lenker.
+ * finanshub://husstand og finanshub://brukere-og-familie (alias67 i GlimtInnstillingerSider.kt), og gamle «healthpos»-lenker.
  */
 
 internal const val USERS68 = "users68"

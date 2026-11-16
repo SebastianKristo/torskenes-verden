@@ -306,7 +306,7 @@ internal fun Global41(vm: AppViewModel) {
         vm.appAuthAfterLogin41()
         vm.loadServer41()
         vm.loadJourney41()
-        vm.loadZones41() // skolesonene registreres som geofence (Live41.kt)
+        vm.loadZones41() // skolesonene registreres som geofence (LiveReise.kt)
     }
     // Oslo-bakgrunnen: sjekk hvert minutt om timen/tidsrommet er endret; Min reise: sanntid hvert 30. s mens kortet vises.
     GjentaMensSynlig { while (true) { delay(60_000); vm.osloTick41(); if (s.journey != null) vm.loadJourney41() } }

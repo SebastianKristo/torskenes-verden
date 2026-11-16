@@ -29,7 +29,7 @@ import androidx.compose.ui.unit.sp
 import no.kristo.finanshub.*
 
 /*
- * Prompt 51 (ANDFEAT51): onboarding-veiviseren for nye familiemedlemmer (Onboard51.kt). Knappen «Jeg har en invitasjon» ligger
+ * Prompt 51 (ANDFEAT51): onboarding-veiviseren for nye familiemedlemmer (Invitasjon.kt). Knappen «Jeg har en invitasjon» ligger
  * på innloggingen (PaperLogin), veiviseren legger seg over den: 1 Skann/lim inn → 2 Om deg (navn, brukernavn, passord) →
  * 3 Deling (posisjon, helse, kalender) → logget inn.
  */

@@ -60,7 +60,7 @@ test('B2: periodisk henting fra composables stopper ved ON_STOP (GjentaMensSynli
   assert.match(e, /eier\.lifecycle\.repeatOnLifecycle\(Lifecycle\.State\.STARTED\) \{ siste\.value\(this\) \}/);
   assert.match(e, /val siste = rememberUpdatedState\(blokk\)/, 'nyeste lambda brukes');
   const hent = /LaunchedEffect\([^)]*\)\s*\{\s*while\s*\((?:true|[^)]*!= null)\)\s*\{[^{}]*(load|refresh|osloTick|vaerCheck)\w*\(/;
-  for (const f of ['ui/Effekter.kt', 'ui/HjemFliser.kt', 'ui/Tiles50.kt', 'ui/Paper17.kt', 'ui/GlobaleLag.kt', 'ui/domene/Avganger.kt', 'ui/domene/Familie.kt']) {
+  for (const f of ['ui/Effekter.kt', 'ui/HjemFliser.kt', 'ui/HjemMinifliser.kt', 'ui/PapirInnstillinger.kt', 'ui/GlobaleLag.kt', 'ui/domene/Avganger.kt', 'ui/domene/Familie.kt']) {
     assert.doesNotMatch(code(f), hent, `${f}: henting i LaunchedEffect-løkke uten livssyklus`);
   }
   assert.match(code('ui/HjemFliser.kt'), /"h52fa" -> \{ GjentaMensSynlig \{ while \(true\) \{ vm\.loadPositions\(\); delay\(60_000\) \} \}/);
@@ -69,8 +69,8 @@ test('B2: periodisk henting fra composables stopper ved ON_STOP (GjentaMensSynli
 });
 
 test('tegn som ikon: › ✓ + ‹ ⋯ er Icon(Icons…) i skallets filer', () => {
-  const filer = ['ui/Konto.kt', 'ui/Mer.kt', 'ui/Chat.kt', 'ui/Paper14.kt', 'ui/Paper.kt', 'ui/Fanelinje.kt', 'ui/ChatArk.kt', 'ui/Cards31.kt',
-    'ui/Paper17.kt', 'ui/Memory33Ui.kt', 'ui/AiCtl34.kt', 'ui/MerListe.kt', 'ui/Innstillinger.kt', 'ui/HjemDeler.kt',
+  const filer = ['ui/Konto.kt', 'ui/Mer.kt', 'ui/Chat.kt', 'ui/PapirSider.kt', 'ui/Paper.kt', 'ui/Fanelinje.kt', 'ui/ChatArk.kt', 'ui/ChatKort.kt',
+    'ui/PapirInnstillinger.kt', 'ui/GlimtHusker.kt', 'ui/AiKontrollSkjerm.kt', 'ui/MerListe.kt', 'ui/Innstillinger.kt', 'ui/HjemDeler.kt',
     'ui/Glimt.kt', 'ui/Brief.kt', 'ui/Bakgrunn.kt'];
   for (const f of filer) assert.doesNotMatch(code(f), /Text\("(›|‹|✓|\+|⋯)"/, f);
   assert.match(code('ui/Chat.kt'), /\.ch27Label\("Tilbake"\), contentAlignment = Alignment\.Center\) \{ Icon\(Icons\.AutoMirrored\.Filled\.KeyboardArrowLeft, contentDescription = null/);

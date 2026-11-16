@@ -670,7 +670,7 @@ internal fun PaperLogin(vm: AppViewModel) {
                     LoginServerLine89(server) // prompt 89: «Server: os.smarthjemeksperten.no»
                     // Prompt 46 (claude-code-qr-innlogging-finans-kalender.md): logg inn ved å skanne QR-en med en innlogget mobil.
                     QrLoginButton46 { vm.openQrLogin46(server) }
-                    Join51Button() // prompt 51 (ANDFEAT51): ny i familien med invitasjon (ui/Onboard51Ui.kt)
+                    Join51Button() // prompt 51 (ANDFEAT51): ny i familien med invitasjon (ui/Invitasjon.kt)
                     Text("Face ID / fingeravtrykk kan slås på etter innlogging, under Innstillinger → Konto og sikkerhet.", color = p.mut, fontSize = 12.sp)
                     if (vm.addingAccount) Text("‹ Avbryt", color = p.lab, fontWeight = FontWeight.SemiBold, modifier = Modifier.clickable { vm.addingAccount = false })
                 } else {

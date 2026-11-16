@@ -64,7 +64,7 @@ test('filene finnes, og Skjold Lab er koblet inn i Mer, sidene, tilbake, dyplenk
   assert.match(nav, /navShortcut32b\(t\)\?\.takeIf \{ it\.second != "kart" \|\| !skjoldKnows76\(t\) \}/, '«hvor er M3-skruene?» går til Glimt');
   assert.match(nav, /glimtAnswered76\(t, r\.open, r\.card, r\.tool, r\.intent, r\.results\)/);
   assert.match(code('ui/Glimt.kt'), /glimtSkj76\?\.takeIf \{ it\.first == a\.q \}\?\.let \{ \(_, u\) -> GlimtSkjold76\(vm, u\) \}/);
-  const s51 = code('ui/Search51Ui.kt');
+  const s51 = code('ui/FellesSok.kt');
   assert.match(s51, /"part", "skjold", "deler" -> dl\("finanshub:\/\/skjold\/del\/\$ref"\)/);
   assert.match(s51, /"skjold" -> vm\.openSkjold76\(\)/);
 });

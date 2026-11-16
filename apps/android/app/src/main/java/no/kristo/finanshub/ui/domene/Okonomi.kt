@@ -110,7 +110,7 @@ private val ADD_OPTS28 = listOf(
     AddOpt28("shot", "Skjermbilde", "Fra App Store, e-post eller kontoside. Tjeneste, pris og trekkdato fylles ut.", "M4 7V5a1 1 0 0 1 1-1h2M17 4h2a1 1 0 0 1 1 1v2M20 17v2a1 1 0 0 1-1 1h-2M7 20H5a1 1 0 0 1-1-1v-2M8 12h8", true),
     AddOpt28("rc", "Kvittering", "Ta bilde eller velg PDF. Ollama leser beløp og syklus.", "M6 3h12v18l-3-2-3 2-3-2-3 2V3zM9 8h6M9 12h6", true),
     AddOpt28("tx", "Fra transaksjon", "Velg et gjentakende trekk fra banken.", "M4 8h13l-3-3M20 16H7l3 3", false),
-    // Prompt 31: gratis prøveperiode med varsel før den blir betalt (ui/Nordlys31.kt → TrialForm31).
+    // Prompt 31: gratis prøveperiode med varsel før den blir betalt (ui/Nordlys.kt → TrialForm31).
     AddOpt28("trial", "Gratis prøveperiode", "Få varsel før prøven går over til betalt. Skriv det med egne ord eller fyll ut.", "M12 7v5l3 2M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z", true),
     AddOpt28("form", "Skriv inn selv", "Tjeneste, beløp, syklus og trekkdag.", "M4 20h4L19 9l-4-4L4 16v4zM14 6l4 4", false),
 )

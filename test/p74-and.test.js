@@ -18,7 +18,7 @@ const swipeClose = (up, speed, minPx, minV) => up > minPx && speed > minV;
 
 test('wiggle: Søk-widgeten (h1) har hold = false, og søkefelt/svar sjekkes i tillegg', () => {
   assert.match(code('ui/Paper.kt'), /PSec\("h1", "Søk", full = true, hold = false\)/);
-  const h = code('ui/Home70.kt');
+  const h = code('ui/HjemRutenett.kt');
   assert.match(h, /if \(!wiggleHold74\(edit, key in hold, Ans70\.searchRect\?\.contains\(pt\) == true \|\| vm\.p38\.ansRect\?\.contains\(pt\) == true\)\) return@awaitEachGesture/);
   assert.match(h, /internal fun wiggleHold74\(edit: Boolean, hold: Boolean, inSearch: Boolean\): Boolean = edit \|\| \(hold && !inSearch\)/);
   // Gesten konsumerer ikke berøringen før wiggle faktisk starter (TextField får det lange trykket).
@@ -29,17 +29,17 @@ test('wiggle: Søk-widgeten (h1) har hold = false, og søkefelt/svar sjekkes i t
   assert.equal(wiggleHold(false, true, false), true, 'annen flis: wiggle');
   assert.equal(wiggleHold(true, false, true), true, 'i wiggle kan Søk flyttes');
   // EditWrap (rutenettet uten fliser og Fold) bruker sec.hold – ingen holdDrag37 for h1.
-  assert.match(code('ui/Paper15.kt'), /\.holdDrag37\(sec\.hold \|\| edit,/);
+  assert.match(code('ui/PapirTilpassOgNavigasjon.kt'), /\.holdDrag37\(sec\.hold \|\| edit,/);
 });
 
 test('tekstmarkering: svaret og opptakskortet ligger i SelectionContainer, søkefeltets ramme ryddes', () => {
   assert.match(code('ui/Glimt.kt'), /else androidx\.compose\.foundation\.text\.selection\.SelectionContainer \{ Text\(\s*buildAnnotatedString \{\s*boldParts31\(a\.text\)/);
-  assert.match(code('ui/Mic70.kt'), /SelectionContainer\(Modifier\.weight\(1f, fill = false\)\) \{ Text\(/);
-  assert.match(code('ui/Home29Ui.kt'), /DisposableEffect\(Unit\) \{ onDispose \{ Ans70\.searchRect = null \} \}/);
+  assert.match(code('ui/Mikrofon.kt'), /SelectionContainer\(Modifier\.weight\(1f, fill = false\)\) \{ Text\(/);
+  assert.match(code('ui/HjemSok.kt'), /DisposableEffect\(Unit\) \{ onDispose \{ Ans70\.searchRect = null \} \}/);
 });
 
 test('trykk utenfor: bare et ekte trykk lukker (bevegelse, tid, scroll, fling)', () => {
-  const h = code('ui/Home70.kt');
+  const h = code('ui/HjemRutenett.kt');
   const t = h.slice(h.indexOf('fun Modifier.ansTapOutside70'), h.indexOf('internal fun tapOk74'));
   assert.match(t, /awaitPointerEvent\(PointerEventPass\.Final\)/, 'Final-passet ser om scroll konsumerte');
   assert.match(t, /path \+= ch\.positionChangeIgnoreConsumed\(\)\.getDistance\(\)/, 'total bevegelse, ikke bare avstand fra ned');

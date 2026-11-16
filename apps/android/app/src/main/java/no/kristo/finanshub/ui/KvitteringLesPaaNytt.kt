@@ -53,7 +53,7 @@ import no.kristo.finanshub.ui.designsystem.HomelabType
  *    «✦ Analyser på nytt med Gemini» er en primærknapp (#4f63ff, hvit, 600) og bare grå når den faktisk er deaktivert (med grunnen under);
  *    «Les med lokal OCR» er sekundær (kort + kant + ink). Tekst øverst, knappene på én rad under (FlowRow, 10 dp), Gemini først.
  *  - claude-code-kvittering-les-pa-nytt-502.md: «Les på nytt» går som jobb (async, polling hvert 1,5 s), fremdrift «Leser … 12 s»,
- *    tydelige meldinger (GlimtErr50.kt) og «Les mindre versjon» ved tidsavbrudd. Arket beholder «Lukk» og «Prøv igjen».
+ *    tydelige meldinger (GlimtFeil.kt) og «Les mindre versjon» ved tidsavbrudd. Arket beholder «Lukk» og «Prøv igjen».
  */
 
 /** Aksenten fra spesifikasjonen (--b-acc, som «Prøv igjen» på web). Hvit tekst gir 4,9:1. */

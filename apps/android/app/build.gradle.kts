@@ -90,7 +90,7 @@ dependencies {
     // fra Play-tjenester (ingen kameratillatelse, ingen modell i APK-en). Brukes bare når «Dokumentskanner» er på; ellers/uten
     // Play-tjenester brukes systemkameraet som før (ui/KvitteringSkann.kt).
     implementation(libs.play.mlkit.document.scanner)
-    // Prompt 51 (ANDPLAT51): Android Auto – Avganger, På vei hjem og Media som bilmaler (Car51Plat.kt). Fast stabil versjon.
+    // Prompt 51 (ANDPLAT51): Android Auto – Avganger, På vei hjem og Media som bilmaler (AndroidAuto.kt). Fast stabil versjon.
     implementation(libs.car.app)
     // Prompt 71 (ANIAND71): Baseline Profile (src/main/baseline-prof.txt) for Hjem, Chat og ark. Profilinstalleren skriver profilen ved
     // første oppstart, også for APK-er som sideloades. Ingen ny Gradle-plugin (AGP tar med baseline-prof.txt av seg selv).

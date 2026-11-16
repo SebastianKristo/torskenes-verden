@@ -102,7 +102,7 @@ test('alarmer og nærhetsvarsler settes opp igjen etter omstart av telefonen', (
   assert.match(arm, /if \(alarm && exactOk\(am\)\) am\.setAlarmClock/);
   assert.match(arm, /else am\.setAndAllowWhileIdle\(AlarmManager\.RTC_WAKEUP, whenMs/);
 
-  const boot = block(code('Ntfy51.kt'), 'class Ntfy51Boot');
+  const boot = block(code('Ntfy.kt'), 'class Ntfy51Boot');
   assert.match(boot, /Intent\.ACTION_BOOT_COMPLETED\) \{\s*runCatching \{ Alarms37\.restore85\(ctx\) \}\s*runCatching \{ Geofence50\.restore85\(ctx\) \}/);
   assert.match(boot, /runCatching \{ Ntfy51\.sync\(ctx\) \}/);
   const geo = block(code('FamilyModel.kt'), 'fun restore85(ctx: Context)');

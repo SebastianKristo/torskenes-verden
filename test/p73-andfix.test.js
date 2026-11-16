@@ -13,9 +13,9 @@ const read = (f) => readFileSync(join(SRC, f), 'utf8');
 /** Kode uten kommentarer. */
 const code = (f) => read(f).replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
 
-/** Regexene fra AndFix73.kt, oversatt til JS ((?i) → flagg i). */
+/** Regexene fra Feiltekst.kt, oversatt til JS ((?i) → flagg i). */
 function ktRegex(name) {
-  const s = read('AndFix73.kt');
+  const s = read('Feiltekst.kt');
   const m = s.match(new RegExp(`private val ${name} = Regex\\(([\\s\\S]*?)\\)\\n`));
   assert.ok(m, `${name} finnes`);
   const parts = [...m[1].matchAll(/"""([\s\S]*?)"""/g)].map((x) => x[1]);
@@ -49,16 +49,16 @@ test('avbrudd: filteret kjenner igjen «StandaloneCoroutine was cancelled» og r
   for (const t of ['Fikk ikke kontakt med serveren.', 'Serveren svarte ikke i tide.', 'Bare administrator kan endre dette for alle', 'Feil 500']) {
     assert.doesNotMatch(t, raw, t);
   }
-  const a = code('AndFix73.kt');
+  const a = code('Feiltekst.kt');
   assert.match(a, /internal fun uiErr73\(e: Throwable, fallback: String = ERR_GENERIC73\): String/);
   assert.match(a, /Log\.w\(TAG73, fallback, e\)/, 'detaljene logges');
   assert.match(a, /if \(isCancelText73\(s\)\) \{[^}]*return null \}/);
 });
 
 test('avbrudd: catch (e: Exception) med e.message i coroutines har CancellationException foran og ingen rå tekst', () => {
-  const files = ['Offline51Plat.kt', 'RaskTime.kt', 'Car51Plat.kt', 'Kalender.kt', 'BackupModel.kt', 'G67.kt', 'SmbModel.kt', 'Feat51.kt',
-    'Memory33.kt', 'BirthdaysModel.kt', 'Kalender.kt', 'Chat.kt', 'ui/FamilyPage.kt', 'ui/UpdatePage.kt',
-    'ui/Search51Ui.kt', 'ui/HealthSettings.kt', 'upload/PendingUploads.kt', 'Onboard51.kt', 'AppViewModel.kt',
+  const files = ['OfflineKo.kt', 'RaskTime.kt', 'AndroidAuto.kt', 'Kalender.kt', 'BackupModel.kt', 'GlimtInnstillingerSider.kt', 'SmbModel.kt', 'Funksjonssider.kt',
+    'GlimtHusker.kt', 'BirthdaysModel.kt', 'Kalender.kt', 'Chat.kt', 'ui/FamilyPage.kt', 'ui/UpdatePage.kt',
+    'ui/FellesSok.kt', 'ui/HealthSettings.kt', 'upload/PendingUploads.kt', 'Invitasjon.kt', 'AppViewModel.kt',
     // Fase 5: P30/31/41/46, Mod28B og ui/Ui41 er delt opp etter funksjon.
     'Glimt.kt', 'Oppstart.kt', 'Varsler.kt', 'Nordlys.kt', 'Hjem.kt', 'AiKontroll.kt', 'Serveradresse.kt', 'Innlogging.kt', 'Bakgrunn.kt',
     'Chat.kt', 'Hoytider.kt', 'MerListe.kt', 'domene/Drift.kt', 'domene/Okonomi.kt', 'domene/Media.kt', 'domene/Gjoremal.kt',
@@ -69,9 +69,9 @@ test('avbrudd: catch (e: Exception) med e.message i coroutines har CancellationE
     const s = code(f);
     assert.doesNotMatch(s, /catch \((\w+): (?:Exception|Throwable)\) \{[^{}]*\b\1\.message \?: "/, `${f}: rå e.message ?: "…" i catch`);
   }
-  assert.match(code('G67.kt'), /else -> uiErr73\(e, what\)/);
-  assert.match(code('Onboard51.kt'), /else -> uiErr73\(e, "Noe gikk galt\. Prøv igjen\."\)/);
-  assert.equal((code('Feat51.kt').match(/catch \(e: kotlinx\.coroutines\.CancellationException\) \{ throw e \}/g) || []).length >= 4, true);
+  assert.match(code('GlimtInnstillingerSider.kt'), /else -> uiErr73\(e, what\)/);
+  assert.match(code('Invitasjon.kt'), /else -> uiErr73\(e, "Noe gikk galt\. Prøv igjen\."\)/);
+  assert.equal((code('Funksjonssider.kt').match(/catch \(e: kotlinx\.coroutines\.CancellationException\) \{ throw e \}/g) || []).length >= 4, true);
   const api = code('Api.kt');
   assert.doesNotMatch(api, /HTTPS-feil \(\$\{e\.message\}\)/);
   assert.doesNotMatch(api, /throw ApiException\(e\.message \?: "Nettverksfeil"\)/);
@@ -90,7 +90,7 @@ test('Hjem: faste høyder fra tabell (prompt 80: 101 / 212 = 2 × 101 + 10)', ()
   const ios52 = readFileSync(join(IOS, 'HomeGrid.swift'), 'utf8');
   assert.match(ios50, /minHeight: 212/, 'Avgang 212 på iOS');
   assert.ok((ios52.match(/minHeight: 150/g) || []).length >= 4, 'små fliser 150 på iOS');
-  const h = code('ui/Home70.kt');
+  const h = code('ui/HjemRutenett.kt');
   const num = (re) => Number(h.match(re)[1]);
   const small = num(/private val SMALL73 = (\d+)\.dp/);
   const tall = num(/private val TALL73 = (\d+)\.dp/);
@@ -111,7 +111,7 @@ test('Hjem: faste høyder fra tabell (prompt 80: 101 / 212 = 2 × 101 + 10)', ()
 });
 
 test('Hjem: tekst med tak 1,15, uten fontpadding og med eksplisitt linjehøyde; fontene er med', () => {
-  const h = code('ui/Home70.kt');
+  const h = code('ui/HjemRutenett.kt');
   assert.match(h, /private const val FONT_MAX73 = 1\.15f/);
   assert.match(h, /LocalDensity provides Density\(d\.density, d\.fontScale\.coerceAtMost\(FONT_MAX73\)\)/);
   assert.match(h, /lineHeight = 1\.35\.em/);

@@ -787,7 +787,7 @@ internal fun PaperTxDetail(vm: AppViewModel, navBottom: Dp, camera: () -> Unit, 
         }
         val t = d.tx
         item {
-            // Prompt 52: samme kvitteringshode som Boliger (ui/And52AUi.kt ReceiptHead52).
+            // Prompt 52: samme kvitteringshode som Boliger (ui/ChatTenking.kt ReceiptHead52).
             ReceiptHead52(
                 vm, t.domain, t.merchant ?: t.description, t.color,
                 listOf(t.category, longDate(runCatching { java.time.LocalDate.parse(t.date.take(10)) }.getOrDefault(java.time.LocalDate.now())), t.account).filter { it.isNotBlank() }.joinToString(" · "),

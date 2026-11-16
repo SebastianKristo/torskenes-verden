@@ -146,7 +146,7 @@ class P43State {
     var impDone by mutableStateOf<String?>(null)
     var impLastId by mutableStateOf<String?>(null)
 
-    /* Widget-galleri (ui/WidgetGallery43.kt) */
+    /* Widget-galleri (ui/WidgetGalleri.kt) */
     var galleryOpen by mutableStateOf(false)
     var catalog by mutableStateOf<List<JSONObject>?>(null)
 }

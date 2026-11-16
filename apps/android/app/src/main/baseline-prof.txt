@@ -23,8 +23,8 @@ Lno/kristo/finanshub/ui/PaperFonts*;
 # Hjem (rutenett, wiggle/flytting, Glimt-orb og -svar, mikrofon)
 HSPLno/kristo/finanshub/ui/PaperKt*;->**(**)**
 Lno/kristo/finanshub/ui/PaperKt*;
-HSPLno/kristo/finanshub/ui/Home70Kt*;->**(**)**
-Lno/kristo/finanshub/ui/Home70Kt*;
+HSPLno/kristo/finanshub/ui/HjemRutenettKt*;->**(**)**
+Lno/kristo/finanshub/ui/HjemRutenettKt*;
 HSPLno/kristo/finanshub/ui/Home70State*;->**(**)**
 Lno/kristo/finanshub/ui/Home70State*;
 HSPLno/kristo/finanshub/ui/Row70*;->**(**)**
@@ -35,14 +35,14 @@ HSPLno/kristo/finanshub/ui/HjemFliserKt*;->**(**)**
 Lno/kristo/finanshub/ui/HjemFliserKt*;
 HSPLno/kristo/finanshub/ui/EffekterKt*;->**(**)**
 Lno/kristo/finanshub/ui/EffekterKt*;
-HSPLno/kristo/finanshub/ui/Tiles50Kt*;->**(**)**
-Lno/kristo/finanshub/ui/Tiles50Kt*;
-HSPLno/kristo/finanshub/ui/Paper15Kt*;->**(**)**
-Lno/kristo/finanshub/ui/Paper15Kt*;
+HSPLno/kristo/finanshub/ui/HjemMinifliserKt*;->**(**)**
+Lno/kristo/finanshub/ui/HjemMinifliserKt*;
+HSPLno/kristo/finanshub/ui/PapirTilpassOgNavigasjonKt*;->**(**)**
+Lno/kristo/finanshub/ui/PapirTilpassOgNavigasjonKt*;
 HSPLno/kristo/finanshub/ui/PSec*;->**(**)**
 Lno/kristo/finanshub/ui/PSec*;
-HSPLno/kristo/finanshub/ui/Anim71Kt*;->**(**)**
-Lno/kristo/finanshub/ui/Anim71Kt*;
+HSPLno/kristo/finanshub/ui/AnimasjonKt*;->**(**)**
+Lno/kristo/finanshub/ui/AnimasjonKt*;
 HSPLno/kristo/finanshub/ui/GlimtKt*;->**(**)**
 Lno/kristo/finanshub/ui/GlimtKt*;
 HSPLno/kristo/finanshub/ui/GlimtSvarKt*;->**(**)**
@@ -53,12 +53,12 @@ HSPLno/kristo/finanshub/ui/GlobaleLagKt*;->**(**)**
 Lno/kristo/finanshub/ui/GlobaleLagKt*;
 HSPLno/kristo/finanshub/ui/KontoKt*;->**(**)**
 Lno/kristo/finanshub/ui/KontoKt*;
-HSPLno/kristo/finanshub/ui/Mic70Kt*;->**(**)**
-Lno/kristo/finanshub/ui/Mic70Kt*;
+HSPLno/kristo/finanshub/ui/MikrofonKt*;->**(**)**
+Lno/kristo/finanshub/ui/MikrofonKt*;
 HSPLno/kristo/finanshub/ui/VoiceInputUiKt*;->**(**)**
 Lno/kristo/finanshub/ui/VoiceInputUiKt*;
-HSPLno/kristo/finanshub/ui/Convo67UiKt*;->**(**)**
-Lno/kristo/finanshub/ui/Convo67UiKt*;
+HSPLno/kristo/finanshub/ui/GlimtSamtaleKt*;->**(**)**
+Lno/kristo/finanshub/ui/GlimtSamtaleKt*;
 HSPLno/kristo/finanshub/ui/GlimtKalenderkortKt*;->**(**)**
 Lno/kristo/finanshub/ui/GlimtKalenderkortKt*;
 HSPLno/kristo/finanshub/P31*;->**(**)**
@@ -83,8 +83,8 @@ HSPLno/kristo/finanshub/ui/ChatKt*;->**(**)**
 Lno/kristo/finanshub/ui/ChatKt*;
 HSPLno/kristo/finanshub/ui/ChatArkKt*;->**(**)**
 Lno/kristo/finanshub/ui/ChatArkKt*;
-HSPLno/kristo/finanshub/ui/Cards31Kt*;->**(**)**
-Lno/kristo/finanshub/ui/Cards31Kt*;
+HSPLno/kristo/finanshub/ui/ChatKortKt*;->**(**)**
+Lno/kristo/finanshub/ui/ChatKortKt*;
 HSPLno/kristo/finanshub/ChatKt*;->**(**)**
 Lno/kristo/finanshub/ChatKt*;
 

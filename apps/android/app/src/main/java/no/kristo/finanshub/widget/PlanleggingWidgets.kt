@@ -66,7 +66,7 @@ import androidx.glance.color.ColorProvider as DayNight51
  *    hvilken konto og dag, og de neste trekkene. Trykk → Planlegging (finanshub://plan, ANDFEAT51).
  *  - «Sjekk inn» (2 × 2): «Alt bra» sender en innsjekk til familien med ett trykk (POST /api/family/checkin {to, quick:'ok', lat?, lon?});
  *    posisjonen sendes bare med selve innsjekken. «Hent meg» åpner Sjekk inn i appen (bekreftes der – høy prioritet skal ikke sendes
- *    ved et uhell fra hjemskjermen). Uten nett legges innsjekken i offline-køen (Offline51Plat.kt).
+ *    ved et uhell fra hjemskjermen). Uten nett legges innsjekken i offline-køen (OfflineKo.kt).
  *  - Pakker og avganger finnes fra før (PackagesWidget, Ruter27-widgetene) og er uendret.
  * Data hentes av WidgetWorker hvert 15. minutt ([fetchPlat51]) og lagres per konto (samme regel som de andre widgetene).
  * Tilgjengelighet: knappene har innholdsbeskrivelse, tekst i sp (skalerer med systemets tekststørrelse), trykkflater ≥ 48 dp.

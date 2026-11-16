@@ -1242,7 +1242,7 @@ fun AppViewModel.alias67(path: String): String? {
         }
         "glimt67", "glimt-og-ai" -> "glimt67"
         "huske", "gjoremal", "gjøremål" -> "kal"
-        // Prompt 68: Husstand → Brukere og familie (ui/Users68Ui.kt), som web-aliasene i settings65.js.
+        // Prompt 68: Husstand → Brukere og familie (ui/Brukere.kt), som web-aliasene i settings65.js.
         "brukere-og-familie", "users", "brukere", "familie", "family", "fam", "husstand", "barn", "helse", "healthpos" -> "users68"
         else -> null
     }

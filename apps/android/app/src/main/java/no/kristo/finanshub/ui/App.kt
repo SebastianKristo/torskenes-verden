@@ -115,7 +115,7 @@ fun FinansApp(vm: AppViewModel, width: WindowWidthSizeClass, unlock: () -> Unit,
     if (vm.menuOpen) ProfileSheet(vm)
     if (vm.widgetGallery) WidgetGallery(vm)
     Overlays51(vm) // prompt 51: «Ny enhet vil logge inn» og «Nytt i denne versjonen»
-    Theme51Effects(vm) // prompt 51 (ANDFEAT51): tema synket mellom enheter + automatisk tema (ui/Theme51Ui.kt)
+    Theme51Effects(vm) // prompt 51 (ANDFEAT51): tema synket mellom enheter + automatisk tema (ui/TemaSynk.kt)
     Effects52B(vm) // prompt 52 (AND52B): Ruter forhåndshentes, Vær nå-bildet, Glimt-figur per bruker (ui/Ui52B.kt)
 }
 

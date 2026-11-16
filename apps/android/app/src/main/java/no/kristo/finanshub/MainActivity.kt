@@ -25,7 +25,7 @@ class MainActivity : FragmentActivity() {
 
     @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
-        runCatching { Crash51.install(this) } // prompt 51: krasj → fil, sendes ved neste oppstart (Qa51.kt)
+        runCatching { Crash51.install(this) } // prompt 51: krasj → fil, sendes ved neste oppstart (Krasjrapporter.kt)
         runCatching { Theme51.init(this) } // prompt 51 (ANDFEAT51): tema per bruker / automatisk tema
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -45,7 +45,7 @@ class MainActivity : FragmentActivity() {
             // Brettbare: bredde ≥ 600 dp (Medium/Expanded) gir navigasjonsrail og to paneler.
             val size = calculateWindowSizeClass(this)
             // Papir · lys / mørk / følg systemet (Innstillinger → Utseende). Prompt 42: det eneste designet.
-            // Prompt 51 (ANDFEAT51): «Automatisk» tema (etter solen / klokkeslett, synket mellom enheter) velger lys/mørk her (Theme51.kt).
+            // Prompt 51 (ANDFEAT51): «Automatisk» tema (etter solen / klokkeslett, synket mellom enheter) velger lys/mørk her (TemaSynk.kt).
             FinansTheme(Theme51.paperMode(vm.paperMode)) {
                 FinansApp(vm, size.widthSizeClass, unlock = ::unlock, onPrivacyChanged = ::applySwitcherPrivacy)
             }
