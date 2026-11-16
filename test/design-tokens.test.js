@@ -119,7 +119,7 @@ test('Swift, Kotlin og asset-katalog har GENERERT-merke og ingen tomme verdier',
   assert.match(files[PATHS.kotlinWear], /^package no\.kristo\.finanshub\.wear\.ui\.designsystem$/m);
   assert.doesNotMatch(files[PATHS.kotlinWear], /material3/, 'wear har ikke Material 3');
   const sets = Object.keys(files).filter((p) => p.endsWith('.colorset/Contents.json'));
-  assert.equal(sets.length, STILER.length * FARGER.length + 1 + Object.keys(categories(tokens).farger).length);
+  assert.equal(sets.length, STILER.length * FARGER.length + 2 + Object.keys(categories(tokens).farger).length); // + onCategory og onCategoryLight
   for (const p of sets) JSON.parse(files[p]);
   // Swift-koden peker bare på fargesett som finnes.
   const names = new Set(sets.map((p) => p.split('/').at(-2).replace('.colorset', '')));

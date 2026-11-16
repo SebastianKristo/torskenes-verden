@@ -31,6 +31,7 @@ enum class DsStil { Papir, Glass }
 @Immutable
 data class DsCategoryColors(
     val onCategory: Color,
+    val onCategoryLight: Color,
     val blue: Color,
     val red: Color,
     val purple: Color,
@@ -78,6 +79,7 @@ data class DsColors(
 object DsPalette {
     val Category = DsCategoryColors(
         onCategory = Color(0xFFFFFFFF),
+        onCategoryLight = Color(0xFF000000),
         blue = Color(0xFF2B5D8A),
         red = Color(0xFFD4231B),
         purple = Color(0xFF6B4FA0),

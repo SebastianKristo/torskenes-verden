@@ -122,6 +122,8 @@ enum DS {
     }
 
     static var onCategory: Color { Color("DSOnCategory", bundle: nil) }
+    /// Tekst på en lys farge brukeren har valgt selv (velges etter luminansen i stedet for onCategory).
+    static var onCategoryLight: Color { Color("DSOnCategoryLight", bundle: nil) }
 
     /// Tekststiler. size/lineHeight er tokenverdiene i pt; textStyle er iOS-stilen som styrer Dynamic Type.
     enum Tekst: String, CaseIterable, Sendable {

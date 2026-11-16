@@ -125,8 +125,9 @@ export function opaque(farger, navn) {
 }
 
 export function categories(tokens) {
-  const { onCategory, ...rest } = plain(tokens.category);
-  return { onCategory, farger: rest };
+  // onCategoryLight (M9): tekst på en lys farge brukeren har valgt selv. Klienten velger den eller onCategory etter luminansen.
+  const { onCategory, onCategoryLight, ...rest } = plain(tokens.category);
+  return { onCategory, onCategoryLight, farger: rest };
 }
 
 /* ---------------------------------------------------------------- Validering */
@@ -176,7 +177,8 @@ export function validate(tokens) {
   }
   const cat = categories(tokens);
   if (!cat.onCategory) errors.push('category.onCategory mangler');
-  for (const [k, v] of Object.entries({ onCategory: cat.onCategory, ...cat.farger })) {
+  if (!cat.onCategoryLight) errors.push('category.onCategoryLight mangler');
+  for (const [k, v] of Object.entries({ onCategory: cat.onCategory, onCategoryLight: cat.onCategoryLight, ...cat.farger })) {
     try { if (parseColor(v).a !== 1) errors.push(`category.${k} må være ugjennomsiktig`); } catch (e) { errors.push(`category.${k}: ${e.message}`); }
   }
   for (const [k, s] of Object.entries(plain(tokens.textStyle))) {
@@ -235,6 +237,7 @@ export function generateCss(tokens) {
   L.push(':root {');
   const cat = categories(tokens);
   L.push(`  --ds-on-category: ${cssValue(cat.onCategory)};`);
+  L.push(`  --ds-on-category-light: ${cssValue(cat.onCategoryLight)};`);
   for (const [k, v] of Object.entries(cat.farger)) L.push(`  --ds-category-${kebab(k)}: ${cssValue(v)};`);
   for (const [k, v] of Object.entries(plain(tokens.font.weight))) L.push(`  --ds-weight-${kebab(k)}: ${v};`);
   for (const [k, s] of Object.entries(plain(tokens.textStyle))) {
@@ -332,8 +335,8 @@ export function generateXcassets(tokens) {
     }
   }
   const cat = categories(tokens);
-  for (const [k, v] of [['onCategory', cat.onCategory], ...Object.entries(cat.farger)]) {
-    const name = k === 'onCategory' ? 'DSOnCategory' : categoryAssetName(k);
+  for (const [k, v] of [['onCategory', cat.onCategory], ['onCategoryLight', cat.onCategoryLight], ...Object.entries(cat.farger)]) {
+    const name = k === 'onCategory' ? 'DSOnCategory' : k === 'onCategoryLight' ? 'DSOnCategoryLight' : categoryAssetName(k);
     files[`${base}/${name}.colorset/Contents.json`] = assetJson({ colors: [colorEntry(v, [])], info: { author: 'xcode', version: 1 } });
   }
   return files;
@@ -399,6 +402,8 @@ export function generateSwift(tokens) {
   L.push('    }');
   L.push('');
   L.push('    static var onCategory: Color { Color("DSOnCategory", bundle: nil) }');
+  L.push('    /// Tekst på en lys farge brukeren har valgt selv (velges etter luminansen i stedet for onCategory).');
+  L.push('    static var onCategoryLight: Color { Color("DSOnCategoryLight", bundle: nil) }');
   L.push('');
   L.push('    /// Tekststiler. size/lineHeight er tokenverdiene i pt; textStyle er iOS-stilen som styrer Dynamic Type.');
   L.push('    enum Tekst: String, CaseIterable, Sendable {');
@@ -531,6 +536,7 @@ function ktColorsBlocks(tokens, L) {
   L.push('@Immutable');
   L.push('data class DsCategoryColors(');
   L.push('    val onCategory: Color,');
+  L.push('    val onCategoryLight: Color,');
   for (const k of Object.keys(cat.farger)) L.push(`    val ${k}: Color,`);
   L.push(')');
   L.push('');
@@ -545,6 +551,7 @@ function ktColorsBlocks(tokens, L) {
   L.push('object DsPalette {');
   L.push('    val Category = DsCategoryColors(');
   L.push(`        onCategory = ${ktColor(cat.onCategory)},`);
+  L.push(`        onCategoryLight = ${ktColor(cat.onCategoryLight)},`);
   for (const [k, v] of Object.entries(cat.farger)) L.push(`        ${k} = ${ktColor(v)},`);
   L.push('    )');
   for (const stil of STILER) {

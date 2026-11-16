@@ -9,6 +9,7 @@ import { speak57, stop57, aiTag57 } from './stemmer.js'; // prompt 57: «Les opp
 // Prompt 73 (NEWS73): fanen «Lagret», bokmerke på kort og i artikkelvisningen, lagret artikkel offline (news-lagret.js).
 import { TAB73, TAB_ICON73, bind73, load73, label73, listHtml73, cardBtn73, artBtn73, artBanner73, readerHtml73, toastHtml73, click73, input73, key73, openSaved73 } from './news-lagret.js';
 import { pageCss } from './lib/page-css.js';
+import { lysBakgrunn } from './lib/kontrast.js'; // M9: forbokstavene på brukerens farge
 
 const CSS_ID = 'news-css';
 const ensureCss = () => {
@@ -493,7 +494,7 @@ function reader(opts = {}) {
       <span class="nw-tx"><b>${n}</b><span>${sub}</span></span><span class="nw-sw ${on(k) ? 'on' : ''}"><span></span></span></button>`;
     const opts0 = Array.isArray(d.categoryOptions) && d.categoryOptions.length ? d.categoryOptions.map((o) => [String(o.id), o.id === 'auto' ? (s.aiCategorize ? '✦ Auto' : 'Auto') : o.name]) : [['auto', s.aiCategorize ? '✦ Auto' : 'Auto'], ...stdCats().map((c) => [c.id, c.name])];
     const opts = [...opts0, ...ccList().filter((c) => !opts0.some(([v]) => v === c.id)).map((c) => [c.id, c.name])];
-    const fav = (f) => { const u = favOf(f); return `<span class="nw-ini nw46-fav" style="background:${esc(f.color)}">${esc(f.name.slice(0, 2).toUpperCase())}${u ? `<img src="${esc(u)}" alt="" loading="lazy" referrerpolicy="no-referrer" data-nw-img>` : ''}</span>`; };
+    const fav = (f) => { const u = favOf(f); return `<span class="nw-ini nw46-fav${lysBakgrunn(f.color) ? ' on-lys' : ''}" style="background:${esc(f.color)}">${esc(f.name.slice(0, 2).toUpperCase())}${u ? `<img src="${esc(u)}" alt="" loading="lazy" referrerpolicy="no-referrer" data-nw-img>` : ''}</span>`; };
     const ints = intList();
     return `<div class="nw-box">${tog('aiSummary', '✦ AI-sammendrag', 'Lager en kort ingress over de viktigste sakene øverst.', 0)}${tog('catSummary', '✦ Sammendrag per kategori', 'Eget Glimt-sammendrag øverst i hver kategori (minst 3 saker).', 1)}${tog('aiCategorize', '✦ AI-kategorisering', 'Setter kategori per sak når kilden står på Auto.', 2)}</div>
       <span class="nw-lab">KATEGORIER</span>

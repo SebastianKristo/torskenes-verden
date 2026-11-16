@@ -63,6 +63,8 @@ Merk: `warning` i Papir lys har 4,0:1 mot `surface`. Bruk den som ikon, fyll (me
 ### Kategorifarger
 
 Fyllfarger for moduler, abonnementskategorier og kalendere, med `onCategory` (`#ffffff`) som tekst og ikon oppå.
+På en farge brukeren har valgt selv (f.eks. per nyhetskilde) velger klienten `onCategory` eller `onCategoryLight` (`#000000`) etter
+bakgrunnens luminans (web: `public/js/lib/kontrast.js`). Den beste av hvit og svart gir alltid minst 4,58:1 (M9).
 Like i alle stiler og moduser. Hentet fra dashbordkortene (`--wc` i web40.css). Energi-oransjen `#d98c1f` (2,7:1 mot hvitt) er byttet med `amber`.
 
 | Token | Verdi | `onCategory` |
