@@ -1024,7 +1024,8 @@ const daysTo = (d) => (d ? Math.round((new Date(`${String(d).slice(0, 10)}T12:00
 
 api.get('/mobile/widgets', authOrToken, async (c) => {
   const id = c.get('user'), admin = isAdmin(id);
-  const tomorrow = new Date(Date.now() + 864e5).toLocaleDateString('sv-SE');
+  // Q20: «i morgen» er dagen etter Oslo-datoen, uansett serverens tidssone (kalenderdag, ikke +24 t).
+  const tomorrow = new Date(Date.parse(`${osloDate()}T12:00:00Z`) + 864e5).toISOString().slice(0, 10);
   const [w, sum, rec, stk, finn, folders, week, week2, subs] = await Promise.all([
     part(safe(ext.getWeather)),
     part(inner(finansApi, '/summary', c)), part(inner(finansApi, '/recurring', c)), part(inner(finansApi, '/stocks', c)), part(inner(finansApi, '/finn', c)),
