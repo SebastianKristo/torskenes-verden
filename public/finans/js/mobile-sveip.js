@@ -10,7 +10,6 @@ import { haptic, hapBack } from './mobile-haptics.js';
 import { canSrv } from './mobile-app-og-sanntid.js';
 
 const root = () => document.getElementById('app');
-const lab = (t, r = '') => `<span class="p23-lab"><span>${t}</span>${r ? `<span>${r}</span>` : ''}</span>`;
 const SVG = (d, s = 20) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${d}"/></svg>`;
 
 /* =====================================================================
