@@ -16,7 +16,7 @@ import { hsTimeout, NAV_T } from './mobile-sidefaner-og-sw.js'; // prompt 32: GL
 import * as P34 from './mobile-glimt-brief.js';
 import * as P35 from './mobile-glimt-figurer.js';
 import * as P36 from './mobile-brief-og-oppstart.js';
-import * as P37B from './mobile-p37b.js'; // prompt 37: «hvor er X» // prompt 36: spørsmål vs. handling, dagslys lokalt // prompt 35: været for et sted i AI-søket // prompt 34: tydelige AI-feil i boblen
+import * as P37B from './mobile-bibel-og-onboarding.js'; // prompt 37: «hvor er X» // prompt 36: spørsmål vs. handling, dagslys lokalt // prompt 35: været for et sted i AI-søket // prompt 34: tydelige AI-feil i boblen
 
 const lsGet = (k, d = null) => { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch { return d; } };
 const lsSet = (k, v) => { try { if (v == null) localStorage.removeItem(k); else localStorage.setItem(k, JSON.stringify(v)); } catch {} };

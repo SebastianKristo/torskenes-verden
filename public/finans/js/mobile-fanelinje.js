@@ -13,7 +13,7 @@ import { paper, paperDark } from './mobile-paper.js';
 import { setTiles } from './mobile-posisjon-og-logoer.js';
 import { DEP, depKey, depStatus, stopList } from './mobile-konto-og-deling.js';
 import * as P24 from './mobile-profiler-og-bursdager.js';
-import * as P22 from './mobile-p22.js';
+import * as P22 from './mobile-familie-soner.js';
 import * as P25 from './mobile-fanelinje-stil.js';
 import { loadLeaflet } from './leaflet.js';
 
@@ -52,7 +52,7 @@ export const TB = {
   nordlys: ['nordlys', 'Nordlys', '◇'], innstillinger: ['set', 'Innstillinger', '⚙'], mer: ['mer', 'Mer', '⋯'],
 };
 // Bibel bare for brukere med modulen (lest lat, så importrekkefølgen ikke endres).
-let B37 = null; import('./mobile-p37b.js').then((x) => { B37 = x; }).catch(() => {});
+let B37 = null; import('./mobile-bibel-og-onboarding.js').then((x) => { B37 = x; }).catch(() => {});
 const tbOk = (k) => k !== 'bibel' || !!B37?.bibleOn?.();
 export const TB_ICONS = ['▦', '✿', '✧', '✝', '◇', '⚙', '☑', '⌂', 'kr', '◐', '◎', '▣', '⌕', '⇆', '◉', '☼', '▤', '↗', '↻', '♥', '★', '✦', '◔', '≡', '⇄', '▢', '✉', '♪', '⚑'];
 const defItems = () => ['hjem', 'finans', 'mat', 'auto', ...(fabStyle() === 'float' ? ['sok'] : []), 'mer'].map((id) => ({ id }));

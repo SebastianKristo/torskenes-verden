@@ -12,7 +12,7 @@ import { DEP, depKey, depStatus, stopList, modeName, delayOf } from './mobile-ko
 import { setFinTabs } from './mobile-tilpassing.js';
 import { hlDom } from './mobile-hl.js';
 import { paperDark } from './mobile-paper.js';
-import { famSource } from './mobile-p22.js';
+import { famSource } from './mobile-familie-soner.js';
 import * as P25 from './mobile-fanelinje-stil.js';
 import * as P26 from './mobile-integrasjoner.js';
 

@@ -31,8 +31,8 @@ import { bgFetch, bgLayers, bgControls, saveBg, takeBg, bgSet } from './mobile-b
 import { homelabStil, homelabMorkt, homelabModus } from './tema.js';
 import * as P34 from './mobile-glimt-brief.js'; // prompt 34: Glimt-brief på Hjem (h12)
 import * as P35 from './mobile-glimt-figurer.js'; // prompt 35: Hjem-kortet med vertsfiguren
-import * as P37 from './mobile-p37.js'; // prompt 37: Gjøremål-widgeten
-import * as P37B from './mobile-p37b.js'; // prompt 37: bibelvers på Hjem, Pakker «bare når det er pakker»
+import * as P37 from './mobile-gjoremal.js'; // prompt 37: Gjøremål-widgeten
+import * as P37B from './mobile-bibel-og-onboarding.js'; // prompt 37: bibelvers på Hjem, Pakker «bare når det er pakker»
 import * as P36 from './mobile-brief-og-oppstart.js'; // prompt 36: sveip bort brief-kortet, Now Brief i Mer, temperatur trykk/hold
 
 /* ---------- Valg (per bruker i /api/me/layout, med lokal kopi) ---------- */

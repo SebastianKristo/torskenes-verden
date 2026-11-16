@@ -25,7 +25,7 @@ import { paperList, listAfterDraw, paperFinn, paperFinnSheet, paperFinnLoad, pap
 import { take15, edDown, edMove, edUp, edClick, edReset, paperSearch, fsBind, paperTx, txLoad, txBind15, TX, finMerGrid, fmerLoad, rcCount, recentLoad, newShipSheet, nsBind, navSetBind, fabStyle } from './mobile-tilpassing.js';
 import { wxView, wxLoad, wxBind, wxBindScroll, WX, wxAfterDraw, wxPlaces } from './mobile-wx.js';
 import { wx22Down, wx22Move, wx22Up } from './mobile-vaer-kart-og-steder.js';
-import * as P22 from './mobile-p22.js';
+import * as P22 from './mobile-familie-soner.js';
 import * as P23 from './mobile-sveip-og-kvitteringer.js';
 import * as P24 from './mobile-profiler-og-bursdager.js';
 import * as P25 from './mobile-fanelinje-stil.js';
@@ -42,8 +42,8 @@ import * as P32 from './mobile-sidefaner-og-sw.js'; // prompt 32: fanelinje på 
 import * as CHAT from './mobile-chat.js';
 import * as P34 from './mobile-glimt-brief.js'; // prompt 34: haptikk tilbake, kvitteringer under AI-analyse, Glimt-brief, markering i Innstillinger
 import * as P34AI from './mobile-ai-kontroll.js'; // prompt 34: AI-kontroll (#/aictl)
-import * as P37 from './mobile-p37.js'; // prompt 37: Gjøremål (uten fanelinje, detaljark, delte lister, Glimt i ✦-knappen)
-import * as P37B from './mobile-p37b.js'; // prompt 37: bibelvers, onboarding med profil, «hvor er X», Pakker-widget, prøveperioder
+import * as P37 from './mobile-gjoremal.js'; // prompt 37: Gjøremål (uten fanelinje, detaljark, delte lister, Glimt i ✦-knappen)
+import * as P37B from './mobile-bibel-og-onboarding.js'; // prompt 37: bibelvers, onboarding med profil, «hvor er X», Pakker-widget, prøveperioder
 import * as P38 from './mobile-okt-og-qr.js'; // prompt 38: AI-svar lukk, nye brief-kort, prestedrakt, ØKT, QR-innlogging, Glimt i Domener
 import * as P39 from './mobile-sveip-bort.js'; // prompt 39: sveip bort myk, Bibel uten fanelinje, wiggle-ark, Tilpass/Appprofil, Yr mot Storm 2a, ukas vær, kvittering på nytt
 let P40 = null; // prompt 40: mobile-jul-og-totrinn.js (dynamisk import i bind())

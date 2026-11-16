@@ -516,7 +516,7 @@ async function toBind(x) {
 export const IG = { cfg: null, err: '', test: '', busy: false, ed: false, f: {} };
 export async function integLoad() {
   const jobs = [hlApi('/config').then((c) => { IG.cfg = (c ?? []).find((g) => g.id === 'ha' || g.name === 'Home Assistant') ?? null; IG.err = ''; }).catch((e) => { IG.err = e.status === 403 ? 'Bare administrator kan endre tilkoblingen.' : e.message; })];
-  const P22 = await import('./mobile-p22.js'), P17 = await import('./mobile-app-og-sanntid.js');
+  const P22 = await import('./mobile-familie-soner.js'), P17 = await import('./mobile-app-og-sanntid.js');
   jobs.push(P17.tasksLoad?.(true)?.catch?.(() => {}), P22.haLoad?.(true)?.catch?.(() => {}));
   await Promise.all(jobs);
 }
@@ -546,7 +546,7 @@ async function igSave(form) {
   if (u) body.ha_url = u; if (tk) body.ha_token = tk;
   if (!Object.keys(body).length) { IG.ed = false; draw(); return; }
   IG.busy = true; draw();
-  try { const c = await hlApi('/config', { method: 'PUT', json: body }); IG.cfg = (c ?? []).find((g) => g.id === 'ha') ?? IG.cfg; IG.ed = false; flash('Home Assistant er lagret ✓'); const P22 = await import('./mobile-p22.js'); await P22.haLoad?.(true); }
+  try { const c = await hlApi('/config', { method: 'PUT', json: body }); IG.cfg = (c ?? []).find((g) => g.id === 'ha') ?? IG.cfg; IG.ed = false; flash('Home Assistant er lagret ✓'); const P22 = await import('./mobile-familie-soner.js'); await P22.haLoad?.(true); }
   catch (err) { flash(err.message); }
   IG.busy = false; draw();
 }

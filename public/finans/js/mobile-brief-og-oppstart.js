@@ -16,7 +16,7 @@ import { esc, hlApi } from './core.js';
 import { m, draw, flash, loadMe, meName, avatarUrl, avInner } from './mobile.js';
 import { haptic } from './mobile-haptics.js';
 import * as P35 from './mobile-glimt-figurer.js';
-import * as P37B from './mobile-p37b.js'; // prompt 37: Profil i husstanden (onboarding)
+import * as P37B from './mobile-bibel-og-onboarding.js'; // prompt 37: Profil i husstanden (onboarding)
 
 const pad = (n) => String(n).padStart(2, '0');
 const reduce = () => matchMedia('(prefers-reduced-motion: reduce)').matches;

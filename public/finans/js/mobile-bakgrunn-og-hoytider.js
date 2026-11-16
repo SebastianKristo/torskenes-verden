@@ -500,7 +500,7 @@ export async function bind41(e, t) {
       let ok = false;
       if (D.jobId) { try { await hlApi(`/tasks/glimt/jobs/${encodeURIComponent(D.jobId)}/undo`, { method: 'POST', json: {} }); ok = true; } catch (err) { if (err.status !== 404 && err.status !== 405) { flash(err.message, 'err'); return true; } } }
       if (!ok) {
-        const P37 = await import('./mobile-p37.js');
+        const P37 = await import('./mobile-gjoremal.js');
         for (const id of D.ids) await P37.delTask(id);
         const q = String(D.q ?? '').trim();
         if (q) await P37.addTask({ title: q.length > 60 ? `${q.slice(0, 58).trim()}…` : q, notes: q, list: D.list ?? undefined }).catch(() => null);

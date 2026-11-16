@@ -13,7 +13,7 @@ import { esc, hlApi } from './core.js';
 import { m, draw, flash } from './mobile.js';
 import { haptic } from './mobile-haptics.js';
 import { HK, tasksLoad, isArch, archLoad37, archOf37, saveLocal37 } from './mobile-app-og-sanntid.js';
-import * as P22 from './mobile-p22.js';
+import * as P22 from './mobile-familie-soner.js';
 
 const pad = (n) => String(n).padStart(2, '0');
 const iso = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;

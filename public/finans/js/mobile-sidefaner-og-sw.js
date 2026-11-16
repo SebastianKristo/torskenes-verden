@@ -124,7 +124,7 @@ export function shortcut(q) {
   const n = String(q ?? '').toLowerCase().trim();
   if (!n) return null;
   if (!/^(vis( meg)?|åpne|gå til|ta meg til|hvor (er|finner jeg)|finn)\b/.test(n) && n.split(/\s+/).length > 2) return null;
-  // Prompt 37: «hvor er Ingrid» er et spørsmål om posisjonen (mobile-p37b.js whereAnswer), ikke en snarvei til Familie.
+  // Prompt 37: «hvor er Ingrid» er et spørsmål om posisjonen (mobile-bibel-og-onboarding.js whereAnswer), ikke en snarvei til Familie.
   const wq = /^(hvor|kor)\s+(er|befinner|holder)\s+(seg\s+)?([a-zæøå]+)\??$/.exec(n);
   if (wq && !NAV.some(([re]) => re.test(wq[4])) && !/^(jeg|det|den|de)$/.test(wq[4]) || /^(where is|posisjonen til)\s/.test(n)) return null;
   if (wq && wq[4] === 'jeg') return null;

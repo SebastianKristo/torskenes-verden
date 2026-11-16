@@ -6,12 +6,12 @@
 //   · Vel fremme: statuslinja på Kart (via mobile-vel-fremme.js) (claude-code-familie-fjern-hjemlys-kort.md)
 //   · Gjøremål-Glimt: lokal forhåndsdeling når serveren ikke deler opp (claude-code-huskeliste-glimt-del-opp.md, punkt 4)
 //   · «Vis mer» i bibelvers-arket (claude-code-bibel-ark-knapp-alltid.md)
-// Soner uten kart og ikonsøk ligger i mobile-p22.js, PostNord-logoen i mobile-track.js, bibelvers-arket i mobile-p37b.js.
+// Soner uten kart og ikonsøk ligger i mobile-familie-soner.js, PostNord-logoen i mobile-track.js, bibelvers-arket i mobile-bibel-og-onboarding.js.
 // Lastes med dynamisk import fra mobile.js (statiske importer herfra er trygge fordi resten allerede er evaluert).
 import { esc, hlApi } from './core.js';
 import { m, draw, flash, startScr, two, FIN } from './mobile.js';
 import { haptic } from './mobile-haptics.js';
-import { BB } from './mobile-p37b.js';
+import { BB } from './mobile-bibel-og-onboarding.js';
 import { FM, famLoad } from './mobile-fanelinje.js';
 import * as HM from './mobile-vel-fremme.js';
 

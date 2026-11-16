@@ -17,7 +17,7 @@ import * as P24 from './mobile-profiler-og-bursdager.js';
 import * as P26 from './mobile-integrasjoner.js';
 import { row, grp, appName, appIcon, ICONS } from './mobile-app-og-sanntid.js';
 import * as P25 from './mobile-fanelinje-stil.js'; // prompt 39: Fanelinje-stil i Tilpass
-import { haSection } from './mobile-p22.js';
+import { haSection } from './mobile-familie-soner.js';
 import { p17SetMain, p17Modules, p17AiExtra, p17Varsler, aiLoad, notifyLoad, NT, canSrv, ADMIN_NOTE } from './mobile-app-og-sanntid.js';
 import * as P27 from './mobile-sokefelt-og-nyheter.js';
 import * as P33 from './mobile-glimt-husker.js'; // prompt 33: GLIMT HUSKER

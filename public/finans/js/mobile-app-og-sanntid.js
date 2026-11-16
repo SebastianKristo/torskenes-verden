@@ -271,7 +271,7 @@ export async function tasksLoad(force = false) {
   }
 }
 const saveLocal = () => { if (HK.local) { L.tasks = HK.d.items; keep(); } };
-export const saveLocal37 = () => saveLocal(); // prompt 37: Gjøremål (mobile-p37.js) lagrer lokalt på eldre server
+export const saveLocal37 = () => saveLocal(); // prompt 37: Gjøremål (mobile-gjoremal.js) lagrer lokalt på eldre server
 async function taskAdd() {
   const title = HK.nv.trim(); if (!title) return;
   const list = HK.cur === 'alle' ? (HK.d?.lists?.[0]?.id ?? 'hjem') : HK.cur;

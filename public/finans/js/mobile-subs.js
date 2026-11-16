@@ -11,7 +11,7 @@ import { paper } from './mobile-paper.js';
 import * as P27 from './mobile-sokefelt-og-nyheter.js';
 import { toJpeg, readShot, errCardHtml, installVision, SLOW_MS } from './sub-shot.js';
 import * as P31 from './mobile-glimt.js';
-import * as P37B from './mobile-p37b.js'; // prompt 37: gratis prøveperioder, delte abonnementer, wiggle med skjul
+import * as P37B from './mobile-bibel-og-onboarding.js'; // prompt 37: gratis prøveperioder, delte abonnementer, wiggle med skjul
 
 // Prompt 31: Gratis prøveperiode (arket og lagring ligger i mobile-glimt.js). Etter Lagre lukkes arket.
 P31.hooks31({ trialSaved: () => { SB.sheet = false; SB.mode = null; }, subsReload: () => subsLoad() });

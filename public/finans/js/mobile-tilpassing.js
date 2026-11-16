@@ -211,7 +211,7 @@ export function edClick(e, t) {
     if (x.dataset.ped === 'done') { ED.page = null; ED.add = false; haptic('ok'); }
     else if (x.dataset.ped === 'add') { ED.add = true; haptic('tap'); }
     else if (x.dataset.ped === 'addx') { ED.add = false; }
-    else if (x.dataset.ped === 'widget') { if (k === 'h3') { P27.hdEdit(); haptic('tap'); return true; } if (k === 'h2') { import('./mobile-p37b.js').then((x) => x.h2Open()); haptic('tap'); return true; } }
+    else if (x.dataset.ped === 'widget') { if (k === 'h3') { P27.hdEdit(); haptic('tap'); return true; } if (k === 'h2') { import('./mobile-bibel-og-onboarding.js').then((x) => x.h2Open()); haptic('tap'); return true; } }
     else if (x.dataset.ped === 'hide') { savePage(page, order, [...new Set([...hidden, k])]); haptic('tap'); }
     // Vist igjen: legges sist.
     else if (x.dataset.ped === 'show') { savePage(page, [...order.filter((y) => y !== k), k], hidden.filter((y) => y !== k)); haptic('ok'); if (hidden.length <= 1) ED.add = false; }

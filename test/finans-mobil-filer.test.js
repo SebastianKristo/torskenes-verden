@@ -11,12 +11,9 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const JS = join(ROOT, 'public/finans/js');
 const filer = readdirSync(JS).filter((f) => f.endsWith('.js'));
 
-// Filene som ennå ikke har fått nytt navn. Lista skal bare krympe; tom når alle familiene er gjennomgått.
-const GJENSTÅR = ['mobile-p22.js', 'mobile-p37.js', 'mobile-p37b.js'];
-
 test('Økonomi mobil-web: ingen JS-filer med promptnummer i navnet', () => {
   const nummer = filer.filter((f) => /^mobile-(p\d+[a-z]?|paper\d+)\.js$/.test(f) || /\d{2}[a-z]?\.js$/.test(f));
-  assert.deepEqual(nummer.sort(), [...GJENSTÅR].sort());
+  assert.deepEqual(nummer, []);
 });
 
 test('Økonomi mobil-web: alle relative importer peker på filer som finnes', () => {

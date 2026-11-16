@@ -1,7 +1,7 @@
 // Papir (prompt 14): sidene som har fått egne Papir-oppsett. Finans → Liste og Finans → Mer, Finn som rutenett med
 // rediger/legg til, og Sporing med faner, «Varsler og kilder» og omorganisering med langt trykk.
 // Data fra de samme API-ene som Klassisk (/finans/api/transactions, /finans/api/finn, /api/tracking).
-import * as P37B from './mobile-p37b.js'; // prompt 37: husstandens sporingsnøkler (maskert) og kvote
+import * as P37B from './mobile-bibel-og-onboarding.js'; // prompt 37: husstandens sporingsnøkler (maskert) og kvote
 import { S, api, esc, n0, n2, ini, today, hlApi } from './core.js';
 import { glimtOrb } from './mobile-orb.js'; // prompt 43
 import { m, draw, flash } from './mobile.js';
