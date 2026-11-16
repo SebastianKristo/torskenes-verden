@@ -130,3 +130,9 @@ test('B3: CSV-eksporten hentes fra serveren og bygges aldri på Main', () => {
   assert.match(f, /shareFileIo\(/);
   assert.match(vm, /private suspend fun shareFileIo\([^)]*\) \{[\s\S]*?withContext\(Dispatchers\.IO\) \{ File\(/);
 });
+
+test('sanntid: tokenet sendes i Authorization-headeren, ikke i /api/ws-adressen (havner ellers i tilgangslogger)', () => {
+  const f = strip(raw(join(APP, 'Realtime.kt')));
+  assert.doesNotMatch(f, /\?token=/);
+  assert.match(f, /\.header\("Authorization", "Bearer \$/);
+});
