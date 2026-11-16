@@ -198,7 +198,7 @@ Status: **Rettet** (i fase N), **Delvis**, **Gjenstår** eller **Ingen feil** (v
 | P85 C | Tilstandsendrende dyplenker uten bekreftelse | Rettet før Fase 0 | `LinkRegel86.kt` | – |
 | P85 E | Trykkflater, ikoner uten beskrivelse | Delvis (skallet rettet) | `08e8c8c`, `c29a40f`, `df8cf60` (48 dp, ikoner); skallet `eb8d285` (rolle og handling på 14 trykkflater i fanelinja, Papir, navigasjon og angre-laget); `test/android-opprydding.test.js` «P85 E» | Modulsidene utenfor skallet er ikke gått gjennom; må ses på enhet |
 | P85 F | Ingen `SavedStateHandle` (prosessdød) | Gjenstår | 0 treff | Del av ViewModel per skjerm (AUDIT §7 nr. 12) |
-| P85 G | Mulig duplikat ved ny opplasting av kvittering | Gjenstår (lav) | Ingen idempotensnøkkel på serveren | Forslag: `Idempotency-Key` på `POST /finans/api/receipts` |
+| P85 G | Mulig duplikat ved ny opplasting av kvittering | Android sender nøkkelen (`8d8a895`); serveren i `opprydding/rest-server` | Android: `Idempotency-Key` = SHA-256 av bildet på `POST /finans/api/receipts/scan`, også fra køen; `test/android-opprydding.test.js` «P85 G» | Krever serverendringen fra rest-server-grenen; iOS ikke rørt |
 | P85 H | Widgeter oppdaterer i `Thread { runBlocking }` uten `goAsync()` | Rettet (`9ddc1b2`) | `widget/WidgetSync.kt` `WidgetJobs` (korutine, `goAsync()` i mottakere); Huskeliste-mottakeren henter via WorkManager; `test/android-opprydding.test.js` «P85 H» | – |
 | P85 I | «Alt bra» fra varsel uten nett går tapt | Gjenstår (lav) | – | Trenger kø eller feilvarsel (ny funksjon) |
 | P85 J | Hjemlys startes ikke etter omstart av telefonen | Gjenstår (lav) | `BOOT_COMPLETED` bare for ntfy | Krever «alltid»-posisjon; eget valg |
