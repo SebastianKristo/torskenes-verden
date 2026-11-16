@@ -124,7 +124,7 @@ const GETS = [
   ['/api/receipts', '200 200 401 401', '[]'],
   ['/api/receipts.csv', '200 200 401 401', ''],
   ['/api/receipts/health', '200 200 200 401', 'brreg categories compareMac external formats lfm72 local_only macOcr model ok preprocess reading_text source_label steps tesseract'],
-  ['/api/widgets/trials', '200 200 200 401', 'addLabel addUrl count deepLink empty emptyText items more next openUrl today updated'],
+  ['/api/widgets/trials', '200 200 200 401', 'addLabel addUrl count deepLink empty emptyText hideAmounts items more next openUrl today updated'],
   ['/api/kalender/abonnementer/events', '200 200 200 401', 'calendar days events from to'],
   ['/api/kalender/abonnementer.ics', '200 200 200 401', ''],
   ['/api/calendars/events?cal=ab', '200 200 200 401', 'calendar events from to'],

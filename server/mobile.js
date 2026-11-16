@@ -25,7 +25,8 @@ import { readBg, weatherImages, weatherKind, planetsToday, osloImages, apodImage
 import { uiPrefs, saveUiPrefs } from './ui.js';
 import { weatherFull, searchPlaces, DEFAULT_PLACES, weatherCompare, PLACES as WX_PLACES } from './vaer/full.js';
 import { searchPlacesV2 } from './vaer/place-search.js';
-import { appMeta } from './notify.js';
+import { appMeta, notifyOf } from './notify.js';
+import { hideAmountsFor } from './skjul-belop.js';
 import { nextTasks } from './gjoremal/routes.js';
 import * as integrations from './integrations.js';
 import { widgetOut as birthdaysWidget } from './kalender/birthdays.js';
@@ -1083,7 +1084,9 @@ api.get('/mobile/widgets', authOrToken, async (c) => {
 
   let birthdays = null;
   try { birthdays = birthdaysWidget(id); } catch { birthdays = null; }
-  return c.json({ updatedAt: new Date().toISOString(), weather, packages, budget, finance, nextCharge, stocks, domains, matplan, finn: finnW, boliger, birthdays });
+  // F 12: hideAmounts sier til widgeten at beløpene skal vises som prikker (brukerens valg eller ?hideAmounts=1 fra enheten).
+  const hideAmounts = hideAmountsFor(c, notifyOf(id).hideAmounts);
+  return c.json({ updatedAt: new Date().toISOString(), hideAmounts, weather, packages, budget, finance, nextCharge, stocks, domains, matplan, finn: finnW, boliger, birthdays });
 });
 
 export default api;

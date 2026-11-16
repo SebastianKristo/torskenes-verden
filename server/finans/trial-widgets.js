@@ -16,6 +16,8 @@ import { osloTodayISO } from '../../public/js/quick-time.js';
 import { domainFor } from './enrich.js';
 import { cancelUrlFor, daysBetween, addDaysISO } from '../../public/js/trial-parse.js';
 import { notificationsOf } from './trials.js';
+import { maskAmounts, hideAmountsFor } from '../skjul-belop.js';
+import { notifyOf } from '../notify.js';
 
 const WDS = ['søn', 'man', 'tir', 'ons', 'tor', 'fre', 'lør'];
 const MNS = ['jan', 'feb', 'mar', 'apr', 'mai', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'des'];
@@ -41,16 +43,21 @@ export function trialCompact(row, today = osloTodayISO()) {
     notifications: notificationsOf(row).filter((n) => !n.sent).map((n) => ({ key: n.key, dedupeKey: `trial-${row.id}-${n.key}`, kind: n.kind, at: n.at, title: n.title, body: n.body })) };
 }
 
-export function trialsWidget(user, today = osloTodayISO()) {
+/** Personvernmodus (F 12): prisen og de ferdige etikettene og varseltekstene får «•••» i stedet for beløpet. */
+const hideTrial = (t) => ({ ...t, price: null, priceLabel: maskAmounts(t.priceLabel), afterLabel: maskAmounts(t.afterLabel),
+  notifications: t.notifications.map((n) => ({ ...n, title: maskAmounts(n.title), body: maskAmounts(n.body) })) });
+
+export function trialsWidget(user, today = osloTodayISO(), { hideAmounts = false } = {}) {
   const rows = q("SELECT * FROM trials WHERE user_id=? AND status='active' AND ends_at>=? ORDER BY ends_at, id").all(user, today);
-  const items = rows.slice(0, 3).map((r) => trialCompact(r, today));
-  return { today, count: rows.length, empty: !rows.length, emptyText: 'Ingen aktive prøver', addLabel: '+ Legg til', addUrl: '/finans/#/abonnement/ny-prove',
+  const items = rows.slice(0, 3).map((r) => trialCompact(r, today)).map((t) => (hideAmounts ? hideTrial(t) : t));
+  return { today, hideAmounts, count: rows.length, empty: !rows.length, emptyText: 'Ingen aktive prøver', addLabel: '+ Legg til', addUrl: '/finans/#/abonnement/ny-prove',
     openUrl: '/finans/#/abonnement', deepLink: 'finanshub://abonnement', next: items[0] ?? null, more: items.slice(1), items, updated: new Date().toISOString() };
 }
 
 const api = new Hono();
 api.use('*', (c, next) => authOrToken(c, next));
-api.get('/', (c) => c.json(trialsWidget(c.get('user'))));
+const hideOf = (c) => hideAmountsFor(c, notifyOf(c.get('user')).hideAmounts);
+api.get('/', (c) => c.json(trialsWidget(c.get('user'), undefined, { hideAmounts: hideOf(c) })));
 api.post('/:id{[0-9]+}', async (c) => {
   const user = c.get('user'), id = +c.req.param('id');
   const row = q('SELECT * FROM trials WHERE id=? AND user_id=?').get(id, user);
@@ -65,7 +72,7 @@ api.post('/:id{[0-9]+}', async (c) => {
     const r = await finansApi.request(`/subscriptions/trials/${id}`, { method: 'PATCH', headers: { cookie: c.req.header('cookie') ?? '', authorization: c.req.header('authorization') ?? '', 'content-type': 'application/json' }, body: JSON.stringify({ status: 'kept' }) }, c.env);
     if (!r.ok) return c.json(await r.json().catch(() => ({ error: 'Kunne ikke beholde prøven' })), r.status);
   }
-  return c.json({ ok: true, action, ...trialsWidget(user) });
+  return c.json({ ok: true, action, ...trialsWidget(user, undefined, { hideAmounts: hideOf(c) }) });
 });
 
 export default api;

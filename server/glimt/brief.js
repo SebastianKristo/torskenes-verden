@@ -43,7 +43,8 @@ import { eventsFor } from '../kalender/events.js';
 import { weatherFull, wmoText, iconOf } from '../vaer/full.js';
 import { newsFor } from '../nyheter/rss.js';
 import { packagesFor } from '../sporing/shipments.js';
-import { notifyUser } from '../notify.js';
+import { notifyUser, notifyOf } from '../notify.js';
+import { maskDeep, hideAmountsFor } from '../skjul-belop.js'; // F 12: personvernmodus i widgeten
 import { run as aiRun } from '../ai/run.js';
 import { once, inFlight } from '../ai/gate.js'; // prompt 43: én LLM-oppsummering per bruker/brief/dato om gangen
 import { glimtSettingsOf, cleanGlimtPatch, saveGlimtSettings, hostOf, charName, proxied, engineReady, speak } from './settings.js'; // prompt 35
@@ -382,7 +383,8 @@ api.get('/widget', async (c) => {
   const size = ['small', 'medium', 'large', 'lock'].includes(c.req.query('size')) ? c.req.query('size') : 'medium';
   const b = await buildBrief(c.get('user'));
   if (b.summarySource === 'mal') kickLlm(c.get('user'), b.kind);
-  return c.json(widgetOf(b, size), 200, { 'Cache-Control': 'no-store' });
+  const w = widgetOf(b, size), hideAmounts = hideAmountsFor(c, notifyOf(c.get('user')).hideAmounts);
+  return c.json(hideAmounts ? { ...maskDeep(w), hideAmounts } : { ...w, hideAmounts }, 200, { 'Cache-Control': 'no-store' });
 });
 api.get('/settings', (c) => c.json(settingsOf(c.get('user'))));
 // Alias (prompt 35): notify/guide lagres i Glimt-innstillingene, home her. Hele formen er GET/PUT /api/glimt/settings.

@@ -68,6 +68,7 @@ Når du finner et begrep som mangler eller brukes ulikt, legg det til her i samm
 | **Finn-handler** (funksjonen), **FINN** (merket) | Finn (som fanenavn) | |
 | **Ukentlig**, **Hver 2. uke**, **Månedlig**, **Kvartalsvis**, **Halvårlig**, **Årlig**, **Hvert 2. år** | Annenhver uke, Kvartalvis, Halvårig (som syklusnavn) | Syklusnavnene serveren sender (`cycleName`, Q40) |
 | **venter: 1 234 kr** (bolig) | Brukt (om poster som venter) | Poster til gjennomgang telles ikke som brukt (Q21) |
+| **Skjul beløp** (personvernmodus: beløp vises som `•••`), **Skjul beløp i varsler og widgeter** (Innstillinger → Varsler, serverens tekster) | Personvernmodus, Privat modus (i UI) | Appenes «Skjul beløp til jeg trykker» gjelder enheten; valget i Varsler gjelder det serveren lager (F 12) |
 
 ## Innstillinger
 

@@ -74,7 +74,7 @@ const GETS = [
   ['/api/assist/settings', '200 200 200 401', 'ai_bg_notify cloud n_ai_in'],
   ['/api/assist/x', '400 400 400 401', ''],
   ['/api/brief/settings', '200 200 200 401', 'guide home notify'],
-  ['/api/brief/widget', '200 200 200 401', 'chips cond deepLink figure generatedAt hi ic icon kicker kind lo news next refreshAt size summary temp title'],
+  ['/api/brief/widget', '200 200 200 401', 'chips cond deepLink figure generatedAt hi hideAmounts ic icon kicker kind lo news next refreshAt size summary temp title'],
   ['/api/chat/auto', '200 200 200 401', 'picks stats using'],
   ['/api/chat/chats', '200 200 200 401', 'chats folders pinned'],
   ['/api/chat/chats/x', '404 404 404 401', ''],
