@@ -26,6 +26,11 @@ import androidx.core.content.FileProvider
 import androidx.exifinterface.media.ExifInterface
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.SavedStateHandle
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.ViewModelStore
+import no.kristo.finanshub.repository.DomenerRepository
+import no.kristo.finanshub.skjerm.DomenerTilstand
+import no.kristo.finanshub.skjerm.DomenerViewModel
 import androidx.savedstate.SavedStateRegistry
 import android.os.Bundle
 import androidx.lifecycle.viewModelScope
@@ -81,6 +86,27 @@ class AppViewModel(app: Application, private val lagret: SavedStateHandle) : And
 
     private val store = AccountStore(app)
     val prefs = AppPrefs(app)
+
+    /* ---------- ViewModel per skjerm (Struktur: Android) ---------- */
+
+    /** Skjermenes egne ViewModel-er lever like lenge som AppViewModel og ryddes i onCleared. */
+    private val skjermer = ViewModelStore()
+
+    /** Repository mot /domains/api (også Domener-flisa på Hjem). */
+    private val domenerRepo = DomenerRepository { api }
+
+    /** Domener-siden (skjerm/DomenerViewModel.kt). */
+    val domener: DomenerViewModel = ViewModelProvider(
+        skjermer,
+        DomenerViewModel.fabrikk(lagret, domenerRepo, { message = it }, { visFeil(it) }),
+    )[DomenerViewModel::class.java]
+
+    /**
+     * Speil av DomenerViewModel.tilstand i Compose-tilstand, så skjermer som ennå leser vm.domains osv. tegnes på nytt.
+     * Verdien hentes alltid fersk fra StateFlow-en; speilet leses bare for at Compose skal følge med.
+     */
+    private var domenerSpeil by mutableStateOf<DomenerTilstand?>(null)
+    private fun domenerNa(): DomenerTilstand = domenerSpeil.let { domener.tilstand.value }
 
     /* ---------- Kontoer ---------- */
 
@@ -190,11 +216,16 @@ class AppViewModel(app: Application, private val lagret: SavedStateHandle) : And
     var tokens by mutableStateOf<List<TokenInfo>?>(null)
     var tokenError by mutableStateOf<String?>(null)
     var newToken by mutableStateOf<String?>(null)
-    var domains by mutableStateOf<List<DomainRef>?>(null)
-    var domain by mutableStateOf<String?>(null)
-    var analytics by mutableStateOf<Analytics?>(null)
-    var domTab by mutableStateOf(DomTab.Traffic)
-    var domRange by mutableStateOf("24h")
+    /* Domener: tilstanden ligger i DomenerViewModel (skjerm/DomenerViewModel.kt). Videresendingene under er for kode som ikke er flyttet. */
+    val domains: List<DomainRef>? get() = domenerNa().domener
+    var domain: String?
+        get() = domenerNa().valgt
+        set(v) { if (!navDry) domener.settValgt(v) }
+    val analytics: Analytics? get() = domenerNa().analyse
+    var domTab: DomTab
+        get() = domenerNa().fane
+        set(v) { if (!navDry) domener.settFane(v) }
+    val domRange: String get() = domenerNa().periode
     var moduleError by mutableStateOf<String?>(null)
     /** «Administrer domener» er åpen. */
     var domainManager by mutableStateOf(false)
@@ -202,7 +233,7 @@ class AppViewModel(app: Application, private val lagret: SavedStateHandle) : And
     var matDay by mutableStateOf<Int?>(null)
     var matFull by mutableStateOf(false)
     /** Verdenskartet til Domener → Besøk (lastes én gang). */
-    var worldMap by mutableStateOf<List<MapCountry>?>(null)
+    val worldMap: List<MapCountry>? get() = domenerNa().verdenskart
     /** Melding over søkeresultatet, f.eks. at AI er av og vanlig søk ble brukt. */
     var aiNote by mutableStateOf<String?>(null)
     var suggestGroups by mutableStateOf<List<SuggestGroup>>(emptyList())
@@ -294,6 +325,7 @@ class AppViewModel(app: Application, private val lagret: SavedStateHandle) : And
     }
 
     override fun onCleared() {
+        skjermer.clear()
         val cm = getApplication<Application>().getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
         netCallback?.let { cb -> runCatching { cm?.unregisterNetworkCallback(cb) } }
         super.onCleared()
@@ -353,10 +385,15 @@ class AppViewModel(app: Application, private val lagret: SavedStateHandle) : And
 
     private fun launch(block: suspend () -> Unit) = viewModelScope.launch {
         // Prompt 73: avbrudd er ikke en feil – kastes videre (ingen melding, ingen feil-haptikk).
-        try { block() } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: ApiException) {
-            if (e.status == 403 && e.message?.startsWith(Api.TOKEN_REFUSED) == true) return@launch
+        try { block() } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: ApiException) { visFeil(e) } catch (e: Exception) { visFeil(e) }
+    }
+
+    /** Felles feilhåndtering (også for skjermenes egne ViewModel-er): utløpt innlogging logger ut, ellers melding og haptikk. */
+    private fun visFeil(e: Exception) {
+        if (e is ApiException) {
+            if (e.status == 403 && e.message?.startsWith(Api.TOKEN_REFUSED) == true) return
             if (e.status == 401 && loggedIn && !e.needsTotp) expired() else { message = e.message; Haptics.error() }
-        } catch (e: Exception) { message = uiErr73(e, "Noe gikk galt. Prøv igjen."); Haptics.error() }
+        } else { message = uiErr73(e, "Noe gikk galt. Prøv igjen."); Haptics.error() }
     }
 
     /** Kort melding med haptikk: feil gir REJECT, ellers CONFIRM. */
@@ -457,7 +494,7 @@ class AppViewModel(app: Application, private val lagret: SavedStateHandle) : And
 
     private fun clearData() {
         boot = null; summary = null; me = null; txs = null; receipts = null; jobs = emptyList(); selectedTx = null; selectedReceipt = null
-        week = null; subs = null; folders = null; folder = null; finn = null; tokens = null; domains = null; analytics = null; domain = null
+        week = null; subs = null; folders = null; folder = null; finn = null; tokens = null; domener.nullstill()
         mobileHome = null; homeError = null; history = emptyList(); suggestions = emptyList(); todayMeal = null; domainToday = null; avatar = null
         ai = null; aiHistory = emptyList(); editing = null; original = null; detail = null; detailTx = null
         recurring = null; stocks = null; report = null; importResult = null; importUris = emptyList(); importText = ""
@@ -922,8 +959,8 @@ class AppViewModel(app: Application, private val lagret: SavedStateHandle) : And
             w.days.firstOrNull { it.date == LocalDate.now().toString() }?.name
         }.getOrNull()
         domainToday = runCatching {
-            val d = parseDomains(api.domGet("/domains")).firstOrNull() ?: return@runCatching null
-            val a = parseAnalytics(api.domGet("/" + URLEncoder.encode(d.name, "UTF-8") + "/analytics?range=today"))
+            val d = domenerRepo.domener().firstOrNull() ?: return@runCatching null
+            val a = domenerRepo.analyse(d.name, "today")
             d.name to a.visitors
         }.getOrNull()
         if (avatar == null) loadAvatar(me?.avatarUrl ?: mobileHome?.avatarUrl)
@@ -1484,49 +1521,15 @@ class AppViewModel(app: Application, private val lagret: SavedStateHandle) : And
     /** «Legg i bolig»: målet for skann og opplasting mens man står i Boliger (null = boligen som er åpen). */
     var uploadFolder by mutableStateOf<Int?>(null)
 
-    /* ---------- Domener ---------- */
+    /* ---------- Domener (videresendinger til DomenerViewModel) ---------- */
 
-    private suspend fun loadDomains() {
-        val list = parseDomains(api.domGet("/domains"))
-        domains = list
-        if (domain == null || list.none { it.name == domain }) domain = list.firstOrNull()?.name
-        loadAnalytics()
-    }
-
-    private suspend fun loadAnalytics() {
-        val d = domain ?: return
-        analytics = parseAnalytics(api.domGet("/" + URLEncoder.encode(d, "UTF-8") + "/analytics?range=$domRange"))
-    }
-
-    fun pickDomain(name: String) { domain = name; analytics = null; launch { loadAnalytics() } }
-    fun setRange(r: String) { domRange = r; launch { loadAnalytics() } }
-    fun reloadDomain() = launch { loadDomains(); message = "Oppdatert fra Cloudflare" }
-
-    /** Administrer domener: samme liste som i Homelab. API-token legges inn på web. */
-    fun addDomain(name: String, source: String) = launch {
-        val n = name.trim().lowercase().removePrefix("https://").removePrefix("http://").trimEnd('/')
-        if (n.isBlank()) return@launch
-        api.domPost("/domains", JSONObject().put("name", n).put("source", source))
-        domain = n
-        loadDomains()
-        message = if (source in DOMAIN_NEEDS_TOKEN) "$n lagt til. Legg inn API-token på web." else "$n lagt til"
-    }
-    fun removeDomain(d: DomainRef) = launch {
-        api.domDelete("/domains/" + URLEncoder.encode(d.id, "UTF-8"))
-        if (domain == d.name) { domain = null; analytics = null }
-        loadDomains()
-        message = "${d.name} fjernet"
-    }
-
-    /** Landene til kartet: fra serveren, ellers world-atlas på jsDelivr. */
-    fun loadWorldMap() {
-        if (worldMap != null) return
-        viewModelScope.launch {
-            suspend fun parse(b: ByteArray?) = b?.let { withContext(Dispatchers.Default) { MapCountry.parse(String(it)) } }.orEmpty()
-            val local = parse(runCatching { api.bytes("/domains/api/vendor/countries-110m.json") }.getOrNull())
-            worldMap = local.ifEmpty { parse(runCatching { withContext(Dispatchers.IO) { java.net.URL(WORLD_ATLAS).openStream().use { it.readBytes() } } }.getOrNull()) }
-        }
-    }
+    private suspend fun loadDomains() = domener.last()
+    fun pickDomain(name: String) { domener.velg(name) }
+    fun setRange(r: String) { domener.settPeriode(r) }
+    fun reloadDomain() = domener.oppdater()
+    fun addDomain(name: String, source: String) = domener.leggTil(name, source)
+    fun removeDomain(d: DomainRef) = domener.fjern(d)
+    fun loadWorldMap() = domener.lastVerdenskart()
 
     /* ---------- API-tokens ---------- */
 
@@ -2699,20 +2702,15 @@ class AppViewModel(app: Application, private val lagret: SavedStateHandle) : And
     /* Ny sending (den flytende knappen på Sporing). */
     var trkAddOpen by mutableStateOf(false)
 
-    /* Domener i Papir: «Alle domener» som kort, ett per domene. */
-    var domAll by mutableStateOf(false)
-    var domAllStats by mutableStateOf<Map<String, Analytics?>>(emptyMap())
-        private set
-    fun showAllDomains() {
-        domAll = true
-        val list = domains ?: return
-        for (d in list) if (!domAllStats.containsKey(d.name)) viewModelScope.launch {
-            val a = runCatching { parseAnalytics(api.domGet("/" + URLEncoder.encode(d.name, "UTF-8") + "/analytics?range=$domRange")) }.getOrNull()
-            domAllStats = domAllStats + (d.name to a)
-        }
-    }
-    fun pickDomainPaper(name: String) { domAll = false; pickDomain(name) }
-    fun setRangePaper(r: String) { domAllStats = emptyMap(); setRange(r); if (domAll) showAllDomains() }
+    /* Domener i Papir: «Alle domener» som kort, ett per domene (DomenerViewModel). previewBack prøvekjører tilbake, og da
+       skal ingenting skrives til DomenerViewModel (den ligger utenfor Compose-snapshotet), derav navDry-sjekken. */
+    var domAll: Boolean
+        get() = domenerNa().alle
+        set(v) { if (!navDry) domener.settAlle(v) }
+    val domAllStats: Map<String, Analytics?> get() = domenerNa().alleTall
+    fun showAllDomains() = domener.visAlle()
+    fun pickDomainPaper(name: String) = domener.velgFraAlle(name)
+    fun setRangePaper(r: String) = domener.settPeriodeFraAlle(r)
 
     /* ---------- Prompt 16: fanelinja, ikonfarger, vær-steder, avganger, Boliger og Familie ---------- */
 
@@ -3996,6 +3994,8 @@ class AppViewModel(app: Application, private val lagret: SavedStateHandle) : And
         runCatching { restoreAs44() }
         // Prompt 51: enhetsnøkkel/-id, bufrede flagg, krasjkøen og ntfy-tjenesten (Krasjrapporter.kt).
         runCatching { start51() }
+        // Skjermenes ViewModel-er: speilet holder Compose-lesere av de gamle feltene oppdatert.
+        viewModelScope.launch { domener.tilstand.collect { domenerSpeil = it } }
         // P85 F: siden og søket fra før prosessdød (lastes av refresh), og lagringen til neste gang.
         runCatching { gjenopprettNavigasjon() }
         lagret.setSavedStateProvider(NAV_LAGRET, object : SavedStateRegistry.SavedStateProvider {

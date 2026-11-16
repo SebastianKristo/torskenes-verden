@@ -72,6 +72,33 @@ test('P85 F: tekstutkast i skjemaene bruker rememberSaveable; passord, koder og 
   assert.ok(saveable >= 55, `rememberSaveable for utkast: ${saveable}`);
 });
 
+test('Struktur: Domener har egen ViewModel med StateFlow og repository; AppViewModel sender bare videre', () => {
+  const dvm = strip(raw(join(APP, 'skjerm/DomenerViewModel.kt')));
+  assert.match(dvm, /class DomenerViewModel\([\s\S]*?\) : ViewModel\(\)/);
+  assert.match(dvm, /val tilstand: StateFlow<DomenerTilstand> = _tilstand\.asStateFlow\(\)/);
+  assert.match(dvm, /lagret\[FANE\] = fane\.name/, 'fanen overlever prosessdød');
+  assert.match(dvm, /lagret\[VALGT\] = navn/);
+  assert.doesNotMatch(dvm, /JSONObject\(|JSONArray\(|domGet\(/, 'ingen nett eller JSON i ViewModel-en');
+  const repo = strip(raw(join(APP, 'repository/DomenerRepository.kt')));
+  assert.match(repo, /withContext\(Dispatchers\.Default\) \{ parseDomains\(raw\) \}/, 'JSON tolkes utenfor Main');
+  assert.match(repo, /withContext\(Dispatchers\.Default\) \{ parseAnalytics\(raw\) \}/);
+  const vm = strip(raw(join(APP, 'AppViewModel.kt')));
+  // Tynne videresendinger: ingen egen tilstand for Domener igjen i AppViewModel.
+  for (const f of ['domains', 'domain', 'analytics', 'domTab', 'domRange', 'worldMap', 'domAll', 'domAllStats']) {
+    assert.doesNotMatch(vm, new RegExp(`var ${f} by mutableStateOf`), f);
+  }
+  assert.match(vm, /val domains: List<DomainRef>\? get\(\) = domenerNa\(\)\.domener/);
+  assert.match(vm, /fun pickDomain\(name: String\) \{ domener\.velg\(name\) \}/);
+  assert.doesNotMatch(vm, /api\.domGet\(|api\.domPost\(|api\.domDelete\(/, 'Domener-kallene går via DomenerRepository');
+  // previewBack prøvekjører tilbake i et Compose-snapshot: skrivinger til ViewModel-en (utenfor snapshotet) hoppes over da.
+  assert.match(vm, /var domAll: Boolean\s*get\(\) = domenerNa\(\)\.alle\s*set\(v\) \{ if \(!navDry\) domener\.settAlle\(v\) \}/);
+  assert.match(vm, /skjermer\.clear\(\)/, 'skjermenes ViewModel-er ryddes med AppViewModel');
+  assert.match(vm, /domener\.tilstand\.collect \{ domenerSpeil = it \}/);
+  assert.match(vm, /tokens = null; domener\.nullstill\(\)/, 'utlogging tømmer Domener');
+  // Siden tegnes fra StateFlow-en.
+  assert.match(strip(raw(join(APP, 'ui/Domains.kt'))), /val t by vm\.domener\.tilstand\.collectAsStateWithLifecycle\(\)/);
+});
+
 test('E-B12/Q34 Homelab-appen: kalenderen viser forslaget med «Slå sammen» og «Ikke nå», og «Angre» etterpå', () => {
   const k = strip(raw(join(APP, 'Kalender.kt')));
   assert.match(k, /hlGet\("\/kalender\/calendars", timeout = 12_000\)/, 'forslaget hentes når kalenderen åpnes');
