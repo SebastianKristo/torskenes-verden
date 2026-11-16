@@ -1,4 +1,4 @@
-// Prompt 77 (SKJAIWEB): rene hjelpere for Glimt i Skjold Lab (ingen DOM, testes i test/p77-web.test.js).
+// Prompt 77 (SKJAIWEB): rene hjelpere for Glimt i Skjold Lab (ingen DOM, testes i test/skjold-ai-web.test.js).
 // Brukes av skjold-ai.js: slå sammen specs/tags fra forslaget, sikkerhet, dekodet tekst (fargebånd/SMD/kondensator),
 // radene i forslagskortet og avkrysning i Rydd opp.
 /** Specs-objekt fra skjemaets rader ([[k, v], …]), uten tomme. */

@@ -1,4 +1,4 @@
-// Prompt 78 (LEDWEB): rene hjelpere for LED over skuffene i Skjold Lab (ingen DOM, testes i test/p78-web.test.js).
+// Prompt 78 (LEDWEB): rene hjelpere for LED over skuffene i Skjold Lab (ingen DOM, testes i test/skjold-led-web.test.js).
 // - normLeds78: leser LED-oppsettet romslig (direkte eller under «leds») og fyller inn standardverdier.
 // - autoRows78: fyller ut radene (start/antall/retning) for én stripe per rad, serpentine eller samme retning.
 // - ledIndex78: samme regel som serveren (nærmeste LED over skuffens midtpunkt, reverse, overstyring) – brukes til forhåndsvisning.

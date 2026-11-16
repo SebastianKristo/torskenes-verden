@@ -1,7 +1,7 @@
 // Prompt 81 (SPANWEB): Skjold Lab – sammenslåtte skuffer (store 2 × 2, brede 2 × 1) og forhåndsoppsettet «Skjold Lab-hylla (3D-print)».
 // Serveren sender alle ruter i /cabinets/:id/map; et anker har spanR × spanC, og rutene det dekker har coveredBy «r-c».
 // Tegningen viser ankeret som ett felt og hopper over dekkede ruter; trykk på en dekket rute = ankeret.
-// Ingen import: modulen er ren (testes i Node, test/p81-web.test.js).
+// Ingen import: modulen er ren (testes i Node, test/skjold-sammenslatte-skuffer-web.test.js).
 const ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
 const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ESC[c]);
 

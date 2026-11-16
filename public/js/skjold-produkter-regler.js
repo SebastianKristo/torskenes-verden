@@ -1,4 +1,4 @@
-// Prompt 82 (CHKWEB): rene hjelpere for «Sjekk ut / Sjekk inn» og Produkter i Skjold Lab (testes i Node, test/p82-web.test.js).
+// Prompt 82 (CHKWEB): rene hjelpere for «Sjekk ut / Sjekk inn» og Produkter i Skjold Lab (testes i Node, test/skjold-sjekk-ut-web.test.js).
 // Ingen import og ingen DOM.
 const ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
 export const esc82 = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ESC[c]);

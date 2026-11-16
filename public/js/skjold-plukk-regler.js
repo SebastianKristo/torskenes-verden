@@ -1,4 +1,4 @@
-// Prompt 79 (PICKWEB): rene hjelpere for plukklista og LED-feilsøkingen i Skjold Lab (testes direkte i test/p79-web.test.js).
+// Prompt 79 (PICKWEB): rene hjelpere for plukklista og LED-feilsøkingen i Skjold Lab (testes direkte i test/skjold-plukk-web.test.js).
 
 /** Maks antall deler som lyser samtidig (serveren tåler 20 skuffer). */
 export const MAX_LIT79 = 20;

@@ -7,7 +7,7 @@ import { readFileSync } from 'node:fs';
 import { drawCabinet76, overlayGrid76, CELL_W, CELL_H } from '../public/js/skjold-tegning.js';
 import { anchor81, longSpan81, longAt81, normSel81, anchors81, spanFieldsHtml81, presetConfirm81, presetBoxHtml81, PRESET_SIZES81 } from '../public/js/skjold-skuffer.js';
 
-// Fasiten fra kontrakten (4 etasjer). Serveren regner den ut (test/p81-span.test.js); her holder vi web-testen fri for databasen.
+// Fasiten fra kontrakten (4 etasjer). Serveren regner den ut (test/skjold-sammenslatte-skuffer.test.js); her holder vi web-testen fri for databasen.
 const FASIT4 = {
   rows: 11, cols: 11,
   spans: [

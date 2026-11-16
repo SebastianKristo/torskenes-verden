@@ -84,3 +84,18 @@ test('ruting, meny, Mer og flis på Hjem', () => {
   assert.match(h, /'w52hus', 'w52skj'/);
   assert.match(h, /tile\('w52skj', 't52-card', '#\/skjold'/);
 });
+
+/* ---------------- Rulleposisjonen i skapet (tidligere egen fil) ---------------- */
+
+// Prompt 83: å trykke på en skuff i skapet (eller gå tilbake til lista i samme skap) er ikke en ny side –
+// rulleposisjonen beholdes. Bytte til en del, oppsett eller et annet skap ruller fortsatt til toppen.
+const skjoldSrc = read('public/js/skjold.js');
+
+test('onHash ruller bare til toppen når det ikke er skuff/liste i samme skap', () => {
+  const i = skjoldSrc.indexOf('async function onHash()');
+  assert.ok(i > 0);
+  const body = skjoldSrc.slice(i, skjoldSrc.indexOf('\n}\n', i));
+  assert.match(body, /const sameCab = \(r\.v === 'drawer' \|\| r\.v === 'list'\) && \(prev\.v === 'drawer' \|\| prev\.v === 'list'\)/);
+  assert.match(body, /if \(!sameCab\) window\.scrollTo\?\.\(\{ top: 0 \}\)/);
+  assert.doesNotMatch(body, /\n\s*window\.scrollTo\?\.\(\{ top: 0 \}\);/, 'ingen ubetinget scroll til toppen');
+});
