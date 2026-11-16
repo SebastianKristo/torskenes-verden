@@ -1,6 +1,6 @@
 // Prompt 43: Ollama-gaten (server/ai-gate.js) mot en falsk Ollama som oppfører seg som brukerens Mac mini M4 16 GB:
 // NUM_PARALLEL=1, bare plass til én av qwen3:8b / qwen2.5vl:7b, innlasting 2–40 s (skalert 1/100), strømmende svar, en forespørsel
-// mot en modell som lastes ut brytes, og qwen3 tenker når think ikke er false. Se test/ollama-sim43.js.
+// mot en modell som lastes ut brytes, og qwen3 tenker når think ikke er false. Se test/ollama-sim.js.
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtempSync } from 'node:fs';
@@ -19,7 +19,7 @@ for (const k of ['GEMINI_API_KEY', 'GROQ_API_KEY', 'OLLAMA_MODEL', 'OLLAMA_TEXT_
 const { hashPassword } = await import('../server/auth/password.js');
 process.env.APP_PASSWORD_HASH = hashPassword('testpassord1');
 
-const { createOllamaSim } = await import('./ollama-sim43.js');
+const { createOllamaSim } = await import('./ollama-sim.js');
 const sim = createOllamaSim({ base: 'http://ollama.sim:11434', scale: 0.01 });
 const realFetch = globalThis.fetch;
 globalThis.fetch = (u, i) => (String(u).startsWith('http://ollama.sim') ? sim.fetch(u, i) : realFetch(u, i));

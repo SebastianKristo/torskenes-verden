@@ -87,7 +87,7 @@ const reset = () => { ol.loaded.clear(); ol.maxInflight = 0; ol.log.length = 0; 
 beforeEach(() => { ai._aiRunTest.loadMs = 3000; ai._aiRunTest.respMs = 1000; ai._aiRunTest.statusMs = 300; });
 
 // Prompt 43: før gikk alle rutene samtidig (Promise.all) rett til Ollama, og alle de kalde feilet. Nå går de gjennom Ollama-gaten:
-// samme samtidige start, men aldri to kall til Ollama samtidig, og alle svarer (se også test/p43-ollama-gate.test.js).
+// samme samtidige start, men aldri to kall til Ollama samtidig, og alle svarer (se også test/ai-gate-ollama.test.js).
 test('reproduksjon: alle rutene samtidig (slik selvtesten gikk før) – gaten sender én om gangen, og alle svarer', async () => {
   reset();
   const ids = ['chat', 'kat', 'rc', 'fsok'];

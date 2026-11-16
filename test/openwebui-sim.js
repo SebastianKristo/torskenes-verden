@@ -1,9 +1,9 @@
-// Prompt 44: falsk Open WebUI som oppfører seg som brukerens (0.12.3 på :8080), brukt av test/p44-ai-backends.test.js og
+// Prompt 44: falsk Open WebUI som oppfører seg som brukerens (0.12.3 på :8080), brukt av test/ai-backends.test.js og
 // selvtest-skriptet. Injiseres som fetch (ingen nettverk).
 //   - Bearer-nøkkel kreves (401 ellers – og som noen ekte servere gjentar den nøkkelen som ble sendt i feilteksten).
 //   - GET /api/models (OpenAI-format, owned_by:'ollama').
 //   - POST /api/chat/completions: OpenAI SSE (data: {choices:[{delta:{content}}]} … data: [DONE]) med usage til slutt. Sender alt
-//     videre til den falske Ollama-en (test/ollama-sim43.js) med samme begrensninger: én om gangen, utlasting bryter strømmen.
+//     videre til den falske Ollama-en (test/ollama-sim.js) med samme begrensninger: én om gangen, utlasting bryter strømmen.
 //     Bilder (image_url med data-URL) → images, params.num_ctx/num_predict/temperature → options, keep_alive (params eller topp),
 //     response_format json_object / format → format.
 //   - think: forwardThink:true (standard) sender think (toppfelt eller params.think) videre; forwardThink:false sender det IKKE

@@ -1,4 +1,4 @@
-// Prompt 58: en falsk oMLX (OpenAI-kompatibel /v1) som en ekte HTTP-server på 127.0.0.1 – for test/p58-omlx.test.js og for å sjekke
+// Prompt 58: en falsk oMLX (OpenAI-kompatibel /v1) som en ekte HTTP-server på 127.0.0.1 – for test/ai-omlx.test.js og for å sjekke
 // riggen `npm run eval -- --backend omlx --url http://127.0.0.1:<port> --key …` uten Mac. Svarer som fake-model.mjs (samme «flinke»
 // planlegger), men i OpenAI-form: SSE med choices[].delta, tool_calls med navn uten punktum, usage. Måler IKKE modellkvalitet.
 import { createServer } from 'node:http';

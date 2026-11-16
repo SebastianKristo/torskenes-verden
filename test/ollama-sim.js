@@ -1,5 +1,5 @@
 // Prompt 43: falsk Ollama som oppfører seg som brukerens (Ollama 0.34, Mac mini M4 16 GB, ~11,8 GB GPU), brukt av
-// test/p43-ollama-gate.test.js og selvtest-skriptet. Injiseres som fetch (ingen nettverk).
+// test/ai-gate-ollama.test.js og selvtest-skriptet. Injiseres som fetch (ingen nettverk).
 //   - OLLAMA_NUM_PARALLEL=1: én forespørsel om gangen; de andre venter i Ollamas egen kø.
 //   - Bare plass til én av qwen3:8b / qwen2.5vl:7b i minnet (med KV-cache), llama3.2:3b får plass ved siden av.
 //   - Innlasting 2–40 s fra ekstern disk (skalert ned: scale = 1/100 gir 20–400 ms).

@@ -1,6 +1,6 @@
 // Prompt 44: én sentral AI-klient med to backends (Open WebUI 0.12 og Ollama direkte) som deler køen, eget nettsøk i Glimt,
 // rutingssteg før hovedmodellen, strømpris-verktøy og «Mine data» bare med de relevante delene.
-// Simulatorer: test/ollama-sim43.js (Ollama 0.34 på Mac mini M4) og test/owui-sim44.js (Open WebUI 0.12.3 som sender alt videre
+// Simulatorer: test/ollama-sim.js (Ollama 0.34 på Mac mini M4) og test/openwebui-sim.js (Open WebUI 0.12.3 som sender alt videre
 // til samme falske Ollama). Ingen ekte nettverk.
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
@@ -27,8 +27,8 @@ process.env.APP_PASSWORD_HASH = hashPassword('testpassord1');
 const logged = [];
 for (const k of ['log', 'info', 'warn', 'error']) { const orig = console[k].bind(console); console[k] = (...a) => { logged.push(a.map((x) => (typeof x === 'string' ? x : (() => { try { return JSON.stringify(x); } catch { return String(x); } })())).join(' ')); orig(...a); }; }
 
-const { createOllamaSim } = await import('./ollama-sim43.js');
-const { createOwuiSim } = await import('./owui-sim44.js');
+const { createOllamaSim } = await import('./ollama-sim.js');
+const { createOwuiSim } = await import('./openwebui-sim.js');
 const sim = createOllamaSim({ base: 'http://ollama.sim:11434', scale: 0.01 });
 const owui = createOwuiSim({ base: 'http://owui.sim:8080', key: KEY, ollama: sim });
 // Falsk hvakosterstrommen.no: 96 kvarterspriser, NOK/kWh = 0,50 + 0,01 × time (uten mva).

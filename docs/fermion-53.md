@@ -120,4 +120,4 @@ Fra Mac-en selv får du 403 (Mac-en står ikke på tillatelseslista) – det er 
   bare Ollama og skymodeller, og den fila skal ikke endres i denne runden. Neutrino brukes derfor bare i Chat foreløpig.
 - Neutrino leser ikke bilder. Bilder i en samtale med Neutrino avvises med en forklaring (velg en bildemodell).
 - Ikke testet på ekte maskinvare i denne runden: `fermion serve`, modellvektene (Hugging Face var blokkert), MLX og
-  `install.sh`/launchd. Vakten (`guard.py`) og Homelab-delen er testet mot en falsk `fermion serve` (`test/p53-fermion.test.js`).
+  `install.sh`/launchd. Vakten (`guard.py`) og Homelab-delen er testet mot en falsk `fermion serve` (`test/ai-fermion.test.js`).

@@ -53,6 +53,6 @@ krever innlogging, `DAL_LICENSE_ENDPOINT` for lisenskallene (se under).
 
 ## Utvikling og tester
 
-`test/p53-dal.test.js` (mocket – huggingface.co er blokkert her). Ekte kjøring som er verifisert: pakkene installeres, den native
+`test/ai-desert-ant-labs.test.js` (mocket – huggingface.co er blokkert her). Ekte kjøring som er verifisert: pakkene installeres, den native
 kjernen lastes med koffi på linux-x64 (nedlastingen feiler raskt uten nett), og Tongue (vektene ligger i pakken) gjenkjenner
 norsk/dansk/svensk/engelsk riktig. **Ikke kjørt ekte:** Eye, Redact, Gist, Emo, Moderator, Clear og Voz med ekte vekter.
