@@ -25,9 +25,11 @@ import { renderFam51, renderMedia51, afterMedfam51 } from './mediakveld-familiek
 import { initWeb52, after52 } from './startup.js'; // oppstart, sideanimasjon, Ruter-buffer m.m.
 import { initNavOverflow } from './nav-overflow.js'; // «Alle sider ▾» i toppmenyen (Q6, B-B1/B2)
 import { bindAvkortet } from './ui/avkortet.js'; // hele teksten som tooltip når den er kuttet med «…» (Sporing og Media, E-B13)
+import { pageCss } from './lib/page-css.js';
 import { loadModuler, aliasTil, viewOf, navKeyOf, tittel, subtabs } from './moduler.js'; // Fase 6: modullisten (GET /api/moduler)
 // Prompt 76 (SKJWEB): Skjold Lab (#/skjold) – skallet tegnes her, selve modulen (skjold.js) lastes ved behov.
-const renderSkjold76 = () => '<section class="sk76" id="sk76" aria-label="Skjold Lab" aria-busy="true"></section>';
+// M5: stilarket hentes samtidig med modulen (ikke først når skjold.js er lastet), og det tomme skallet har plassen sin fra layout.css.
+const renderSkjold76 = () => { pageCss('skjold'); return '<section class="sk76" id="sk76" aria-label="Skjold Lab" aria-busy="true"></section>'; };
 
 // Fase 3 (B §3 P1): rutemodulene lastes når ruten åpnes (import()), ikke alle ved oppstart. Før lastet hver rute ca. 180 moduler.
 // Skallet (topplinje, meny, søk, Glimt-feltet, temaer, innstillingsinngangen) er fortsatt statisk importert over.

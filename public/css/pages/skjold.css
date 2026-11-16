@@ -616,6 +616,8 @@ html[data-mode="dark"] .sk76,html:not([data-hl="2c"]) .sk76{--s-frame:#0d0e10;--
 @media (max-width:899px){
   .sk76-cols{grid-template-columns:minmax(0,1fr)}
   .sk76-side{position:static}
+  /* M5: mens delene hentes, holder lista plassen, så skapet under ikke vises først og så skyves ned (CLS 0,30 på mobil). */
+  .sk76-main:has(> .sk76-empty[aria-busy="true"]){min-height:100vh}
   .sk76-part{grid-template-columns:minmax(0,1fr)}
   .sk76-big{aspect-ratio:4/3}
   .sk76-big.empty{aspect-ratio:3/1}
