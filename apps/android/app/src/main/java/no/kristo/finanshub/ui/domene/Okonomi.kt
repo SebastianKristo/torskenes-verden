@@ -84,6 +84,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.selection.selectable
 import java.time.LocalDate
 import kotlin.math.abs
 import kotlinx.coroutines.delay
@@ -759,7 +760,7 @@ internal fun EditAll40Sheet(vm: AppViewModel, d: TxDetail) {
                     }
                 }
                 Text("+ Legg til linje", color = p.lab, fontWeight = FontWeight.Bold, fontSize = 13.5.sp,
-                    modifier = Modifier.clip(CircleShape).clickable { lines.add(EditLine40("", "")); linesTouched = true }.padding(8.dp, 6.dp))
+                    modifier = Modifier.clip(CircleShape).clickable(role = Role.Button) { lines.add(EditLine40("", "")); linesTouched = true }.padding(8.dp, 6.dp))
             }
             val sum = lines.sumOf { it.price.replace(',', '.').replace(" ", "").toDoubleOrNull() ?: 0.0 }
             val amt = amount.replace(',', '.').replace(" ", "").replace(" ", "").toDoubleOrNull() ?: 0.0
@@ -768,7 +769,7 @@ internal fun EditAll40Sheet(vm: AppViewModel, d: TxDetail) {
                 Text("Sum linjer ${n2(sum)} kr · " + if (ok) "stemmer" else "stemmer ikke med beløpet", color = if (ok) p.pos else p.lab, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
             }
             if (orig.isNotEmpty()) Text("Tilbakestill til slik Glimt leste den", color = p.mut, fontSize = 13.sp, textDecoration = TextDecoration.Underline,
-                modifier = Modifier.clickable { lines.clear(); lines.addAll(orig); linesTouched = false; amount = String.format(nb, "%.2f", kotlin.math.abs(t.amount)); desc = t.description; date = t.date.take(10) })
+                modifier = Modifier.clickable(role = Role.Button) { lines.clear(); lines.addAll(orig); linesTouched = false; amount = String.format(nb, "%.2f", kotlin.math.abs(t.amount)); desc = t.description; date = t.date.take(10) })
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 PButton("Avbryt", Modifier.weight(1f), kind = "line") { vm.p40.editAll = null }
                 PButton(if (vm.p40.editBusy) "Lagrer …" else "Lagre", Modifier.weight(1f)) {
@@ -785,7 +786,7 @@ private fun Seg40Small(opts: List<Pair<String, String>>, cur: String, pick: (Str
     Row(Modifier.height(44.dp).clip(RoundedCornerShape(22.dp)).background(p.surf2).padding(3.dp)) {
         opts.forEach { (k, n) ->
             val on = k == cur
-            Box(Modifier.fillMaxHeight().clip(RoundedCornerShape(19.dp)).background(if (on) p.card else Color.Transparent).clickable { pick(k) }.padding(horizontal = 12.dp),
+            Box(Modifier.fillMaxHeight().clip(RoundedCornerShape(19.dp)).background(if (on) p.card else Color.Transparent).selectable(selected = on, role = Role.Tab) { pick(k) }.padding(horizontal = 12.dp),
                 contentAlignment = Alignment.Center) { Text(n, color = if (on) p.ink else p.mut, fontWeight = FontWeight.Bold, fontSize = 12.5.sp) }
         }
     }
@@ -816,7 +817,7 @@ internal fun FinAsk40(vm: AppViewModel, a: Ask40) {
                 if (i > 0) Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
                 val nd = it0.next?.let { n -> runCatching { java.time.LocalDate.parse(n.take(10)) }.getOrNull() }
                 val days = nd?.let { java.time.temporal.ChronoUnit.DAYS.between(today, it).toInt() }
-                Row(Modifier.fillMaxWidth().clickable { if (it0.kind == "sub") vm.openSubFromMer38() else it0.id?.toIntOrNull()?.let { id -> vm.openTxHl30(id, null) } }.padding(12.dp, 10.dp),
+                Row(Modifier.fillMaxWidth().clickable(role = Role.Button, onClickLabel = "Åpne") { if (it0.kind == "sub") vm.openSubFromMer38() else it0.id?.toIntOrNull()?.let { id -> vm.openTxHl30(id, null) } }.padding(12.dp, 10.dp),
                     verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Logo(vm, it0.domain, it0.name, 0xFF2B5D8A, 36, RoundedCornerShape(10.dp))
                     Column(Modifier.weight(1f)) {
@@ -929,7 +930,7 @@ internal fun SubLog46(vm: AppViewModel, fg: Color, mut: Color, card: Color, pos:
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Row(Modifier.padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             Text("Logg", color = fg, fontFamily = PaperFonts.sans, fontWeight = FontWeight.SemiBold, fontSize = 17.sp, modifier = Modifier.weight(1f))
-            if (!all.isNullOrEmpty()) Text("Eksporter CSV", color = fg, fontWeight = FontWeight.Bold, fontSize = 13.sp, modifier = Modifier.clip(CircleShape).clickable {
+            if (!all.isNullOrEmpty()) Text("Eksporter CSV", color = fg, fontWeight = FontWeight.Bold, fontSize = 13.sp, modifier = Modifier.clip(CircleShape).clickable(role = Role.Button) {
                 val list = filtered46(all, s.filter)
                 runCatching { ctx.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/csv").putExtra(Intent.EXTRA_SUBJECT, "Abonnementslogg").putExtra(Intent.EXTRA_TEXT, subLogCsv46(list)), "Eksporter CSV")) }
             }.padding(8.dp, 4.dp))
@@ -943,7 +944,7 @@ internal fun SubLog46(vm: AppViewModel, fg: Color, mut: Color, card: Color, pos:
         Text("$nCh fakturaer · $nTr prøveperioder · ${kr46(paid)} betalt siste 12 mnd", color = mut, fontSize = 12.5.sp, modifier = Modifier.padding(horizontal = 4.dp))
         Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             listOf("alle" to "Alle", "fakturaer" to "Fakturaer", "prove" to "Prøveperioder").forEach { (k, n) ->
-                Box(Modifier.height(32.dp).clip(CircleShape).background(if (s.filter == k) fg else card).clickable { Haptics.select(); s.filter = k; s.months = 3 }.padding(horizontal = 14.dp),
+                Box(Modifier.height(32.dp).clip(CircleShape).background(if (s.filter == k) fg else card).selectable(selected = s.filter == k, role = Role.RadioButton) { Haptics.select(); s.filter = k; s.months = 3 }.padding(horizontal = 14.dp),
                     contentAlignment = Alignment.Center) { Text(n, color = if (s.filter == k) card else fg, fontWeight = FontWeight.SemiBold, fontSize = 13.sp) }
             }
         }
@@ -964,7 +965,7 @@ internal fun SubLog46(vm: AppViewModel, fg: Color, mut: Color, card: Color, pos:
         }
         val more = groups.size - s.months
         if (more > 0) Text("Vis eldre ($more ${if (more == 1) "måned" else "måneder"})", color = fg, fontWeight = FontWeight.Bold, fontSize = 13.5.sp,
-            modifier = Modifier.clip(CircleShape).clickable { Haptics.select(); s.months += 3 }.padding(8.dp))
+            modifier = Modifier.clip(CircleShape).clickable(role = Role.Button) { Haptics.select(); s.months += 3 }.padding(8.dp))
         if (list.isEmpty()) Text("Ingen hendelser i loggen.", color = mut, fontSize = 13.sp, modifier = Modifier.padding(horizontal = 4.dp))
     }
 }

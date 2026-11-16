@@ -96,6 +96,20 @@ test('P85 E: trykkflatene i skallet (fanelinja, Papir, navigasjon, globale lag) 
   assert.match(paper, /onClickLabel = "Åpne transaksjonen"/);
 });
 
+test('P85 E: trykkflatene i modulsidene (ui/domene) har rolle for TalkBack, og valg sier om de er valgt', () => {
+  const dir = join(APP, 'ui/domene');
+  for (const f of readdirSync(dir).filter((n) => n.endsWith('.kt'))) {
+    const s = strip(raw(join(dir, f)));
+    assert.doesNotMatch(s, /\.clickable\s*(\(\s*\))?\s*\{/, `${f}: clickable uten rolle`);
+    if (/\.selectable\(/.test(s)) assert.match(s, /import androidx\.compose\.foundation\.selection\.selectable/, f);
+  }
+  const ok = strip(raw(join(dir, 'Okonomi.kt')));
+  assert.match(ok, /\.selectable\(selected = on, role = Role\.Tab\) \{ pick\(k\) \}/, 'segmentvalget er faner');
+  assert.match(ok, /\.selectable\(selected = s\.filter == k, role = Role\.RadioButton\)/, 'filteret i loggen');
+  assert.match(strip(raw(join(dir, 'Helse.kt'))), /\.selectable\(selected = on, role = Role\.RadioButton\) \{ pid = /);
+  assert.match(strip(raw(join(dir, 'Avganger.kt'))), /onClickLabel = if \(open\) "Skjul stoppene" else "Vis stoppene"/);
+});
+
 test('P85 G: kvitteringer lastes opp med Idempotency-Key fra bildet, også fra køen; logo 204 betyr «ingen logo»', () => {
   const api = strip(raw(join(APP, 'Api.kt')));
   assert.match(api, /idempotencyKey: String\? = null\): String/);

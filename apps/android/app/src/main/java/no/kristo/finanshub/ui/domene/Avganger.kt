@@ -123,7 +123,7 @@ internal fun DepRow21(d: Dep, from: String?, open: Boolean, top: Boolean, onTogg
             if (d.stops.isEmpty()) Text("Stoppene på turen kommer når serveren har dem.", color = p.mut, fontSize = 12.5.sp, modifier = Modifier.padding(vertical = 4.dp))
             else StopList(d.stops, lineColor)
             Text("Åpne i Ruter ›", color = p.lab, fontWeight = FontWeight.SemiBold, fontSize = 12.5.sp, textDecoration = TextDecoration.Underline,
-                modifier = Modifier.padding(top = 8.dp).clip(RoundedCornerShape(6.dp)).clickable { openLink(ctx, d.ruterUrl ?: ruterPlanner(from, d.to)) }.padding(vertical = 4.dp))
+                modifier = Modifier.padding(top = 8.dp).clip(RoundedCornerShape(6.dp)).clickable(role = Role.Button, onClickLabel = "Åpne turen i Ruter") { openLink(ctx, d.ruterUrl ?: ruterPlanner(from, d.to)) }.padding(vertical = 4.dp))
         }
     }
 }
@@ -139,7 +139,7 @@ private fun StopList(stops: List<DepStop>, lineColor: Color) {
         else listOf(0 to stops[0], 1 to stops[1], null, n - 2 to stops[n - 2], n - 1 to stops[n - 1])
     shown.forEach { e ->
         if (e == null) {
-            Row(Modifier.fillMaxWidth().heightIn(min = 30.dp).clickable { all = true }, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(Modifier.fillMaxWidth().heightIn(min = 30.dp).clickable(role = Role.Button, onClickLabel = "Vis alle stoppene") { all = true }, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 Box(Modifier.width(10.dp).height(30.dp), contentAlignment = Alignment.Center) { Box(Modifier.width(2.dp).fillMaxHeight().background(lineColor)) }
                 Text("· · · ${n - 4} stopp", color = p.mut, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
             }
@@ -210,7 +210,7 @@ private fun TripCard41(vm: AppViewModel, t: Trip41, home: Boolean) {
     val first = firstName37(vm.displayName).uppercase()
     // Prompt 46 (claude-code-ruter-innstillinger-i-wiggle.md): innstillingene vises bare i redigering (hold inne / «Rediger stopp»).
     val edit46 = !home && vm.stopEdit
-    Column(Modifier.fillMaxWidth().wiggle46(edit46).clip(RoundedCornerShape(22.dp)).background(p.card).then(if (home) Modifier.clickable { vm.openRuter() } else Modifier.longPressEdit(!vm.stopEdit) { Haptics.tap(); vm.stopEdit = true }).padding(16.dp, 14.dp),
+    Column(Modifier.fillMaxWidth().wiggle46(edit46).clip(RoundedCornerShape(22.dp)).background(p.card).then(if (home) Modifier.clickable(role = Role.Button, onClickLabel = "Åpne Avganger") { vm.openRuter() } else Modifier.longPressEdit(!vm.stopEdit) { Haptics.tap(); vm.stopEdit = true }).padding(16.dp, 14.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)) {
         // Prompt 42 (claude-code-ruter-snu-knapp.md): raden er sentrert loddrett mot etikett + tittel, med 10 dp mellomrom.
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -243,7 +243,7 @@ private fun TripCard41(vm: AppViewModel, t: Trip41, home: Boolean) {
         opts.forEachIndexed { i, o ->
             if (i > 0) Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
             val open = s.tripOpen == i && !home
-            Column(Modifier.fillMaxWidth().then(if (!home) Modifier.clickable { s.tripOpen = if (open) null else i } else Modifier), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Column(Modifier.fillMaxWidth().then(if (!home) Modifier.clickable(role = Role.Button, onClickLabel = if (open) "Skjul stoppene" else "Vis stoppene") { s.tripOpen = if (open) null else i } else Modifier), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     PSerif(hm41(o.dep).ifBlank { "–" }, 24.sp, maxLines = 1)
                     Text("→ ${hm41(o.arr)}" + (o.minutes?.let { " · $it min" } ?: ""), color = p.mut, fontSize = 13.sp, modifier = Modifier.weight(1f).padding(bottom = 3.dp))

@@ -98,7 +98,7 @@ internal fun HjemlysCard40(vm: AppViewModel, compact: Boolean = false) {
             mine?.let { m -> hlMinutes40(m.eta)?.takeIf { it >= 0 }?.let { Text("$it min", color = HL_GREEN40, fontFamily = PaperFonts.serif, fontSize = 24.sp) } }
         }
         if (mine != null) {
-            Text("Åpne Vel fremme ›", color = p.lab, fontWeight = FontWeight.Bold, fontSize = 13.sp, modifier = Modifier.clickable { s.hlSheet = true })
+            Text("Åpne Vel fremme ›", color = p.lab, fontWeight = FontWeight.Bold, fontSize = 13.sp, modifier = Modifier.clickable(role = Role.Button) { s.hlSheet = true })
             Text(if (mine.state == "late") "Familien har fått beskjed med posisjonen din." else "Husstanden ser at Vel fremme er på. Ingenting deles før du er sen.",
                 color = p.mut, fontSize = 12.5.sp, lineHeight = 17.sp)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -110,11 +110,11 @@ internal fun HjemlysCard40(vm: AppViewModel, compact: Boolean = false) {
                     PButton("Jeg er hjemme", Modifier.weight(1f), height = 42.dp) { vm.hjemlysAct40("home") }
                 }
             }
-            Text("Avslutt", color = p.mut, fontSize = 12.5.sp, textDecoration = TextDecoration.Underline, modifier = Modifier.clickable { vm.hjemlysAct40("end") })
+            Text("Avslutt", color = p.mut, fontSize = 12.5.sp, textDecoration = TextDecoration.Underline, modifier = Modifier.clickable(role = Role.Button, onClickLabel = "Avslutt Hjemlys") { vm.hjemlysAct40("end") })
         }
         others.forEach { m ->
             // Trykk: mottakers visning (1a rolig / 1c rød om natten) når personen er sen, ellers Hjemlys-siden.
-            Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable { s.hlLateFor = m.userId.takeIf { m.state == "late" }; s.hlSheet = true },
+            Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable(role = Role.Button, onClickLabel = "Åpne Vel fremme") { s.hlLateFor = m.userId.takeIf { m.state == "late" }; s.hlSheet = true },
                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 HlDot40(m.state, 26.dp)
                 Column(Modifier.weight(1f)) {
