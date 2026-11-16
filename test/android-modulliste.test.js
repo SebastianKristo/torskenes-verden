@@ -102,3 +102,8 @@ test('ingen gamle navn i tekstene brukeren ser (Q1–Q12)', () => {
     }
   }
 });
+
+test('Økonomi-fanene: serverens nye nøkler «transaksjoner» og «faste» leses som appens «liste» og «abo»', () => {
+  const s = readFileSync(new URL('../apps/android/app/src/main/java/no/kristo/finanshub/Profiler.kt', import.meta.url), 'utf8');
+  assert.match(s, /fun finKey24\(k: String\): String = when \(k\) \{[^}]*"abonnementer", "faste" -> "abo"[^}]*"transaksjoner" -> "liste"/);
+});

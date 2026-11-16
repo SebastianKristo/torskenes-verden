@@ -21,7 +21,8 @@ val PROFILES24: List<Profile24> = listOf(
 )
 
 /** Serverens fanenøkler → appens (kvitteringer heter «kvitt» i appen). */
-internal fun finKey24(k: String): String = when (k) { "kvitteringer", "kvittering" -> "kvitt"; "abonnementer" -> "abo"; else -> k }
+/** Serverens nøkler i finNav → appens. Fase 6: serveren sender «transaksjoner» og «faste» (alias for «liste» og «abonnementer»). */
+internal fun finKey24(k: String): String = when (k) { "kvitteringer", "kvittering" -> "kvitt"; "abonnementer", "faste" -> "abo"; "transaksjoner" -> "liste"; else -> k }
 
 /* ---------- Tilstand ---------- */
 
