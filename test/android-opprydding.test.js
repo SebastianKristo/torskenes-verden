@@ -189,6 +189,19 @@ test('Q19: oppstartssiden og funksjonsflaggene tolker ikke 404 som «alt i orden
   assert.match(raw(join(ROOT, 'server/system/flags-crashes.js')), /qa51Api\.get\('\/flags'/);
 });
 
+test('Q19: «Logg inn med Homelab-appen» lager aldri et vanlig app-token med alle tilganger for Kalender', () => {
+  const k = strip(raw(join(APP, 'KalenderApp.kt')));
+  // Før: 404/405/403 på /tokens/companion ga POST /finans/api/tokens med Homelab-appens tilganger (finance:write m.fl.).
+  assert.doesNotMatch(k, /api\.post\("\/tokens"|finance:write|expiresDays/);
+  assert.match(k, /request\("POST", "\/tokens\/companion"/);
+  // Enhets-tokenet byttes mot et Kalender-token; ingen omvei når serveren svarer 404.
+  const ex = k.slice(k.indexOf('private suspend fun deviceExchange41('), k.indexOf('private suspend fun companionToken('));
+  assert.match(ex, /"\/auth\/device-exchange"/);
+  assert.doesNotMatch(ex, /companionToken\(|404/);
+  assert.match(raw(join(ROOT, 'server/auth/app-login.js')), /app\.post\('\/api\/auth\/device-exchange'/);
+  assert.match(raw(join(ROOT, 'server/kalender/index.js')), /app\.route\('\/api\/tokens\/companion', companionApi\)/);
+});
+
 test('P85 L: forrige brukers Familie-områder fjernes ved bytte av bruker eller utlogging', () => {
   const fam = strip(raw(join(APP, 'FamilyModel.kt')));
   const use = fam.slice(fam.indexOf('fun useAccount(ctx: Context, id: String?)'), fam.indexOf('internal fun region('));
