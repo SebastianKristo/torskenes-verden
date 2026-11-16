@@ -1,5 +1,6 @@
 package no.kristo.finanshub.ui
 
+import no.kristo.finanshub.widget.WidgetKatalog
 import android.appwidget.AppWidgetManager
 import android.content.ComponentName
 import android.content.Context
@@ -39,24 +40,8 @@ import no.kristo.finanshub.*
 
 private data class WDef43(val group: String, val name: String, val size: String, val cls: String, val samsung: Boolean = false)
 
-private val WIDGETS43 = listOf(
-    WDef43("Media", "Media", "2 × 2", "MediaSmallReceiver"), WDef43("Media", "Media · Pause alt", "4 × 2", "MediaMediumReceiver"),
-    WDef43("Media", "Media · Kommer denne uka", "4 × 3", "MediaLargeReceiver"),
-    WDef43("Avganger", "Ruter", "2 × 2", "RuterReceiver27S"), WDef43("Avganger", "Ruter", "4 × 2", "RuterReceiver27M"), WDef43("Avganger", "Ruter-stripe", "4 × 1", "RuterReceiver27Strip"),
-    WDef43("Avganger", "Ruter · Samsung", "2 × 2", "S27RuterSmallReceiver", true), WDef43("Avganger", "Ruter · Samsung", "4 × 2", "S27RuterWideReceiver", true),
-    WDef43("Avganger", "Ruter-stabel · Samsung", "4 × 2", "S27RuterStackReceiver", true),
-    WDef43("Kalender", "Kalender", "2 × 2", "KalReceiver26S"), WDef43("Kalender", "Kalender", "4 × 2", "KalReceiver26M"), WDef43("Kalender", "Kalender", "4 × 4", "KalReceiver26L"),
-    WDef43("Kalender", "Kalender · Samsung", "2 × 2", "S24KalReceiver26S", true), WDef43("Kalender", "Kalender · Samsung", "4 × 2", "S24KalReceiver26M", true),
-    WDef43("Kalender", "Kalender · Samsung", "4 × 4", "S24KalReceiver26L", true),
-    WDef43("Prøveperioder", "Prøveperioder", "2 × 2", "TrialsReceiver32bS"), WDef43("Prøveperioder", "Prøveperioder", "4 × 2", "TrialsReceiver32bM"),
-    WDef43("Prøveperioder", "Prøveperioder · Samsung", "2 × 2", "S32bTrialsSmallReceiver", true), WDef43("Prøveperioder", "Prøveperioder · Samsung", "4 × 2", "S32bTrialsWideReceiver", true),
-    WDef43("Pakker", "Pakker", "4 × 2", "PackagesReceiver"), WDef43("Pakker", "Sporing · Samsung", "2 × 2", "S24PackagesReceiver", true),
-    WDef43("Glimt-brief", "Glimt-brief", "4 × 2", "BriefReceiver34"), WDef43("Glimt-brief", "Glimt-brief · Samsung", "2 × 2", "S35Brief22Receiver", true),
-    WDef43("Glimt-brief", "Glimt-brief · Samsung", "4 × 1", "S35Brief41Receiver", true), WDef43("Glimt-brief", "Glimt-brief · Samsung", "4 × 4", "S35Brief44Receiver", true),
-    WDef43("Andre", "Vær", "4 × 2", "WeatherReceiver"), WDef43("Andre", "Gjøremål", "4 × 2", "TasksReceiver"), WDef43("Andre", "Bursdager", "4 × 2", "BirthdaysReceiver24"),
-    WDef43("Andre", "Budsjett", "4 × 2", "BudgetReceiver"), WDef43("Andre", "Økonomi", "4 × 2", "FinanceReceiver"), WDef43("Andre", "Skann", "1 × 1", "ScanReceiver"),
-    WDef43("Andre", "Bibelvers", "4 × 2", "Bible37Receiver"), WDef43("Andre", "Hjemlys", "4 × 2", "HjemlysStart40Receiver"),
-)
+/** Q31: galleriet leses fra widget-definisjonen (apps/android/app/widgets.json → widget/WidgetKatalog.kt), samme rekkefølge som før. */
+private val WIDGETS43: List<WDef43> = WidgetKatalog.galleri.map { v -> WDef43(v.gruppe, v.galleri ?: v.etikett, v.storrelse ?: "", v.mottaker, v.samsung) }
 
 private fun comp43(ctx: Context, cls: String) = ComponentName(ctx.packageName, "no.kristo.finanshub.widget.$cls")
 

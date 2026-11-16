@@ -21,6 +21,8 @@
     "rekey-secrets": "node scripts/rekey-secrets.js",
     "tokens": "node scripts/design-tokens.mjs",
     "tokens:check": "node scripts/design-tokens.mjs --check",
+    "widgets": "node scripts/android-widgets.mjs",
+    "widgets:check": "node scripts/android-widgets.mjs --check",
     "kontrakt:eksempler": "node scripts/kontrakt-eksempler.mjs"
   },
   "engines": {

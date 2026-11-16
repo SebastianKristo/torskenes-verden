@@ -52,6 +52,50 @@ test('C-S4/D-B5: ingen fast lokal standardadresse i appene; lagret adresse og se
   assert.match(strip(raw(join(KAL, 'Serveradresser.kt'))), /getString\("k47_def_loc", ""\)\?\.takeIf \{ it\.startsWith\("http"\) \} \?: ""/);
 });
 
+test('Q31: widgetene og variantene (One UI, Samsung, låseskjerm) står i én definisjon, og manifestet og katalogen er generert fra den', async () => {
+  const { DEF, MANIFEST, KATALOG, validate, render, katalog } = await import('../scripts/android-widgets.mjs');
+  const def = validate(JSON.parse(raw(DEF)));
+  const man = raw(MANIFEST);
+  assert.equal(render(def, man), man, 'AndroidManifest.xml: kjør «npm run widgets»');
+  assert.equal(raw(KATALOG), katalog(def), 'WidgetKatalog.kt: kjør «npm run widgets»');
+  const vars = def.widgets.flatMap((w) => w.varianter);
+  assert.equal(vars.length, 74);
+  // Alle widget-mottakerne i manifestet ligger i den genererte blokken, og ingen andre steder.
+  const block = man.slice(man.indexOf('widgets:start'), man.indexOf('widgets:end'));
+  const outside = man.replace(block, '');
+  assert.doesNotMatch(outside, /android\.appwidget\.provider/);
+  assert.equal((block.match(/<receiver /g) ?? []).length, vars.length);
+  // Hver mottaker finnes som klasse i widget-pakken (samme navn som før, så plasserte widgets virker), og hver xml finnes.
+  const kt = ktFiles(join(APP, 'widget')).map((p) => strip(raw(p))).join('\n');
+  const xmlDir = join(AND, 'app/src/main/res/xml');
+  const xmls = new Set(readdirSync(xmlDir).map((f) => f.replace(/\.xml$/, '')));
+  for (const v of vars) {
+    assert.match(kt, new RegExp(`class ${v.mottaker}\\b`), v.mottaker);
+    assert.ok(xmls.has(v.xml), v.xml);
+  }
+  // Samsung og låseskjerm hører til samme widget som standardvarianten.
+  for (const id of ['kalender', 'ruter', 'proveperioder', 'gjoremal', 'pakker', 'brief']) {
+    const w = def.widgets.find((x) => x.id === id);
+    assert.ok(w.varianter.some((v) => v.type === 'standard') && w.varianter.some((v) => v.type === 'samsung'), id);
+  }
+  // Galleriet og Samsung-påslåingen leser katalogen i stedet for egne lister.
+  const gal = strip(raw(join(APP, 'ui/WidgetGalleri.kt')));
+  assert.match(gal, /WidgetKatalog\.galleri\.map/);
+  assert.doesNotMatch(gal, /WDef43\("Media"/);
+  assert.match(strip(raw(join(APP, 'widget/BirthdaysWidgets.kt'))), /WidgetKatalog\.slaasPaaSamsung\.map \{ it\.klasse \}/);
+  assert.equal(vars.filter((v) => v.samsungPaa).length, 16);
+});
+
+test('P85 E: trykkflatene i skallet (fanelinja, Papir, navigasjon, globale lag) har rolle for TalkBack', () => {
+  for (const f of ['Fanelinje.kt', 'Paper.kt', 'PapirTilpassOgNavigasjon.kt', 'GlobaleLag.kt', 'HomelabSkall.kt', 'Navigasjon.kt', 'Topplinje.kt', 'Homelab.kt']) {
+    const s = strip(raw(join(APP, 'ui', f)));
+    assert.doesNotMatch(s, /\.clickable\s*(\(\s*\))?\s*\{/, `${f}: clickable uten rolle`);
+  }
+  const paper = strip(raw(join(APP, 'ui/Paper.kt')));
+  assert.match(paper, /clickable\(role = Role\.Tab\) \{ vm\.scanTarget = k \}\.semantics \{ selected = on \}/);
+  assert.match(paper, /onClickLabel = "Åpne transaksjonen"/);
+});
+
 test('P85 H: widgetene tegnes og hentes med korutine (og goAsync i mottakere), aldri Thread { runBlocking }', () => {
   for (const p of ktFiles(join(AND, 'app/src/main'))) {
     const s = strip(raw(p));

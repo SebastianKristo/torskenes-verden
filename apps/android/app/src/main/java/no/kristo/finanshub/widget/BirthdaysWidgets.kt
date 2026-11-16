@@ -193,17 +193,8 @@ class Midnight24Worker(ctx: Context, params: WorkerParameters) : CoroutineWorker
 object S24 {
     private const val MIDNIGHT = "finanshub-bd24-midnight"
 
-    /** Samsung-providerne (av i manifestet). */
-    private val SAMSUNG: List<Class<*>> = listOf(
-        S24ScanReceiver::class.java, S24TasksReceiver::class.java, S24TasksWideReceiver::class.java, S24BirthdaysReceiver::class.java,
-        S24PackagesReceiver::class.java, S24DeparturesReceiver::class.java, S24DeparturesWideReceiver::class.java, S24BalanceReceiver::class.java,
-        // Prompt 26: Kalender i 134 × 155, 296 × 155 og 296 × 330 dp.
-        S24KalReceiver26S::class.java, S24KalReceiver26M::class.java, S24KalReceiver26L::class.java,
-        // Prompt 27: Ruter liten, bred og stabel.
-        S27RuterSmallReceiver::class.java, S27RuterWideReceiver::class.java, S27RuterStackReceiver::class.java,
-        // Prompt 32: Prøveperioder 2×2 og 4×2.
-        S32bTrialsSmallReceiver::class.java, S32bTrialsWideReceiver::class.java,
-    )
+    /** Samsung-providerne appen slår på, fra widget-definisjonen (Q31: apps/android/app/widgets.json → WidgetKatalog). */
+    private val SAMSUNG: List<String> get() = WidgetKatalog.slaasPaaSamsung.map { it.klasse }
 
     val isSamsung: Boolean get() = Build.MANUFACTURER.equals("samsung", ignoreCase = true)
 
@@ -213,7 +204,7 @@ object S24 {
         val pm = ctx.packageManager
         SAMSUNG.forEach { c ->
             runCatching {
-                val cn = ComponentName(ctx, c)
+                val cn = ComponentName(ctx.packageName, c)
                 if (pm.getComponentEnabledSetting(cn) != PackageManager.COMPONENT_ENABLED_STATE_ENABLED)
                     pm.setComponentEnabledSetting(cn, PackageManager.COMPONENT_ENABLED_STATE_ENABLED, PackageManager.DONT_KILL_APP)
             }
