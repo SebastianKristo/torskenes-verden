@@ -110,3 +110,21 @@ test('rutene Økonomi sender gamle /finans/-lenker til, virker i skallet (direkt
   for (const id of ['brief', 'bibel', 'reise']) assert.ok(ids.includes(id), id);
   assert.equal(mod.aliasTil('#/bibel'), '/finans/#/bibel');
 });
+
+// Fase 7 (Q4/Q7): «Subscription OS» er ikke lenger et navn i UI. Kommentarer i koden kan fortsatt nevne det gamle navnet.
+test('ingen tekst i web-koden viser «Subscription OS» (Q4, Q7)', async () => {
+  const { readdirSync } = await import('node:fs');
+  const files = (dir) => readdirSync(join(ROOT, dir), { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? files(`${dir}/${e.name}`) : e.name.endsWith('.js') ? [`${dir}/${e.name}`] : []));
+  const funn = [];
+  for (const f of files('public')) {
+    // Kommentarlinjer (// … og linjer i /* … */-blokker som starter på egen linje) og kommentarer etter koden (« // …») telles ikke.
+    let blokk = false;
+    read(f).split('\n').forEach((l, i) => {
+      if (blokk) { if (l.includes('*/')) blokk = false; return; }
+      if (/^\s*\/\*/.test(l)) { blokk = !l.includes('*/'); return; }
+      if (/^\s*(\/\/|\*)/.test(l)) return;
+      if (/Subscription OS/.test(l.replace(/\s\/\/\s.*$/, ''))) funn.push(`${f}:${i + 1}`);
+    });
+  }
+  assert.deepEqual(funn, []);
+});
