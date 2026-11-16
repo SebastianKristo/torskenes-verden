@@ -34,6 +34,21 @@ test('E-B12/Q34 Kalender-appen: forslaget «Slå sammen kalenderne: N → 4?» v
   assert.match(strip(raw(join(KAL, 'ui/KalRoot.kt'))), /TopBar\(vm, onBackToHomelab\)\s*MigForslag\(vm\)/);
 });
 
+test('P85 F: AppViewModel lagrer valgt side og søkeutkast i SavedStateHandle, og henter dem etter prosessdød', () => {
+  const vm = strip(raw(join(APP, 'AppViewModel.kt')));
+  assert.match(vm, /class AppViewModel\(app: Application, private val lagret: SavedStateHandle\) : AndroidViewModel\(app\)/);
+  // Lagringen skjer når systemet ber om den (ikke i navigate), så previewBack sitt prøve-snapshot aldri skrives ut.
+  assert.match(vm, /lagret\.setSavedStateProvider\(NAV_LAGRET, object : SavedStateRegistry\.SavedStateProvider \{\s*override fun saveState\(\): Bundle = lagreNavigasjon\(\)/);
+  const lagre = vm.match(/private fun lagreNavigasjon\(\): Bundle = Bundle\(\)\.apply \{([\s\S]*?)\n    \}/)[1];
+  for (const f of ['screen.name', 'backTo?.name', 'paperPage', 'settingsPage', 'domSection', 'query', 'aiQuery']) assert.ok(lagre.includes(f), f);
+  assert.doesNotMatch(lagre, /password|token|totp|code/i, 'aldri hemmeligheter i lagret tilstand');
+  // Gjenopprettes før refresh(), som laster siden.
+  assert.match(vm, /runCatching \{ gjenopprettNavigasjon\(\) \}[\s\S]{0,300}if \(loggedIn\) refresh\(\)\s*\}/);
+  assert.match(vm, /private fun gjenopprettNavigasjon\(\) \{\s*val b = lagret\.get<Bundle>\(NAV_LAGRET\) \?: return\s*if \(!loggedIn\) return/);
+  // Bare én måte å lage AppViewModel på: standardfabrikken i aktiviteten (gir Application og SavedStateHandle).
+  assert.match(strip(raw(join(APP, 'MainActivity.kt'))), /private val vm: AppViewModel by viewModels\(\)/);
+});
+
 test('E-B12/Q34 Homelab-appen: kalenderen viser forslaget med «Slå sammen» og «Ikke nå», og «Angre» etterpå', () => {
   const k = strip(raw(join(APP, 'Kalender.kt')));
   assert.match(k, /hlGet\("\/kalender\/calendars", timeout = 12_000\)/, 'forslaget hentes når kalenderen åpnes');

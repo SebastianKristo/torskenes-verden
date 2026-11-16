@@ -25,6 +25,9 @@ import androidx.compose.runtime.setValue
 import androidx.core.content.FileProvider
 import androidx.exifinterface.media.ExifInterface
 import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.SavedStateHandle
+import androidx.savedstate.SavedStateRegistry
+import android.os.Bundle
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -69,7 +72,12 @@ enum class DomTab(val label: String) { Traffic("Trafikk"), Visits("Besøk"), Per
 /** Login i to steg: brukernavn og passord, så eventuelt 2FA-kode. */
 data class PendingLogin(val server: String, val username: String, val password: String)
 
-class AppViewModel(app: Application) : AndroidViewModel(app) {
+/**
+ * [lagret]: tilstanden som skal overleve prosessdød (P85 F). Systemet kan drepe appen i bakgrunnen; da ble brukeren sendt til
+ * startsiden og mistet søket. Valgt side og søkeutkast lagres nå i SavedStateHandle (se lagreNavigasjon/gjenopprettNavigasjon).
+ * Standardfabrikken i ComponentActivity (SavedStateViewModelFactory) gir både Application og SavedStateHandle.
+ */
+class AppViewModel(app: Application, private val lagret: SavedStateHandle) : AndroidViewModel(app) {
 
     private val store = AccountStore(app)
     val prefs = AppPrefs(app)
@@ -673,6 +681,45 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             Tilbakesteg("til-hjem", { screen != Screen.Homelab && backTo == null }) { navigate(Screen.Homelab, null) },
             Tilbakesteg("forrige", { backTo != null }) { navigate(backTo ?: Screen.Homelab, null) },
         ))
+    }
+
+    /* ---------- P85 F: valgt side og utkast overlever prosessdød ---------- */
+
+    /**
+     * Leses først når systemet lagrer tilstanden (onSaveInstanceState), aldri mens previewBack prøvekjører tilbake i et eget
+     * snapshot. Bare sider og søketekst – aldri passord, koder eller tokens.
+     */
+    private fun lagreNavigasjon(): Bundle = Bundle().apply {
+        putString("skjerm", screen.name)
+        putString("tilbakeTil", backTo?.name)
+        putString("papirside", paperPage)
+        putBoolean("papirFinans", paperFin)
+        putBoolean("fraMer", paperFromMer)
+        putBoolean("fraFinansMer", paperFromFinMer)
+        putString("innstillingsside", settingsPage)
+        putString("domeneseksjon", domSection)
+        putString("abonnementfane", subTab)
+        putString("boligfane", bolTab)
+        putString("sok", query)
+        putString("glimtSok", aiQuery)
+    }
+
+    /** Etter prosessdød: tilbake til siden brukeren var på, med søket. Første oppstart (ingen lagret tilstand) = startsiden som før. */
+    private fun gjenopprettNavigasjon() {
+        val b = lagret.get<Bundle>(NAV_LAGRET) ?: return
+        if (!loggedIn) return
+        b.getString("skjerm")?.let { n -> Screen.entries.firstOrNull { it.name == n } }?.let { screen = it }
+        backTo = b.getString("tilbakeTil")?.let { n -> Screen.entries.firstOrNull { it.name == n } }
+        paperPage = b.getString("papirside")
+        paperFin = b.getBoolean("papirFinans", false)
+        paperFromMer = b.getBoolean("fraMer", false)
+        paperFromFinMer = b.getBoolean("fraFinansMer", false)
+        settingsPage = b.getString("innstillingsside")
+        b.getString("domeneseksjon")?.let { domSection = it }
+        b.getString("abonnementfane")?.let { subTab = it }
+        b.getString("boligfane")?.let { bolTab = it }
+        query = b.getString("sok") ?: ""
+        aiQuery = b.getString("glimtSok") ?: ""
     }
 
     /** Rute-id for laget tilbake lukker nå («rot» på Hjem). Brukes av skallet (HomelabSkall) og forhåndsvisningen av tilbake. */
@@ -3949,10 +3996,18 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         runCatching { restoreAs44() }
         // Prompt 51: enhetsnøkkel/-id, bufrede flagg, krasjkøen og ntfy-tjenesten (Krasjrapporter.kt).
         runCatching { start51() }
+        // P85 F: siden og søket fra før prosessdød (lastes av refresh), og lagringen til neste gang.
+        runCatching { gjenopprettNavigasjon() }
+        lagret.setSavedStateProvider(NAV_LAGRET, object : SavedStateRegistry.SavedStateProvider {
+            override fun saveState(): Bundle = lagreNavigasjon()
+        })
         if (loggedIn) refresh()
     }
 
 }
+
+/** P85 F: nøkkelen i SavedStateHandle for valgt side og søkeutkast. */
+private const val NAV_LAGRET = "navigasjon"
 
 /** Prompt 85: meldingen når en delt/valgt fil ikke kan leses fra telefonen. */
 internal const val UNREADABLE85 = "Fikk ikke lest filen. Prøv å dele den på nytt."
