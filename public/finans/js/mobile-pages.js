@@ -11,8 +11,7 @@ import { AK, aksView, aksLoad, aksBind } from './mobile-aks.js';
 export const PAGES = ['mer', 'kv', 'fast', 'konto', 'aks', 'rap', 'imp', 'sok'];
 const PG = { rec: null, stocks: null, rep: null, repMode: 'month', sub: null, dirs: null, finn: null, booked: null,
   imp: { rows: null, files: [], text: '', busy: false, acc: null }, ai: { q: '', r: null, busy: false, hist: null, sugg: null, groups: null, focus: false, aiDown: false, notice: '' }, last: '' };
-const isI = () => theme() === 'ios';
-const gl = (c = 'glass2') => (isI() ? c : '');
+const gl = (c = 'glass2') => '';
 const kr = (v) => `${n0(v)} kr`, kr2 = (v) => `${n2(v)} kr`;
 // Prompt 85: n0() er alltid uten fortegn. Total saldo og «Spart» kan være negative og sto da som positive tall.
 export const krS = (v) => `${v < 0 ? '−' : ''}${n0(v)} kr`;
@@ -22,13 +21,13 @@ const curM = () => S.summary?.month ?? today().slice(0, 7);
 
 export const R = {
   // Raden kan ha en egen knapp (o.act), så den klikkbare raden er en div med role=button (knapper kan ikke ligge i knapper).
-  item: (o) => `<div class="item prow${o.attrs ? ' tap' : ''}" ${o.attrs ? `role="button" tabindex="0" ${o.attrs}` : ''}>${o.logo ? logo(o.logo, 40, isI() ? 20 : 12) : `<span class="m-ini pini" style="${o.iniStyle ?? ''}">${esc(o.ini ?? (o.t ?? '?').slice(0, 1))}</span>`}
+  item: (o) => `<div class="item prow${o.attrs ? ' tap' : ''}" ${o.attrs ? `role="button" tabindex="0" ${o.attrs}` : ''}>${o.logo ? logo(o.logo, 40, 12) : `<span class="m-ini pini" style="${o.iniStyle ?? ''}">${esc(o.ini ?? (o.t ?? '?').slice(0, 1))}</span>`}
     <span class="m-grow"><span class="m-ell" style="font-weight:500">${esc(o.t)}</span>${o.s ? `<span class="m-ell s">${esc(o.s)}</span>` : ''}${aiLine(o.ai, 'm-ell ai')}${o.tags?.length ? `<span class="ptags">${o.tags.map((g) => `<em class="${g.k ?? ''}">${esc(g.n)}</em>`).join('')}</span>` : ''}</span>
     <span class="pv">${o.v ? `<b class="m-mono" style="color:${o.vc ?? 'inherit'}">${esc(o.v)}</b>` : ''}${o.vs ? `<small>${esc(o.vs)}</small>` : ''}${o.act ? `<button class="pact ${o.act.k ?? ''}" ${o.act.attrs}>${esc(o.act.l)}</button>` : ''}</span></div>`,
   bar: (l, v, pct, c, s = '', sc = '') => `<div class="opt-row col pbar"><span class="m-row" style="justify-content:space-between;gap:10px"><span class="m-ell">${esc(l)}</span><span class="m-mono" style="flex:none">${esc(v)}</span></span><span class="hbar"><i style="width:${Math.max(0, Math.min(100, pct))}%;background:${c}"></i></span>${s ? `<span style="font-size:12.5px;color:${sc || 'inherit'};opacity:${sc ? 1 : 0.65}">${esc(s)}</span>` : ''}</div>`,
   tog: (l, sub, on, attrs) => `<button class="opt-row" ${attrs} role="switch" aria-checked="${!!on}"><span class="m-grow"><b style="font-weight:500">${esc(l)}</b>${sub ? `<br><span style="font-size:13px;opacity:.65">${esc(sub)}</span>` : ''}</span><span class="sw" aria-checked="${!!on}"></span></button>`,
   val: (l, v, c = '', mono = false) => `<div class="opt-row"><span class="m-grow" style="opacity:.75">${esc(l)}</span><b class="${mono ? 'm-mono' : ''}" style="font-weight:500;text-align:right;${c ? `color:${c}` : ''}">${esc(v)}</b></div>`,
-  chips: (l, opts) => `<div class="opt-row col">${l ? `<span style="font-size:13px;opacity:.7">${esc(l)}</span>` : ''}<div class="schips">${opts.map((o) => `<button class="chip" ${o.attrs} aria-pressed="${!!o.on}">${o.on && !isI() ? '✓ ' : ''}${esc(o.n)}</button>`).join('')}</div></div>`,
+  chips: (l, opts) => `<div class="opt-row col">${l ? `<span style="font-size:13px;opacity:.7">${esc(l)}</span>` : ''}<div class="schips">${opts.map((o) => `<button class="chip" ${o.attrs} aria-pressed="${!!o.on}">${o.on && !false ? '✓ ' : ''}${esc(o.n)}</button>`).join('')}</div></div>`,
   inp: (l, id, v, ph = '', extra = '') => `<label class="opt-row col"><span style="font-size:13px;opacity:.7">${esc(l)}</span><input class="sinp" id="${id}" value="${esc(v ?? '')}" placeholder="${esc(ph)}" ${extra}></label>`,
   btn: (l, attrs, c = 'var(--m-acc)') => `<button class="opt-row" ${attrs}><span class="m-grow" style="color:${c};font-weight:500">${esc(l)}</span></button>`,
   link: (l, href, c = 'var(--m-acc)', extra = '') => `<a class="opt-row" href="${href}" ${extra}><span class="m-grow" style="color:${c};font-weight:500">${esc(l)}</span></a>`,
@@ -155,7 +154,7 @@ function rap() {
     groups: [G('', [R.chips('Periode', [{ n: 'Denne måneden', on: !yr, attrs: 'data-pa="rapm" data-v="month"' }, { n: 'Hittil i år', on: yr, attrs: 'data-pa="rapm" data-v="year"' }])]),
       G('Per kategori', (r.byCategory ?? []).map((c) => R.bar(c.category, kr(c.amount), (c.amount / mx) * 100, c.color))),
       (r.merchants ?? []).length ? G('Topp butikker', r.merchants.map((x) => R.item({ logo: { description: x.name }, t: x.name, s: `${x.count} kjøp`, v: `−${n0(x.amount)} kr`, attrs: `data-pd="merch" data-name="${esc(x.name)}"` }))) : '',
-      G('Måned for måned', ms.map((x) => R.item({ ini: cap(monthName(x.month, false)).slice(0, 3), iniStyle: 'font-size:12px', t: cap(monthName(x.month)), s: `Spart ${kr(x.inn - x.ut)}`, v: `+${n0(x.inn)}`, vs: `−${n0(x.ut)}`, vc: '#9FE3C6' }))),
+      G('Måned for måned', ms.map((x) => R.item({ ini: cap(monthName(x.month, false)).slice(0, 3), iniStyle: 'font-size:12px', t: cap(monthName(x.month)), s: `Spart ${kr(x.inn - x.ut)}`, v: `+${n0(x.inn)}`, vs: `−${n0(x.ut)}`, vc: 'var(--pp-pos)' }))),
       G('', [R.link('Eksporter som CSV', `/finans/api/transactions.csv?from=${r.from}&to=${r.to}`, 'var(--m-acc)', 'download'), R.link('Lag PDF-rapport på en større skjerm', '/finans/?desktop=1#/rap')])] });
 }
 
@@ -191,7 +190,7 @@ const allSugg = () => groupsOf().flatMap((g) => g.items);
 function hitRow(h) {
   const ini = h.type === 'line' ? '≡' : h.type === 'receipt' ? '⧉' : (h.description ?? '?').slice(0, 1);
   return R.item({ ini, iniStyle: `background:${(h.color ?? '#A0A0AA')}2e;color:${h.color ?? '#A0A0AA'}`, t: h.description ?? '–', s: [h.date ? dd(h.date) : '', h.source ?? ''].filter(Boolean).join(' · '),
-    ai: h.reason ?? h.why ?? '', v: h.amount != null ? sgn(h.amount) : '', vc: (h.amount ?? 0) > 0 ? '#9FE3C6' : 'inherit',
+    ai: h.reason ?? h.why ?? '', v: h.amount != null ? sgn(h.amount) : '', vc: (h.amount ?? 0) > 0 ? 'var(--pp-pos)' : 'inherit',
     attrs: h.txId ? `data-hit="${h.txId}" data-d="${esc(h.description ?? '')}"` : h.receiptId ? `data-rc="${esc(h.receiptId)}"` : '' });
 }
 function sok() {

@@ -246,13 +246,13 @@ export function logo(t, size = 40, radius = 12) {
   const name = t?.description ?? t?.merchant ?? t?.name ?? it.navn;
   return `<span class="m-logo tint" style="width:${size}px;height:${size}px;border-radius:${radius}px;flex:none;--ini-c:${esc(c || '#A0A0AA')}"><img src="${fileUrl(it)}" alt="" loading="lazy" width="${size - 8}" height="${size - 8}"><i>${esc(String(name).replace(/[^A-Za-zÆØÅæøå0-9]/g, '').charAt(0).toUpperCase() || '•')}</i></span>`;
 }
-/** Papir-radene (.pp-ti): bokstav i butikkens farge, med logo over når registeret har en fil. */
+/** Papir-radene (.pp-ti): bokstav i butikkens farge (--ti), med logo over på hvit bunn (.p20-lg) når registeret har en fil. */
 export function ppTi(t, letter, color) {
   const ov = logoOv73(t); // prompt 73: overstyrt logo, "" = bare bokstaven
-  if (ov !== undefined) return `<span class="pp-ti${ov ? ' p20-lg' : ''}" style="background:${esc(color || '#6b665c')}">${esc(letter)}${ov ? `<img src="${esc(ov)}" alt="" loading="lazy">` : ''}</span>`;
+  if (ov !== undefined) return `<span class="pp-ti${ov ? ' p20-lg' : ''}" style="--ti:${esc(color || '#6b665c')}">${esc(letter)}${ov ? `<img src="${esc(ov)}" alt="" loading="lazy">` : ''}</span>`;
   const it = regMatch(t), bg = it?.farge || color || '#6b665c';
   const src = it ? (it.hasFile !== false ? fileUrl(it) : it.domene ? `/finans/api/logo/${encodeURIComponent(it.domene)}` : null) : t?.domain ? `/finans/api/logo/${encodeURIComponent(t.domain)}` : null;
-  return `<span class="pp-ti${src ? ' p20-lg' : ''}" style="background:${esc(color && color !== '#6b665c' && !it ? color : bg)}">${esc(letter)}${src ? `<img src="${esc(src)}" alt="" loading="lazy">` : ''}</span>`;
+  return `<span class="pp-ti${src ? ' p20-lg' : ''}" style="--ti:${esc(color && color !== '#6b665c' && !it ? color : bg)}">${esc(letter)}${src ? `<img src="${esc(src)}" alt="" loading="lazy">` : ''}</span>`;
 }
 // En logo som ikke finnes (404) eller er et tomt bilde: vis bokstaven under.
 document.addEventListener('error', (e) => { const img = e.target; if (img?.tagName === 'IMG' && img.parentNode?.classList?.contains('p20-lg')) { img.parentNode.classList.remove('p20-lg'); img.remove(); } }, true);

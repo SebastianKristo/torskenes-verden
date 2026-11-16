@@ -52,7 +52,7 @@ html[data-ui=mobile] body{background:#000;overscroll-behavior-y:none}
 .and .item.on{background:var(--m3-3D332C,#3D332C)}
 .and .search{display:flex;align-items:center;gap:12px;height:56px;padding:0 20px;border-radius:28px;background:var(--m3-31281F,#31281F);width:auto;border:0}
 .and .chip{height:36px;padding:0 16px;border-radius:10px;border:1px solid var(--m3-A08D83,#A08D83)!important;font-size:14px;font-weight:500;color:var(--m3-D7C2B8,#D7C2B8);flex:none;transition:border-radius .2s}
-.and .chip[aria-pressed=true]{background:var(--m3-5D4033,#5D4033)!important;border-color:var(--m3-5D4033,#5D4033)!important;color:var(--m3-FFDBC8,#FFDBC8);border-radius:18px}
+.and .chip[aria-pressed=true]{background:var(--m3-5D4033,#5D4033);border-color:var(--m3-5D4033,#5D4033)!important;color:var(--m3-FFDBC8,#FFDBC8);border-radius:18px}
 .and .field{display:flex;flex-direction:column;padding:8px 16px;border-radius:16px 16px 4px 4px;background:var(--m3-31281F,#31281F);border-bottom:1px solid var(--m3-A08D83,#A08D83);font-size:12px;color:var(--m3-D7C2B8,#D7C2B8)}
 .and .field:focus-within{border-bottom:2px solid var(--m3-FFB68A,#FFB68A);color:var(--m3-FFB68A,#FFB68A)}
 .and .field input,.and .field select{background:none;border:0;outline:none;color:var(--m3-F0DFD7,#F0DFD7);font-size:16px;padding:4px 0;width:100%}
@@ -90,24 +90,6 @@ html[data-ui=mobile] body{background:#000;overscroll-behavior-y:none}
 .and .sw[aria-checked=true]{background:var(--m3-FFB68A,#FFB68A);border-color:var(--m3-FFB68A,#FFB68A)}
 .and .sw[aria-checked=true]::after{background:var(--m3-532200,#532200);width:24px;height:24px;top:2px;transform:translateX(18px)}
 .m .sw[aria-checked=true]::after{transform:translateX(20px)}
-
-/* ================= Brettbar / nettbrett ≥ 600 px: rail + to paneler ================= */
-@media (min-width:600px){
-  .m.two{display:grid;grid-template-columns:96px minmax(0,1fr) minmax(0,1fr);height:100dvh;overflow:hidden}
-  .m.two .m-scroll{max-width:none;margin:0;padding:calc(env(safe-area-inset-top) + 20px) 20px 30px;height:100dvh;overflow-y:auto}
-  .m.two .m-detail{display:flex;flex-direction:column;gap:14px;padding:calc(env(safe-area-inset-top) + 20px) 24px 30px;height:100dvh;overflow-y:auto;position:relative;z-index:1}
-  .m.two .tabbar,.m.two .navbar,.m.two .fab{display:none}
-  .m.two .rail{display:flex;flex-direction:column;align-items:center;gap:14px;padding:calc(env(safe-area-inset-top) + 20px) 0 20px;position:relative;z-index:2}
-  .and.two .rail{background:var(--m3-261E19,#261E19)}
-  .m.two .rail .r-scan{width:56px;height:56px;border-radius:16px;display:grid;place-items:center;margin-bottom:10px}
-  .and.two .rail .r-scan{background:var(--m3-FFB68A,#FFB68A);color:var(--m3-532200,#532200)}
-  .m.two .rail a{display:flex;flex-direction:column;align-items:center;gap:4px;font-size:12px;font-weight:600;opacity:.85}
-  .m.two .rail a span{width:56px;height:32px;border-radius:16px;display:grid;place-items:center}
-  .and.two .rail a[aria-current=page] span{background:var(--m3-5D4033,#5D4033)}
-  .m.two .rail a[aria-current=page]{opacity:1}
-  .and.two .m-detail{background:var(--m3-1E1712,#1E1712);border-radius:28px 0 0 28px}
-  .m.two .one-only{display:none}
-}
 
 /* ---------- Mobil v2 ---------- */
 .m-logo{display:grid;place-items:center;background:#fff;overflow:hidden;position:relative}
@@ -174,18 +156,6 @@ a.fab,a.r-scan{text-decoration:none}
 .and.dom .navbar a[aria-current=page]{color:var(--m3-FFD9E2,#FFD9E2)}
 .and.dom .navbar a[aria-current=page] span{background:var(--m3-7B2949,#7B2949)}
 
-/* Brettbar: rail med skann øverst og profilbildet nederst; moduler fyller hele skjermen */
-.r-av{margin-top:auto}
-@media (min-width:600px){
-  .m.two.full{grid-template-columns:96px minmax(0,1fr)}
-  .m.two.full .m-detail{display:none}
-  .m.two.full .m-scroll{max-width:860px;width:100%;margin:0 auto}
-  .m.two .rail{height:100dvh}
-  .m.two .rail .r-av{width:48px;height:48px;margin-top:0}
-  .and.dom.two .rail{background:var(--m3-2A2024,#2A2024)}
-  .and.dom.two .rail a[aria-current=page] span{background:var(--m3-7B2949,#7B2949);color:var(--m3-FFD9E2,#FFD9E2)}
-}
-
 /* Meny bak profilbildet, handlingsark for skann */
 .sheet.left{left:8px;right:auto;margin-left:0;width:min(380px,calc(100vw - 16px));animation:slideL .28s cubic-bezier(.3,1.2,.5,1)}
 @keyframes slideL{from{transform:translateX(-24px);opacity:0}}
@@ -240,8 +210,8 @@ em.role.blk{background:rgba(255,138,128,.16);color:#FF8A80}em.role.chl{backgroun
 .steps em.done{background:#1F3A2F;color:#9FE3C6;opacity:1}
 
 /* Domener: rosa palett (iOS mørkt glass #FF9EBE, Android tonal #7B2949/#FFD9E2) */
-.dom .chip[aria-pressed=true]{background:var(--m-acc)!important;border-color:var(--m-acc)!important;color:#3B0A1E}
-.and.dom .chip[aria-pressed=true]{background:var(--m3-7B2949,#7B2949)!important;border-color:var(--m3-7B2949,#7B2949)!important;color:var(--m3-FFD9E2,#FFD9E2)}
+.dom .chip[aria-pressed=true]{background:var(--m-acc);border-color:var(--m-acc);color:#3B0A1E}
+.and.dom .chip[aria-pressed=true]{background:var(--m3-7B2949,#7B2949);border-color:var(--m3-7B2949,#7B2949);color:var(--m3-FFD9E2,#FFD9E2)}
 .dhero{padding:20px;border-radius:28px;display:flex;flex-direction:column;gap:10px}
 .and .dhero{background:var(--m3-7B2949,#7B2949);color:var(--m3-FFD9E2,#FFD9E2);border-radius:32px 32px 32px 10px}
 .live{display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--m-acc)}
@@ -445,13 +415,7 @@ em.role.blk{background:rgba(255,138,128,.16);color:#FF8A80}em.role.chl{backgroun
 .orig .opt-row{display:flex;align-items:center;gap:12px;padding:12px 16px}
 .orig.and .list{display:flex;flex-direction:column;gap:3px}
 
-/* Brettbar: rail med Homelab øverst, skann og profil nederst; alle sider uten listepanel fyller skjermen */
-@media (min-width:600px){
-  .m.two .rail .r-home{margin-bottom:2px}
-  .m.two.hlp .m-scroll{max-width:760px}
-  .m.two .m-scroll{padding-bottom:30px}
-  
-}
+/* Bakgrunnen bak appen (synlig ved overscroll) */
 html[data-ui=mobile] body:has(.m.and){background:var(--m3-19120E,#19120E)}
 .and.light .m-spin{border-color:rgba(0,0,0,.12);border-top-color:var(--m3-FF7A3D,#FF7A3D)}
 .m .prow.tap{cursor:pointer}
@@ -461,15 +425,11 @@ html[data-ui=mobile] body:has(.m.and){background:var(--m3-19120E,#19120E)}
 /* Linsen løftes mens den dras: bare blur/saturate/brightness (ingen SVG-forskyvning på WebKit) */
 /* Skann (Finans) og tannhjul (Domener): rund glassknapp i samme rad, til høyre for kapselen */
 .and .m-scroll{padding-bottom:calc(env(safe-area-inset-bottom) + 180px)}
-.m.nobar .m-scroll{padding-bottom:calc(env(safe-area-inset-bottom) + 28px)}
-.m.nobar .edge{display:none}
 
 /* Pil tilbake øverst, med profilbildet på samme rad helt til høyre */
 .toprow{display:flex;align-items:center;gap:10px;min-height:44px;margin-bottom:-4px}
 .and .atop{height:40px;padding:0 18px 0 12px;border-radius:20px;display:inline-flex;align-items:center;gap:8px;background:var(--m3-31281F,#31281F);color:var(--m3-F0DFD7,#F0DFD7);font-weight:600;font-size:14.5px;text-decoration:none}
 .and.dom .atop{background:var(--m3-3A2F33,#3A2F33);color:var(--m3-F2DEE2,#F2DEE2)}
-.m.backtop .m-scroll button.m-av[data-mact=menu]:not(.topav){display:none}
-@media (min-width:600px){ .m.two .toprow .topav{display:none} }
 
 /* Matplan: egen lys «matapp»-flate (og mørk modus) */
 .m.matp{--mp-bg:#F1F2EC;--mp-fg:#1E241C;--mp-mut:#5B6158;--mp-dim:#7A8077;--mp-card:#fff;--mp-red:#F2552C;--mp-lime:#E4F0A9;--mp-cream:#FBEACB;--mp-line:#D9DCD2;
@@ -528,7 +488,6 @@ html[data-ui=mobile] body:has(.m.and){background:var(--m3-19120E,#19120E)}
 .m.matp .atop{background:var(--mp-card);color:var(--mp-fg)}
 .m.matp .m-av{background:var(--mp-card);color:var(--mp-fg)}
 .m.matp .m-spin{border-color:rgba(0,0,0,.1);border-top-color:var(--mp-red)}
-@media (min-width:600px){ .m.two.matp .m-scroll{max-width:620px} .m.two.matp .rail{background:transparent} }
 /* Domener: verdenskart (rosa skala) og DNS */
 .dmapbox{gap:8px}
 .dmap{position:relative;width:100%;aspect-ratio:1.9/1;min-height:150px}
@@ -824,7 +783,7 @@ em.role.dns{min-width:46px;text-align:center;font-style:normal;font-size:11px;fo
 .m.papir .hero .amt{font-family:Newsreader,serif;font-weight:400}
 .m.papir .list,.m.papir .hcard,.m.papir .tile,.m.papir .bsum{border-radius:20px!important}
 .m.papir .sec{font:600 10.5px 'IBM Plex Mono',monospace;letter-spacing:.12em;text-transform:uppercase;color:var(--pp-lab);padding:8px 2px 6px;border-bottom:2px solid var(--pp-ink);margin-bottom:2px}
-.m.papir .chip[aria-pressed=true]{background:var(--pp-ink)!important;color:var(--pp-bg)!important}
+.m.papir .chip[aria-pressed=true]{background:var(--pp-ink);color:var(--pp-bg)}
 .m.papir .blob{display:none}
 .m.papir .fab,.m.papir .navbar,.m.papir .rail,.m.papir .tabbar{display:none!important}
 
@@ -832,7 +791,7 @@ em.role.dns{min-width:46px;text-align:center;font-style:normal;font-size:11px;fo
 .pp-hero.home{height:calc(env(safe-area-inset-top) + 228px);padding-bottom:42px}
 .pp-top{display:flex;align-items:center;gap:8px;position:relative;z-index:3}
 .pp-brand{font:500 22px Newsreader,serif;text-shadow:0 2px 12px rgba(0,0,0,.4)}
-.pp-pill{height:34px;padding:0 14px 0 12px;border-radius:999px;border:0;background:rgba(27,26,23,.55);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);color:#fff!important;font:600 13px Manrope,sans-serif;white-space:nowrap;display:inline-flex;align-items:center;text-decoration:none;cursor:pointer}
+.pp-pill{height:34px;padding:0 14px 0 12px;border-radius:999px;border:0;background:rgba(27,26,23,.55);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);color:#fff;font:600 13px Manrope,sans-serif;white-space:nowrap;display:inline-flex;align-items:center;text-decoration:none;cursor:pointer}
 .pp-pill.line{background:transparent;border:1px solid var(--pp-line);color:var(--pp-ink)!important;-webkit-backdrop-filter:none;backdrop-filter:none}
 .pp-av{width:38px;height:38px;border-radius:19px;background:#f3efe6;color:#1b1a17;display:grid;place-items:center;font-weight:700;font-size:14px;overflow:hidden;text-decoration:none;flex:none}
 .pp-av img{width:100%;height:100%;object-fit:cover}
@@ -854,7 +813,7 @@ em.role.dns{min-width:46px;text-align:center;font-style:normal;font-size:11px;fo
 .pp-nav a{height:46px;padding:0 10px;border-radius:999px;color:var(--pp-navInk);display:flex;align-items:center;gap:7px;font:600 12.5px Manrope,sans-serif;white-space:nowrap;text-decoration:none}
 .pp-nav a[aria-current=page]{background:var(--pp-navAct);color:var(--pp-navActInk);padding:0 16px}
 .pp-nav a i{font:500 16px Newsreader,serif;font-style:normal}
-.pp-nav .pp-scan{width:46px;height:46px;border-radius:23px;background:var(--pp-lab)!important;color:#fff!important;font-size:22px;flex:none}
+.pp-nav .pp-scan{width:46px;height:46px;border-radius:23px;background:var(--pp-lab);color:#fff;font-size:22px;flex:none}
 @media (max-width:370px){ .pp-nav a{padding:0 7px;font-size:11.5px} .pp-nav a[aria-current=page]{padding:0 11px} }
 
 .pp-card{border-radius:20px;background:var(--pp-card);color:var(--pp-ink);padding:14px 16px;display:flex;flex-direction:column;gap:8px;text-decoration:none;flex:none}
@@ -889,9 +848,9 @@ em.role.dns{min-width:46px;text-align:center;font-style:normal;font-size:11px;fo
 .pp-nlist a .pp-serif{font-size:14.5px;line-height:1.3}
 .pp-nlist a .pp-mut{flex:none;font-size:11px}
 .pp-center{display:flex;justify-content:center;padding:10px 14px 12px}
-.pp-btn{height:48px;border-radius:14px;border:1px solid var(--pp-line)!important;background:transparent;color:var(--pp-ink)!important;display:grid;place-items:center;font:600 14px Manrope,sans-serif;text-decoration:none;cursor:pointer;padding:0 18px;box-sizing:border-box}
-.pp-btn.ink{background:var(--pp-ink)!important;color:var(--pp-bg)!important;border-color:var(--pp-ink)!important;font-weight:700}
-.pp-btn.lab{background:var(--pp-lab)!important;color:#fff!important;border:0!important;font-weight:700}
+.pp-btn{height:48px;border-radius:14px;border:1px solid var(--pp-line)!important;background:transparent;color:var(--pp-ink);display:grid;place-items:center;font:600 14px Manrope,sans-serif;text-decoration:none;cursor:pointer;padding:0 18px;box-sizing:border-box}
+.pp-btn.ink{background:var(--pp-ink);color:var(--pp-bg);border-color:var(--pp-ink)!important;font-weight:700}
+.pp-btn.lab{background:var(--pp-lab);color:#fff;border:0!important;font-weight:700}
 .pp-btn.ghost{border:0!important;color:var(--pp-mut)!important}
 .pp-btn.sm{height:36px;border-radius:999px;font-size:12px}
 .pp-btn:disabled{opacity:.55}
@@ -908,7 +867,7 @@ em.role.dns{min-width:46px;text-align:center;font-style:normal;font-size:11px;fo
 .pp-tx{display:flex;align-items:center;gap:12px;padding:7px 2px;border-bottom:1px solid var(--pp-line)!important;text-align:left;width:100%;cursor:pointer}
 .pp-tx b{display:block;font-size:14.5px;font-weight:600}
 .pp-tx .pp-serif{font-size:17px;flex:none}
-.pp-ti{flex:none;width:38px;height:38px;border-radius:11px;color:#fff;display:grid;place-items:center;font-weight:800;font-size:11px}
+.pp-ti{flex:none;width:38px;height:38px;border-radius:11px;background:var(--ti);color:#fff;display:grid;place-items:center;font-weight:800;font-size:11px}
 .pp-bud{display:flex;align-items:center;gap:12px;padding:7px 2px;color:inherit;text-decoration:none;font-size:14px}
 .pp-bud>span:first-child{width:110px;flex:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .pp-bar{flex:1;height:8px;border-radius:4px;background:var(--pp-line);display:flex;overflow:hidden}.pp-bar i{border-radius:4px}
@@ -929,16 +888,14 @@ em.role.dns{min-width:46px;text-align:center;font-style:normal;font-size:11px;fo
 
 /* Nyhetsleser */
 .m.news .m-scroll{padding:calc(env(safe-area-inset-top) + 12px) 18px calc(env(safe-area-inset-bottom) + 28px);margin-top:0}
-.m.news:not(.papir){--pp-bg:#f3efe6;--pp-ink:#1b1a17;--pp-card:#fff;--pp-line:#d8d1c2;--pp-lab:#b23a2a;--pp-mut:#8f897c;--pp-pos:#2f7a4f;background:var(--pp-bg)!important;color:var(--pp-ink)!important;font-family:Manrope,system-ui,sans-serif}
-.m.news.and:not(.light):not(.papir){--pp-bg:#14130f;--pp-ink:#ece7dc;--pp-card:#211f19;--pp-line:#34322a;--pp-lab:#e8705c;--pp-mut:#8a8578;--pp-pos:#7fcf9a}
 .m.news .blob{display:none}
 .pp-reader{display:flex;flex-direction:column;gap:12px}
 .pp-rhead{display:flex;align-items:center;gap:10px}
 .pp-rtitle{font-size:30px;line-height:1.05}
 .pp-gear{flex:none;width:40px;height:40px;border-radius:20px;border:1px solid var(--pp-line)!important;background:var(--pp-card)!important;color:var(--pp-ink);display:grid;place-items:center}
 .pp-tabs{display:flex;gap:18px;border-bottom:1px solid var(--pp-line);overflow-x:auto;white-space:nowrap;margin:0 -18px;padding:0 18px}
-.pp-tabs button{flex:none;padding:6px 0 10px;border-bottom:2px solid transparent!important;color:var(--pp-mut);font:600 14px Manrope,sans-serif}
-.pp-tabs button[aria-selected=true]{color:var(--pp-ink);border-bottom-color:var(--pp-ink)!important}
+.pp-tabs button{flex:none;padding:6px 0 10px;border-bottom:2px solid transparent;color:var(--pp-mut);font:600 14px Manrope,sans-serif}
+.pp-tabs button[aria-selected=true]{color:var(--pp-ink);border-bottom-color:var(--pp-ink)}
 .pp-lead{display:flex;flex-direction:column;gap:8px}
 .pp-lead p{margin:0;font:italic 400 19px/1.35 Newsreader,serif;text-wrap:pretty}
 .pp-items a{display:flex;gap:14px;align-items:baseline;padding:11px 0;border-bottom:1px solid var(--pp-line);color:inherit;text-decoration:none}
@@ -947,7 +904,7 @@ em.role.dns{min-width:46px;text-align:center;font-style:normal;font-size:11px;fo
 .pp-it{font-size:15px;line-height:1.35}
 .pp-tight{padding:0;gap:0;overflow:hidden}
 .pp-tog{display:flex;align-items:center;gap:12px;width:100%;padding:12px 14px;text-align:left}
-.pp-tog+.pp-tog{border-top:1px solid var(--pp-line)!important}
+.pp-tog+.pp-tog{border-top:1px solid var(--pp-line)}
 .pp-tog b{display:block;font-size:14.5px;font-weight:600}
 .pp-sw{flex:none;width:46px;height:28px;border-radius:14px;background:#9a958a;padding:3px;display:flex;box-sizing:border-box;transition:background .2s}
 .pp-sw.on{background:#2f7a4f;justify-content:flex-end}.pp-sw i{width:22px;height:22px;border-radius:11px;background:#fff}
@@ -955,7 +912,7 @@ em.role.dns{min-width:46px;text-align:center;font-style:normal;font-size:11px;fo
 .pp-feed+.pp-feed{border-top:1px solid var(--pp-line)}
 .pp-feed b{display:block;font-size:14px;font-weight:600}
 .pp-fi{flex:none;width:34px;height:34px;border-radius:9px;color:#fff;display:grid;place-items:center;font:700 10px Manrope,sans-serif}
-.pp-chip{flex:none;height:30px;padding:0 10px;border-radius:999px;border:1px solid var(--pp-line)!important;font:600 12px Manrope,sans-serif;white-space:nowrap;color:var(--pp-ink)}
+.pp-chip{flex:none;height:30px;padding:0 10px;border-radius:999px;border:1px solid var(--pp-line);font:600 12px Manrope,sans-serif;white-space:nowrap;color:var(--pp-ink)}
 .pp-x{flex:none;width:28px;height:28px;border-radius:8px;color:var(--pp-mut);font-size:16px}
 .pp-col{display:flex;flex-direction:column;gap:8px}
 .pp-in{height:46px;padding:0 14px;border-radius:14px;border:1px solid var(--pp-line);background:var(--pp-card);color:var(--pp-ink);font:500 14px Manrope,sans-serif;box-sizing:border-box;width:100%}
@@ -1067,7 +1024,7 @@ a.wx-r{color:inherit;text-decoration:none}
 .pp-nav a{flex:1 1 0;min-width:0;justify-content:center;padding:0 6px;overflow:hidden}
 .pp-nav a span{overflow:hidden;text-overflow:ellipsis}
 .pp-nav a[aria-current=page]{flex:none;padding:0 16px}
-.pp-nav .pp-scan{margin-left:4px;color:var(--pp-onLab)!important;transition:transform .15s;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+.pp-nav .pp-scan{margin-left:4px;color:var(--pp-onLab);transition:transform .15s;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
 .pp-nav .pp-scan.down{transform:scale(.88)}
 /* Innholdet stopper over linja: en flate i papirfarge dekker alt bak og under fanelinja. */
 .pp-navbg{position:fixed;z-index:19;left:0;right:0;bottom:0;height:calc(var(--pp-navb) + 70px);background:var(--pp-bg);pointer-events:none}
@@ -1096,7 +1053,7 @@ a.wx-r{color:inherit;text-decoration:none}
 .pp-chips.pp-wrap{flex-direction:row;flex-wrap:wrap;overflow:visible;margin:0;padding:0}
 .pp-fchip{flex:none;height:34px;padding:0 14px;border-radius:999px;border:1px solid var(--pp-line)!important;background:transparent;color:var(--pp-ink);font:600 13px Manrope,sans-serif;white-space:nowrap;cursor:pointer}
 .pp-fchip.sm{height:32px;padding:0 11px;font-size:12px}
-.pp-fchip[aria-pressed=true]{background:var(--pp-ink)!important;color:var(--pp-bg)!important;border-color:var(--pp-ink)!important}
+.pp-fchip[aria-pressed=true]{background:var(--pp-ink);color:var(--pp-bg);border-color:var(--pp-ink)!important}
 .pp-grp{display:flex;flex-direction:column;gap:6px;flex:none}.pp-grp>.pp-lab{padding:6px 4px 0}
 .pp-list b.pp-serif{font-size:18px}
 
@@ -1135,7 +1092,7 @@ a.wx-r{color:inherit;text-decoration:none}
 .pp-trktabs-s{flex:1;min-width:0;display:flex;gap:2px;overflow-x:auto;scrollbar-width:none;-webkit-mask-image:linear-gradient(90deg,#000 88%,transparent);mask-image:linear-gradient(90deg,#000 88%,transparent)}
 .pp-trktabs-s button{flex:none;height:38px;padding:0 13px;border-radius:999px;color:var(--pp-mut);font:600 13px Manrope,sans-serif;white-space:nowrap}
 .pp-trktabs-s button span{margin-left:5px;font:600 11px 'IBM Plex Mono',monospace;opacity:.55}
-.pp-trktabs-s button[aria-selected=true]{background:var(--pp-ink)!important;color:var(--pp-bg)}
+.pp-trktabs-s button[aria-selected=true]{background:var(--pp-ink);color:var(--pp-bg)}
 .pp-trkset{flex:none;width:38px;height:38px;border-radius:19px;border-left:1px solid var(--pp-line)!important;color:var(--pp-ink);display:grid;place-items:center}
 .pp-pk{padding:14px;gap:10px;color:var(--pp-ink)}
 .pp-pk.ready{outline:1.5px solid var(--pp-lab)}
@@ -1161,7 +1118,7 @@ a.wx-r{color:inherit;text-decoration:none}
 .pp-mv button:disabled{opacity:.35}
 
 /* Domener i Papir: kortene får papirfarger */
-.m.papir.dom .dhero,.m.papir.dom .dcard,.m.papir.dom .dchart{background:var(--pp-card)!important;color:var(--pp-ink)}
+.m.papir.dom .dhero,.m.papir.dom .dcard,.m.papir.dom .dchart{background:var(--pp-card);color:var(--pp-ink)}
 
 /* Abonnement: ark for å redigere og legge til (begge design) */
 .sb-edit{position:fixed;left:0;right:0;bottom:0;z-index:61;max-width:560px;margin:0 auto;max-height:90dvh;overflow-y:auto;border-radius:28px 28px 0 0;padding:12px 18px calc(env(safe-area-inset-bottom) + 22px);display:flex;flex-direction:column;gap:12px;box-sizing:border-box;background:var(--x-card2,#1F1712);color:var(--x-fg,#fff);animation:up .28s cubic-bezier(.3,1.2,.5,1)}
@@ -1323,7 +1280,7 @@ a.wx-r{color:inherit;text-decoration:none}
 /* Innstillinger → Fanelinje og Finans-fanelinje */
 .pp-navset .pp-lab{padding:6px 4px 0}
 .pp-srow{display:flex;align-items:center;gap:12px;width:100%;padding:12px 14px!important;text-align:left;color:var(--pp-ink);cursor:pointer}
-.pp-srow+.pp-srow{border-top:1px solid var(--pp-line)!important}
+.pp-srow+.pp-srow{border-top:1px solid var(--pp-line)}
 .pp-srow b{display:block;font-size:14.5px;font-weight:600}
 .pp-sv{flex:none;font-size:12.5px;font-weight:600;color:var(--pp-mut);white-space:nowrap}
 .pp-sv.pos{color:var(--pp-pos)}.pp-sv.lab{color:var(--pp-lab)}
@@ -1332,15 +1289,15 @@ a.wx-r{color:inherit;text-decoration:none}
 .pp-domtop{padding:16px 0 14px;gap:14px;box-shadow:0 10px 30px -14px rgba(0,0,0,.3)}
 .pp-domtop>.pp-row{padding:0 18px}
 .pp-dompills{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding:0 18px;scroll-padding:0 18px;scroll-snap-type:x proximity}
-.pp-dompills button{flex:none;scroll-snap-align:start;display:flex;flex-direction:column;align-items:flex-start;gap:6px;min-width:128px;max-width:200px;padding:12px 14px!important;border-radius:16px;border:1px solid var(--pp-line)!important;background:transparent;color:var(--pp-ink);text-align:left;cursor:pointer}
-.pp-dompills button[aria-selected=true]{background:var(--pp-ink)!important;border-color:var(--pp-ink)!important;color:var(--pp-bg)}
+.pp-dompills button{flex:none;scroll-snap-align:start;display:flex;flex-direction:column;align-items:flex-start;gap:6px;min-width:128px;max-width:200px;padding:12px 14px;border-radius:16px;border:1px solid var(--pp-line);background:transparent;color:var(--pp-ink);text-align:left;cursor:pointer}
+.pp-dompills button[aria-selected=true]{background:var(--pp-ink);border-color:var(--pp-ink);color:var(--pp-bg)}
 .pp-dompills span{display:flex;align-items:center;gap:7px;font-size:11.5px;opacity:.75}
 .pp-dompills i{width:7px;height:7px;border-radius:4px}
 .pp-dompills b{font-size:15px;font-weight:600;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
 .pp-pend{flex:none;width:10px}
 .pp-domper{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin:0 18px;padding:4px;border-radius:12px;background:var(--pp-surf2)}
 .pp-domper button{height:34px;border-radius:9px;color:var(--pp-mut);font:600 13px 'IBM Plex Mono',monospace;cursor:pointer}
-.pp-domper button[aria-pressed=true]{background:var(--pp-card)!important;color:var(--pp-ink);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.pp-domper button[aria-pressed=true]{background:var(--pp-card);color:var(--pp-ink);box-shadow:0 1px 3px rgba(0,0,0,.12)}
 .pp-domkpi{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;flex:none}
 .pp-domkpi .pp-card{gap:4px;padding:16px 18px}
 .pp-domkpi b{font:600 24px 'IBM Plex Mono',monospace;letter-spacing:-.02em;white-space:nowrap}
@@ -1358,7 +1315,7 @@ a.wx-r{color:inherit;text-decoration:none}
 /* Subscription OS i Papir: papirfarger, AI-kortet i mørk gradient */
 .m.papir .sb{--x-card:var(--pp-card);--x-card2:var(--pp-surf2);--x-fg:var(--pp-ink);--x-mut:var(--pp-mut);--x-bd:var(--pp-line);--x-pill:var(--pp-ink);--x-onpill:var(--pp-bg);--x-up:var(--pp-pos);--x-dn:var(--pp-lab);--x-acc:var(--pp-lab);--x-acc2:var(--pp-lab);--x-seg:var(--pp-line);--sb-acc:var(--pp-lab);color:var(--pp-ink)}
 .m.papir .sb-card{border-radius:22px;border-color:transparent;box-shadow:0 1px 0 var(--pp-line)}
-.m.papir .sb-hero{background:radial-gradient(120% 100% at 100% 0%,#6A3218 0%,#2A160C 50%,#17161B 85%)!important;color:#fff!important;border-radius:28px!important}
+.m.papir .sb-hero{background:radial-gradient(120% 100% at 100% 0%,#6A3218 0%,#2A160C 50%,#17161B 85%);color:#fff;border-radius:28px}
 .m.papir .sb-hero .sb-pill{background:#fff;color:#1b1a17}
 .m.papir.ph .sb>.m-row:first-child{display:none}
 .m.papir .sb-tabs button[aria-selected=true]{background:var(--pp-ink);color:var(--pp-bg)}
@@ -1407,19 +1364,19 @@ a.wx-r{color:inherit;text-decoration:none}
 .vx-pad{padding:16px}
 .vx-hours{padding:14px 0 12px;display:flex;flex-direction:column;gap:10px}
 .vx-hrow{display:flex;justify-content:space-between;align-items:center;padding:0 16px;gap:10px}
-.vx-forh{color:#fff!important;text-align:left;padding:0!important;min-width:0}
+.vx-forh{color:#fff;text-align:left;padding:0;min-width:0}
 .vx-forh b{display:block;font-size:16px}.vx-forh span{font-size:12.5px;color:#9fe0ff}
 .vx-modes{display:flex;gap:2px;padding:3px;border-radius:999px;background:rgba(0,0,0,.18);flex:none}
-.vx-modes button{width:44px;height:30px;border-radius:999px;color:#fff!important;display:grid;place-items:center}
-.vx-modes button[aria-pressed=true]{background:rgba(255,255,255,.28)!important}
+.vx-modes button{width:44px;height:30px;border-radius:999px;color:#fff;display:grid;place-items:center}
+.vx-modes button[aria-pressed=true]{background:rgba(255,255,255,.28)}
 .vx-hs{display:flex;overflow-x:auto;scrollbar-width:none;padding:0 8px}
 .vx-h{flex:none;width:56px;display:flex;flex-direction:column;align-items:center;gap:8px;padding:4px 0}
 .vx-h>span:first-child{font-size:14px;font-weight:600}.vx-h>span.b{font-weight:800}
 .vx-pp{font-size:11px;font-weight:700;color:#9fe0ff;min-height:13px}
 .vx-h b{font-size:17px;font-weight:700}
 .vx-days{padding:4px 16px}
-.vx-d{display:grid!important;width:100%;grid-template-columns:52px 40px 38px minmax(0,1fr) 38px;align-items:center;gap:8px;padding:12px 0!important;color:#fff!important;text-align:left}
-.vx-d+.vx-d{border-top:1px solid rgba(255,255,255,.16)!important}
+.vx-d{display:grid;width:100%;grid-template-columns:52px 40px 38px minmax(0,1fr) 38px;align-items:center;gap:8px;padding:12px 0!important;color:#fff;text-align:left}
+.vx-d+.vx-d{border-top:1px solid rgba(255,255,255,.16)}
 .vx-dn{font-size:17px;font-weight:700}
 .vx-di{display:flex;flex-direction:column;align-items:center;gap:1px}.vx-di small{font-size:10.5px;font-weight:800;color:#9fe0ff;min-height:12px}
 .vx-lo{font-size:17px;font-weight:700;color:#bfe6ff;text-align:right}.vx-hi{font-size:17px;font-weight:700;text-align:right}
@@ -1477,7 +1434,7 @@ a.wx-r{color:inherit;text-decoration:none}
 .vx-ppb span{height:100%;display:flex;align-items:flex-end}
 .vx-ppb i{display:block;width:100%;background:#5ec8d8;border-radius:2px 2px 0 0}
 .vx-ppx{display:flex;justify-content:space-between;font-size:12px;font-weight:700;color:#9aa0aa;margin-top:-8px}
-.pp-hero button.pp-pill{background:rgba(27,26,23,.55)!important;color:#fff!important;padding:0 14px 0 12px!important}
+.pp-hero button.pp-pill{background:rgba(27,26,23,.55);color:#fff;padding:0 14px 0 12px}
 .pp-fmn b{color:var(--pp-ink)}
 .m.papir.ph .sb .m-row>.title{visibility:hidden}
 
@@ -1623,9 +1580,9 @@ a.wx-r{color:inherit;text-decoration:none}
 .pp-nav.sb-nav>button[aria-current=page]{flex:none;background:var(--pp-navAct);color:var(--pp-navActInk);padding:0 16px}
 .pp-nav.sb-nav>button i{font:500 16px Newsreader,serif;font-style:normal}
 .pp-nav.sb-nav>button:not([aria-current=page]) i{display:none}
-.pp-nav .pp-scan.sb-red{background:#d63b2b!important;color:#fff!important;border-radius:50%}
-.m.papir .sb-hero .sb-pill{background:#f3efe6!important;color:#1b1a17!important;border:0}
-.m.papir.pd .sb-hero .sb-pill{background:#ece7dc!important;color:#14130f!important}
+.pp-nav .pp-scan.sb-red{background:#d63b2b;color:#fff;border-radius:50%}
+.m.papir .sb-hero .sb-pill{background:#f3efe6;color:#1b1a17;border:0}
+.m.papir.pd .sb-hero .sb-pill{background:#ece7dc;color:#14130f}
 @media (min-width:600px){
   .m.papir .pp-nav.sb-nav>button[data-sb=tab],.m.papir .pp-nav.sb-nav>button[aria-current=page]{flex:none;height:58px;padding:0 2px;border-radius:18px;flex-direction:column;justify-content:center;gap:2px;font-size:11.5px;width:100%}
   .m.papir .pp-nav.sb-nav>button i{display:block}
@@ -1697,7 +1654,7 @@ a.wx-r{color:inherit;text-decoration:none}
 .p17-lists .pp-fchip{display:inline-flex;align-items:center;gap:6px}
 .p17-lists .pp-fchip i{width:9px;height:9px;border-radius:50%;display:inline-block}
 .p17-lists .pp-fchip span{opacity:.6;font-weight:700}
-.p17-lists .pp-fchip[aria-pressed=true],.p17-due .pp-fchip[aria-pressed=true],.p17-eng .pp-fchip[aria-pressed=true]{background:var(--pp-ink)!important;color:var(--pp-bg)!important;border-color:var(--pp-ink)!important}
+.p17-lists .pp-fchip[aria-pressed=true],.p17-due .pp-fchip[aria-pressed=true],.p17-eng .pp-fchip[aria-pressed=true]{background:var(--pp-ink);color:var(--pp-bg);border-color:var(--pp-ink)!important}
 .p17-sep{flex:none;width:1px;background:var(--pp-line);margin:4px 2px}
 .p17-hadd{flex-direction:row!important;align-items:center;gap:8px;padding:6px 6px 6px 14px!important;border-radius:999px!important;box-shadow:0 10px 30px -14px rgba(0,0,0,.3)}
 .p17-hadd input{flex:1;min-width:0;border:0!important;background:transparent!important;height:42px;font:500 15px Manrope,sans-serif;color:var(--pp-ink);outline:none;padding:0!important}
@@ -1707,7 +1664,7 @@ a.wx-r{color:inherit;text-decoration:none}
 .p17-tk+.p17-tk{border-top:1px solid var(--pp-line)}
 .p17-tk b{font-size:15px;font-weight:600;overflow-wrap:anywhere}
 .p17-tk.done b{text-decoration:line-through;opacity:.5}
-.p17-chk{flex:none;width:26px;height:26px;border-radius:50%!important;border:2px solid var(--c,var(--pp-ink))!important;background:var(--cb,transparent)!important;color:#fff;font:800 13px Manrope,sans-serif;cursor:pointer;display:grid;place-items:center;padding:0}
+.p17-chk{flex:none;width:26px;height:26px;border-radius:50%;border:2px solid var(--c,var(--pp-ink))!important;background:var(--cb,transparent);color:#fff;font:800 13px Manrope,sans-serif;cursor:pointer;display:grid;place-items:center;padding:0}
 .p17-chk.sm{width:24px;height:24px;margin:-2px} /* A11Y51: minst 24 × 24 px */
 .m.papir .p17-list>.p17-row{border-radius:0;margin:0;box-shadow:none}
 .p17-x{flex:none;width:32px;height:32px;border-radius:16px;border:0;background:transparent;color:var(--pp-mut);font-size:20px;cursor:pointer}
@@ -1769,9 +1726,6 @@ a.wx-r{color:inherit;text-decoration:none}
 .p17-ptri{display:inline-block;font-size:15px}
 .p17-ptri.spin{animation:p17spin .8s linear infinite}
 @keyframes p17spin{to{transform:rotate(360deg)}}
-/* Klassisk: Huskeliste og de nye kortene får papirfarger lokalt. */
-.m:not(.papir) .p17-hk{--pp-bg:transparent;--pp-card:rgba(255,255,255,.07);--pp-ink:currentColor;--pp-mut:rgba(255,255,255,.6);--pp-line:rgba(255,255,255,.14);--pp-lab:#ff8a80;--pp-pos:#7BE3A0}
-.m.light:not(.papir) .p17-hk{--pp-card:#fff;--pp-mut:rgba(0,0,0,.55);--pp-line:rgba(0,0,0,.1);--pp-lab:#b23a2a;--pp-pos:#2f7a4f}
 @media (min-width:600px){.p17-ppl{grid-template-columns:repeat(3,minmax(0,1fr))}.p17-sens{grid-template-columns:repeat(3,minmax(0,1fr))}}
 .m.papir .p17-ftabs{background:var(--pp-card);border-radius:999px;padding:4px;box-shadow:0 10px 30px -14px rgba(0,0,0,.35);border:0}
 .m.papir .p17-ftabs button{border-radius:999px!important}
@@ -1824,7 +1778,7 @@ a.wx-r{color:inherit;text-decoration:none}
 .p19-prev small{font-size:12px;line-height:1.3;color:var(--pp-mut,rgba(255,255,255,.6))}
 .p19-prev small.bad{color:var(--pp-lab,#ff8a80)}
 .p19-prev .m-file{position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer}
-.p19-ctl{display:flex;flex-direction:column;padding:4px 14px!important;margin-bottom:12px}
+.p19-ctl{display:flex;flex-direction:column;padding:4px 14px;margin-bottom:12px}
 .p19-row{display:flex;align-items:center;gap:12px;padding:10px 0;border:0;border-bottom:1px solid var(--pp-line,rgba(255,255,255,.12));background:none;color:inherit;font:inherit;text-align:left;width:100%;min-width:0}
 .p19-row:last-child{border-bottom:0}
 .p19-row.col{flex-direction:column;align-items:stretch;gap:8px}
@@ -1881,7 +1835,7 @@ a.wx-r{color:inherit;text-decoration:none}
 .pp-fmgrid.edit .pp-fmt.drag{animation:none;z-index:5;cursor:grabbing;box-shadow:0 18px 40px -12px rgba(0,0,0,.45);opacity:.96;transition:none}
 @media (prefers-reduced-motion:reduce){.pp-fmgrid.edit .pp-fmt{animation:none}}
 /* Papir-radene: logo fra registeret over bokstaven (bokstaven vises når filen mangler). */
-.pp-ti.p20-lg{position:relative;overflow:hidden;background:#fff!important;color:transparent}
+.pp-ti.p20-lg{position:relative;overflow:hidden;background:#fff;color:transparent} /* butikkfargen er --ti (ppTi), ikke inline background */
 .pp-ti.p20-lg img{position:absolute;inset:4px;width:calc(100% - 8px);height:calc(100% - 8px);object-fit:contain}
 /* Ruter: «+ Stopp» lesbar også over trikkebildet. */
 .m.papir .p16-stopchips>button{background:var(--pp-card);color:var(--pp-ink);border:1.5px dashed color-mix(in srgb,var(--pp-ink) 55%,transparent)}
@@ -1890,8 +1844,8 @@ a.wx-r{color:inherit;text-decoration:none}
 /* Kvitteringer m.fl.: ingen strek under seksjonsetiketten; listen er ett kort med skillelinjer bare mellom radene. */
 .m.papir .sec{border-bottom:0;padding-bottom:4px}
 .m.papir .list{gap:0;background:var(--pp-card);border-radius:20px!important;overflow:hidden}
-.m.papir .list>.item,.m.papir .list>.opt-row,.m.papir .list>a,.m.papir .list>button{border-radius:0;background:transparent!important;box-shadow:none}
-.m.papir .list>*+*{border-top:1px solid var(--pp-line)!important}
+.m.papir .list>.item,.m.papir .list>.opt-row,.m.papir .list>a,.m.papir .list>button{border-radius:0;background:transparent;box-shadow:none}
+.m.papir .list>*+*{border-top:1px solid var(--pp-line)}
 .m.papir .list>.item.on{background:color-mix(in oklab,var(--pp-lab) 8%,var(--pp-card))!important}
 /* Finans-flisene: ikonboks med 14 % av fargen i kortbakgrunnen (som designet, i begge temaer). */
 .pp-fmt .pp-fmi,.m.papir:not(.light) .pp-fmt .pp-fmi{color:var(--fc,var(--pp-lab));background:color-mix(in oklab,var(--fc,var(--pp-lab)) 14%,var(--pp-card))}
@@ -1903,7 +1857,7 @@ a.wx-r{color:inherit;text-decoration:none}
 /* Pakkelogo: butikk i hvit boks, fraktselskap som liten rund merkelapp nede til høyre. */
 .p21-pl{position:relative;flex:none;display:inline-block}
 .p21-pl>.trk-badge{border:1px solid var(--pp-line,rgba(0,0,0,.08));box-sizing:border-box}
-.p21-shop img{padding:14%!important;background:#fff!important;object-fit:contain!important}
+.p21-shop img{padding:14%;background:#fff;object-fit:contain}
 .p21-pcb{position:absolute;right:-4px;bottom:-4px;width:18px;height:18px;border-radius:50%;border:2px solid #fff;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.2);background:#fff}
 .p21-pcb .trk-badge{width:18px!important;height:18px!important;border-radius:50%!important;font-size:7px!important;border:0!important}
 .p21-pcb .trk-badge img{padding:8%!important}
@@ -1949,8 +1903,8 @@ a.wx-r{color:inherit;text-decoration:none}
 /* Vær: systemfont bare her (SF Pro / Roboto), stor tynn temperatur. */
 .vx{--sys:-apple-system,BlinkMacSystemFont,'SF Pro Display','SF Pro Text','Helvetica Neue',Roboto,system-ui,sans-serif;font-family:var(--sys)!important}
 .vx button,.vx input,.vx a,.vx b,.vx span,.vx-back,.vx-places button,.vx-seg2 button{font-family:var(--sys)!important}
-.vx-city{font:500 36px/1.1 var(--sys)!important}
-.vx-temp{font:200 112px/1 var(--sys)!important}
+.vx-city{font:500 36px/1.1 var(--sys)}
+.vx-temp{font:200 112px/1 var(--sys)}
 .vx-in{z-index:1}
 .vx-card[data-wx2]{cursor:pointer}
 .vx-shdays button{min-width:0}.vx-shdays span,.vx-shdays b{white-space:nowrap}
@@ -2015,7 +1969,7 @@ a.wx-r{color:inherit;text-decoration:none}
 .w22-cc>span{min-width:0}.w22-cc b{display:block;font-size:14.5px;white-space:nowrap}.w22-cc small{display:block;font-size:11.5px;color:#9fe0ff;white-space:nowrap}
 .w22-df{justify-self:end;padding:3px 7px;border-radius:8px;font-size:12px;font-weight:800;white-space:nowrap}
 .w22-busy{padding:8px 0 10px;font-size:13px;opacity:.75}
-.w22-more{display:flex!important;justify-content:space-between;align-items:center;min-height:44px;border-top:1px solid rgba(255,255,255,.18)!important;background:transparent!important;color:#fff!important;font-weight:600!important;font-size:14px!important;padding:0!important;width:100%;border-radius:0!important}
+.w22-more{display:flex;justify-content:space-between;align-items:center;min-height:44px;border-top:1px solid rgba(255,255,255,.18);background:transparent;color:#fff;font-weight:600;font-size:14px;padding:0;width:100%;border-radius:0}
 
 /* Familie (design/Familie.dc.html) */
 .f22{display:flex;flex-direction:column;gap:14px;min-width:0;color:var(--pp-ink);font-family:Manrope,system-ui,sans-serif}
@@ -2113,9 +2067,9 @@ a.wx-r{color:inherit;text-decoration:none}
 @media (min-width:600px){ .h22-dock{left:108px;right:96px;bottom:24px;max-width:none} .m.papir:not(.flyt) .h22-dock{right:24px} }
 .h22-ha{display:flex;flex-direction:column;gap:6px;margin-top:6px}
 .h22-hah{display:flex;justify-content:space-between;align-items:baseline;padding:0 4px}
-.h22-hac{padding:2px 14px!important;border-radius:20px!important;gap:0!important}
-.h22-r{width:100%;display:flex;align-items:center;gap:12px;min-height:52px;border:0;border-top:1px solid var(--pp-line)!important;background:transparent!important;color:var(--pp-ink)!important;text-align:left;padding:0!important;border-radius:0!important}
-.h22-r.tg{min-height:56px;border-top:0!important}
+.h22-hac{padding:2px 14px;border-radius:20px;gap:0}
+.h22-r{width:100%;display:flex;align-items:center;gap:12px;min-height:52px;border:0;border-top:1px solid var(--pp-line);background:transparent;color:var(--pp-ink);text-align:left;padding:0;border-radius:0}
+.h22-r.tg{min-height:56px;border-top:0}
 .h22-r b{display:block;font-size:15px;font-weight:700}.h22-r small{display:block;font-size:12px;color:var(--pp-mut)}
 .h22-sw{flex:none;width:46px;height:28px;border-radius:14px;background:var(--pp-line);position:relative;transition:background .15s}.h22-sw.on{background:#2f7a4f}
 .h22-sw i{position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:11px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.3);transition:left .15s}.h22-sw.on i{left:21px}
@@ -2254,11 +2208,11 @@ html[data-ui=mobile]:has(#app > .m.papir),html[data-ui=mobile] body:has(#app > .
 .sb-sopill>span{flex:1;min-width:0;font-size:13px;font-weight:600}
 .m .sb-sopill>button{flex:none;height:34px;padding:0 14px;border-radius:17px;background:var(--pp-surf2,#2a2821);color:var(--pp-ink);font:600 13px Manrope;cursor:pointer}
 .m .sb-sopill>button.on{padding:0 16px;background:var(--pp-ink);color:var(--pp-card);font-weight:700}
-.m.papir .sb-home>.sb-hero{background:radial-gradient(120% 120% at 100% 0%,#5A2A14 0%,#24130B 45%,#141418 80%)!important;color:#fff!important;border-radius:28px!important;padding:20px;gap:14px;min-height:250px;box-sizing:border-box;position:relative;overflow:hidden}
+.m.papir .sb-home>.sb-hero{background:radial-gradient(120% 120% at 100% 0%,#5A2A14 0%,#24130B 45%,#141418 80%);color:#fff;border-radius:28px;padding:20px;gap:14px;min-height:250px;box-sizing:border-box;position:relative;overflow:hidden}
 .m.papir .sb-home>.sb-hero .sb-k{align-self:flex-start;padding:6px 12px;border-radius:999px;background:rgba(255,255,255,.08);color:#FFB08A;opacity:1}
 .m.papir .sb-home>.sb-hero .sb-big{font-size:34px;font-weight:700;line-height:1.05;color:#fff}
 .m.papir .sb-home>.sb-hero .sb-pill{align-self:flex-start;margin-top:auto}
-.m.papir .sb-bars i.on{background:#FF7A3D!important}
+.m.papir .sb-bars i.on{background:#FF7A3D}
 .m.papir .sb-wkv{font-family:'IBM Plex Mono',monospace}
 /* «Endre abonnement»: papirbakgrunn, kortfargede felt, valgt chip fylt svart, «Lagre» fylt, «Slett» og «Lukk» i rødt. */
 .m.papir .sb-edit{background:var(--pp-bg)!important;color:var(--pp-ink)!important;font-family:Manrope,system-ui,sans-serif;-webkit-backdrop-filter:none;backdrop-filter:none}
@@ -2316,7 +2270,7 @@ html[data-ui=mobile]:has(#app > .m.papir),html[data-ui=mobile] body:has(#app > .
 .m .p23-cat{padding:0 12px}
 
 /* =====================================================================
-   Prompt 24 (mobile-profiler-og-bursdager.js): fanelinje-ikoner, Mer, Ruter, Bursdager, Boliger, Innstillinger-søk, Integrasjoner, Familie
+   Prompt 24 (mobile-profiler.js, mobile-bursdager.js): fanelinje-ikoner, Mer, Ruter, Bursdager, Boliger, Innstillinger-søk, Integrasjoner, Familie
    ===================================================================== */
 
 /* Fanelinje: ikon i 18 × 18-boks, glyf 16 (Newsreader), sentrert og 1,5 ned; 7 mellom ikon og tekst. Valgt pille 0 16, ellers 0 6. */
@@ -2548,7 +2502,7 @@ button.p24-gp{padding:0 12px;font-size:12.5px}
 .m .f22-ok{flex:none;color:var(--pp-pos);font-weight:800}
 
 /* Nyhetsleser: ikonene er <img>, ikke maske */
-img.p23-ic,span.p24-img{background:none;-webkit-mask:none!important;mask:none!important;display:inline-block;flex:none;vertical-align:-3px;object-fit:contain}
+img.p23-ic,span.p24-img{background:none;-webkit-mask:none;mask:none;display:inline-block;flex:none;vertical-align:-3px;object-fit:contain}
 .m .pp-sheet.p24-be>*{flex-shrink:0}
 .m.papir .pp-hero .pp-bottom>.m-grow{min-width:0}
 .m.papir .pp-hero .pp-kick{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -2566,13 +2520,13 @@ img.p23-ic,span.p24-img{background:none;-webkit-mask:none!important;mask:none!im
    etiketten på én linje. Rød Hjem-knapp (60) øverst når du ikke er på Hjem; da skjules «‹ Hjem». */
 .p25-home,.m .pp-nav>a.p25-home{display:none}
 @media (min-width:600px){
-  .m.papir .pp-nav{background:var(--pp-nav)!important;-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
+  .m.papir .pp-nav{background:var(--pp-nav);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
   .m.papir .pp-nav>a,.m.papir .pp-nav>button[data-sb=tab]{border-radius:18px}
   .m.papir .pp-nav>a>i,.m.papir .pp-nav>button[data-sb=tab]>i{display:inline-flex!important;transform:none;font-size:16px}
   .m.papir .pp-nav.ns-icons>a>i,.m.papir .pp-nav.ns-icons>button[data-sb=tab]>i,.m.papir .pp-nav.ns-ial>a:not([aria-current=page])>i,.m.papir .pp-nav.ns-ial>button[data-sb=tab]:not([aria-current=page])>i{font-size:20px}
-  .m.papir .pp-nav>a>span,.m.papir .pp-nav>button[data-sb=tab]>span{display:block!important;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.2}
+  .m.papir .pp-nav>a>span,.m.papir .pp-nav>button[data-sb=tab]>span{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.2}
   .m.papir .pp-nav.ns-icons>a>span,.m.papir .pp-nav.ns-icons>button[data-sb=tab]>span{display:none!important}
-  .m.papir .pp-nav>a.p25-home{flex:none!important;align-self:center;display:grid!important;place-items:center;width:60px!important;height:60px!important;margin:0 0 8px;padding:0!important;border-radius:30px!important;background:var(--pp-lab)!important;color:var(--pp-onLab)!important;box-shadow:0 8px 20px -8px rgba(0,0,0,.5);animation:p25pop .15s ease-out;-webkit-tap-highlight-color:transparent}
+  .m.papir .pp-nav>a.p25-home{flex:none;align-self:center;display:grid;place-items:center;width:60px;height:60px;margin:0 0 8px;padding:0;border-radius:30px;background:var(--pp-lab);color:var(--pp-onLab);box-shadow:0 8px 20px -8px rgba(0,0,0,.5);animation:p25pop .15s ease-out;-webkit-tap-highlight-color:transparent}
   .m.papir .pp-nav>a.p25-home:active{transform:scale(.94)}
   .m.papir:has(.pp-nav>.p25-home) .pp-back.to-home{display:none}
 }
@@ -2623,16 +2577,16 @@ img.p23-ic,span.p24-img{background:none;-webkit-mask:none!important;mask:none!im
 @media (min-width:700px){
   .vx-in.p25-fold{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);align-items:start;gap:12px 20px;max-width:1280px;padding-left:24px;padding-right:24px;box-sizing:border-box}
   .vx-in.p25-fold>.p25-c1,.vx-in.p25-fold>.p25-c2{display:flex;flex-direction:column;gap:12px;min-width:0}
-  .vx-in.p25-fold .vx-head{opacity:1!important}
+  .vx-in.p25-fold .vx-head{opacity:1}
   .vx-in.p25-fold .vx-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
   .vx-in.p25-fold>.vx-yr{grid-column:1 / -1;justify-self:center}
   .p25-wmap{display:block;position:relative;flex:none;height:300px;border-radius:24px;overflow:hidden;border:1px solid rgba(255,255,255,.16);background:rgba(10,20,35,.5)}
   .p25-wmap iframe{width:100%;height:100%;border:0;display:block}
   .p25-wmt{position:absolute;left:10px;right:10px;top:10px;display:flex;justify-content:space-between;align-items:center;gap:8px;pointer-events:none}
   .p25-wml{pointer-events:auto;display:flex;gap:2px;padding:3px;border-radius:999px;background:rgba(10,20,35,.75);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);min-width:0;overflow-x:auto;scrollbar-width:none}
-  .m .p25-wml button{flex:none;height:30px;padding:0 12px!important;border-radius:999px;border:0;background:transparent!important;color:#fff!important;font:700 12px -apple-system,system-ui,sans-serif;cursor:pointer;white-space:nowrap}
-  .m .p25-wml button[aria-pressed=true]{background:#fff!important;color:#0d1520!important}
-  .m .p25-wfs{flex:none;pointer-events:auto;height:36px;padding:0 14px!important;border-radius:999px;border:0;background:rgba(10,20,35,.75)!important;-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);color:#fff!important;font:700 12.5px -apple-system,system-ui,sans-serif;cursor:pointer;white-space:nowrap}
+  .m .p25-wml button{flex:none;height:30px;padding:0 12px;border-radius:999px;border:0;background:transparent;color:#fff;font:700 12px -apple-system,system-ui,sans-serif;cursor:pointer;white-space:nowrap}
+  .m .p25-wml button[aria-pressed=true]{background:#fff;color:#0d1520}
+  .m .p25-wfs{flex:none;pointer-events:auto;height:36px;padding:0 14px;border-radius:999px;border:0;background:rgba(10,20,35,.75);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);color:#fff;font:700 12.5px -apple-system,system-ui,sans-serif;cursor:pointer;white-space:nowrap}
   .m.vaer .vx-sh{left:auto;right:16px;width:min(520px,46%);max-width:none;top:calc(env(safe-area-inset-top) + 60px);bottom:16px;margin:0;border-radius:28px;box-shadow:0 30px 80px -20px rgba(0,0,0,.6);padding-bottom:30px;animation:p25side .26s cubic-bezier(.3,1.1,.5,1)}
   .m.vaer .w22-bot{left:24px;right:24px;max-width:none}
   .m.vaer .p17-cmp{align-items:stretch;justify-content:flex-end}
@@ -2649,7 +2603,6 @@ img.p23-ic,span.p24-img{background:none;-webkit-mask:none!important;mask:none!im
 .m .p17-adm{font-weight:500}
 
 /* ================= Prompt 26 · Kalender (Kalender.dc.html, variant mobile og mode widget) ================= */
-.m:not(.papir) .k26,.m:not(.papir) .k26-hw,.m:not(.papir) .p26{--pp-ink:#ece7dc;--pp-bg:#14130f;--pp-card:#211f19;--pp-line:#34322a;--pp-lab:#e8705c;--pp-mut:#8a8578;--pp-pos:#7fcf9a}
 .m .k26{display:flex;flex-direction:column;gap:14px;min-width:0;color:var(--pp-ink);font-family:Manrope,system-ui,sans-serif}
 .m .k26 .mut,.m .k26-hw .mut{color:var(--pp-mut)}
 /* Nå-kort */
@@ -2696,8 +2649,8 @@ img.p23-ic,span.p24-img{background:none;-webkit-mask:none!important;mask:none!im
 .m .p26-gl{padding:8px 4px 0}
 .m .p26-card{border-radius:18px;background:var(--pp-card);overflow:hidden;flex:none}
 .m .p26>.p26-card+.p26-card{margin-top:8px}
-.m .p26-r{display:flex;align-items:center;gap:12px;width:100%;min-height:56px;padding:10px 14px;border-top:1px solid var(--pp-line)!important;color:var(--pp-ink);text-align:left;font-family:inherit;text-decoration:none;cursor:pointer;box-sizing:border-box}
-.m .p26-card>.p26-r:first-child,.m .p26-card>:first-child{border-top:0!important}
+.m .p26-r{display:flex;align-items:center;gap:12px;width:100%;min-height:56px;padding:10px 14px;border-top:1px solid var(--pp-line);color:var(--pp-ink);text-align:left;font-family:inherit;text-decoration:none;cursor:pointer;box-sizing:border-box}
+.m .p26-card>.p26-r:first-child,.m .p26-card>:first-child{border-top:0}
 .m .p26-r[disabled]{opacity:.45;cursor:default}
 .m .p26-r.st{cursor:default;align-items:flex-start}
 .m .p26-r.top{cursor:default}
@@ -2724,8 +2677,8 @@ img.p23-ic,span.p24-img{background:none;-webkit-mask:none!important;mask:none!im
 /* Sporing: transportør ved ny pakke og SPOR VIA */
 .m .p26-cars{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin:0 -4px;padding:0 4px;flex:none}
 .m .p26-cars.wrap{flex-wrap:wrap;overflow:visible;margin:0;padding:0}
-.m .p26-car{flex:none!important;width:auto!important;min-width:0;display:inline-flex;align-items:center;justify-content:center;height:32px;padding:0 12px!important;border-radius:16px;border:1px solid var(--pp-line)!important;color:var(--pp-ink);font:600 12.5px Manrope,sans-serif;white-space:nowrap;cursor:pointer}
-.m .p26-car.on{background:var(--pp-ink)!important;border-color:var(--pp-ink)!important;color:var(--pp-bg)}
+.m .p26-car{flex:none;width:auto;min-width:0;display:inline-flex;align-items:center;justify-content:center;height:32px;padding:0 12px;border-radius:16px;border:1px solid var(--pp-line);color:var(--pp-ink);font:600 12.5px Manrope,sans-serif;white-space:nowrap;cursor:pointer}
+.m .p26-car.on{background:var(--pp-ink);border-color:var(--pp-ink);color:var(--pp-bg)}
 .m .p26-car.inv{border-color:color-mix(in oklab,var(--pp-bg) 35%,transparent)!important;color:var(--pp-bg)}
 .m .p26-car.inv.on{background:var(--pp-bg)!important;border-color:var(--pp-bg)!important;color:var(--pp-ink)}
 .m .pp-sheet .p26-cars{margin:0;padding:0}
@@ -2759,8 +2712,6 @@ img.p23-ic,span.p24-img{background:none;-webkit-mask:none!important;mask:none!im
 /* =====================================================================
    Prompt 27: ✕ i søkefelt, søkeforslag, Chat, Kalender v2, Nyheter, Ruter-kortet, abonnement fra skjermbilde
    ===================================================================== */
-.m:not(.papir) .k27,.m:not(.papir) .ch27.papir,.m:not(.papir) .p27-art,.m:not(.papir) .p27-sug{--pp-ink:#ece7dc;--pp-bg:#14130f;--pp-card:#211f19;--pp-line:#34322a;--pp-lab:#e8705c;--pp-mut:#8a8578;--pp-pos:#7fcf9a}
-.m.light:not(.papir) .k27,.m.light:not(.papir) .ch27.papir,.m.light:not(.papir) .p27-art,.m.light:not(.papir) .p27-sug{--pp-ink:#1b1a17;--pp-bg:#f3efe6;--pp-card:#fff;--pp-line:#d8d1c2;--pp-lab:#b23a2a;--pp-mut:#8f897c}
 .m.p27-fs .m-scroll{min-height:100vh;min-height:100dvh}
 
 /* --- Felles søkefelt: ✕ til venstre (26 px sirkel, 36 px trykkflate) --- */
@@ -2837,7 +2788,7 @@ img.p23-ic,span.p24-img{background:none;-webkit-mask:none!important;mask:none!im
 /* --- Chat (fullskjerm; Fold/bred = fast sidepanel) --- */
 .m .ch27{position:fixed;inset:0;z-index:58;display:flex;overflow:hidden;background:var(--cb);color:var(--ci);font-family:Manrope,system-ui,sans-serif;--hf:Newsreader,Georgia,serif}
 .m .ch27.papir{--cb:var(--pp-bg);--cc:var(--pp-card);--ci:var(--pp-ink);--cm:var(--pp-mut);--cl:var(--pp-line);--ca:var(--pp-lab);--cs:#ebe6da;--cub:var(--pp-ink);--cuI:var(--pp-bg)}
-.m.papir.pd .ch27.papir,.m:not(.papir):not(.light) .ch27.papir{--cs:#1b1a15}
+.m.papir.pd .ch27.papir{--cs:#1b1a15}
 .m .ch27.noytral{--cb:#212121;--cc:#2f2f2f;--ci:#ececec;--cm:#a3a3a3;--cl:#3a3a3a;--ca:#ececec;--cs:#171717;--cub:#303030;--cuI:#ececec;--hf:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;font-family:var(--hf)}
 .m .ch27 button{font:inherit;color:inherit;-webkit-tap-highlight-color:transparent}
 .m .ch27 .ch27-h{font-family:var(--hf);font-size:25px;font-weight:500}
@@ -2877,7 +2828,7 @@ img.p23-ic,span.p24-img{background:none;-webkit-mask:none!important;mask:none!im
 .m .ch27-hi{font-family:var(--hf);font-size:34px;line-height:1.1;font-weight:500;text-wrap:pretty}
 .m .ch27-chips{display:flex;gap:6px;flex-wrap:wrap}.m .ch27-chips.sc{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;margin:0 -18px;padding:0 18px}
 .m .ch27-pc{flex:none;height:36px;padding:0 14px;border-radius:999px;border:0;background:var(--cc);font-size:13.5px!important;font-weight:700!important;white-space:nowrap;cursor:pointer}
-.m .ch27-pc.on{background:var(--ci);color:var(--cb)!important}
+.m .ch27-pc.on{background:var(--ci);color:var(--cb)}
 .m .ch27-sug{display:flex;flex-direction:column;gap:8px}
 .m .ch27-sug button{display:flex;flex-direction:column;align-items:flex-start;gap:2px;min-height:52px;justify-content:center;padding:10px 16px;border:1px solid var(--cl);border-radius:18px;background:transparent;text-align:left;cursor:pointer}
 .m .ch27-sug b{font-size:15px;font-weight:600}.m .ch27-sug span{font-size:12px;color:var(--cm)}
@@ -2914,12 +2865,12 @@ img.p23-ic,span.p24-img{background:none;-webkit-mask:none!important;mask:none!im
 .m .ch27-tools{display:flex;align-items:center;gap:6px}
 .m .ch27-plus{flex:none;width:38px;height:38px;border-radius:19px;border:1px solid var(--cl);background:transparent;display:grid;place-items:center;cursor:pointer}
 .m .ch27-tg{flex:none;height:38px;padding:0 11px;border-radius:999px;border:1px solid var(--cl);background:transparent;display:flex;align-items:center;gap:6px;font-size:12.5px!important;font-weight:700!important;white-space:nowrap;cursor:pointer}
-.m .ch27-tg.on{background:var(--ci);color:var(--cb)!important;border-color:var(--ci)}
+.m .ch27-tg.on{background:var(--ci);color:var(--cb);border-color:var(--ci)}
 .m .ch27-mic,.m .ch27-send{flex:none;width:40px;height:40px;border-radius:20px;border:0;background:transparent;display:grid;place-items:center;cursor:pointer}
 .m .ch27-mic.on{background:#b23a2a;color:#fff!important}
-.m .ch27-send{background:var(--ci);color:var(--cb)!important;transition:background-color .15s,color .15s,box-shadow .15s}
+.m .ch27-send{background:var(--ci);color:var(--cb);transition:background-color .15s,color .15s,box-shadow .15s}
 /* Prompt 43 (claude-code-chat-send-knapp-tom.md): tom melding = lys knapp med synlig pil og tynn kant, ingen opasitet */
-.m .ch27-send.dim{background:color-mix(in srgb,var(--cl) 70%,var(--cc));color:var(--cm)!important;box-shadow:inset 0 0 0 1.5px var(--cl);cursor:default}
+.m .ch27-send.dim{background:color-mix(in srgb,var(--cl) 70%,var(--cc));color:var(--cm);box-shadow:inset 0 0 0 1.5px var(--cl);cursor:default}
 .m .ch27-mic,.m .ch27-send{width:38px;height:38px;border-radius:19px}
 .m .ch27-tools{padding:0 4px 2px 0;min-width:0}.m .ch27-tg{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis}.m .ch27-send .sq{width:13px;height:13px;border-radius:3px;background:currentColor}
 .m .ch27-foot{max-width:760px;margin:0 auto;text-align:center;font-size:11.5px;color:var(--cm);padding-top:6px}
@@ -2972,14 +2923,14 @@ img.p23-ic,span.p24-img{background:none;-webkit-mask:none!important;mask:none!im
 .m .k27-mh{display:flex;align-items:center;gap:4px}.m .k27-mh b{flex:1;font:700 14px Manrope,sans-serif;padding-left:4px}.m .k27-mh button{width:34px;height:34px;border-radius:17px;border:0;background:transparent;font-size:17px;cursor:pointer}
 .m .k27-mg{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:2px}.m .k27-mg>span{text-align:center;font:600 9.5px 'IBM Plex Mono',monospace;color:var(--pp-mut);padding:2px 0}
 .m .k27-mc{height:34px;padding:0;border:0;border-radius:17px;background:transparent;font-weight:600!important;font-size:12.5px!important;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;cursor:pointer}
-.m .k27-mc i{width:4px;height:4px;border-radius:2px}.m .k27-mc.o{opacity:.35}.m .k27-mc.w{background:color-mix(in oklab,var(--pp-ink) 10%,transparent)}.m .k27-mc.t{background:var(--pp-lab);color:#fff!important}
+.m .k27-mc i{width:4px;height:4px;border-radius:2px}.m .k27-mc.o{opacity:.35}.m .k27-mc.w{background:color-mix(in oklab,var(--pp-ink) 10%,transparent)}.m .k27-mc.t{background:var(--pp-lab);color:#fff}
 .m .k27-cals{display:flex;gap:6px;flex-wrap:wrap;border-top:1px solid var(--pp-line);padding-top:10px}
 .m .k27-cc{display:flex;align-items:center;gap:6px;height:32px;padding:0 10px;border-radius:999px;border:1px solid var(--pp-line);background:transparent;font-size:12.5px!important;font-weight:600!important;cursor:pointer}.m .k27-cc i{width:9px;height:9px;border-radius:5px}.m .k27-cc.off{opacity:.45}
 .m .k27-adm{height:36px;border-radius:18px;border:1px solid var(--pp-line);background:transparent;font-size:12.5px!important;font-weight:600!important;cursor:pointer}
 .m .k27-note{flex:none;margin:0 14px 6px;font-size:12px;color:var(--pp-mut)}.m .k27-note.err{color:var(--pp-lab)}
 .m .k27-body{flex:1;min-height:0;display:flex}
 .m .k27-side{flex:none;width:252px;padding:4px 14px 18px;display:flex;flex-direction:column;gap:16px;overflow-y:auto;scrollbar-width:none;border-right:1px solid var(--pp-line);box-sizing:border-box}
-.m .k27-cl{display:flex;flex-direction:column;gap:2px}.m .k27-cl>button:not(.k27-adm){display:flex;align-items:center;gap:10px;min-height:38px;padding:0 6px;border:0;border-radius:10px;background:transparent;text-align:left;font-size:13.5px!important;font-weight:600!important;cursor:pointer}
+.m .k27-cl{display:flex;flex-direction:column;gap:2px}.m .k27-cl>button:not(.k27-adm){display:flex;align-items:center;gap:10px;min-height:38px;padding:0 6px;border:0;border-radius:10px;background:transparent;text-align:left;font-size:13.5px;font-weight:600;cursor:pointer}
 .m .k27-cb{flex:none;width:18px;height:18px;border-radius:5px;border:2px solid;color:#fff;display:grid;place-items:center;font-size:11px;box-sizing:border-box}
 .m .k27-lab{font:600 10.5px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:var(--pp-lab);padding:0 4px 6px}
 .m .k27-main{flex:1;min-width:0;display:flex;flex-direction:column;min-height:0;touch-action:pan-y}
@@ -2998,8 +2949,8 @@ img.p23-ic,span.p24-img{background:none;-webkit-mask:none!important;mask:none!im
 .m .k27-col{position:relative;min-width:0;border-left:1px solid var(--pp-line);cursor:copy}
 .m .k27-col>i{position:absolute;left:0;right:0;border-top:1px solid var(--pp-line);pointer-events:none}
 .m .k27-col.t{background:color-mix(in oklab,var(--pp-lab) 5%,transparent)}.m .k27-col.we{background:color-mix(in oklab,var(--pp-line) 30%,transparent)}
-.m .k27-ev{position:absolute;box-sizing:border-box;padding:3px 5px;border:0;border-left:3px solid;border-radius:6px;text-align:left;overflow:hidden;cursor:pointer;display:flex;flex-direction:column;gap:1px;color:var(--pp-ink)!important}
-.m .k27-ev.solid{color:#fff!important}.m .k27-ev b{font-weight:700;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.m .k27-ev span{font-size:11px;line-height:1.25;opacity:.8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.m .k27-ev{position:absolute;box-sizing:border-box;padding:3px 5px;border:0;border-left:3px solid;border-radius:6px;text-align:left;overflow:hidden;cursor:pointer;display:flex;flex-direction:column;gap:1px;color:var(--pp-ink)}
+.m .k27-ev.solid{color:#fff}.m .k27-ev b{font-weight:700;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.m .k27-ev span{font-size:11px;line-height:1.25;opacity:.8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .m .k27-now{position:absolute;left:-1px;right:0;height:2px;background:#e0342a;pointer-events:none;z-index:2}.m .k27-now i{position:absolute;left:-5px;top:-4px;width:10px;height:10px;border-radius:5px;background:#e0342a}
 .m .k27-mhd{flex:none;display:grid;grid-template-columns:repeat(7,minmax(0,1fr));padding:0 6px;border-bottom:1px solid var(--pp-line)}.m .k27-mhd span{text-align:center;font:600 10px 'IBM Plex Mono',monospace;letter-spacing:.08em;color:var(--pp-mut);padding:4px 0 6px}
 .m .k27-mo{flex:1;min-height:0;display:grid;grid-template-columns:repeat(7,minmax(0,1fr));grid-template-rows:repeat(6,minmax(0,1fr));padding:0 6px calc(env(safe-area-inset-bottom) + 100px)}
@@ -3018,8 +2969,8 @@ img.p23-ic,span.p24-img{background:none;-webkit-mask:none!important;mask:none!im
 .m .k27-li em{flex:none;font:normal 700 9.5px 'IBM Plex Mono',monospace;letter-spacing:.08em;padding:3px 6px;border-radius:6px;background:rgba(0,0,0,.18)}
 .m .k27-none{font-size:14px;color:var(--pp-mut);padding:12px 2px}
 .m .k27-bar2{position:absolute;z-index:5;left:12px;right:86px;bottom:calc(env(safe-area-inset-bottom) + 14px);height:62px;border-radius:31px;background:var(--pp-ink);display:flex;align-items:center;gap:2px;padding:0 6px;box-sizing:border-box;box-shadow:0 14px 30px -10px rgba(0,0,0,.45)}
-.m .k27-bar2 button{flex:1 1 0;min-width:0;height:50px;border-radius:25px;border:0;background:transparent;color:color-mix(in oklab,var(--pp-bg) 72%,transparent)!important;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:10.5px!important;font-weight:700!important;white-space:nowrap}
-.m .k27-bar2 button[aria-pressed=true]{background:var(--pp-bg);color:var(--pp-ink)!important}
+.m .k27-bar2 button{flex:1 1 0;min-width:0;height:50px;border-radius:25px;border:0;background:transparent;color:color-mix(in oklab,var(--pp-bg) 72%,transparent);cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:10.5px;font-weight:700;white-space:nowrap}
+.m .k27-bar2 button[aria-pressed=true]{background:var(--pp-bg);color:var(--pp-ink)}
 .m .k27-fab{position:absolute;z-index:5;right:14px;bottom:calc(env(safe-area-inset-bottom) + 14px);width:62px;height:62px;border-radius:31px;border:0;background:var(--pp-lab);color:#fff!important;cursor:pointer;display:grid;place-items:center;box-shadow:0 14px 30px -10px rgba(0,0,0,.45)}
 .m .k27.wide .k27-bar2{left:50%;right:auto;transform:translateX(-50%);width:440px}
 .m .k27-shbg{position:absolute;inset:0;z-index:20;background:rgba(0,0,0,.4);display:flex;align-items:flex-end;justify-content:center}
@@ -3084,7 +3035,6 @@ textarea.k27-in{height:auto;padding:12px 16px;resize:vertical}
 .upd-mul{margin:0;padding-left:18px;font-size:13.5px;line-height:1.45;opacity:.8}
 .m.papir .upd-mcode,.m.papir .upd-mlog{border-radius:0;background:var(--pp-card,#fff);border:1px solid var(--pp-line)}
 .upd-msheet .sinp{height:48px}
-.m:not(.papir) .upd-msheet{--pp-ink:#ece7dc;--pp-bg:#14130f;--pp-card:#211f19;--pp-line:#34322a;--pp-lab:#e8705c;--pp-mut:#8a8578;--pp-pos:#7fcf9a}
 
 /* «Legg til abonnement»-arket (fasit Abonnement Legg til ark.dc.html): én grep-strek, liste i ett kort, farger fra temaet */
 .m .s28-sh{--a-bg:var(--pp-bg,#f3efe6);--a-card:var(--pp-card,#fff);--a-ink:var(--pp-ink,#1b1a17);--a-mut:var(--pp-mut2,#6b665c);--a-lab:var(--pp-lab,#b23a2a);--a-onlab:var(--pp-onLab,#fff);--a-line:var(--pp-line,#e4ddcf);--a-tint:color-mix(in srgb,var(--a-lab) 13%,var(--a-card));--a-seg:var(--pp-surf2,#e9e3d6)}
@@ -3213,7 +3163,7 @@ textarea.k27-in{height:auto;padding:12px 16px;resize:vertical}
 .m .p28-mhl{padding:8px 4px 0;font-size:11.5px;font-weight:800;letter-spacing:.12em;color:var(--pp-lab)}
 .m .p28-dim{flex:1;min-width:0;display:flex;align-items:center;gap:12px;opacity:.5}
 .m .p28-mhint{font-size:12px;color:var(--pp-mut2,var(--pp-mut));text-align:center;padding:2px 4px}
-.m.p28-mer :is(.pp-fab,.pp-scan){display:none!important}
+.m.p28-mer :is(.pp-fab,.pp-scan){display:none}
 html.p28-kb .m.papir{--pp-navb:calc(var(--p28-kb,0px) + 8px)}
 
 /* Ruter: åpne/lukke en avgang – alltid i layout, høyden animeres (0fr ↔ 1fr), ingen hopp */
@@ -3310,7 +3260,7 @@ html.p28-kb .m.papir{--pp-navb:calc(var(--p28-kb,0px) + 8px)}
 /* Innstillinger → Backup */
 .m .p29-bic{background:var(--pp-lab)!important;color:#fff}
 .m .p29-ok{color:var(--pp-pos);font-weight:700}.m .p29-bad{color:var(--pp-lab);font-weight:700}.m .p29-lab{color:var(--pp-lab);font-weight:700}
-.m .p29-bv{opacity:1!important}
+.m .p29-bv{opacity:1}
 .m .p29-bar{display:block;height:4px;border-radius:2px;background:var(--pp-line);margin-top:8px;overflow:hidden}.m .p29-bar i{display:block;height:100%;background:var(--pp-lab);transition:width .4s}
 .m .p29-seg{display:flex;gap:4px;padding:4px;border-radius:999px;background:var(--pp-card);margin:0 0 8px}
 .m .p29-seg button{flex:1;min-width:0;height:36px;border:0;border-radius:999px;background:transparent;color:var(--pp-ink);cursor:pointer;font:600 13px Manrope,sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 6px}
@@ -3333,9 +3283,7 @@ html.p28-kb .m.papir{--pp-navb:calc(var(--p28-kb,0px) + 8px)}
 /* Wiggle-verktøylinja ligger øverst i scroll-innholdet (8 px), og innholdet får 64 px luft (claude-code-wiggle-verktoylinje.md).
    mobile-mer.js flytter .p28-pills til første barn av .m-scroll og animerer padding-top 0 → 64 px (280 ms). */
 .m .m-scroll:has(>.p28-pills){padding-top:64px}
-.m.two .m-scroll:has(>.p28-pills){padding-top:calc(env(safe-area-inset-top) + 64px)}
 .m .m-scroll>.p28-pills{position:absolute;top:8px;left:16px;right:16px;height:auto;max-width:none;margin:0;z-index:30}
-.m.two .m-scroll>.p28-pills{top:calc(env(safe-area-inset-top) + 8px)}
 .m:has(.p28-pills) .pp-av{visibility:visible}
 .m .p28-pill.plus b{font:800 14px Manrope,system-ui,sans-serif}
 .m .p28-pill.plus.on{background:var(--pp-ink,#1b1a17)!important;color:var(--pp-bg,#f3efe6)!important;border-color:var(--pp-ink,#1b1a17)!important}
@@ -3363,12 +3311,12 @@ html.p28-kb .m.papir{--pp-navb:calc(var(--p28-kb,0px) + 8px)}
 .m .p30-fmhid .pp-fmt .p30-wb{opacity:1}
 
 /* Felles SheetButton (claude-code-felles-knapper-ark.md): pille 36 px, treffflate 44 px */
-.m .p30-sb{text-transform:none;letter-spacing:0;position:relative;flex:none;display:inline-flex;align-items:center;justify-content:center;gap:2px;height:36px;min-height:36px;padding:0 16px;border-radius:18px;border:0!important;background:rgba(27,26,23,.08)!important;color:var(--pp-ink,#1b1a17)!important;font:700 14px Manrope,system-ui,sans-serif;cursor:pointer;white-space:nowrap;box-shadow:none;-webkit-tap-highlight-color:transparent}
+.m .p30-sb{text-transform:none;letter-spacing:0;position:relative;flex:none;display:inline-flex;align-items:center;justify-content:center;gap:2px;height:36px;min-height:36px;padding:0 16px;border-radius:18px;border:0;background:rgba(27,26,23,.08);color:var(--pp-ink,#1b1a17);font:700 14px Manrope,system-ui,sans-serif;cursor:pointer;white-space:nowrap;box-shadow:none;-webkit-tap-highlight-color:transparent}
 .m .p30-sb::after{content:'';position:absolute;inset:-4px -2px}
 .m .p30-sb.p30-pri{background:var(--pp-ink,#1b1a17)!important;color:var(--pp-bg,#f3efe6)!important}
 .m .p30-sb.p30-back{padding:0 16px 0 10px}
 .m .p30-sb:active{filter:brightness(.94)}
-.m.papir.pd .p30-sb:not(.p30-pri),.m.vaer .p30-sb:not(.p30-pri),.m .s28-sh:not(.s28-l) .p30-sb:not(.p30-pri){background:rgba(255,255,255,.1)!important;color:var(--pp-ink,#ece8df)!important}
+.m.papir.pd .p30-sb:not(.p30-pri),.m.vaer .p30-sb:not(.p30-pri),.m .s28-sh:not(.s28-l) .p30-sb:not(.p30-pri){background:rgba(255,255,255,.1);color:var(--pp-ink,#ece8df)}
 .m.vaer .p30-sb:not(.p30-pri){color:#fff!important}
 .m.vaer .p30-sb.p30-pri,.m .vx-sh .p30-sb.p30-pri,.m .p17-cmp .p30-sb.p30-pri{background:#fff!important;color:#17191e!important}
 .m .s28-sh .p30-sb:not(.p30-pri){color:var(--a-ink)!important}
@@ -3420,7 +3368,7 @@ html.p30-kb .m .ch27 :is(.pp-nav,.tabbar,.navbar){display:none}
 
 /* Vær: to flytende glassknapper nederst (claude-code-vaer-bunnknapper.md) */
 .m .w22-bot.w30-bot,.m.vaer .w22-bot.w30-bot{position:fixed;left:0;right:0;bottom:0;top:auto;max-width:none;margin:0;z-index:6;display:flex;align-items:center;gap:10px;padding:0 18px calc(6px + env(safe-area-inset-bottom,0px));background:none;border:0;-webkit-backdrop-filter:none;backdrop-filter:none;box-shadow:none;pointer-events:none}
-.m .w30-bb{flex:none;width:52px;height:52px;padding:0;border-radius:26px!important;border:1px solid rgba(255,255,255,.22)!important;background:rgba(10,20,35,.34)!important;-webkit-backdrop-filter:blur(20px) saturate(1.4);backdrop-filter:blur(20px) saturate(1.4);box-shadow:0 8px 24px -10px rgba(0,0,0,.45)!important;color:#fff!important;cursor:pointer;display:grid;place-items:center;pointer-events:auto}
+.m .w30-bb{flex:none;width:52px;height:52px;padding:0;border-radius:26px;border:1px solid rgba(255,255,255,.22);background:rgba(10,20,35,.34);-webkit-backdrop-filter:blur(20px) saturate(1.4);backdrop-filter:blur(20px) saturate(1.4);box-shadow:0 8px 24px -10px rgba(0,0,0,.45);color:#fff;cursor:pointer;display:grid;place-items:center;pointer-events:auto}
 .m .w30-bb:active{transform:scale(.96)}
 /* Yr og Storm: ekte logoer, overlappende 30 px; hele kortet trykkbart */
 .m .p30-logos{display:flex;flex:none}
@@ -3610,12 +3558,11 @@ html.p30-kb .m .ch27 :is(.pp-nav,.tabbar,.navbar){display:none}
 .m .p31-cb{flex:none;width:20px;height:20px;border-radius:6px;border:1.5px solid var(--p31m);box-sizing:border-box;display:grid;place-items:center}.m .p31-cb.on{background:#2f7d4f;border-color:#2f7d4f}
 .m .p31-strike{text-decoration:line-through;opacity:.6}
 /* ---------- PROGRAMVARE-raden og banneret ---------- */
-.m .sval.p31-red{color:var(--pp-lab,#b23a2a)!important;font-weight:700}.m .sval.p31-ok{color:var(--pp-pos,#2f7d4f)!important;font-weight:700}
+.m .sval.p31-red{color:var(--pp-lab,#b23a2a)!important;font-weight:700}.m .sval.p31-ok{color:var(--pp-pos,#2f7d4f);font-weight:700}
 .m .p30-up.p31-upc{cursor:pointer}
 /* ---------- System-siden «Nordlys OS» ---------- */
 .m.n31-pg{background:var(--pp-bg,#f3efe6)}
 .m.n31-pg .m-scroll{padding-top:0;padding-bottom:calc(env(safe-area-inset-bottom,0px) + 24px)}
-.m:not(.papir).n31-pg{--pp-bg:var(--m-bg,#14130f);--pp-card:rgba(255,255,255,.06);--pp-ink:inherit;--pp-mut:rgba(255,255,255,.62);--pp-line:rgba(255,255,255,.12);--pp-lab:#ff8a6b}
 .m .n31{display:flex;flex-direction:column;gap:14px;width:100%;min-width:0;box-sizing:border-box;padding-bottom:120px;color:var(--pp-ink)}
 .m .n31-top{min-height:128px;box-sizing:border-box;padding:calc(env(safe-area-inset-top,0px) + 8px) 0 6px;display:flex;flex-direction:column;justify-content:flex-end;gap:2px}
 .m .n31-back{align-self:flex-start;display:inline-flex;align-items:center;gap:2px;height:36px;padding:0 12px 0 6px;margin:0 0 auto -6px;border-radius:18px;color:var(--pp-ink);text-decoration:none;font:700 15px Manrope,sans-serif}
@@ -3706,8 +3653,6 @@ html.p30-kb .m .ch27 :is(.pp-nav,.tabbar,.navbar){display:none}
 .m .m-scroll:has(>.p28-pills){padding-top:0}
 .m .m-scroll>.p28-pills{position:sticky!important;top:0;left:auto!important;right:auto!important;width:auto!important;height:62px!important;box-sizing:border-box;margin:0 -16px 2px!important;padding:8px 16px 0!important;max-width:none;align-items:flex-start;background:transparent}
 .m .m-scroll>.p28-pills.p32-stuck{background:var(--pp-bg);box-shadow:0 calc(-1 * env(safe-area-inset-top)) 0 var(--pp-bg),0 8px 14px -12px rgba(0,0,0,.25)}
-.m.two .m-scroll>.p28-pills{top:0;padding-top:calc(env(safe-area-inset-top) + 8px)!important;height:calc(env(safe-area-inset-top) + 62px)!important}
-.m.two .m-scroll:has(>.p28-pills){padding-top:0}
 .m .m-scroll>.p28-pills .p28-pill{height:40px}
 
 /* GLIMT I SØKEFELTET */
@@ -3758,7 +3703,7 @@ html.p30-kb .m .ch27 :is(.pp-nav,.tabbar,.navbar){display:none}
 .m .p32-copy{height:28px;padding:0 12px;border-radius:14px;border:1px solid var(--pp-line);background:transparent;color:var(--pp-ink);font:700 12px Manrope,system-ui,sans-serif;cursor:pointer}
 
 /* Kalender: ingen tone på dagens kolonne (claude-code-kalender-fargekontrast.md) */
-.m .k27-col.t{background:transparent!important}
+.m .k27-col.t{background:transparent}
 /* Søk med Glimt (Kalender.dc.html → sr) */
 .m .k32-srbg{background:rgba(20,18,14,.38);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
 .m .k27-sheet.k32-sr{max-height:92%;padding:14px 0 0;gap:0;overflow:hidden}
@@ -3820,7 +3765,7 @@ html.p30-kb .m .ch27 :is(.pp-nav,.tabbar,.navbar){display:none}
 
 /* Vær: ✕ oppe til høyre, kilden under H/L (claude-code-vaer-lukk-x.md) */
 .m .vx-bar .w32-sp{width:42px;flex:none}
-.m .w32-x{flex:none;width:42px;height:42px;padding:0!important;border-radius:21px;border:0;background:rgba(255,255,255,.22)!important;-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);color:#fff!important;display:grid;place-items:center;cursor:pointer}
+.m .w32-x{flex:none;width:42px;height:42px;padding:0;border-radius:21px;border:0;background:rgba(255,255,255,.22);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);color:#fff;display:grid;place-items:center;cursor:pointer}
 .m .vx-head .w32-src{font-size:11.5px;font-weight:500;opacity:.7;margin-top:6px}
 /* Forhold: lik plassering i alle visninger (claude-code-vaer-forhold-moduser.md) */
 .m .w32-fh b{line-height:20px;height:20px}
@@ -3871,7 +3816,7 @@ html.p30-kb .m .ch27 :is(.pp-nav,.tabbar,.navbar){display:none}
    ===================================================================== */
 /* 1. Innholdet scroller UNDER fanelinjen (claude-code-innhold-under-navbar.md): ingen bakgrunnsstripe bak navbaren,
       bare selve pillen har farge + blur; plass nok nederst til at siste kort kan scrolles helt opp over pillen. */
-.m.papir .pp-navbg{display:none!important}
+.m.papir .pp-navbg{display:none}
 .m.papir .pp-nav{-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
 .m.papir .m-scroll,.m.papir.flyt .m-scroll,.m.papir.matp .m-scroll{padding-bottom:calc(var(--pp-navb) + 62px + 38px)}
 .m.papir.p32-nonav .m-scroll{padding-bottom:calc(env(safe-area-inset-bottom,0px) + 28px)}
@@ -4131,7 +4076,7 @@ html[data-ui=mobile] body:has(#app > .m.p34-brpg){background:var(--pp-bg)}
 .m .p34a-err{padding:12px 14px;border-radius:14px;background:color-mix(in oklab,var(--pp-lab) 12%,var(--pp-card));color:var(--pp-lab);font-size:13px;font-weight:600;line-height:1.4}
 .m .p34a-foot{font-size:12px;color:var(--pp-mut);line-height:1.5;padding:0 4px}
 .m .p34a-pull{animation:p34In .25s ease both}
-.m.papir .pp-home>.pp-ed[data-edk="h12"]{box-shadow:none!important;background:transparent!important;border-radius:24px}
+.m.papir .pp-home>.pp-ed[data-edk="h12"]{box-shadow:none;background:transparent;border-radius:24px}
 .m .p34-evt span{white-space:nowrap}
 .m .p34a-bar>span:first-child{gap:10px}.m .p34a-bar>span:first-child b{white-space:nowrap;text-align:right}
 /* Prompt 34 (claude-code-mat-papir-tema.md): Mat i Papir – «i dag»-kortet er mørkt som «valgt» ellers i appen, Papir-fontene */
@@ -4870,7 +4815,6 @@ html.p36-booting body{overflow:hidden}
 /* Konto → Økt og ark */
 .m .p38-shb{position:fixed;inset:0;z-index:950;background:rgba(27,26,23,.4);animation:p35Fade .2s ease both}
 .m .p38-sh{position:fixed;left:0;right:0;bottom:0;z-index:951;max-width:560px;margin:0 auto;max-height:92dvh;overflow-y:auto;box-sizing:border-box;background:var(--pp-card,#fffdf8);color:var(--pp-ink,#1b1a17);border-radius:28px 28px 0 0;padding:10px 18px calc(26px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:12px;box-shadow:0 -14px 40px rgba(0,0,0,.2);animation:p38Up .3s cubic-bezier(.2,.8,.2,1) both}
-.m:not(.papir) .p38-sh{background:#1c1b18;color:#f3efe6;--pp-line:rgba(255,255,255,.14);--pp-mut:rgba(255,255,255,.6);--pp-bg:#14130f;--pp-lab:#ff8a80}
 @keyframes p38Up{from{transform:translateY(40px);opacity:0}to{transform:none;opacity:1}}
 .m .p38-grab{align-self:center;width:36px;height:5px;border-radius:3px;background:var(--pp-line)}
 .m .p38-shf{display:flex;flex-direction:column;gap:12px}
@@ -5090,15 +5034,15 @@ html.p39-sh .m .pp-sheet,html.p39-sh .m .p37-sheet,html.p39-sh .m .p28-sheet{pos
 .m .p40-grab::after{content:'';position:absolute;inset:-8px}
 .m .pp-ed.p28-wig>.p40-grab{pointer-events:auto!important}
 /* Vær: glass-stripe bak statuslinja + topplinja (tones inn sammen med bynavnet), ✕ alltid i topplinja */
-.m .vx .vx-bar,.m .vx.sc .vx-bar{background:transparent!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important;z-index:30}
+.m .vx .vx-bar,.m .vx.sc .vx-bar{background:transparent;-webkit-backdrop-filter:none;backdrop-filter:none;z-index:30}
 .m .vx .vx-bar::before{content:'';position:absolute;left:0;right:0;top:0;bottom:-18px;z-index:-1;pointer-events:none;background:linear-gradient(180deg,rgba(34,58,92,.62),rgba(34,58,92,0));-webkit-backdrop-filter:blur(18px) saturate(1.3);backdrop-filter:blur(18px) saturate(1.3);-webkit-mask-image:linear-gradient(180deg,#000 62%,transparent);mask-image:linear-gradient(180deg,#000 62%,transparent);opacity:0;transition:opacity .2s}
 .m .vx.sc .vx-bar::before{opacity:1}
 .m .vx-in{padding-top:calc(env(safe-area-inset-top) + 66px)}
 /* Glimt · ukas vær: velgeren på egen rad, tre like brede knapper, undertekster over to linjer */
-.m .p39-wkh{display:flex!important;flex-direction:column!important;align-items:stretch!important;gap:10px!important}
-.m .p39-wkp{display:grid!important;grid-template-columns:repeat(3,1fr)!important;width:100%!important;max-width:none!important}
-.m .p39-wkp button{height:32px;min-width:0;white-space:nowrap;overflow:visible!important;text-overflow:clip!important}
-.m .p39-wks>div>span{white-space:normal!important;overflow:visible!important;text-overflow:clip!important;line-height:1.3;display:block}
+.m .p39-wkh{display:flex;flex-direction:column;align-items:stretch;gap:10px}
+.m .p39-wkp{display:grid;grid-template-columns:repeat(3,1fr);width:100%;max-width:none}
+.m .p39-wkp button{height:32px;min-width:0;white-space:nowrap;overflow:visible;text-overflow:clip}
+.m .p39-wks>div>span{white-space:normal;overflow:visible;text-overflow:clip;line-height:1.3;display:block}
 .m .p39-wks>div>b{white-space:nowrap}
 /* Samme ✕ i alle Vær-ark (42 px glass). Over kart: mørk glass. */
 .m .w32-x.p40-dk{background:rgba(10,20,35,.62)!important}
@@ -5112,7 +5056,7 @@ html.p39-sh .m .pp-sheet,html.p39-sh .m .p37-sheet,html.p39-sh .m .p28-sheet{pos
 .m .w22-mtop .w32-x{width:42px;height:42px;padding:0!important;border-radius:21px!important}.m .w22-mtop .w32-sp{width:42px}
 .m .w22-shh .w32-x.p40-dk{background:rgba(10,20,35,.62)!important;color:#fff!important}
 /* Bibel: rekke-kortet går 36 px opp i hero, over bildet, alle hjørner runde; kreditt og tittel flyttes opp */
-.m.papir.ph.p39-bib .m-scroll{margin-top:-36px!important;position:relative;z-index:3}
+.m.papir.ph.p39-bib .m-scroll{margin-top:-36px;position:relative;z-index:3}
 .m.papir.p39-bib .p37-bp{padding-top:0}
 .m.papir.p39-bib .p37-bp>:first-child{position:relative;z-index:3;border-radius:24px;box-shadow:0 14px 30px -12px rgba(0,0,0,.35)}
 .m.papir.ph.p39-bib .pp-hero{overflow:visible}
@@ -5360,7 +5304,7 @@ html.h40-ov,html.h40-ov body{overflow:hidden}
 
 /* Fold: rød Hjem-knapp i samme form som aktiv fane (claude-code-fold-hjem-knapp.md) */
 @media (min-width:600px){
-  .m.papir .pp-nav>a.p25-home{width:100%!important;height:58px!important;border-radius:18px!important;flex-direction:column;gap:2px;display:flex!important;align-items:center;justify-content:center;align-self:stretch;font:600 11.5px Manrope,sans-serif;text-decoration:none;margin:0 0 8px}
+  .m.papir .pp-nav>a.p25-home{width:100%;height:58px;border-radius:18px;flex-direction:column;gap:2px;display:flex;align-items:center;justify-content:center;align-self:stretch;font:600 11.5px Manrope,sans-serif;text-decoration:none;margin:0 0 8px}
   .m.papir .pp-nav>a.p25-home svg{width:20px;height:20px}
   .m.papir .pp-nav>a.p25-home:active{transform:scale(.96)}
 }
@@ -5368,7 +5312,7 @@ html.h40-ov,html.h40-ov body{overflow:hidden}
 /* Fold 1c: stort Glimt-kort til venstre, faner og kort til høyre */
 @media (min-width:600px){
   .m.papir.p41-fold{--f41l:112px;--f41w:calc((100vw - var(--f41l) - 44px) / 2)}
-  .m.papir.p41-fold .m-scroll{padding-top:calc(env(safe-area-inset-top) + 24px);padding-left:calc(var(--f41l) + var(--f41w) + 28px);padding-right:16px;margin-top:0!important}
+  .m.papir.p41-fold .m-scroll{padding-top:calc(env(safe-area-inset-top) + 24px);padding-left:calc(var(--f41l) + var(--f41w) + 28px);padding-right:16px;margin-top:0}
   .m.papir.p41-fold .m-scroll>*{max-width:none}
   .m.papir.hlp.p41-fold .m-scroll>.pp-home{display:flex;flex-direction:column;gap:10px;max-width:none;width:100%}
   .m.papir.p41-fold .pp-home>.pp-edhint{order:98}
@@ -5386,7 +5330,7 @@ html.h40-ov,html.h40-ov body{overflow:hidden}
   .m .p41-fw b{font:300 64px/1 Newsreader,serif}.m .p41-fw span{font-size:13.5px;opacity:.92}
   .m .p41-fbot{margin-top:auto;display:flex;flex-direction:column;gap:10px;min-height:0}
   .m .p41-fbr{border-radius:22px;overflow:hidden;max-height:46vh}
-  .m .p41-fbr>*{margin:0!important}
+  .m .p41-fbr>*{margin:0}
   .m .p41-fsr .p31-ans{position:absolute;left:0;right:0;bottom:calc(100% + 8px)}
   .m .p41-fsr{position:relative}
   .m .p41-ftabs{display:flex;gap:6px;flex-wrap:wrap;padding-bottom:2px}
@@ -5528,7 +5472,7 @@ html.h40-ov,html.h40-ov body{overflow:hidden}
 .m .p41-jt small{font:500 11px Manrope,sans-serif;color:var(--pp-mut)}
 
 /* Chat: ✦ Auto */
-.m .ch27 em.p41-auto,.ch27 em.p41-auto{background:#7a5ad6!important;color:#fff!important}
+.m .ch27 em.p41-auto,.ch27 em.p41-auto{background:#7a5ad6;color:#fff}
 
 /* Bursdager: uten fanelinje, jenka-tog i toppkortet, bilder */
 .m.papir.p41-bdpg .m-scroll{padding-bottom:calc(env(safe-area-inset-bottom) + 28px)!important}
@@ -5734,7 +5678,7 @@ html.h40-ov,html.h40-ov body{overflow:hidden}
 .m .f22>.p41-hjl{padding-top:16px}
 
 /* PostNord-logoen pakket med appen: hvit flis, 12 % luft (claude-code-postnord-logo-fiks.md) */
-.m .trk-badge.p42-cl{background:#fff!important;border:1px solid var(--pp-line,rgba(0,0,0,.08));box-sizing:border-box}
+.m .trk-badge.p42-cl{background:#fff;border:1px solid var(--pp-line,rgba(0,0,0,.08));box-sizing:border-box}
 .m .trk-badge.p42-cl img{padding:12%!important;background:#fff;object-fit:contain}
 .m .p21-pcb .trk-badge.p42-cl img{padding:6%!important}
 .m .p37-sheet.p42-still,.m .p37-scrim.p42-still{animation:none!important}
@@ -5787,13 +5731,13 @@ html.h40-ov,html.h40-ov body{overflow:hidden}
 .m .p43-mhn{flex:none;font:500 12px Manrope,sans-serif;color:var(--pp-mut)}
 .m .p43-mg .pp-rows .pp-tx:first-child{border-top:0}
 /* Rød Glimt-pille med orben (Liste) og Glimt-knappen i Søk */
-.m .p43-gpill,.m .pp-aitog.p43-gtog{flex:none;display:inline-flex;align-items:center;gap:7px;height:34px;min-width:44px;padding:0 13px 0 7px;border-radius:17px;border:0;background:var(--pp-lab);color:#fff!important;font:800 13px Manrope,sans-serif;cursor:pointer;white-space:nowrap}
+.m .p43-gpill,.m .pp-aitog.p43-gtog{flex:none;display:inline-flex;align-items:center;gap:7px;height:34px;min-width:44px;padding:0 13px 0 7px;border-radius:17px;border:0;background:var(--pp-lab);color:#fff;font:800 13px Manrope,sans-serif;cursor:pointer;white-space:nowrap}
 .m .p43-gpill .p43-orbi,.m .p43-gtog .p43-orbi{background:rgba(255,255,255,.92)}
-.m .pp-aitog.p43-gtog:not(.on){background:color-mix(in srgb,var(--pp-lab) 12%,transparent);color:var(--pp-lab)!important;box-shadow:inset 0 0 0 1.5px var(--pp-lab)}
+.m .pp-aitog.p43-gtog:not(.on){background:color-mix(in srgb,var(--pp-lab) 12%,transparent);color:var(--pp-lab);box-shadow:inset 0 0 0 1.5px var(--pp-lab)}
 .m .pp-search .p43-gpill{margin-right:-6px}
 
 /* Gjøremål: «+ Ny liste» alltid sist, kort-flate, mørk tekst og stiplet kant */
-.m .p37-lc.new.p43-newl{background:var(--pp-card)!important;color:var(--pp-ink)!important;font-weight:700!important;font-size:13px!important;border:1.5px dashed color-mix(in srgb,var(--pp-ink) 40%,transparent)!important;opacity:1!important}
+.m .p37-lc.new.p43-newl{background:var(--pp-card);color:var(--pp-ink);font-weight:700;font-size:13px;border:1.5px dashed color-mix(in srgb,var(--pp-ink) 40%,transparent);opacity:1}
 .m .p43-ord .p43-ol{display:flex;flex-direction:column;border-radius:18px;background:var(--pp-card);overflow:hidden}
 .m .p43-or{display:flex;align-items:center;gap:10px;min-height:56px;padding:0 6px 0 16px;border-top:1px solid color-mix(in srgb,var(--pp-line) 60%,transparent);background:var(--pp-card);touch-action:none;position:relative}
 .m .p43-or:first-child{border-top:0}
@@ -5845,8 +5789,8 @@ html.h40-ov,html.h40-ov body{overflow:hidden}
 .m .p43-copy{cursor:copy;-webkit-user-select:all;user-select:all;white-space:pre-wrap}
 
 /* Media (mobil, fasit Media.dc.html variant «mobile», 2a) */
-.m.p43-mpg .m-scroll{padding:0!important;max-width:none!important;margin:0!important}
-.m.p43-mpg .m-scroll>*{max-width:none!important}
+.m.p43-mpg .m-scroll{padding:0!important;max-width:none;margin:0}
+.m.p43-mpg .m-scroll>*{max-width:none}
 .m .p43m{display:flex;flex-direction:column;min-height:100dvh;background:var(--pp-bg);color:var(--pp-ink);font-family:Manrope,system-ui,sans-serif}.m .p43m.enter{animation:p43in .32s cubic-bezier(.2,.8,.2,1) both}
 @keyframes p43in{from{transform:translateX(24px);opacity:0}to{transform:none;opacity:1}}
 @media (prefers-reduced-motion:reduce){.m .p43m{animation:none}}
@@ -5995,7 +5939,7 @@ html.h40-ov,html.h40-ov body{overflow:hidden}
 .m .p43-sr .p43-lib{grid-template-columns:repeat(3,minmax(0,1fr))}
 
 /* Hjem-widget Media (h16) */
-.m .p43-mw{display:flex!important;flex-direction:column;gap:10px;padding:14px 16px!important;border-radius:20px;text-decoration:none;color:var(--pp-ink)}
+.m .p43-mw{display:flex;flex-direction:column;gap:10px;padding:14px 16px;border-radius:20px;text-decoration:none;color:var(--pp-ink)}
 .m .p43-mwh{display:flex;justify-content:space-between;align-items:baseline;width:100%}.m .p43-mwh .pp-lab{font:600 10.5px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:var(--pp-lab)}.m .p43-mwh .pp-mut{font-size:13px}
 .m .p43-mwr{display:flex;flex-direction:column;gap:5px;width:100%}
 .m .p43-mwt{display:flex;justify-content:space-between;align-items:baseline;gap:10px;font-size:15px}.m .p43-mwt>span{min-width:0}.m .p43-mwt b{font-weight:600}.m .p43-mwt b.mono{flex:none;font:600 13px 'IBM Plex Mono',monospace}
@@ -6085,8 +6029,8 @@ html.h40-ov,html.h40-ov body{overflow:hidden}
 .m .p44-mono{font:600 12px 'IBM Plex Mono',ui-monospace,monospace}
 .m .p44-mut{color:var(--pp-mut);font-size:13px;line-height:1.45}
 .m .p44-mut.s{font-size:12px;padding:0 14px 12px}
-.m .p44-red{color:#b23a2a!important;opacity:1;font-weight:700}
-.m.papir.pd .p44-red{color:#f08a76!important}
+.m .p44-red{color:#b23a2a;opacity:1;font-weight:700}
+.m.papir.pd .p44-red{color:#f08a76}
 .m .p44-chev{flex:none;color:var(--pp-mut);opacity:.7}
 /* Mer ny */
 .m .p44-mer{display:flex;flex-direction:column;gap:10px;min-width:0}
@@ -6614,8 +6558,8 @@ html.h40-ov,html.h40-ov body{overflow:hidden}
 
 /* Brett (≥ 600 px, Papir): skann i navbaren, Hjem-knappen og wiggle-knappene */
 @media (min-width:600px){
-  .m.papir.p45-rs .pp-fab{display:none!important}
-  .m.papir .pp-nav .pp-scan.p45-rscan{flex:none;width:46px!important;height:46px!important;min-height:46px;margin:auto auto 0!important;padding:0!important;border-radius:23px!important;border:0;background:var(--pp-lab)!important;color:var(--pp-onLab,#fff)!important;display:grid!important;place-items:center;box-shadow:0 10px 22px -10px rgba(0,0,0,.55);cursor:pointer}
+  .m.papir.p45-rs .pp-fab{display:none}
+  .m.papir .pp-nav .pp-scan.p45-rscan{flex:none;width:46px;height:46px;min-height:46px;margin:auto auto 0;padding:0;border-radius:23px;border:0;background:var(--pp-lab);color:var(--pp-onLab,#fff);display:grid;place-items:center;box-shadow:0 10px 22px -10px rgba(0,0,0,.55);cursor:pointer}
   .m.papir .pp-nav .pp-scan.p45-rscan:active{transform:scale(.94)}
   .m.papir.p45-edr .p28-pills{display:none!important}
   .m.papir.p45-edr .m-scroll{padding-top:0}
@@ -6714,17 +6658,17 @@ html.h40-ov,html.h40-ov body{overflow:hidden}
 }
 
 /* Gjøremål: fullskjerm uten bakgrunnsbilde (telefon, Fold og iPad) */
-.m.papir.p45-hk .pp-hero{background:var(--pp-bg)!important;color:var(--pp-ink)!important;min-height:0}
-.m.papir.p45-hk .pp-hero .bgx,.m.papir.p45-hk .pp-hero::before,.m.papir.p45-hk .pp-hero::after{display:none!important}
-.m.papir.p45-hk .pp-hero .pp-title,.m.papir.p45-hk .pp-hero .pp-kick{color:var(--pp-ink)!important;text-shadow:none!important}
-.m.papir.p45-hk .pp-hero .pp-back{background:var(--pp-card)!important;color:var(--pp-ink)!important;border:1px solid var(--pp-line);box-shadow:0 2px 8px -4px rgba(0,0,0,.2)}
+.m.papir.p45-hk .pp-hero{background:var(--pp-bg);color:var(--pp-ink);min-height:0}
+.m.papir.p45-hk .pp-hero .bgx,.m.papir.p45-hk .pp-hero::before,.m.papir.p45-hk .pp-hero::after{display:none}
+.m.papir.p45-hk .pp-hero .pp-title,.m.papir.p45-hk .pp-hero .pp-kick{color:var(--pp-ink);text-shadow:none}
+.m.papir.p45-hk .pp-hero .pp-back{background:var(--pp-card);color:var(--pp-ink);border:1px solid var(--pp-line);box-shadow:0 2px 8px -4px rgba(0,0,0,.2)}
 .m.papir.p45-hk .pp-hero .pp-av{box-shadow:0 0 0 1px var(--pp-line),0 4px 12px -6px rgba(0,0,0,.3)}
-.m.papir.p45-hk .m-scroll{margin-top:0!important}
+.m.papir.p45-hk .m-scroll{margin-top:0}
 /* Gjøremål på brett: navbar til venstre, «Ny oppgave …» og Glimt-knappen starter til høyre for navbaren */
 @media (min-width:600px){
   .m.papir.p45-hk .pp-hero{padding-left:130px}
-  .m.papir.p45-hk .p37-dock{left:124px!important;right:96px!important;width:auto!important;max-width:none}
-  .m.papir.p45-hk .p37-fab{right:24px!important;width:60px;height:60px;border-radius:22px}
+  .m.papir.p45-hk .p37-dock{left:124px;right:96px;width:auto;max-width:none}
+  .m.papir.p45-hk .p37-fab{right:24px;width:60px;height:60px;border-radius:22px}
 }
 @media (min-width:700px){
   .m.papir.p45-hk.p43-big .m-scroll{padding-right:16px}
@@ -6779,7 +6723,7 @@ html.h40-ov,html.h40-ov body{overflow:hidden}
 
 /* Innstillinger → Helse → Home Assistant (uten bakgrunnsbilde) */
 .m.papir.p45-hapg .pp-hero{display:none}
-.m.papir.p45-hapg .m-scroll{margin-top:0!important}
+.m.papir.p45-hapg .m-scroll{margin-top:0}
 .m .p45-hpage{display:flex;flex-direction:column;gap:14px;padding-bottom:110px}
 .m .p45-hh{display:flex;flex-direction:column;gap:2px;padding:4px 2px 0}
 .m .p45-hak{font:italic 400 16px Newsreader,serif;color:var(--pp-mut)}
@@ -6833,7 +6777,7 @@ html.h40-ov,html.h40-ov body{overflow:hidden}
 .m .p45-hback{height:40px;padding:0 16px 0 12px;border-radius:20px;border:1px solid var(--pp-line);background:var(--pp-card);color:var(--pp-ink);font:700 14px Manrope,sans-serif;display:flex;align-items:center;text-decoration:none;white-space:nowrap}
 .m .p45-hav0{width:40px;height:40px;border-radius:20px;background:var(--pp-lab);color:#fff;display:grid;place-items:center;font:700 14px Manrope,sans-serif;text-decoration:none;overflow:hidden}
 .m .p45-hav0 img{width:100%;height:100%;object-fit:cover}
-.m.papir.p45-hapg .m-scroll{padding-top:calc(env(safe-area-inset-top,0px) + 14px)!important}
+.m.papir.p45-hapg .m-scroll{padding-top:calc(env(safe-area-inset-top,0px) + 14px)}
 
 /* =====================================================================
    Prompt 46 (PWA46)
@@ -6844,7 +6788,7 @@ html.h40-ov,html.h40-ov body{overflow:hidden}
   background:linear-gradient(#f3efe6,#f3efe6) content-box,linear-gradient(var(--p46-gap),var(--p46-gap)) padding-box,conic-gradient(from 200deg,#b23a2a,#e8794a,#f2c14e,#3fbf9a,#4f8fd6,#7a5ad6,#b23a2a) border-box;
   box-shadow:0 2px 8px rgba(0,0,0,.25);-webkit-backdrop-filter:none;backdrop-filter:none;filter:none}
 .m.pd .pp-av:not(.chip),.m.pd .p41-fav{--p46-gap:#14130f}
-.m .p41-fav{border-radius:50%!important}
+.m .p41-fav{border-radius:50%}
 .m .pp-av:not(.chip) img,.m .p41-fav img{width:100%;height:100%;border-radius:50%;object-fit:cover;display:block}
 .m .p36-avb{box-sizing:border-box;border:2.5px solid transparent;padding:1.5px;box-shadow:none!important;background:linear-gradient(var(--pp-bg,#f3efe6),var(--pp-bg,#f3efe6)) padding-box,conic-gradient(from 200deg,#b23a2a,#e8794a,#f2c14e,#3fbf9a,#4f8fd6,#7a5ad6,#b23a2a) border-box}
 .m .p36-avb img,.m .p36-avb .p36-avi{border-radius:50%}
@@ -6852,19 +6796,19 @@ html.h40-ov,html.h40-ov body{overflow:hidden}
 
 /* Bibel på brett (claude-code-bibel-side-ipad-fold.md): to kolonner fra 680 px, maks 1100 px. */
 .m .p46-bc{display:contents}
-.m.papir.p39-bib .p46-bp>.p46-bc{border-radius:0!important;box-shadow:none;z-index:auto}
+.m.papir.p39-bib .p46-bp>.p46-bc{border-radius:0;box-shadow:none;z-index:auto}
 .m.papir.p39-bib .p46-bp>.p46-bc:first-child>:first-child{position:relative;z-index:3;border-radius:24px;box-shadow:0 14px 30px -12px rgba(0,0,0,.35)}
 .m.papir.p39-bib .p46-bp>.p46-bc>*{margin-top:0;margin-bottom:0}
 @media (min-width:680px){
   .m.papir.p39-bib .m-scroll>.p46-bp{max-width:1100px}
-  .m .p46-bp{display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,1fr);column-gap:18px;row-gap:14px;align-items:start}
+  .m .p46-bp{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);column-gap:18px;row-gap:14px;align-items:start}
   .m .p46-bc{display:flex;flex-direction:column;gap:14px;min-width:0}
   .m.papir.p39-bib .p46-bp>.p46-bc+.p46-bc{padding-top:44px} /* høyre kolonne starter under toppbildet */
 }
 
 /* Vær: Liquid Glass-velgeren (claude-code-vaer-modusvelger-liquid-glass.md, fasit Vaer.dc.html `seg`). */
 .vx-modes.p46-seg{position:relative;touch-action:none;user-select:none;-webkit-user-select:none}
-.vx-modes.p46-seg button,.vx-modes.p46-seg button[aria-pressed=true]{position:relative;z-index:1;background:transparent!important;transition:transform .25s cubic-bezier(.34,1.5,.5,1)}
+.vx-modes.p46-seg button,.vx-modes.p46-seg button[aria-pressed=true]{position:relative;z-index:1;background:transparent;transition:transform .25s cubic-bezier(.34,1.5,.5,1)}
 .vx-modes.p46-seg button.p46-big{transform:scale(1.12)}
 .p46-drop{position:absolute;top:3px;left:0;width:44px;height:30px;border-radius:999px;pointer-events:none;z-index:0;will-change:transform;
   background:linear-gradient(180deg,rgba(255,255,255,.34),rgba(255,255,255,.16));-webkit-backdrop-filter:blur(8px) saturate(180%);backdrop-filter:blur(8px) saturate(180%);
@@ -6921,8 +6865,8 @@ html.h40-ov,html.h40-ov body{overflow:hidden}
 .m .p46-intf{flex:1;min-width:140px}
 
 /* Kart (claude-code-kart-side.md, fasit Kart.dc.html) */
-.m.p46-kart .m-scroll{padding:0!important;max-width:none!important}
-.m.p46-kart .m-scroll>*{max-width:none!important}
+.m.p46-kart .m-scroll{padding:0!important;max-width:none}
+.m.p46-kart .m-scroll>*{max-width:none}
 .m .p46k{position:fixed;inset:0;z-index:5;overflow:hidden;background:#e4e0d8;color:#1b1a17;font-family:Manrope,system-ui,sans-serif;--k-card:#fff;--k-bg:#f3efe6;--k-line:#efe9dd;--k-mut:#6b665c;--k-ink:#1b1a17;--k-seg:#e9e3d6}
 .m.pd .p46k{background:#1b1c1f;color:#ece7dc;--k-card:#211f19;--k-bg:#17160f;--k-line:#34322a;--k-mut:#9a9486;--k-ink:#ece7dc;--k-seg:#2a2821}
 .m .p46k-slot,.m .p46k-map{position:absolute;inset:0}
@@ -6935,7 +6879,7 @@ html.h40-ov,html.h40-ov body{overflow:hidden}
 .m .p46k .leaflet-container{background:transparent;font-family:Manrope,system-ui,sans-serif}
 .m .p46k .leaflet-control-attribution{font-size:9.5px;background:rgba(255,255,255,.7)}
 .m.pd .p46k .leaflet-control-attribution{background:rgba(0,0,0,.5);color:#bbb}
-.m .p46k-mk{background:none!important;border:0!important}
+.m .p46k-mk{background:none;border:0}
 .m .p46k-chips{position:absolute;z-index:12;top:calc(env(safe-area-inset-top,0px) + 14px);left:12px;right:12px;display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding:2px}
 .m .p46k-chips::-webkit-scrollbar{display:none}
 .m .p46k-back{flex:none;height:36px;padding:0 14px 0 10px;border-radius:18px;border:0;background:#1b1a17;color:#f3efe6;font:700 13px Manrope,sans-serif;white-space:nowrap;box-shadow:0 2px 8px rgba(27,26,23,.18);cursor:pointer}
@@ -7061,15 +7005,13 @@ html.h40-ov,html.h40-ov body{overflow:hidden}
 .m .p48-r48 .r48s-btn.pri{background:var(--pp-lab)}
 /* Prompt 85: fargene #9FE3C6 (inn/positivt) og #FFB08A (minus/advarsel) er satt inline i mange maler fra det mørke designet.
    På lyst papir ga de 1,5–1,8:1 («0 kr» i Rapporter, negativ saldo i Kontoer, «Klar · trykk for å bekrefte» i Kø).
-   Malene i Økonomi bruker nå var(--pp-pos)/var(--pp-lab) eller klassene .m-tx-pos/.m-tx-lab. Regelen under (!important mot inline
-   stil) står likevel, fordi kategorifargene fra serveren (Inntekt #9FE3C6, Vedlikehold #FFB08A) også kommer inline. */
+   Malene i Økonomi bruker nå var(--pp-pos)/var(--pp-lab) eller klassene .m-tx-pos/.m-tx-lab, og kategorifargene fra serveren
+   (Inntekt #9FE3C6, Vedlikehold #FFB08A) går gjennom papirTekst() i mobile-theme.js. Ingen regel mot inline stil trengs lenger. */
 .m.papir .m-tx-pos{color:var(--pp-pos)}
 .m.papir .m-tx-lab{color:var(--pp-lab)}
-.m.papir [style*="color:#9FE3C6"]:not([style*="background"]){color:var(--pp-pos)!important}
-.m.papir [style*="color:#FFB08A"]:not([style*="background"]){color:var(--pp-lab)!important}
 /* Prompt 85: mørkt papir har lys aksent (--pp-lab #f08a76). Hvit tekst på den ga 2,4:1 i «N kvitteringer til gjennomgang» og Glimt-pillen;
    --pp-onLab er hvit i lyst og mørk i mørkt papir (samme som Kontoer-kortet bruker). */
-.m.papir .pp-cta,.m.papir .pp-cta a,.m.papir .pp-cta button,.m.papir .p43-gpill{color:var(--pp-onLab,#fff)!important}
+.m.papir .pp-cta,.m.papir .pp-cta a,.m.papir .pp-cta button,.m.papir .p43-gpill{color:var(--pp-onLab,#fff)}
 
 /* Q35 (B-B11): onboardingen som kort over fanelinja når appen åpnes med en dyp lenke (mobile-gate.js showOnboardingCard).
    Fargene fra mobilpaletten (--pp-*, mobile-theme.js), som følger Homelab-modusen. */

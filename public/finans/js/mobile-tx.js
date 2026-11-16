@@ -6,7 +6,6 @@ import { logoBtn73 } from './endre-logo.js'; // prompt 73: trykk på logoen → 
 import { m, draw, flash, two, amtC, backBtn, openSheet } from './mobile.js';
 import { c3 } from './mobile-theme.js';
 
-const isI = (th) => th === 'ios';
 const dLong = (d) => (!d ? '–' : /^\d{4}-\d{2}-\d{2}/.test(d) ? `${d.slice(8, 10)}.${d.slice(5, 7)}.${d.slice(0, 4)}` : String(d));
 let folders = null;
 async function loadFolders() { if (folders) return folders; try { folders = await api('/folders'); } catch { folders = []; } return folders; }
@@ -17,17 +16,17 @@ const folderName = (t) => t.folder ?? (folders ?? []).find((f) => f.id === t.fol
 export function txDetail(th, t) {
   if (!t) return two() ? '<div class="m-empty">Velg en transaksjon i listen.</div>' : '<div class="m-empty">Ingen transaksjon valgt.</div>';
   if (t.folderId && !folders) loadFolders().then(draw);
-  const row = (k, v, attrs = '', chev = false) => `<${attrs ? 'button' : 'div'} class="${isI(th) ? 'field' : 'opt-row frow'}" ${attrs}><span style="opacity:.7">${k}</span><b style="font-weight:500">${v}</b>${chev ? '<span style="opacity:.5">›</span>' : ''}</${attrs ? 'button' : 'div'}>`;
+  const row = (k, v, attrs = '', chev = false) => `<${attrs ? 'button' : 'div'} class="opt-row frow" ${attrs}><span style="opacity:.7">${k}</span><b style="font-weight:500">${v}</b>${chev ? '<span style="opacity:.5">›</span>' : ''}</${attrs ? 'button' : 'div'}>`;
   const lines = t.lines ?? [];
   const rcTxt = t.receipt === 'booked' ? 'Vedlagt' : t.receipt ? 'Til gjennomgang' : '–';
-  return `${two() ? '' : `<div class="m-row">${backBtn(th, '#', 'Tilbake', 'txback')}${isI(th) ? '' : `<b class="ptitle">${t.amount > 0 ? 'Inntekt' : 'Utgift'}</b>`}</div>`}
-    <div class="m-row" style="gap:14px">${logoBtn73(t, logo(t, 60, isI(th) ? 30 : 18), 'pen-on')}<div class="m-grow"><b style="font-size:20px;font-weight:700">${esc(t.description)}</b><div style="opacity:.7;font-size:14px">${cap(dWeek(t.date))}</div></div></div>
+  return `${two() ? '' : `<div class="m-row">${backBtn(th, '#', 'Tilbake', 'txback')}${`<b class="ptitle">${t.amount > 0 ? 'Inntekt' : 'Utgift'}</b>`}</div>`}
+    <div class="m-row" style="gap:14px">${logoBtn73(t, logo(t, 60, 18), 'pen-on')}<div class="m-grow"><b style="font-size:20px;font-weight:700">${esc(t.description)}</b><div style="opacity:.7;font-size:14px">${cap(dWeek(t.date))}</div></div></div>
     <div class="m-mono" style="font-size:40px;font-weight:600;letter-spacing:-.03em;color:${amtC(t.amount, th)}">${sgn(t.amount)} <span style="font-size:18px;opacity:.6">kr</span></div>
-    ${t.aiLong || t.aiShort ? `<div class="aicard ${isI(th) ? 'glass2' : ''}"><b>✦ AI-beskrivelse</b><p>${esc(t.aiLong || t.aiShort)}</p></div>` : ''}
-    ${lines.length ? `<div class="sec">Varelinjer</div><div class="list ${isI(th) ? 'glass2' : ''}">${lines.map((l) => `<div class="opt-row" style="justify-content:space-between"><span class="m-ell">${esc(l.description ?? '–')}</span><span class="m-mono">${n2(l.amount)}</span></div>`).join('')}</div>` : ''}
+    ${t.aiLong || t.aiShort ? `<div class="aicard"><b>✦ AI-beskrivelse</b><p>${esc(t.aiLong || t.aiShort)}</p></div>` : ''}
+    ${lines.length ? `<div class="sec">Varelinjer</div><div class="list">${lines.map((l) => `<div class="opt-row" style="justify-content:space-between"><span class="m-ell">${esc(l.description ?? '–')}</span><span class="m-mono">${n2(l.amount)}</span></div>`).join('')}</div>` : ''}
     <div class="sec">Originaler</div>
-    <div class="${isI(th) ? 'list glass2' : 'fields'}">${row('Original kvittering', t.receiptId ? 'Vis bilde' : 'Mangler', `data-orig="rc" data-id="${t.id}"`, true)}${row('Original banktransaksjon', t.source === 'manual' || t.source === 'receipt' ? 'Ikke fra bank' : 'Vis', `data-orig="bank" data-id="${t.id}"`, true)}</div>
-    <div class="${isI(th) ? 'list glass2' : 'fields'}">${row('Kategori', esc(t.category))}${row('Konto', esc(t.account))}${row('Dato', dLong(t.date))}${row('Kvittering', rcTxt)}${row('Bolig', folderName(t) ? esc(folderName(t)) : '–')}${t.note ? row('Notat', esc(t.note)) : ''}</div>
+    <div class="fields">${row('Original kvittering', t.receiptId ? 'Vis bilde' : 'Mangler', `data-orig="rc" data-id="${t.id}"`, true)}${row('Original banktransaksjon', t.source === 'manual' || t.source === 'receipt' ? 'Ikke fra bank' : 'Vis', `data-orig="bank" data-id="${t.id}"`, true)}</div>
+    <div class="fields">${row('Kategori', esc(t.category))}${row('Konto', esc(t.account))}${row('Dato', dLong(t.date))}${row('Kvittering', rcTxt)}${row('Bolig', folderName(t) ? esc(folderName(t)) : '–')}${t.note ? row('Notat', esc(t.note)) : ''}</div>
     <div class="btn2"><button class="sec-b danger" data-txact="del" data-id="${t.id}">${icon('trash', 18)} Slett</button><button class="pri-b" data-txact="edit" data-id="${t.id}">${icon('edit', 18)} Rediger</button></div>`;
 }
 
@@ -46,11 +45,9 @@ export function openEdit(t) {
 export function editForm(th) {
   const E = m.edit;
   if (!E) return '';
-  const chip = (k, v, n, on) => `<button class="chip" data-ef="${k}" data-v="${esc(String(v ?? ''))}" aria-pressed="${on}">${on && !isI(th) ? '✓ ' : ''}${esc(n)}</button>`;
-  const grp = (title, inner, note = '') => `${title ? `<div class="sec">${title}</div>` : ''}<div class="${isI(th) ? 'list glass2' : 'fields'}">${inner}</div>${note ? `<div class="snote">${note}</div>` : ''}`;
-  const inp = (k, label, val, attrs = '') => isI(th)
-    ? `<label class="field"><span>${label}</span><input id="m-ef-${k}" data-efi="${k}" value="${esc(val ?? '')}" ${attrs}></label>`
-    : `<label class="field">${label}<input id="m-ef-${k}" data-efi="${k}" value="${esc(val ?? '')}" ${attrs}></label>`;
+  const chip = (k, v, n, on) => `<button class="chip" data-ef="${k}" data-v="${esc(String(v ?? ''))}" aria-pressed="${on}">${on && !false ? '✓ ' : ''}${esc(n)}</button>`;
+  const grp = (title, inner, note = '') => `${title ? `<div class="sec">${title}</div>` : ''}<div class="fields">${inner}</div>${note ? `<div class="snote">${note}</div>` : ''}`;
+  const inp = (k, label, val, attrs = '') => `<label class="field">${label}<input id="m-ef-${k}" data-efi="${k}" value="${esc(val ?? '')}" ${attrs}></label>`;
   const kinds = E.type === 'income' ? ['income', 'transfer'] : ['expense', 'transfer'];
   const catList = (S.boot?.categories ?? []).filter((c) => kinds.includes(c.kind));
   const rcTxt = E.receipt === 'booked' ? 'Vedlagt' : E.receipt ? 'Til gjennomgang' : 'Ingen';
@@ -62,7 +59,7 @@ export function editForm(th) {
     ${grp('Konto', `<div class="opt-row col"><div class="schips">${accs().map((a) => chip('accountId', a.id, a.name, E.accountId === a.id)).join('')}</div></div>`)}
     ${grp('Kvittering', `<div class="opt-row"><span class="m-grow">${rcTxt}</span></div><button type="button" class="opt-row" data-mact="efattach"><span class="m-grow" style="color:var(--m-acc);font-weight:500">Legg ved kvittering</span></button>`)}
     ${grp('Bolig', `<div class="opt-row col"><div class="schips">${chip('folderId', '', 'Ingen', !E.folderId)}${(folders ?? []).map((f) => chip('folderId', f.id, f.name, E.folderId === f.id)).join('')}</div></div>`, 'Utgiften vises også i boligen og fordeles på medlemmene.')}
-    ${grp('Notat', isI(th) ? `<label class="field"><input id="m-ef-note" data-efi="note" value="${esc(E.note ?? '')}" placeholder="Valgfritt" style="text-align:left;width:100%"></label>` : `<label class="field">Notat<input id="m-ef-note" data-efi="note" value="${esc(E.note ?? '')}" placeholder="Valgfritt"></label>`)}
+    ${grp('Notat', `<label class="field">Notat<input id="m-ef-note" data-efi="note" value="${esc(E.note ?? '')}" placeholder="Valgfritt"></label>`)}
     <div class="btn2"><button type="submit" class="pri-b">${E.id ? 'Lagre endringer' : 'Legg til'}</button></div>
     ${E.id ? `<button type="button" class="sec-b danger wide" data-txact="del" data-id="${E.id}">Slett transaksjon</button>` : ''}
     </form>`;
@@ -121,12 +118,12 @@ export function origOverlay(th) {
     const rows = bank ? [['Dato', dLong(bank.bookingDate)], ['Rentedato', dLong(bank.valueDate)], ['Forklaring', bank.description, true], [Number(bank.amount?.value ?? bank.amount) < 0 ? 'Ut fra konto' : 'Inn på konto', `${n2(Math.abs(Number(bank.amount?.value ?? bank.amount) || 0))} kr`],
       ['Konto', bank.account, true], ['Bank', bank.source], ['Arkivref.', bank.archiveReference, true], ['Importert', bank.importedAt ? new Date(bank.importedAt).toLocaleString('nb-NO') : '']].filter((r) => r[1]) : [];
     body = !bank ? `<div class="orig-empty">${icon('bank', 40)}<b>Ingen bankrad lagret</b><span>${t?.source === 'manual' || t?.source === 'receipt' ? 'Transaksjonen er lagt inn manuelt eller fra en kvittering, ikke importert fra banken.' : 'Banktransaksjoner importert før denne versjonen har ikke den opprinnelige raden. Nye importer lagres uendret.'}</span></div>`
-      : `<div class="list ${isI(th) ? 'glass2' : ''}">${rows.map(([k, v, mono]) => `<div class="opt-row frow"><span style="opacity:.7">${k}</span><b class="${mono ? 'm-mono' : ''}" style="font-weight:500;text-align:right">${esc(v)}</b></div>`).join('')}</div>
+      : `<div class="list">${rows.map(([k, v, mono]) => `<div class="opt-row frow"><span style="opacity:.7">${k}</span><b class="${mono ? 'm-mono' : ''}" style="font-weight:500;text-align:right">${esc(v)}</b></div>`).join('')}</div>
         <div class="sec">Rådata</div><pre class="rawjson">${esc(JSON.stringify(bank.raw ?? bank, null, 2))}</pre>`;
   }
   const canDl = d && ((O.mode === 'rc' && (rc?.fileUrl || rc?.id)) || (O.mode === 'bank' && bank));
   return `<div class="orig ${th}${m.light ? ' light' : ''}" role="dialog" aria-label="${O.mode === 'rc' ? 'Original kvittering' : 'Original banktransaksjon'}">
-    <div class="orig-top"><button class="${isI(th) ? 'gback' : 'back'}" data-mact="origclose" aria-label="Lukk">${isI(th) ? icon('close', 18, 'currentColor', 2.4) : '×'}</button>
+    <div class="orig-top"><button class="back" data-mact="origclose" aria-label="Lukk">×</button>
       <div class="m-grow" style="text-align:center"><b>${O.mode === 'rc' ? 'Original kvittering' : 'Original banktransaksjon'}</b><div style="font-size:12.5px;opacity:.65">${esc(t?.description ?? '')}${t?.date ? ` · ${dLong(t.date)}` : ''}</div></div><span style="width:44px"></span></div>
     <div class="seg3">${seg('rc', 'Kvittering')}${seg('bank', 'Banktransaksjon')}</div>
     <div class="orig-body">${body}</div>

@@ -116,11 +116,10 @@ export async function hlLoad() {
 
 /* ---------- Visning ---------- */
 
-const isI = (th) => th === 'ios';
 // Hilsen etter tid på døgnet (core.js): God morgen / formiddag / ettermiddag / kveld / natt.
 const greetTxt = () => greet();
 const timeTxt = () => new Date().toLocaleTimeString('nb-NO', { hour: '2-digit', minute: '2-digit' });
-const card = (th, inner, cls = '') => `<div class="hcard ${isI(th) ? 'glass2' : ''} ${cls}">${inner}</div>`;
+const card = (th, inner, cls = '') => `<div class="hcard  ${cls}">${inner}</div>`;
 const isoWeek = (d = new Date()) => { const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())); const day = t.getUTCDay() || 7; t.setUTCDate(t.getUTCDate() + 4 - day); return Math.ceil(((t - Date.UTC(t.getUTCFullYear(), 0, 1)) / 864e5 + 1) / 7); };
 
 // Ikoner for vær (samme streker som Homelab v2) og symbolkoder fra MET/yr eller WMO-koder fra eldre servere.
@@ -191,7 +190,7 @@ function dropHtml() {
     ${items.map((x, i) => `<div class="hdrop-i${i === H.sel ? ' on' : ''}" role="option" data-hls="go" data-q="${esc(x.t)}">${icon(x.hist ? 'hist' : 'search', 18)}<span class="m-ell m-grow">${esc(x.t)}</span>${x.hist ? `<button type="button" data-hls="del" data-q="${esc(x.t)}" aria-label="Fjern ${esc(x.t)} fra historikken">×</button>` : ''}</div>`).join('')}`;
 }
 const GLOGO = '<svg width="20" height="20" viewBox="0 0 48 48" aria-hidden="true" style="flex:none"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.6 5.4 2.6 13.2l7.9 6.2C12.4 13.6 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.1 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.4c-.5 2.9-2.2 5.3-4.6 6.9l7.4 5.8c4.3-4 6.9-9.9 6.9-17.2z"/><path fill="#FBBC05" d="M10.5 28.6c-.5-1.4-.8-3-.8-4.6s.3-3.2.8-4.6l-7.9-6.2C1 16.5 0 20.1 0 24s1 7.5 2.6 10.8l7.9-6.2z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.4-5.8c-2.1 1.4-4.8 2.3-8.5 2.3-6.3 0-11.6-4.1-13.5-9.9l-7.9 6.2C6.6 42.6 14.6 48 24 48z"/></svg>';
-const wSearch = (th) => `<form class="hsearch ${isI(th) ? 'glass2' : ''}" data-hlform role="search"><div class="hsearch-in">${GLOGO}<input id="m-hlq" type="search" enterkeyhint="search" value="${esc(H.q)}" placeholder="Søk på Google eller skriv en adresse" autocomplete="off" autocapitalize="off" aria-label="Søk på Google" aria-autocomplete="list"></div><div id="m-hldrop" class="hdrop" role="listbox">${dropHtml()}</div></form>`;
+const wSearch = (th) => `<form class="hsearch" data-hlform role="search"><div class="hsearch-in">${GLOGO}<input id="m-hlq" type="search" enterkeyhint="search" value="${esc(H.q)}" placeholder="Søk på Google eller skriv en adresse" autocomplete="off" autocapitalize="off" aria-label="Søk på Google" aria-autocomplete="list"></div><div id="m-hldrop" class="hdrop" role="listbox">${dropHtml()}</div></form>`;
 
 function wLinks(th) {
   const l = H.data?.shortcuts ?? [];
@@ -207,9 +206,9 @@ function wOs(th) {
   const fin = [`Finans · igjen å bruke${s ? ` i ${new Date(s.month + '-15').toLocaleDateString('nb-NO', { month: 'long' })}` : ''}`, s ? `${neg0(s.left)} kr` : '–', rv ? `${rv} kvittering${rv > 1 ? 'er' : ''} til gjennomgang` : 'Alt er gjennomgått'];
   const dm = H.dom, mt = H.mat;
   return `<div class="sec">Andre OS</div><div class="hos">
-    <a class="hos-fin ${isI(th) ? 'glass2' : ''}" href="#/hjem"><span class="m-grow"><span class="dim">${esc(fin[0])}</span><b>${esc(fin[1])}</b>${fin[2] ? `<span class="acc">${esc(fin[2])}</span>` : ''}</span><span style="font-size:24px;opacity:.6">›</span></a>
-    ${dm != null && domOk() ? `<a class="${isI(th) ? 'glass2' : ''}" href="#/dom"><span class="dim">Domener</span><b>${dm?.visitors != null ? n0(dm.visitors) : dm ? dm.n : '…'}</b><span class="dim sm">${dm?.visitors != null ? `besøk i dag · ${dm.up === false ? 'sjekk status' : 'alle oppe'}` : dm?.n === 0 ? 'Ingen domener ennå' : 'domener'}</span></a>` : ''}
-    ${mt !== null ? `<a class="${isI(th) ? 'glass2' : ''}" href="#/mat"><span class="dim">Mat</span><b class="m-ell">${esc(mt?.name ?? (mt ? 'Ingen plan' : '…'))}</b><span class="dim sm">i dag · uke ${mt?.week ?? isoWeek()}</span></a>` : ''}
+    <a class="hos-fin" href="#/hjem"><span class="m-grow"><span class="dim">${esc(fin[0])}</span><b>${esc(fin[1])}</b>${fin[2] ? `<span class="acc">${esc(fin[2])}</span>` : ''}</span><span style="font-size:24px;opacity:.6">›</span></a>
+    ${dm != null && domOk() ? `<a class="" href="#/dom"><span class="dim">Domener</span><b>${dm?.visitors != null ? n0(dm.visitors) : dm ? dm.n : '…'}</b><span class="dim sm">${dm?.visitors != null ? `besøk i dag · ${dm.up === false ? 'sjekk status' : 'alle oppe'}` : dm?.n === 0 ? 'Ingen domener ennå' : 'domener'}</span></a>` : ''}
+    ${mt !== null ? `<a class="" href="#/mat"><span class="dim">Mat</span><b class="m-ell">${esc(mt?.name ?? (mt ? 'Ingen plan' : '…'))}</b><span class="dim sm">i dag · uke ${mt?.week ?? isoWeek()}</span></a>` : ''}
   </div>`;
 }
 
@@ -249,9 +248,9 @@ function gallery(th) {
       ${fx ? '<span class="sval" style="width:51px;text-align:center">Alltid</span>' : `<button class="swb" data-hle="tog" data-id="${id}" role="switch" aria-checked="${!hid}" aria-label="Vis ${def[id][1]}">${tr(!hid)}</button>`}</div>`;
   }).join('');
   return `<div class="hgal"><div class="sec">Legg til widget</div>
-    <div class="hgrid">${lay.sec.map((id) => { const vis = !lay.hide[id]; return `<div class="hgw ${isI(th) ? 'glass2' : ''}"><span class="hgic">${icon(WD[id][2], 20)}</span><b>${WD[id][0]}</b><span class="dim m-grow">${WD[id][1]}</span><button class="${vis ? 'added' : 'add'}" data-hle="add" data-id="${id}" ${vis ? 'disabled' : ''}>${vis ? 'Lagt til' : 'Legg til'}</button></div>`; }).join('')}</div>
-    <div class="sec">Navigasjon · Homelab</div><div class="list ${isI(th) ? 'glass2' : ''}">${rows('hlTabs', HLTABS, FIXED_HL)}</div>
-    <div class="sec">Navigasjon · Finans</div><div class="list ${isI(th) ? 'glass2' : ''}">${rows('finTabs', FINTABS, FIXED_FIN)}</div>
+    <div class="hgrid">${lay.sec.map((id) => { const vis = !lay.hide[id]; return `<div class="hgw"><span class="hgic">${icon(WD[id][2], 20)}</span><b>${WD[id][0]}</b><span class="dim m-grow">${WD[id][1]}</span><button class="${vis ? 'added' : 'add'}" data-hle="add" data-id="${id}" ${vis ? 'disabled' : ''}>${vis ? 'Lagt til' : 'Legg til'}</button></div>`; }).join('')}</div>
+    <div class="sec">Navigasjon · Homelab</div><div class="list">${rows('hlTabs', HLTABS, FIXED_HL)}</div>
+    <div class="sec">Navigasjon · Finans</div><div class="list">${rows('finTabs', FINTABS, FIXED_FIN)}</div>
     <button class="linkb" data-hle="reset">Tilbakestill</button></div>`;
 }
 

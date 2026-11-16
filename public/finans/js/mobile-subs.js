@@ -29,7 +29,6 @@ const CAT_RE = [['Underholdning', /netflix|spotify|hbo|max\b|viaplay|disney|yout
 // Syklusene og navnene kommer fra serveren (sykluser.js); ukentlige og kvartalsvise vises som de er.
 const MND = ['jan', 'feb', 'mar', 'apr', 'mai', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'des'];
 const kr = (v) => `${n0(v)} kr`;
-const isI = () => theme() === 'ios';
 
 export async function subsLoad() {
   if (!SO.loaded) { SO.loaded = true; hlApi('/me/layout').then((r) => { if (Array.isArray(r?.subHomeOrder)) { SO.o = r.subHomeOrder; draw(); } if (Array.isArray(r?.subHomeHid)) { SO.h = r.subHomeHid; draw(); } }).catch(() => {}); }
@@ -124,8 +123,8 @@ const doneSet = () => { if (!SB.done) { try { SB.done = JSON.parse(localStorage.
 
 /* ---------- Byggeklosser ---------- */
 
-const lg = (x, size = 38) => (x.logoUrl ? `<span class="sb-logo" style="width:${size}px;height:${size}px;border-radius:${isI() ? size / 2 : 12}px;background-image:url('${esc(x.logoUrl)}')" aria-hidden="true"></span>` : logo({ ...x, description: x.name }, size, isI() ? size / 2 : 12));
-const card = (inner, cls = '') => `<div class="sb-card ${isI() ? 'glass2' : ''} ${cls}">${inner}</div>`;
+const lg = (x, size = 38) => (x.logoUrl ? `<span class="sb-logo" style="width:${size}px;height:${size}px;border-radius:12px;background-image:url('${esc(x.logoUrl)}')" aria-hidden="true"></span>` : logo({ ...x, description: x.name }, size, 12));
+const card = (inner, cls = '') => `<div class="sb-card  ${cls}">${inner}</div>`;
 const row = (x, right, sub) => `<div class="sb-row"${x.id != null ? ` data-sbed="${esc(x.id)}" role="button" tabindex="0"` : ''}>${lg(x)}<span class="m-grow" style="min-width:0"><b class="m-ell">${esc(x.name)}${P37B.subAvs(x)}${x.plan ? ` <span class="sb-dim" style="font-weight:400">· ${esc(x.plan)}</span>` : ''}</b><span class="sb-dim m-ell">${esc(sub)}</span>${P37B.subShareLine(x)}</span>${right}</div>`;
 const whenTxt = (d) => { if (!d) return ''; const days = Math.round((new Date(d + 'T12:00') - new Date(today() + 'T12:00')) / 864e5); return days === 0 ? 'I dag' : days === 1 ? 'I morgen' : days > 1 && days < 7 ? new Date(d + 'T12:00').toLocaleDateString('nb-NO', { weekday: 'long' }).replace(/^./, (c) => c.toUpperCase()) : `${+d.slice(8, 10)}. ${MND[+d.slice(5, 7) - 1]}`; };
 
@@ -218,10 +217,10 @@ function home() {
   const cls = (k) => `sb-blk${SO.on ? ` so-ed ${SO_D.indexOf(k) % 2 ? 'b' : 'a'}` : ''}${SO.drag === k ? ' drag' : ''}`;
   if (P31.G.trials === null) P31.trialsLoad().then(() => { if (m.screen === 'sub') draw(); }).catch(() => {});
   const blocks = {
-    trials: ((tc) => (tc ? `<div class="${cls('trials')} sb-card ${isI() ? 'glass2' : ''}" ${soAttr('trials')}>${tc}</div>` : ''))(P37B.trialsCard(P31.G.trials ?? [], { editing: SO.on, adding: SB.mode === 'trial' })), // prompt 46: skjult uten aktive
+    trials: ((tc) => (tc ? `<div class="${cls('trials')} sb-card" ${soAttr('trials')}>${tc}</div>` : ''))(P37B.trialsCard(P31.G.trials ?? [], { editing: SO.on, adding: SB.mode === 'trial' })), // prompt 46: skjult uten aktive
     ai: `<div class="${cls('ai')} sb-hero" ${soAttr('ai')}><span class="sb-k">✦ AI-SPARING</span><div class="sb-big">Spar ${kr(sv.monthly ?? 0)}<br>i måneden</div><div class="sb-hs">${nAi ? `AI fant ${nAi} abonnement${nAi === 1 ? '' : 'er'} å se på${pu ? `, og ${num[pu] ?? pu} prisøkning${pu > 1 ? 'er' : ''}` : ''}.` : 'AI fant ingenting å spare akkurat nå.'}</div><button class="sb-pill" data-sb="tab" data-v="ins">Gå gjennom</button></div>`,
-    next7: `<div class="${cls('next7')} sb-card ${isI() ? 'glass2' : ''}" ${soAttr('next7')}><div class="sb-wk"><div><span class="sb-dim">Neste 7 dager</span><b class="sb-wkv">${kr(wk)}</b><span class="sb-dim">${up.length} trekk</span></div><div class="sb-bars" aria-hidden="true">${bars.map((v, i) => `<i style="height:${v ? Math.max(8, (v / bmx) * 56) : 4}px" class="${v ? 'on' : ''}${i % 2 ? ' gap' : ''}"></i>`).join('')}</div></div></div>`,
-    check: `<div class="${cls('check')} sb-card ${isI() ? 'glass2' : ''}" ${soAttr('check')}><div class="sb-chk"><span class="sb-crown">♛</span><div class="m-grow"><b>Abonnementssjekk</b><span class="sb-dim">Gå gjennom før fornyelse</span></div></div><div class="sb-chk2">${low.length ? `<span><b>${low.length} abonnement${low.length > 1 ? 'er' : ''}</b> trenger en titt · spar opptil <span class="sb-acc">${kr(low.reduce((a, x) => a + per(x), 0))}</span></span><span class="sb-avs">${low.slice(0, 4).map((x) => lg(x, 26)).join('')}</span>` : '<span>Alt ser bra ut · ingen trenger en titt</span>'}</div></div>`,
+    next7: `<div class="${cls('next7')} sb-card" ${soAttr('next7')}><div class="sb-wk"><div><span class="sb-dim">Neste 7 dager</span><b class="sb-wkv">${kr(wk)}</b><span class="sb-dim">${up.length} trekk</span></div><div class="sb-bars" aria-hidden="true">${bars.map((v, i) => `<i style="height:${v ? Math.max(8, (v / bmx) * 56) : 4}px" class="${v ? 'on' : ''}${i % 2 ? ' gap' : ''}"></i>`).join('')}</div></div></div>`,
+    check: `<div class="${cls('check')} sb-card" ${soAttr('check')}><div class="sb-chk"><span class="sb-crown">♛</span><div class="m-grow"><b>Abonnementssjekk</b><span class="sb-dim">Gå gjennom før fornyelse</span></div></div><div class="sb-chk2">${low.length ? `<span><b>${low.length} abonnement${low.length > 1 ? 'er' : ''}</b> trenger en titt · spar opptil <span class="sb-acc">${kr(low.reduce((a, x) => a + per(x), 0))}</span></span><span class="sb-avs">${low.slice(0, 4).map((x) => lg(x, 26)).join('')}</span>` : '<span>Alt ser bra ut · ingen trenger en titt</span>'}</div></div>`,
     list: `<div class="${cls('list')} sb-lblk" ${soAttr('list')}><div class="sec">Alle abonnementer · ${kr(act().reduce((a, x) => a + P37B.myShare(x), 0) || (SB.d?.monthly ?? 0))}/mnd</div>
     ${card(all.map((x) => { const [n, c] = ST[statusOf(x)] ?? ST.active, cl = x.cycleName ?? syklus(SB.d, x.cycle).name, pr = x.perLabel ?? syklus(SB.d, x.cycle).perLabel;
       return row(x, `<span class="sb-r"><b class="m-mono">${n0(x.price)} kr<small class="sb-dim">${pr}</small></b><button class="stchip ${c}" data-subtog="${x.id}" aria-label="${x.active ? 'Si opp' : 'Gjenoppta'} ${esc(x.name)}">${x.active ? (c === 'ok' ? 'Aktiv' : 'Si opp') : 'Sagt opp'}</button></span>`, `${cl}${x.nextDate ? ` · neste ${dd(x.nextDate)}` : ''} · ${catOf(x)}${c !== 'ok' && x.active ? ` · ${n.replace(/^\W+ /, '')}` : ''}`);
@@ -299,7 +298,7 @@ function editor() {
   const when = whenText(e, day, mon);
   const chip = (attr, on, n) => `<button type="button" class="chip" ${attr} aria-pressed="${on}">${n}</button>`;
   const lgBox = e.logoUrl || e.file ? `<span class="sb-elogo" style="background-image:url('${esc(e.file ? URL.createObjectURL(e.file) : e.logoUrl)}')"></span>` : `<span class="sb-elogo ini">${esc((e.name || '?').trim().charAt(0).toUpperCase())}</span>`;
-  return `<div class="sheet-bg" data-sbx="close"></div><div class="sb-edit ${isI() ? 'glass' : ''}" role="dialog" aria-label="${e.id ? 'Rediger abonnement' : 'Nytt abonnement'}"><span class="sb-grab"></span>
+  return `<div class="sheet-bg" data-sbx="close"></div><div class="sb-edit" role="dialog" aria-label="${e.id ? 'Rediger abonnement' : 'Nytt abonnement'}"><span class="sb-grab"></span>
     <div class="m-row" style="justify-content:space-between"><b class="sb-st">${e.id ? `Rediger ${esc(e.name)}` : 'Nytt abonnement'}</b><button class="sb-x" data-sbx="close" aria-label="Lukk">×</button></div>
     <div class="sb-erow">${lgBox}<div class="m-grow"><span class="sb-dim sm">Logo</span><div class="schips"><label class="chip">↑ Last opp<input class="m-file" type="file" accept="image/*" data-sblogo></label><button type="button" class="chip" data-sbx="ailogo" ${e.busy ? 'disabled' : ''}>${e.busy === 'logo' ? '✦ Leter …' : '✦ Finn logo med AI'}</button>${e.logoUrl || e.file ? '<button type="button" class="chip" data-sbx="nologo">Fjern</button>' : ''}</div></div></div>
     <div class="sb-two"><label class="sb-lab">Navn<input class="sinp" id="m-sbe-name" data-sbe="name" value="${esc(e.name)}" placeholder="F.eks. HBO Max" autocomplete="off"></label><label class="sb-lab">Pris (kr)<input class="sinp m-mono" id="m-sbe-price" data-sbe="price" value="${esc(e.price)}" inputmode="decimal" placeholder="149"></label></div>

@@ -4,7 +4,7 @@
 //   - sammenleggbar «Rådata»-seksjon: OCR-motor, rader i mono, bildestørrelse (ocr_raw fra GET /finans/api/receipts/:id)
 //     – så brukeren ser om feilen ligger i OCR-en eller i modellen
 //   - learn51: rettet butikknavn (og ev. org.nr.) → POST /receipts/:id/merchant, så serveren lærer org.nr. → visningsnavn
-// Feltnavnene står i $S/SERVER51-API.md (RCPTSRV51). Brukes av desktop.js (confirmPanel) og mobile-sveip-og-kvitteringer.js (Kvitteringer).
+// Feltnavnene står i $S/SERVER51-API.md (RCPTSRV51). Brukes av desktop.js (confirmPanel) og mobile-kvitteringer.js (Kvitteringer).
 import { api, esc } from './core.js';
 
 const SRC = { orgnr: 'fra org.nr.', known: 'kjent butikk', model: 'modellens forslag', user: 'rettet av deg' };

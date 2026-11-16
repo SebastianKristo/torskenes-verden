@@ -7,7 +7,7 @@
 import { esc, hlApi } from './core.js';
 import { m, draw } from './mobile.js';
 import { haptic } from './mobile-haptics.js';
-import { IG, integLoad24 } from './mobile-profiler-og-bursdager.js';
+import { IG, integLoad24 } from './mobile-profiler.js';
 import * as P31 from './mobile-glimt.js';
 import { vw } from '/assets/js/lib/viewport.js'; // vindusstørrelsen uten tvungen layout
 

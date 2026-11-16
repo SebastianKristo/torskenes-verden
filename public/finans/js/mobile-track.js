@@ -3,7 +3,7 @@
 // «Push» betyr her lokale varsler (Notification) mens appen er åpen i bakgrunnen; ekte server-push finnes ikke ennå.
 import { pkgLogo, pkgTitle } from './mobile-konto-og-deling.js';
 import { esc, icon, ICONS, hlApi } from './core.js';
-import { m, draw, flash, avatar, theme } from './mobile.js';
+import { m, draw, flash, avatar } from './mobile.js';
 import { haptic, hpref, setHap } from './mobile-haptics.js';
 
 Object.assign(ICONS, {
@@ -99,8 +99,7 @@ export function trkWatch() {
 
 /* ---------- Byggeklosser ---------- */
 
-const isI = () => theme() === 'ios';
-const gl = (c = 'glass2') => (isI() ? c : '');
+const gl = (c = 'glass2') => '';
 const hm = (t) => (t ? new Date(t).toLocaleTimeString('nb-NO', { hour: '2-digit', minute: '2-digit' }) : '–');
 const dm = (t) => { if (!t) return ''; const d = new Date(t); return Number.isNaN(+d) ? String(t) : `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')} ${hm(t)}`; };
 // Prompt 22: logo kan være et objekt fra logobiblioteket. Uten fil (url: null): fargefyll med navnet, ikke favicon.
@@ -143,7 +142,7 @@ export function pkgCard(th, list, { loading = false, missing = false } = {}) {
   const ready = all.filter(isReady).length;
   const count = all.length ? `${all.length} på vei${ready ? ` · ${ready} klar` : ''}` : '';
   const rows = items.slice(0, 2).map((p) => `<span class="pkg-row">${pkgLogo(p, 34)}<span class="m-grow" style="min-width:0"><b class="m-ell">${esc(pkgTitle(p))}</b><span class="m-ell ${statusCls(p)}">${esc(statusTxt(p))}${etaTxt(p) ? ` · ${esc(etaTxt(p))}` : ''}</span>${bars(p)}</span></span>`).join('');
-  return `<a class="hcard pkgcard ${th === 'ios' ? 'glass2' : ''}" href="#/spor" aria-label="Pakker – åpne Sporing">
+  return `<a class="hcard pkgcard" href="#/spor" aria-label="Pakker – åpne Sporing">
     <span class="pkg-head"><span class="pkg-ic">${icon('box', 18)}</span><b class="m-grow">Pakker</b><span class="dim">${esc(count)}</span></span>
     ${rows || `<span class="pkg-none">${loading ? 'Henter pakker …' : missing ? 'Sporing krever nyere server.' : 'Ingen pakker på vei.'}</span>`}
     ${items.length < 2 ? pkgExtra() : ''}

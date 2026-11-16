@@ -151,10 +151,9 @@ test('CSS (desktop): kompakt sidemeny viser ikonene, lange navn i Planlegging br
 
 test('CSS (mobil): lyse farger fra det mørke designet får papirfarger', () => {
   const css = src('public/finans/css/mobile.css');
-  assert.match(css, /\.m\.papir \[style\*="color:#9FE3C6"\]:not\(\[style\*="background"\]\)\{color:var\(--pp-pos\)!important\}/);
-  assert.match(css, /\.m\.papir \[style\*="color:#FFB08A"\]:not\(\[style\*="background"\]\)\{color:var\(--pp-lab\)!important\}/);
-  assert.match(css, /\.m\.papir \.pp-cta,[^{]*\.m\.papir \.p43-gpill\{color:var\(--pp-onLab,#fff\)!important\}/);
-  // Malene skriver fargen nøyaktig slik regelen leter etter den (store bokstaver, uten mellomrom).
-  assert.match(src('public/finans/js/mobile-pages.js'), /c: '#9FE3C6'|vc: [^,]*'#FFB08A'/);
+  // Runde 3: fargene rettes i JS (amtC, papirTekst i mobile-theme.js), ikke med !important mot inline stil.
+  assert.doesNotMatch(css, /\[style\*="color:#(9FE3C6|FFB08A)"\]/);
+  assert.match(css, /\.m\.papir \.pp-cta,[^{]*\.m\.papir \.p43-gpill\{color:var\(--pp-onLab,#fff\)\}/); // runde 3: målt uten virkning av !important
+  assert.doesNotMatch(src('public/finans/js/mobile-pages.js'), /vc: [^,]*'#(9FE3C6|FFB08A)'/);
   assert.match(src('public/finans/js/mobile-pages.js'), /style="color:\$\{o\.vc \?\? 'inherit'\}"/);
 });

@@ -12,7 +12,7 @@ import { haptic } from './mobile-haptics.js';
 import { G as G31 } from './mobile-glimt.js';
 import * as P35 from './mobile-glimt-figurer.js';
 import { TR } from './mobile-track.js';
-import { BD } from './mobile-profiler-og-bursdager.js';
+import { BD } from './mobile-bursdager.js';
 import { logout } from './mobile-konto-og-deling.js';
 import { glimtOrb } from './mobile-orb.js'; // prompt 43
 

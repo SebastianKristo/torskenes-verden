@@ -4,6 +4,7 @@ import { api, esc, n0, n2, dd, dWeek, today, icon, aiLine, matApi, domApi, parse
 import { logo } from './mobile-posisjon-og-logoer.js'; // logoregisteret (prompt 20), ellers core.logo
 import { m, draw, flash, avatar, backBtn, pref } from './mobile.js';
 import { subsLoad, subsView, subsBind } from './mobile-subs.js';
+import { papirTekst } from './mobile-theme.js';
 import * as P38 from './mobile-okt-og-qr.js'; // prompt 38: Glimt-oppsummering og alt lastet ved åpning
 
 export const MODS = [
@@ -15,8 +16,7 @@ export const MODS = [
 ];
 const D = { mat: null, dirs: null, dir: {}, finn: null, err: {}, users: null, dirAdd: false, dirF: { name: '', type: 'Hytte', address: '' } };
 const desk = { sub: 'sub', dir: 'dir', finn: 'finn', mat: null, dom: null };
-const isIos = (th) => th === 'ios';
-const gl = (th, c = 'glass2') => (isIos(th) ? c : '');
+const gl = (th, c = 'glass2') => '';
 
 // Subscription OS, Delte mapper og Finn-handler ligger under Finans → Mer og får en tilbakeknapp dit.
 function head(th, title, right = '') {
@@ -78,11 +78,11 @@ function folders(th) {
   const list = D.dirs;
   if (!list) return `${head(th, navName('dir', 'Boliger'))}<div class="m-spin"></div>`;
   const f = D.dirF;
-  const form = D.dirAdd ? `${sec('Ny bolig')}<form class="${isIos(th) ? 'list glass2' : 'fields'}" data-dirnew>
-      <label class="field">${isIos(th) ? '<span>Navn</span>' : 'Navn'}<input name="name" value="${esc(f.name)}" placeholder="f.eks. Hytta Geilo" required></label>
+  const form = D.dirAdd ? `${sec('Ny bolig')}<form class="fields" data-dirnew>
+      <label class="field">Navn<input name="name" value="${esc(f.name)}" placeholder="f.eks. Hytta Geilo" required></label>
       <div class="opt-row col"><span style="font-size:13px;opacity:.7">Type</span><div class="schips">${['Enebolig', 'Leilighet', 'Hytte', 'Utleie', 'Annet'].map((t) => `<button class="chip" type="button" data-dirtype="${t}" aria-pressed="${f.type === t}">${t}</button>`).join('')}</div></div>
-      <label class="field">${isIos(th) ? '<span>Adresse</span>' : 'Adresse'}<input name="address" value="${esc(f.address)}" placeholder="Valgfritt"></label>
-      <div style="padding:${isIos(th) ? '10px 12px' : '0'};display:flex;gap:8px"><button class="pri-b" type="submit" style="flex:1">Opprett</button><button class="sec-b" type="button" data-diradd="0" style="flex:1">Avbryt</button></div></form>
+      <label class="field">Adresse<input name="address" value="${esc(f.address)}" placeholder="Valgfritt"></label>
+      <div style="padding:0;display:flex;gap:8px"><button class="pri-b" type="submit" style="flex:1">Opprett</button><button class="sec-b" type="button" data-diradd="0" style="flex:1">Avbryt</button></div></form>
       <div class="snote">Del boligen med andre brukere etterpå. Nye brukere legges til av admin i Homelab → Innstillinger → Konto og sikkerhet.</div>` : '';
   return `${head(th, navName('dir', 'Boliger'), D.dirAdd ? '' : '<button class="tonal" data-diradd="1">+ Ny</button>')}
     <div style="font-size:14px;opacity:.7;padding:0 4px;margin-top:-6px">Utgifter til bolig, hytte og utleie</div>${form}
@@ -107,7 +107,7 @@ function folder(th, id) {
       <span class="m-bar" style="height:5px;background:rgba(127,127,127,.18)"><i style="width:${Math.min(100, c.pct ?? 0)}%;background:${esc(c.color)}"></i></span>
       ${(c.subs ?? []).map((x) => `<span class="m-row" style="justify-content:space-between;gap:8px;font-size:12.5px;opacity:.72;padding-left:18px"><span class="m-ell">${esc(x.name)}</span><span class="m-mono">${n0(x.sum)} kr</span></span>`).join('')}</div>`).join(''))}` : ''}
     ${sec('Utgifter')}
-    ${listBox(th, (f.entries ?? []).map((e) => `<div class="item">${logo(e, 40, isIos(th) ? 20 : 12)}<span class="m-grow"><span class="m-ell" style="font-weight:500">${esc(e.description)}</span>${aiLine(e.aiShort, 'm-ell ai')}<span class="m-ell s">${e.pending ? '✦ Kategoriseres … · ' : e.categoryLabel ? `<span style="color:${esc(e.color ?? 'inherit')}">${e.aiCategory ? '✦ ' : ''}${esc(e.categoryLabel)}</span> · ` : ''}${dd(e.date)}${e.paidBy ? ` · betalt av ${esc(e.paidBy)}` : ''}${e.split ? ` · ${esc(e.split)}` : ''}</span></span><span class="m-mono" style="font-weight:600">${n2(e.amount)}</span></div>`).join('') || '<div class="m-empty">Ingen utgifter ennå.</div>')}
+    ${listBox(th, (f.entries ?? []).map((e) => `<div class="item">${logo(e, 40, 12)}<span class="m-grow"><span class="m-ell" style="font-weight:500">${esc(e.description)}</span>${aiLine(e.aiShort, 'm-ell ai')}<span class="m-ell s">${e.pending ? '✦ Kategoriseres … · ' : e.categoryLabel ? `<span style="color:${esc(papirTekst(e.color ?? 'inherit'))}">${e.aiCategory ? '✦ ' : ''}${esc(e.categoryLabel)}</span> · ` : ''}${dd(e.date)}${e.paidBy ? ` · betalt av ${esc(e.paidBy)}` : ''}${e.split ? ` · ${esc(e.split)}` : ''}</span></span><span class="m-mono" style="font-weight:600">${n2(e.amount)}</span></div>`).join('') || '<div class="m-empty">Ingen utgifter ennå.</div>')}
     ${ro && !bolEditable().length ? '<div class="m-empty">Du har lesetilgang. Be en eier om redigeringstilgang for å legge til utgifter.</div>' : addForm(th, f, members)}
     ${sharing(th, f)}`;
 }
@@ -117,15 +117,15 @@ const bolTarget = (f) => { const t = D.bolTarget?.[f.id]; return bolEditable().s
 function addForm(th, f, members) {
   const list = bolEditable(), tgt = bolTarget(f), other = tgt !== f.id;
   const opts = (f.catTree ?? []);
-  const lab = (t) => (isIos(th) ? `<span>${t}</span>` : t);
+  const lab = (t) => t;
   return `${sec('Legg til utgift eller kvittering')}
     ${list.length > 1 ? `<div class="opt-row col" style="padding:0 2px"><span style="font-size:13px;opacity:.7">Legg i bolig</span><div class="schips">${list.map((x) => `<button class="chip" type="button" data-boltgt="${f.id}:${x.id}" aria-pressed="${x.id === tgt}">${esc(x.name)}</button>`).join('')}</div></div>` : ''}
-    <form class="${isIos(th) ? 'list glass2' : 'fields'}" data-dirform="${esc(String(tgt))}" data-from="${esc(String(f.id))}">
+    <form class="fields" data-dirform="${esc(String(tgt))}" data-from="${esc(String(f.id))}">
       <label class="field">${lab('Beskrivelse')}<input name="description" required placeholder="F.eks. Plantasjen, blomster"></label>
       <label class="field">${lab('Beløp')}<input name="amount" inputmode="decimal" required placeholder="0,00" class="m-mono"></label>
       <label class="field">${lab('Kategori')}<select name="categoryId"><option value="">✦ AI velger</option>${opts.map((o) => `<option value="${o.id}">${o.sub ? '  ' : ''}${esc(o.label)}</option>`).join('')}</select></label>
       ${other ? '' : `<label class="field">${lab('Betalt av')}<select name="paidBy">${members.map((x) => `<option>${esc(x.name ?? x.username)}</option>`).join('')}</select></label>`}
-      <div style="padding:${isIos(th) ? '10px 12px' : '0'};display:flex;gap:8px"><button class="pri-b" type="submit" style="flex:1;height:50px">Legg til</button><label class="sec-b" style="flex:1;height:50px;display:flex;align-items:center;justify-content:center;cursor:pointer">Kvittering<input type="file" accept="image/*,application/pdf" multiple hidden data-dirrc="${esc(String(tgt))}" data-from="${esc(String(f.id))}"></label></div>
+      <div style="padding:0;display:flex;gap:8px"><button class="pri-b" type="submit" style="flex:1;height:50px">Legg til</button><label class="sec-b" style="flex:1;height:50px;display:flex;align-items:center;justify-content:center;cursor:pointer">Kvittering<input type="file" accept="image/*,application/pdf" multiple hidden data-dirrc="${esc(String(tgt))}" data-from="${esc(String(f.id))}"></label></div>
     </form>
     <div class="snote">${other ? `Havner i ${esc(list.find((x) => x.id === tgt)?.name ?? '')}. ` : ''}✦ AI velger kategori og underkategori, og kan lage en ny når ingen passer.</div>`;
 }
@@ -146,7 +146,7 @@ function finn(th) {
   if (!f) return `${head(th, navName('finn', 'Finn-handler'))}<div class="m-spin"></div>`;
   return `${head(th, navName('finn', 'Finn-handler'))}
     ${kpis(th, [['Kjøpt i år', `${n0(f.bought ?? 0)} kr`], ['Solgt i år', `${n0(f.sold ?? 0)} kr`], ['Pågående', String(f.ongoing ?? 0)]])}
-    ${listBox(th, (f.items ?? []).map((x) => `<div class="item" style="align-items:flex-start">${logo({ domain: 'finn.no', description: 'Finn' }, 40, isIos(th) ? 20 : 12)}<span class="m-grow"><span class="m-row" style="gap:8px"><em class="role ${x.role === 'sold' ? 'sold' : 'bought'}">${x.role === 'sold' ? 'Solgt' : 'Kjøpt'}</em><span class="m-ell" style="font-weight:500">${esc(x.item)}</span></span><span class="m-ell s">${esc(x.counterpart ?? '')}${x.date ? ` · ${dd(x.date)}` : ''}</span>
+    ${listBox(th, (f.items ?? []).map((x) => `<div class="item" style="align-items:flex-start">${logo({ domain: 'finn.no', description: 'Finn' }, 40, 12)}<span class="m-grow"><span class="m-row" style="gap:8px"><em class="role ${x.role === 'sold' ? 'sold' : 'bought'}">${x.role === 'sold' ? 'Solgt' : 'Kjøpt'}</em><span class="m-ell" style="font-weight:500">${esc(x.item)}</span></span><span class="m-ell s">${esc(x.counterpart ?? '')}${x.date ? ` · ${dd(x.date)}` : ''}</span>
       <span class="steps">${(x.steps ?? []).map((s) => `<em class="${s.done ? 'done' : ''}">${esc(s.t ?? s.name ?? s.label ?? s)}</em>`).join('')}</span></span><span class="m-mono" style="font-weight:600;color:${x.role === 'sold' ? 'var(--pp-pos)' : 'inherit'}">${x.role === 'sold' ? '+' : '−'}${n0(x.amount)}</span></div>`).join('') || '<div class="m-empty">Ingen Finn-handler ennå. Lim inn Finn-e-poster i Økonomi på PC.</div>')}`;
 }
 
@@ -224,7 +224,7 @@ const shareRows = (th, rows, total, name = 'name', val = 'visitors') => { const 
 
 function domManage(th) {
   const f = dm.add;
-  return `<div class="m-row" style="justify-content:space-between;padding:6px 4px 0"><div class="title" style="font-size:${isIos(th) ? 30 : 32}px">Domener</div><button class="tonal" data-dom="mclose">Ferdig</button></div>
+  return `<div class="m-row" style="justify-content:space-between;padding:6px 4px 0"><div class="title" style="font-size:32px">Domener</div><button class="tonal" data-dom="mclose">Ferdig</button></div>
     ${sec('Dine domener')}${listBox(th, (dm.list ?? []).map((d) => `<div class="opt-row"><span class="m-grow">${esc(d.name)}<br><span style="font-size:12px;opacity:.6">${esc(DSRC[d.source] ?? d.source ?? '')}${d.hasToken ? ' · eget token' : ''}</span></span><button class="mini danger" data-dom="rm" data-id="${esc(d.id)}" data-name="${esc(d.name)}">Fjern</button></div>`).join('') || '<div class="m-empty">Ingen domener ennå.</div>')}
     ${sec('Legg til domene')}<form class="list ${gl(th)}" data-domadd><label class="opt-row col"><span style="font-size:13px;opacity:.7">Domene</span><input class="sinp" name="name" id="m-dom-name" value="${esc(f.name)}" placeholder="eksempel.no" inputmode="url" autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="off"></label>
       <div class="opt-row col"><span style="font-size:13px;opacity:.7">Statistikkilde</span><div class="chips">${Object.entries(DSRC).map(([k, n]) => `<button type="button" class="chip" data-dom="src" data-v="${k}" aria-pressed="${f.source === k}">${n}</button>`).join('')}</div></div>
@@ -272,7 +272,7 @@ function domView(th) {
   // Prompt 12: domenevelgeren er bare et ikon, og ligger sammen med Oppdater ved siden av profilbildet.
   const pickBtn = `<button class="mini dpick-ic${dm.pick ? ' on' : ''}" data-dom="pick" aria-expanded="${dm.pick}" aria-label="Velg domene (${esc(dm.sel ?? 'ingen valgt')})">${icon('globe', 18)}</button>`;
   // iPhone: tannhjulet ligger i fanelinjen (samme plass som Skann i Finans), ikke øverst.
-  const right = `${pickBtn}<button class="mini" data-dom="refresh" aria-label="Oppdater">${icon('refresh', 18)}</button>${isIos(th) ? '' : `<a class="mini" href="#/set/dom" aria-label="Innstillinger">${icon('gear', 18)}</a>`}`;
+  const right = `${pickBtn}<button class="mini" data-dom="refresh" aria-label="Oppdater">${icon('refresh', 18)}</button>${`<a class="mini" href="#/set/dom" aria-label="Innstillinger">${icon('gear', 18)}</a>`}`;
   const manageRow = `<button class="opt-row" data-dom="manage"><span class="m-grow" style="color:var(--m-acc);font-weight:600">＋ Administrer domener</span></button>`;
   const top = `<div class="m-row" style="justify-content:space-between;padding:6px 4px 0;gap:8px"><b class="dname m-ell">${esc(dm.sel ?? 'Domener')}</b><span class="m-row" style="gap:8px;flex:none">${right}${avatar()}</span></div>
     ${dm.pick ? listBox(th, (dm.list ?? []).map((d) => `<button class="opt-row" data-dom="sel" data-name="${esc(d.name)}"><span class="m-grow">${esc(d.name)}<br><span style="font-size:12px;opacity:.6">${esc(DSRC[d.source] ?? d.source ?? '')}</span></span>${d.name === dm.sel ? '<span style="color:var(--m-acc)">✓</span>' : ''}</button>`).join('') + manageRow) : ''}`;
@@ -294,7 +294,7 @@ function domView(th) {
   const STAT = { active: ['Aktiv', '#7BE3A0'], down: ['Nede', '#FF8A80'], pending: ['Venter', '#F2B56B'] }[a.status] ?? ['Ukjent', 'inherit'];
   const meta = [`<b style="color:${STAT[1]};font-weight:600">● ${STAT[0]}</b>`, a.plan ? esc(a.plan) : '', a.sslExpires ? `SSL til ${dd(a.sslExpires)}.${String(a.sslExpires).slice(0, 4)}` : ''].filter(Boolean).join(' · ');
   liveTimer(tab === 'traf');
-  return `${top}<div class="title" style="font-size:${isIos(th) ? 30 : 32}px">${DOMTABS.find(([k]) => k === `dom/${tab}`)[1]}</div><div style="font-size:13px;opacity:.75;padding:0 4px">${meta}</div>${a.error ? `<div class="m-empty" style="padding:8px">${esc(a.error)}${a.stale ? ' · viser sist hentede tall' : ''}</div>` : ''}${body}${mock}`;
+  return `${top}<div class="title" style="font-size:32px">${DOMTABS.find(([k]) => k === `dom/${tab}`)[1]}</div><div style="font-size:13px;opacity:.75;padding:0 4px">${meta}</div>${a.error ? `<div class="m-empty" style="padding:8px">${esc(a.error)}${a.stale ? ' · viser sist hentede tall' : ''}</div>` : ''}${body}${mock}`;
 }
 const chipRow = (opts, cur, key) => `<div style="display:flex;gap:8px;overflow-x:auto">${opts.map(([k, n]) => `<button class="chip" data-dom="${key}" data-v="${k}" aria-pressed="${cur === k}">${cur === k ? '✓ ' : ''}${n}</button>`).join('')}</div>`;
 function domTraf(th, a, { card = true, chips = true } = {}) {
@@ -453,6 +453,6 @@ export function modAfterDraw(th) {
   const a = dm.data[`${dm.sel}|${dm.per}`];
   const lt = th === 'and' && m.light;
   import('/assets/js/worldmap.js').then(({ drawMap }) => drawMap(el, a?.countries ?? [], {
-    lo: lt ? '#F2C4D3' : '#4a2433', hi: lt ? '#8A4E61' : '#FFB1C8', empty: lt ? '#EBDDE1' : th === 'and' ? '#3A2F33' : '#2A2228', stroke: lt ? '#FFFFFF' : th === 'and' ? '#1A1114' : '#141016', tap: true,
+    lo: lt ? '#F2C4D3' : '#4a2433', hi: lt ? '#8A4E61' : '#FFB1C8', empty: lt ? '#EBDDE1' : '#3A2F33', stroke: lt ? '#FFFFFF' : '#1A1114', tap: true,
   })).catch(() => { el.innerHTML = '<div class="wm-msg">Kunne ikke laste kartet.</div>'; });
 }

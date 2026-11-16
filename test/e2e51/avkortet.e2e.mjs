@@ -38,3 +38,30 @@ for (const hash of ['#/sporing', '#/media']) {
     assert.deepEqual(errors, []);
   });
 }
+
+// Runde 3: Kvitteringer i Økonomi (desktop og mobil-web) bruker samme hjelper. Butikknavnet får en lang tekst, så den kuttes.
+for (const [navn, vp, mobil] of [['desktop', { width: 1440, height: 900 }, false], ['mobil', { width: 390, height: 844 }, true]]) {
+  test(`avkortet tekst får tooltip (Økonomi → Kvitteringer, ${navn})`, async (t) => {
+    if (!E) return t.skip('ingen nettleser');
+    const ctx = await E.browser.newContext({ viewport: vp, isMobile: mobil, hasTouch: false, serviceWorkers: 'block' });
+    t.after(() => ctx.close());
+    await ctx.route((u) => !u.href.startsWith(BASE), (r) => r.abort());
+    await apiLogin(ctx, 'sebastian', PASSWORD);
+    const page = await ctx.newPage();
+    const errors = watchErrors(page);
+    await page.goto(`${BASE}/finans/#/kv`);
+    const res = await page.waitForFunction(() => {
+      const ell = [...document.querySelectorAll('#app *')].filter((el) => !el.hasAttribute('title') && getComputedStyle(el).textOverflow === 'ellipsis'
+        && el.children.length === 0 && el.textContent.trim() && el.getBoundingClientRect().width > 20);
+      if (!ell.length) return null;
+      let el = ell.find((x) => x.scrollWidth > x.clientWidth + 1);
+      if (!el) { el = ell[0]; el.textContent = 'En svært lang butikk som ikke får plass på én linje i denne bredden – den kuttes med ellipse'; }
+      const tekst = el.textContent.replace(/\s+/g, ' ').trim();
+      el.dispatchEvent(new PointerEvent('pointerover', { bubbles: true }));
+      return { tekst, title: el.getAttribute('title') };
+    }, null, { timeout: 15_000 }).then((h) => h.jsonValue()).catch(() => null);
+    assert.ok(res, 'fant ingen tekst med ellipse i Kvitteringer');
+    assert.equal(res.title, res.tekst);
+    assert.deepEqual(errors.filter((e) => !/\/api\//.test(e)), []);
+  });
+}

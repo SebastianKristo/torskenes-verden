@@ -1,6 +1,7 @@
 // Velger desktop eller mobil (PWA i Papir-design / brettbar) ut fra skjerm og enhet.
 import { S, onChange, loadBoot, loadAi, toast } from './core.js';
 import { startVersionCheck } from '../../js/vercheck.js';
+import { bindAvkortet } from '../../js/ui/avkortet.js';
 
 const isMobile = () => !new URLSearchParams(location.search).has('desktop') && (matchMedia('(max-width: 899px)').matches || (matchMedia('(pointer: coarse)').matches && matchMedia('(max-width: 1100px)').matches));
 let ui = null;
@@ -71,6 +72,8 @@ async function start() {
   onChange(() => ui?.draw());
   window.addEventListener('hashchange', () => ui?.route());
   window.addEventListener('resize', pick);
+  // E-B13: butikk og varelinjer som kuttes med «…» i Kvitteringer, får hele teksten som tooltip (desktop og mobil-web).
+  bindAvkortet(() => /^#\/kv(\/|$)/.test(location.hash));
   await pick();
   loadAi().then(() => ui?.draw());
   // Prompt 52 (WEB52F): «Nytt i versjon» som lesbart papirkort første gang etter en oppdatering (web og PWA).

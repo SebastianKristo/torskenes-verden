@@ -14,10 +14,11 @@ import { edOn, edBlocks, finKeys, finScreens, fabStyle, fourth, onWay, rcBanner,
 import { mainTabs, heroBg, bolTitle } from './mobile-fanelinje.js';
 import { SB } from './mobile-subs.js';
 import { aksTitle } from './mobile-aks.js';
-import * as P23 from './mobile-sveip-og-kvitteringer.js';
+import * as P23 from './mobile-sveip.js';
 import * as P29 from './mobile-sok-og-backup.js';
 import * as P30 from './mobile-system-og-ark.js';
-import * as P24 from './mobile-profiler-og-bursdager.js';
+import * as P24 from './mobile-profiler.js';
+import * as BDM from './mobile-bursdager.js'; // Bursdager (skilt ut fra mobile-profiler.js)
 import * as P25 from './mobile-fanelinje-stil.js';
 import * as P26 from './mobile-integrasjoner.js';
 import * as KAL from './mobile-kal.js';
@@ -402,7 +403,7 @@ export function homeBlocks() {
     h4: `<div class="pp-minis">${minis.map(([k, v, sub, c, href, fs]) => `<a class="pp-card pp-mini" href="${href}"><span class="pp-lab mut">${k}</span><b class="pp-serif m-ell" style="font-size:${fs}">${esc(v)}</b><span class="${c === 'lab' ? 'pp-lab-c' : `pp-${c}`}" style="font-size:11px">${esc(sub)}</span></a>`).join('')}</div>`,
     h5: newsCard(H?.news),
     // Nye kort (prompt 17): Posisjon (familien), Bolig (budsjett, gjennomgang og neste faste utgift) og Huskeliste.
-    h6: posCard(), h7: bolWidget(), h8: P37.todoWidget(), h9: P24.bdWidget(), h10: KAL.kalWidget(), h11: P32.trialsWidget(edOn('hl')), // prompt 46: skjult uten aktive prøveperioder // Prompt 32: Prøveperioder
+    h6: posCard(), h7: bolWidget(), h8: P37.todoWidget(), h9: BDM.bdWidget(), h10: KAL.kalWidget(), h11: P32.trialsWidget(edOn('hl')), // prompt 46: skjult uten aktive prøveperioder // Prompt 32: Prøveperioder
     h12: P36.briefCard(P35.briefCard(), edOn('hl')), h13: P37B.bibleHome(edOn('hl')), h14: globalThis.P40?.hjemlysHome?.(edOn('hl')) ?? '', // Prompt 40: Vel fremme // Prompt 37: Dagens bibelvers (bare med modulen) // Prompt 34/35/36: sveip mot høyre skjuler kortet til neste brief: Glimt-brief øverst med vertsfiguren
     h15: globalThis.P41?.tripHome?.(edOn('hl')) ?? '', // Prompt 41: Min reise · forlot skolen (bare når relevant)
     h16: globalThis.P43?.mediaHome?.(edOn('hl')) ?? '', // Prompt 43: Media · lastes ned og kommer (h12 er Glimt-brief)
