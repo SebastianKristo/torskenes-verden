@@ -158,3 +158,9 @@ test('kalendervisningene har navn og rekkefølge fra modullisten', () => {
   const hv = [...h.slice(h.indexOf('static let views')).matchAll(/\("([^"]+)", "([^"]+)", "[^"]+"\)/g)].map((x) => x[2]).slice(0, 5);
   assert.deepEqual(hv, vis.filter((u) => u.id !== 'ar').map((u) => u.navn));
 });
+
+test('Media-widgeten: «Pause alt» og «Fortsett» kaller stien serveren har, uten en 404-rundtur først (A §6 B5)', () => {
+  const f = read(IOS, 'Shared', 'MediaShared.swift');
+  assert.doesNotMatch(f, /request\("\/api\/media\/qbit\//);
+  for (const a of ['pauseAll', 'resumeAll']) assert.ok(f.includes(`request("/api/media/torrents/${a}"`), a);
+});
