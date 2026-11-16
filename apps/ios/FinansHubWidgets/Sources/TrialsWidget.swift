@@ -32,7 +32,7 @@ enum TrialsFetch32b {
     static func load() async -> TrialsEntry32b {
         let linked: Bool = !(WidgetShared.token ?? "").isEmpty
         var items: [TrialW32b] = []
-        if let d = await Trials32b.request("/api/widgets/trials") {
+        if let d = await Trials32b.request(WidgetShared.medBelopsvalg("/api/widgets/trials")) {
             items = Trials32b.parse(d)
             WidgetShared.defaults.set(d, forKey: Trials32b.cacheKey)
         } else if let d = await Trials32b.request("/finans/api/subscriptions/trials") {
@@ -231,7 +231,7 @@ private struct TrialsMedium32b: View {
                     Spacer(minLength: 4)
                     TrialRing32b(t: t, size: 86)
                     Spacer(minLength: 4)
-                    Text(t.name + " · " + t.priceText).font(.system(size: 14, weight: .bold)).foregroundStyle(trInk).lineLimit(1)
+                    Text(t.name + " · " + trPris(t)).font(.system(size: 14, weight: .bold)).foregroundStyle(trInk).lineLimit(1)
                 }
                 .frame(width: 118, alignment: .leading)
                 VStack(alignment: .leading, spacing: 8) {
@@ -314,7 +314,7 @@ private struct TrialsRect32b: View {
         VStack(alignment: .leading, spacing: 1) {
             if let t = entry.items.first {
                 Text("⏳ " + t.name).font(.system(size: 13, weight: .bold)).lineLimit(1).widgetAccentable()
-                Text("\(t.days()) \(t.unit()) · \(t.priceText)").font(.system(size: 12)).lineLimit(1)
+                Text("\(t.days()) \(t.unit()) · \(trPris(t))").font(.system(size: 12)).lineLimit(1)
                 Text("Avslutt før " + t.endShort).font(.system(size: 11)).opacity(0.75).lineLimit(1)
             } else {
                 Text("⏳ Prøveperioder").font(.system(size: 13, weight: .bold)).widgetAccentable()
@@ -323,4 +323,9 @@ private struct TrialsRect32b: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
+}
+
+/// Prisen i widgeten: «•••» når beløpene er skjult (WidgetShared.skjulBelop), ellers serverens tekst.
+private func trPris(_ t: TrialW32b) -> String {
+    WidgetShared.skjulBelop ? WidgetShared.skjultBelop : t.priceText
 }

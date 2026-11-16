@@ -100,6 +100,42 @@ enum WidgetShared {
         return out
     }
 
+    /* ---------- «Skjul beløp» i widgetene ---------- */
+    // Appens personvernvalg («Skjul beløp til jeg trykker», fh_hide_amounts) speiles hit, så widgetene ber serveren skjule
+    // beløpene (?hideAmounts=1 på /api/mobile/widgets, /api/widgets/trials og /api/brief/widget) og selv viser «•••» i
+    // tallfeltene. Serveren sender også hideAmounts i svaret (valget i /api/me/notify); da skjules de på samme måte.
+
+    /// Enhetens valg (fra appen).
+    static var hideAmounts: Bool {
+        get { defaults.bool(forKey: "w.hideAmounts") }
+        set { defaults.set(newValue, forKey: "w.hideAmounts") }
+    }
+
+    /// Serverens valg (hideAmounts i siste widgetsvar).
+    static var hideAmountsServer: Bool {
+        get { defaults.bool(forKey: "w.hideAmountsServer") }
+        set { defaults.set(newValue, forKey: "w.hideAmountsServer") }
+    }
+
+    /// Skal tallfeltene i widgetene vises som «•••»?
+    static var skjulBelop: Bool { hideAmounts || hideAmountsServer }
+
+    /// Stien med ?hideAmounts=1 når enheten skjuler beløp.
+    static func medBelopsvalg(_ path: String) -> String {
+        guard hideAmounts else { return path }
+        return path + (path.contains("?") ? "&" : "?") + "hideAmounts=1"
+    }
+
+    /// Leser hideAmounts fra et widgetsvar (JSON-objekt øverst).
+    static func lesBelopsvalg(_ data: Data) {
+        guard let o = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] else { return }
+        let v: Bool = (o["hideAmounts"] as? Bool) ?? false
+        if v != hideAmountsServer { hideAmountsServer = v }
+    }
+
+    /// «•••» i stedet for et beløp når beløpene er skjult.
+    static let skjultBelop: String = "•••"
+
     /// Siste svar, så widgeten har noe å vise når serveren ikke svarer.
     static var cache: Data? {
         get { defaults.data(forKey: "w.cache") }

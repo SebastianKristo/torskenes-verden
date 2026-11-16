@@ -107,12 +107,15 @@ private let nb2: NumberFormatter = {
     return f
 }()
 
+/// Beløp i widgetene. «Skjul beløp» (appens valg eller serverens hideAmounts) gir «•••» (WidgetShared.skjulBelop).
 private func kr(_ v: Double?) -> String {
+    if WidgetShared.skjulBelop { return WidgetShared.skjultBelop }
     guard let v else { return "–" }
     let s = nb.string(from: NSNumber(value: abs(v))) ?? "\(Int(abs(v)))"
     return (v < 0 ? "−" : "") + s
 }
 private func signed2(_ v: Double) -> String {
+    if WidgetShared.skjulBelop { return WidgetShared.skjultBelop }
     let s = nb2.string(from: NSNumber(value: abs(v))) ?? String(format: "%.2f", abs(v))
     return (v < 0 ? "−" : "+") + s
 }

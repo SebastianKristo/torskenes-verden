@@ -146,8 +146,8 @@ struct Plat51PlanView: View {
     private var s: Plat51PlanSnap { entry.snap }
 
     private var voice: String {
-        var t: String = "Saldo " + Plat51Net.kr(s.today)
-        if !s.lowestDate.isEmpty { t += ". Laveste " + Plat51Net.kr(s.lowest) + " " + Plat51Net.day(s.lowestDate) }
+        var t: String = "Saldo " + platKr(s.today)
+        if !s.lowestDate.isEmpty { t += ". Laveste " + platKr(s.lowest) + " " + Plat51Net.day(s.lowestDate) }
         return t
     }
 
@@ -155,7 +155,7 @@ struct Plat51PlanView: View {
         Group {
             switch family {
             case .accessoryInline:
-                Text("Saldo " + Plat51Net.kr(s.today))
+                Text("Saldo " + platKr(s.today))
             case .accessoryRectangular:
                 rect
             default:
@@ -171,8 +171,8 @@ struct Plat51PlanView: View {
     private var rect: some View {
         VStack(alignment: .leading, spacing: 1) {
             Text("Saldo").font(.system(size: 11, weight: .semibold)).widgetAccentable()
-            Text(Plat51Net.kr(s.today)).font(.system(size: 17, weight: .bold)).monospacedDigit().lineLimit(1).minimumScaleFactor(0.7)
-            Text(s.lowestDate.isEmpty ? "Ingen prognose" : "Lavest " + Plat51Net.kr(s.lowest) + " · " + Plat51Net.day(s.lowestDate))
+            Text(platKr(s.today)).font(.system(size: 17, weight: .bold)).monospacedDigit().lineLimit(1).minimumScaleFactor(0.7)
+            Text(s.lowestDate.isEmpty ? "Ingen prognose" : "Lavest " + platKr(s.lowest) + " · " + Plat51Net.day(s.lowestDate))
                 .font(.system(size: 11)).lineLimit(1)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -199,10 +199,10 @@ struct Plat51PlanView: View {
     private var small: some View {
         VStack(alignment: .leading, spacing: 2) {
             Text("Saldo").font(.system(size: 12, weight: .semibold)).foregroundStyle(Color.white.opacity(0.75))
-            Text(Plat51Net.kr(s.today)).font(.system(size: 24, weight: .semibold)).monospacedDigit().lineLimit(1).minimumScaleFactor(0.6)
+            Text(platKr(s.today)).font(.system(size: 24, weight: .semibold)).monospacedDigit().lineLimit(1).minimumScaleFactor(0.6)
             Plat51Spark(values: s.series).frame(height: 28).padding(.vertical, 6)
             Spacer(minLength: 0)
-            Text("Lavest " + Plat51Net.kr(s.lowest)).font(.system(size: 12, weight: .semibold))
+            Text("Lavest " + platKr(s.lowest)).font(.system(size: 12, weight: .semibold))
                 .foregroundStyle(s.lowest < 0 ? Plat51W.warn : Plat51W.accentLight).lineLimit(1).minimumScaleFactor(0.7)
             if !s.lowestDate.isEmpty {
                 Text(Plat51Net.day(s.lowestDate)).font(.system(size: 11)).foregroundStyle(Color.white.opacity(0.6))
@@ -216,17 +216,17 @@ struct Plat51PlanView: View {
         HStack(alignment: .top, spacing: 14) {
             VStack(alignment: .leading, spacing: 3) {
                 Text("Saldo nå").font(.system(size: 12, weight: .semibold)).foregroundStyle(Color.white.opacity(0.75))
-                Text(Plat51Net.kr(s.today)).font(.system(size: 26, weight: .semibold)).monospacedDigit().lineLimit(1).minimumScaleFactor(0.6)
-                Text("Om 30 dager " + Plat51Net.kr(s.end)).font(.system(size: 12)).foregroundStyle(Color.white.opacity(0.7)).lineLimit(1)
+                Text(platKr(s.today)).font(.system(size: 26, weight: .semibold)).monospacedDigit().lineLimit(1).minimumScaleFactor(0.6)
+                Text("Om 30 dager " + platKr(s.end)).font(.system(size: 12)).foregroundStyle(Color.white.opacity(0.7)).lineLimit(1)
                 Spacer(minLength: 0)
                 if !s.nextName.isEmpty {
-                    Text("Neste: " + s.nextName + " " + Plat51Net.kr(abs(s.nextAmount))).font(.system(size: 12, weight: .medium)).lineLimit(1)
+                    Text("Neste: " + s.nextName + " " + platKr(abs(s.nextAmount))).font(.system(size: 12, weight: .medium)).lineLimit(1)
                     Text(Plat51Net.day(s.nextDate)).font(.system(size: 11)).foregroundStyle(Color.white.opacity(0.6))
                 }
             }
             VStack(alignment: .leading, spacing: 4) {
                 Plat51Spark(values: s.series).frame(maxHeight: .infinity)
-                Text("Lavest " + Plat51Net.kr(s.lowest) + (s.lowestDate.isEmpty ? "" : " · " + Plat51Net.day(s.lowestDate)))
+                Text("Lavest " + platKr(s.lowest) + (s.lowestDate.isEmpty ? "" : " · " + Plat51Net.day(s.lowestDate)))
                     .font(.system(size: 12, weight: .semibold)).foregroundStyle(s.lowest < 0 ? Plat51W.warn : Plat51W.accentLight).lineLimit(1).minimumScaleFactor(0.7)
             }
         }
@@ -573,4 +573,9 @@ struct Plat51DepView: View {
         .foregroundStyle(Color.white)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
+}
+
+/// Beløp i plan-/økonomiwidgetene: «•••» når beløpene er skjult (WidgetShared.skjulBelop), ellers «48 312 kr».
+private func platKr(_ v: Double) -> String {
+    WidgetShared.skjulBelop ? WidgetShared.skjultBelop : Plat51Net.kr(v)
 }

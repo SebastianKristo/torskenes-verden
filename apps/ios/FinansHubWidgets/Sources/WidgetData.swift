@@ -181,13 +181,15 @@ enum WidgetFetch {
         guard let token = WidgetShared.token, !token.isEmpty else { return (WidgetData(), false) }
         for base in WidgetShared.bases {
             let trimmed = base.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
-            guard let url = URL(string: trimmed + "/api/mobile/widgets") else { continue }
+            // «Skjul beløp»: enhetens valg sendes med (?hideAmounts=1), serverens valg leses fra svaret.
+            guard let url = URL(string: trimmed + WidgetShared.medBelopsvalg("/api/mobile/widgets")) else { continue }
             var r = URLRequest(url: url)
             r.timeoutInterval = 8
             r.setValue("application/json", forHTTPHeaderField: "Accept")
             r.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
             if let pair = try? await HomelabHTTP.session.data(for: r), (pair.1 as? HTTPURLResponse)?.statusCode == 200 {
                 let data = pair.0
+                WidgetShared.lesBelopsvalg(data)
                 WidgetShared.cache = data
                 return (WidgetData(json: data), true)
             }

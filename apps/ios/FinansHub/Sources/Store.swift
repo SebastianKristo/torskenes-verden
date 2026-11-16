@@ -399,7 +399,7 @@ final class Store {
     var lockEnabled = UserDefaults.standard.bool(forKey: "fh_lock") { didSet { UserDefaults.standard.set(lockEnabled, forKey: "fh_lock") } }
     var lockAfter = UserDefaults.standard.integer(forKey: "fh_lock_after") { didSet { UserDefaults.standard.set(lockAfter, forKey: "fh_lock_after") } }
     var hideSwitcher = UserDefaults.standard.bool(forKey: "fh_hide_switcher") { didSet { UserDefaults.standard.set(hideSwitcher, forKey: "fh_hide_switcher") } }
-    var hideAmounts = UserDefaults.standard.bool(forKey: "fh_hide_amounts") { didSet { UserDefaults.standard.set(hideAmounts, forKey: "fh_hide_amounts"); Privacy.shared.hidden = hideAmounts } }
+    var hideAmounts = UserDefaults.standard.bool(forKey: "fh_hide_amounts") { didSet { UserDefaults.standard.set(hideAmounts, forKey: "fh_hide_amounts"); Privacy.shared.hidden = hideAmounts; syncWidgets() } }
     /// homelab | home | list | budget. Lagres også i oppsettet på serveren (layout.mobile.start).
     var startPage = UserDefaults.standard.string(forKey: "fh_start") ?? "homelab" {
         didSet {
