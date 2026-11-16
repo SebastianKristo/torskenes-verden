@@ -36,7 +36,7 @@ async function probe() {
     return { up: true, ready: !!j.ready, restarting, phase, updating: j.updating === true, steps: Array.isArray(j.steps) ? j.steps : null, ver: j.version ?? '', to: j.updatingTo ?? null };
   } catch { return { down: true }; }
 }
-/** /api/ready (SERVER44) → {ok, version} og /api/health må begge si klar (og ikke «restarting»). /api/ready 404 → bare helsa. */
+/** GET /api/ready → {ok, ready, version} (503 mens serveren starter) og /api/health må begge si klar. Eldre server uten /api/ready (404) → bare helsa. */
 async function readyProbe() {
   let rd = null;
   try {

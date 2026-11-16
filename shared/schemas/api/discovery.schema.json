@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "api/discovery.schema.json",
+  "title": "Serveroppdagelse",
+  "description": "Uten innlogging. Appene bruker den ved oppsett. local har serverens lokale adresser bare når klienten er på lokalt nett (10/8, 172.16/12, 192.168/16), lest fra tilkoblingen eller fra CF-Connecting-IP bak Cloudflare, aldri fra X-Forwarded-For. Fra internett er local en tom liste.",
+  "x-endpoint": "GET /api/discovery",
+  "type": "object",
+  "required": [
+    "name",
+    "version",
+    "local",
+    "external",
+    "app",
+    "api"
+  ],
+  "properties": {
+    "name": {
+      "type": "string"
+    },
+    "version": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "local": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^https?://"
+      }
+    },
+    "external": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "app": {
+      "const": "homelab"
+    },
+    "api": {
+      "type": "integer"
+    }
+  }
+}

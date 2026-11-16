@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "api/ready.schema.json",
+  "title": "Klar til bruk",
+  "description": "Uten innlogging. 200 når serveren er klar, 503 med samme form mens den starter eller starter på nytt. Oppstartssiden (public/js/starting.js) spør denne før /api/health.",
+  "x-endpoint": "GET /api/ready",
+  "type": "object",
+  "required": [
+    "ok",
+    "ready",
+    "version"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "ok": {
+      "type": "boolean",
+      "description": "true når serveren er klar og ingen omstart pågår."
+    },
+    "ready": {
+      "type": "boolean",
+      "description": "Samme som ok (for klienter som leser ready)."
+    },
+    "version": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    }
+  }
+}

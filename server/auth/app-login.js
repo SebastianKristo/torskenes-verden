@@ -22,7 +22,7 @@ import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { db as fhDb } from '../finans/db.js';
-import { sessionUser, userInfo, currentSessionId } from './session.js';
+import { sessionUser, userInfo, currentSessionId, trustIp, isLan } from './session.js';
 import { tokenAccessOf, issueToken, tokensById, revokeTokenOf, TOKEN_SCOPES } from '../finans/routes.js';
 import { companionsOf, deviceName } from '../kalender/calendars.js';
 import { issueRefresh44 } from './refresh.js'; // prompt 44: refresh-token (90 d glidende, 60 s grace)
@@ -114,7 +114,12 @@ function validateAppCode(c, b) {
 /* ---------------- Rutene ---------------- */
 
 export function mountAppLogin(app) {
-  app.get('/api/discovery', (c) => c.json(discovery41(), 200, { 'Cache-Control': 'no-store', 'Access-Control-Allow-Origin': '*' }));
+  // A §5: den lokale adressen bare til klienter på lokalt nett (adressen fra tilkoblingen, eller CF-Connecting-IP når tilkoblingen
+  // kommer fra cloudflared på lokalnettet; aldri X-Forwarded-For). Fra internett er local tom, resten er som før.
+  app.get('/api/discovery', (c) => {
+    const d = discovery41(), ip = trustIp(c);
+    return c.json(ip && isLan(ip) ? d : { ...d, local: [] }, 200, { 'Cache-Control': 'no-store', 'Access-Control-Allow-Origin': '*', Vary: 'CF-Connecting-IP' });
+  });
 
   app.get('/api/me/server', (c) => { const r = requester(c); return r.error ? bad(c, r.error, r.status) : c.json(meServer41(r.user)); });
   app.put('/api/me/server', async (c) => {

@@ -1,0 +1,8 @@
+{
+  "name": "Homelab",
+  "version": "5.0.0",
+  "local": [],
+  "external": null,
+  "app": "homelab",
+  "api": 41
+}

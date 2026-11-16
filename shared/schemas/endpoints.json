@@ -11,6 +11,18 @@
     },
     {
       "method": "GET",
+      "path": "/api/ready",
+      "schema": "api/ready.schema.json",
+      "auth": "none"
+    },
+    {
+      "method": "GET",
+      "path": "/api/discovery",
+      "schema": "api/discovery.schema.json",
+      "auth": "none"
+    },
+    {
+      "method": "GET",
       "path": "/api/me",
       "schema": "api/me.schema.json",
       "auth": "session|token"

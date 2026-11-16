@@ -70,6 +70,8 @@ curl -s https://os.dittdomene.no/finans/api/search/ai -H "Authorization: Bearer 
 | CRUD | `/api/grades`, `/api/tests` | Studie |
 | GET / PUT / DELETE | `/api/cv` | CV-en. Lesing er offentlig, endring krever admin. |
 | GET | `/healthz` | `ok` |
+| GET | `/api/ready` | `{ok, ready, version}` uten innlogging. 200 når serveren er klar, 503 mens den starter (oppstartssiden) |
+| GET | `/api/discovery` | `{name, version, local[], external, app, api}` uten innlogging. Appene bruker den ved oppsett. `local` har serverens lokale adresser bare når klienten er på lokalt nett (adressen fra tilkoblingen, eller `CF-Connecting-IP` bak Cloudflare, aldri `X-Forwarded-For`). Fra internett er `local` tom |
 | POST | `/api/dates/parse` | `{text, now?}` → `{date, time, end, allDay, rest, label, today, dateText, timeText, errors}`. Den felles datotolkeren (Q17). Sesjon eller app-token |
 | GET | `/api/dates/holidays?year=` (eller `?from=&to=`) | `{from, to, items:[{date, name, type:'helligdag'\|'merkedag', fri}]}` (Q18) |
 

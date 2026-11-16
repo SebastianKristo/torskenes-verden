@@ -240,6 +240,13 @@ app.get('/api/health', async (c, next) => {
   try { const j = await c.res.clone().json(); c.res = c.json({ ...j, ...b }, 200, { 'Cache-Control': 'no-store', 'X-Homelab-State': b.state }); } catch { /* lar svaret stå */ }
 });
 
+// A-B9: GET /api/ready → {ok, ready, version} uten innlogging (oppstartssiden spør denne først). 503 mens serveren starter
+// eller en omstart pågår, ellers 200. Samme kilde som /api/health (bootState og updateren).
+app.get('/api/ready', (c) => {
+  const b = health40(bootState()), ok = b.ready && !b.restarting;
+  return c.json({ ok, ready: ok, version: b.version ?? null }, ok ? 200 : 503, { 'Cache-Control': 'no-store', 'X-Homelab-State': b.state, ...(ok ? {} : { 'Retry-After': '2' }) });
+});
+
 /* ---------------- Innlogging ---------------- */
 
 // Passord, 2FA-steg og 2FA-oppsett i appen, reauth, QR-innlogging, /l/:code, /.well-known, førstegangsoppsett og utlogging (server/auth/login.js).
