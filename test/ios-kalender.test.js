@@ -77,3 +77,27 @@ test('Q26: Ny hendelse har Gjenta, Merknad og «✦ Beskriv med Glimt» (POST /a
   assert.match(l, /if let t = q\("title"\) \{\n\s+s\.openPrefilled\(title: t, date: q\("date"\)/);
   assert.match(x, /presentNew46\(f\)/);
 });
+
+test('Q26: Oversikt har kortene A–E fra den gamle kalendersiden, som kan flyttes og skjules (kalOrder/kalHidden i /api/me/layout)', () => {
+  const o = code('Kalender/Sources/KalOverview.swift');
+  assert.match(o, /static let cardKeys: \[String\] = \["A", "B", "C", "D", "E"\]/);
+  // Samme kortnøkler som serveren godtar (KAL_CARDS i server/mobile.js).
+  const srv = readFileSync(join(import.meta.dirname, '..', 'server', 'mobile.js'), 'utf8');
+  assert.match(srv, /const KAL_CARDS = \['A', 'B', 'C', 'D', 'E'\]/);
+  assert.match(o, /KalNet\.get\("\/api\/me\/layout"/);
+  assert.match(o, /let body: \[String: Any\] = \["kalOrder": order, "kalHidden": Array\(hidden\)\.sorted\(\)\]/);
+  assert.match(o, /KalNet\.send\("PUT", "\/api\/me\/layout", json: body/);
+  for (const f of ['func move(', 'func hide(', 'func show(', 'func reset(']) assert.ok(o.includes(f), f);
+  assert.match(o, /if visible\.count <= 1 \{ return \}/, 'minst ett kort synlig');
+  for (const c of ['KalNowCard(now: now)', 'KalTestsCard()', 'KalCalsCard()', 'KalViewsCard()', 'KalWidgetsCard()']) assert.ok(o.includes(c), c);
+  // Prøver og frister med nedtelling (serverens daysLeft når den finnes) og rødt den siste uka.
+  const sc = code('SharedKal/Core/KalSchoolCore.swift');
+  assert.match(sc, /if let d = e\.daysLeft \{ return d \}/);
+  assert.match(sc, /static func urgent\(_ n: Int\) -> Bool \{ n <= 7 \}/);
+  assert.match(o, /KalSchool\.inText\(n\)/);
+  // Innganger: sidemenyen (iPhone), sidepanelet (iPad) og kalender://oversikt.
+  assert.match(code('Kalender/Sources/KalDrawer.swift'), /s\.overviewOpen = true/);
+  assert.match(code('Kalender/Sources/KalPad.swift'), /s\.overviewOpen = true/);
+  assert.match(code('Kalender/Sources/KalLinks.swift'), /case "oversikt", "prover":\n\s+s\.overviewOpen = true/);
+  assert.match(code('Kalender/Sources/KalApp.swift'), /if s\.overviewOpen \{\n\s+KalOverviewView\(\)/);
+});

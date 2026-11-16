@@ -199,6 +199,7 @@ struct KalRoot: View {
         .animation(sheetAnim, value: s.newForm != nil)
         .animation(sheetAnim, value: s.drawerOpen)
         .animation(reduce ? Animation.easeOut(duration: 0.2) : Animation.timingCurve(0.2, 0.8, 0.2, 1, duration: 0.28), value: s.settingsOpen)
+        .animation(reduce ? Animation.easeOut(duration: 0.2) : Animation.timingCurve(0.2, 0.8, 0.2, 1, duration: 0.28), value: s.overviewOpen)
         .animation(.easeOut(duration: 0.2), value: s.searchOpen)
         .animation(reduce ? Animation.easeOut(duration: 0.2) : Animation.timingCurve(0.2, 0.8, 0.2, 1, duration: 0.28), value: s.cals39Open)
         .animation(reduce ? Animation.easeOut(duration: 0.2) : Animation.timingCurve(0.2, 0.8, 0.2, 1, duration: 0.28), value: s.cal39Edit)
@@ -411,6 +412,13 @@ struct KalRoot: View {
                 .zIndex(67)
             KalConflict44View()
                 .zIndex(68)
+        }
+        // Q26: Oversikt glir inn fra høyre som Innstillinger (KalOverview.swift).
+        if s.overviewOpen {
+            KalOverviewView()
+                .modifier(KalPadSide42(pad: pad))
+                .transition(reduce ? AnyTransition.opacity : AnyTransition.move(edge: .trailing))
+                .zIndex(59)
         }
         // Prompt 35: Innstillinger glir inn fra høyre over hele skjermen (0,28 s).
         if s.settingsOpen {

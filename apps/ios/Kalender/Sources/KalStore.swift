@@ -120,6 +120,8 @@ final class KalStore {
         didSet { UserDefaults.standard.set(nTv, forKey: "kal.nTv") }
     }
     var settingsOpen: Bool = false
+    /// Q26: Oversikt (Nå-kort, Prøver og frister, Kalendere, Kalender, Widgets – KalOverview.swift).
+    var overviewOpen: Bool = false
     /// Prompt 39: Innstillinger → Kalendere (1a), Rediger (1b, kalender-id), Legg til (1c) og Google-velgeren (1d).
     var cals39Open: Bool = false
     var cal39Edit: String? = nil
