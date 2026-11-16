@@ -491,7 +491,7 @@ export async function bind(e, t) {
     if (k === 'map') { const id = HA.pick, en = h.dataset.e || null; HA.pick = null; HA.d = { ...HA.d, maps: [...(HA.d?.maps ?? []).filter((x) => String(x.listId) !== String(id)), ...(en ? [{ listId: id, entityId: en }] : [])] }; await haCall('/tasks/ha/map', { method: 'PUT', json: { listId: id, entityId: en } }, en ? `Koblet til ${en} ✓` : 'Koblingen er fjernet'); await tasksLoad(true); draw(); return true; }
     if (k === 'new') {
       const l = (HK.d?.lists ?? []).find((x) => String(x.id) === String(HA.pick)), id = HA.pick; HA.pick = null; HA.busy = true; draw();
-      try { const r = await hlApi('/tasks/ha/create', { method: 'POST', json: { name: l?.name ?? 'Huskeliste' } }); const en = r?.entity_id ?? r?.entityId; if (en) await hlApi('/tasks/ha/map', { method: 'PUT', json: { listId: id, entityId: en } }); HA.t = 0; await haLoad(true); flash(en ? `Laget ${en} i Home Assistant ✓` : 'Listen er laget ✓'); }
+      try { const r = await hlApi('/tasks/ha/create', { method: 'POST', json: { name: l?.name ?? 'Gjøremål' } }); const en = r?.entity_id ?? r?.entityId; if (en) await hlApi('/tasks/ha/map', { method: 'PUT', json: { listId: id, entityId: en } }); HA.t = 0; await haLoad(true); flash(en ? `Laget ${en} i Home Assistant ✓` : 'Listen er laget ✓'); }
       catch (err) { flash(err.message); }
       HA.busy = false; draw(); return true;
     }

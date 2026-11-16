@@ -120,7 +120,7 @@ function bsDismiss(E) {
 }
 export function briefUndo() { lsSet(HIDE, null); clearTimeout(BS.toT); BS.toast = false; BS.ph = ''; haptic('tap'); draw(); }
 /** Mer: undertekst for Now Brief. */
-export const briefMerSub = () => (briefHidden() ? 'Skjult på Hjem · trykk for å åpne' : 'Glimt oppsummerer dagen');
+export const briefMerSub = () => (briefHidden() ? 'Skjult på Oversikt · trykk for å åpne' : 'Glimt oppsummerer dagen');
 // Hintet: de 2 første gangene Hjem åpnes glir kortet 72 px til høyre og tilbake, så 40 px og tilbake (bsNudge 2,4 s).
 function bsVisit() {
   const n = +(lsGet(HINT) ?? 0) || 0;

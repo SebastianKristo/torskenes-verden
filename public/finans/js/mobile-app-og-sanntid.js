@@ -91,7 +91,7 @@ function nameSheet() {
     <div class="pp-sh">Navn på appen</div>
     <input class="sinp p17-nmin" id="p17-nm" data-p17in="nm" value="${esc(v)}" maxlength="20" placeholder="Homelab" autocomplete="off" aria-label="Navn på appen">
     <div class="pp-chips">${['Homelab', 'Torskenes Verden'].map((x) => `<button class="pp-fchip" data-p17="nmset" data-v="${esc(x)}" aria-pressed="${v === x}">${esc(x)}</button>`).join('')}</div>
-    <span class="pp-mut">Vises øverst på Hjem, i innloggingen, i varsler og i nettleserfanen.</span>
+    <span class="pp-mut">Vises øverst på Oversikt, i innloggingen, i varsler og i nettleserfanen.</span>
     <div class="p17-two"><button class="pp-btn" data-p17="nmx">Avbryt</button><button class="pp-btn ink" data-p17="nmsave" ${v.trim() ? '' : 'disabled'}>Lagre</button></div></div>`;
 }
 const TINTS = ['#e8e8e8', '#f0b56a', '#8cb8e6', '#8fd3a5', '#e3a1cf'], MY = ['#c7d7ff', '#ffd8c2', '#c9ecd2', '#f1d0f0'];
@@ -161,7 +161,7 @@ export function p17SetMain(T = {}) {
 export function p17Modules() {
   const M = [['#/spor', 'Sporing', 'Pakker fra e-post og Finn', 'globe'], ['#/dom', 'Domener', 'Cloudflare-statistikk', 'globe'], ['#/mat', 'Mat', 'Ukeplan og oppskrifter', 'home'], ['#/nyheter', 'Nyheter', 'RSS med AI-sammendrag', 'look'],
     ['#/huske', 'Gjøremål', 'To-do: egne og delte lister', 'list'], ['#/fam', 'Familie og kart', 'Posisjon, soner og helse', 'users'], ['#/avg', 'Avganger', 'Sanntid fra Entur', 'globe'], ['#/vaer', 'Vær', 'MET og Yr mot Storm', 'look']];
-  return grp('MODULER', M.filter(([h]) => h !== '#/dom' || domOk()).map(([h, n, s, ic]) => row(h, n, s, '', ic, `mod-${n}`))) + '<div class="snote">Modulene kan også legges i fanelinja under Fanelinje i Hjem.</div>';
+  return grp('MODULER', M.filter(([h]) => h !== '#/dom' || domOk()).map(([h, n, s, ic]) => row(h, n, s, '', ic, `mod-${n}`))) + '<div class="snote">Modulene kan også legges i fanelinja under Fanelinje på Oversikt.</div>';
 }
 
 /* ---------- AI og tolkning: hvem gjør hva, lokal OCR-reserve og logg ---------- */

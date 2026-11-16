@@ -1,6 +1,6 @@
 // Prompt 41 (PWA41) del 2: Min reise (Ruter + Hjem), Vel fremme i Familie («Si fra» og tur), Bursdager (jenka-tog og bilder).
 //   · claude-code-ruter-forhandsruter-sebastian.md: MIN REISE · SEBASTIAN over transportfilteret, forsinket trikk fra Frydenlund,
-//     SKOLESONER (chips + «+ Sone»), «PÅ HJEM NÅR DU FORLATER SKOLEN» (Over · I stedet · Av), og kortet på Hjem som bare vises
+//     SKOLESONER (chips + «+ Sone»), «PÅ OVERSIKT NÅR DU FORLATER SKOLEN» (Over · I stedet · Av), og kortet på Hjem som bare vises
 //     når «forlot skolen» er aktiv – sveipes bort som briefen (mobile-sveip-bort.js swAdd), med Angre i 4,5 s.
 //   · claude-code-hjemlys.md: Familie → Vel fremme (Start med fire valg + aktive i familien · Hvem får beskjed? · Klar · Sendt/Aktiv).
 //     Bare beskjeden og stedet du velger sendes. Du selv er aldri i mottakerlista.
@@ -116,7 +116,7 @@ export function tripRuter() {
     ${seg ? `<span class="p41-lab mut">ANTALL ANBEFALTE REISER</span>${seg}` : ''}
     ${school50Html() ?? `<span class="p41-lab mut">SKOLESONER · ALLE TELLER SOM SKOLE</span><div class="p41-zones">${Z.map((z) => `<span class="p41-zone">${esc(z.name)}<small>${esc(z.label?.replace(z.name, '').trim() || `${z.radius_m} m`)}</small>${Z.length > 1 ? `<button type="button" data-p41b="zrm" data-id="${esc(z.id)}" aria-label="Fjern ${esc(z.name)}">✕</button>` : ''}</span>`).join('')}<button type="button" class="p41-zadd" data-p41b="zadd">+ Sone</button></div>
     ${RT.addZ ? `<form class="p41-zform" data-p41bf="zone"><input class="p24-in" id="p41-zn" data-p41bin="zn" value="${esc(RT.addZ.n)}" placeholder="Navn, f.eks. Idrettshallen" autocomplete="off"><div class="p41-zr"><span class="p41-mut">Radius ${RT.addZ.r} m</span><input type="range" min="50" max="300" step="10" value="${RT.addZ.r}" data-p41bin="zr" aria-label="Radius"></div><span class="p41-mut">Sonen legges der du står nå (posisjonen brukes bare til dette).</span><div class="p24-two"><button type="button" class="p24-b" data-p41b="zx">Avbryt</button><button type="submit" class="p24-b ink">Legg til sone</button></div></form>` : ''}`}
-    <span class="p41-lab mut">PÅ HJEM NÅR DU FORLATER SKOLEN</span><span class="p41-mut">${hc === 'instead' ? 'Vises i stedet for Avganger mens reisen er aktiv.' : hc === 'off' ? 'Vises ikke på Hjem.' : 'Vises over Avganger mens reisen er aktiv.'}</span>
+    <span class="p41-lab mut">PÅ OVERSIKT NÅR DU FORLATER SKOLEN</span><span class="p41-mut">${hc === 'instead' ? 'Vises i stedet for Avganger mens reisen er aktiv.' : hc === 'off' ? 'Vises ikke på Oversikt.' : 'Vises over Avganger mens reisen er aktiv.'}</span>
     <div class="p41-seg">${[['over', 'Over Ruter-kortet'], ['instead', 'I stedet'], ['off', 'Av']].map(([k, n]) => `<button type="button" data-p41b="rthc" data-v="${k}" aria-pressed="${hc === k}">${n}</button>`).join('')}</div>
     <span class="p41-mut">${geoOff ? 'Skolesonene trenger posisjon «Alltid» for å virke.' : 'Endringer lagres med en gang. Samme valg i Innstillinger → Moduler → Reise.'}</span></div></div>` : ''}</div>`;
 }

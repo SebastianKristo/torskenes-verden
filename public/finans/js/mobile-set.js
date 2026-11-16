@@ -88,7 +88,7 @@ const PHOTO_N = { cur: 'Ingen', oslo: 'Oslo', weather: 'Vær', planets: 'Planete
 function paperTop() {
   const md = paperModeValgt(), r = (k, n, s2) => `<button class="opt-row" data-sact="ppmode" data-v="${k}"><span class="m-grow"><b style="font-weight:600">${n}</b><br><span style="font-size:13px;opacity:.65">${s2}</span></span><span class="sval" style="${md === k ? 'color:var(--pp-pos);opacity:1;font-weight:600' : ''}">${md === k ? '✓ Valgt' : ''}</span></button>`;
   return `${G('Tema', [r('lys', 'Papir · lys', 'Lyst papir og svart fanelinje'), r('mork', 'Papir · mørk', 'Kveldspapir og lys fanelinje'), r('auto', 'Papir · følg systemet', 'Lys om dagen, mørk når telefonen er mørk')])}
-    ${G('Tilpass', [nav('profil', 'Profil', m.me?.username ? `@${m.me.username}` : '', 'users', '#5E8BFF'), nav('bakgrunn', 'Bakgrunn på Hjem', PHOTO_N[pref('photo')] ?? 'Ingen', 'look', '#FF9F0A'), nav('fanelinje', 'Fanelinje', 'Faner, navn og ikoner', 'list', '#5E5CE6'), link('<b style="font-weight:600">Nyheter</b>', '#/nyheter', 'Kilder, kategorier og AI')])}
+    ${G('Tilpass', [nav('profil', 'Profil', m.me?.username ? `@${m.me.username}` : '', 'users', '#5E8BFF'), nav('bakgrunn', 'Bakgrunn på Oversikt', PHOTO_N[pref('photo')] ?? 'Ingen', 'look', '#FF9F0A'), nav('fanelinje', 'Fanelinje', 'Faner, navn og ikoner', 'list', '#5E5CE6'), link('<b style="font-weight:600">Nyheter</b>', '#/nyheter', 'Kilder, kategorier og AI')])}
     <div class="sec">Ikonfarger</div>${iconThemeRow()}
 `;
 }
@@ -112,10 +112,10 @@ const PAGE = {
     const md = paperModeValgt(), r = (k, n, s2) => `<button class="opt-row p17-row" data-sact="ppmode" data-v="${k}"><span class="m-grow p17-rt"><b>${n}</b><small>${s2}</small></span><span class="sval" style="${md === k ? 'color:var(--pp-pos);opacity:1;font-weight:700' : ''}">${md === k ? '✓ Valgt' : ''}</span></button>`;
     const st = { hl: 'homelab', hjem: 'fin-hjem', liste: 'fin-liste', budsjett: 'fin-budsjett' }[startScr()] ?? 'homelab';
     return `${grp('IDENTITET', [row('', 'Navn på appen', '', appName(), 'home', 'appnavn', 'data-p17="nm"'), row('', 'App-ikon', '', ICONS.find(([k]) => k === appIcon())?.[1] ?? '', 'img', 'appikon', 'data-p17="ic"')])}
-      ${grp('FANELINJE', [...(globalThis.P42 ? [globalThis.P42.nhRow(row)] : []) /* prompt 42: Hjem-knapp */, ...(globalThis.P41 ? [globalThis.P41.scanRow(false)] : []), row('', 'Fanelinje-stil', P25.NAV_STYLES.find(([k]) => k === P25.navStyle())[2], P25.navStyleName(), 'list', 'navstil', 'data-p25="nscycle"'), row('#/set/fanelinje', 'Fanelinje i Hjem', 'Fjern, flytt, gi nytt navn og ikon · eller hold inne på fanelinjen', '', 'list', 'hjemnav')])}
+      ${grp('FANELINJE', [...(globalThis.P42 ? [globalThis.P42.nhRow(row)] : []) /* prompt 42: Oversikt-knapp */, ...(globalThis.P41 ? [globalThis.P41.scanRow(false)] : []), row('', 'Fanelinje-stil', P25.NAV_STYLES.find(([k]) => k === P25.navStyle())[2], P25.navStyleName(), 'list', 'navstil', 'data-p25="nscycle"'), row('#/set/fanelinje', 'Fanelinje på Oversikt', 'Fjern, flytt, gi nytt navn og ikon · eller hold inne på fanelinjen', '', 'list', 'hjemnav')])}
       <span class="pp-lab p17-gl" data-hl="theme">TEMA</span><div class="list p17-list">${[r('lys', 'Papir · lys', 'Lyst papir og svart fanelinje'), r('mork', 'Papir · mørk', 'Kveldspapir og lys fanelinje'), r('auto', 'Papir · følg systemet', 'Lys om dagen, mørk når telefonen er mørk')].join('')}</div>
       <span class="pp-lab p17-gl">IKONFARGER</span>${iconThemeRow()}
-      ${grp('BAKGRUNN', [row('#/set/bakgrunn', 'Bakgrunn på Hjem', 'Toppbilde, vær, planeter eller eget bilde', PHOTO_N[pref('photo')] ?? 'Ingen', 'look', 'bakgrunn')])}
+      ${grp('BAKGRUNN', [row('#/set/bakgrunn', 'Bakgrunn på Oversikt', 'Toppbilde, vær, planeter eller eget bilde', PHOTO_N[pref('photo')] ?? 'Ingen', 'look', 'bakgrunn')])}
       ${globalThis.P41?.holidayGroup?.() ?? '' /* prompt 41: HØYTIDER · 17. mai */}
       ${G('Forside', [chips('startL', 'Startside', [['homelab', 'Homelab'], ['fin-hjem', 'Økonomi · Oversikt'], ['fin-liste', 'Økonomi · Transaksjoner'], ['fin-budsjett', 'Økonomi · Budsjett']], st)], st === 'homelab' ? 'Appen åpner på Homelab.' : 'Appen åpner i Økonomi, og hjem-knappen går til Økonomi.')}
       <span class="pp-lab p17-gl">FANELINJE · FLERE VALG</span>${P32.secNavSettings()}`;
@@ -140,7 +140,7 @@ const PAGE = {
   },
   huske: () => globalThis.P44?.huskeSet?.() ?? '<div class="m-spin"></div>', // prompt 44: Innstillinger → Gjøremål
   logger: () => globalThis.P44?.loggerSet?.() ?? '<div class="m-spin"></div>', // prompt 44: Homelab → Logger
-  bakgrunn: () => `${photoChoices()}<div class="snote">Bakgrunnen vises øverst på Hjem. «Vær» følger været der du er (MET), «Planeter» viser Jorda, Månen, Jupiter, Mars og Saturn fra NASA (ny hver dag), og «Oslo» er ekte Oslo-bilder fra lufta (Wikimedia Commons) som skifter gjennom døgnet. Bildene lastes ned og skaleres av serveren din, og appen lagrer dem for bruk uten nett. «Kun på Wi-Fi» finnes i de native appene.</div>`,
+  bakgrunn: () => `${photoChoices()}<div class="snote">Bakgrunnen vises øverst på Oversikt. «Vær» følger været der du er (MET), «Planeter» viser Jorda, Månen, Jupiter, Mars og Saturn fra NASA (ny hver dag), og «Oslo» er ekte Oslo-bilder fra lufta (Wikimedia Commons) som skifter gjennom døgnet. Bildene lastes ned og skaleres av serveren din, og appen lagrer dem for bruk uten nett. «Kun på Wi-Fi» finnes i de native appene.</div>`,
   fanelinje: () => `<div class="sec">Hovedlinja</div>${tabEditor()}<div class="pp-col pp-navset" style="gap:8px">${navSettings()}</div>`,
   konto: () => `${P36.kontoTop() /* prompt 36: profilbildet øverst, miniatyr i raden, Last opp nytt · Ta bilde · Fjern */}
     ${G('På denne enheten', [profile(), val('Status', '✓ Aktiv', '#7BE3A0')],

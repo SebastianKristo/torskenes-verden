@@ -98,7 +98,7 @@ function bgTick() {
 export const scanHome = () => lsGet('papir_scan_home', true) !== false;
 export function scanRow(sheet = false) {
   const on = scanHome();
-  return `<button type="button" class="p24-tog p41-scanr${sheet ? ' sh' : ''}" data-p41="scanhome" role="switch" aria-checked="${on}"><span class="p41-scanic" aria-hidden="true">${svg('M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3M8 12h8', 17, 2.2)}</span><span class="m-grow"><b>Skanneknapp på Hjem</b><small>${on ? 'Vises på Hjem' : 'Skjult på Hjem · vises i de andre fanene'}</small></span>${sw(on)}</button>`;
+  return `<button type="button" class="p24-tog p41-scanr${sheet ? ' sh' : ''}" data-p41="scanhome" role="switch" aria-checked="${on}"><span class="p41-scanic" aria-hidden="true">${svg('M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3M8 12h8', 17, 2.2)}</span><span class="m-grow"><b>Skanneknapp på Oversikt</b><small>${on ? 'Vises på Oversikt' : 'Skjult på Oversikt · vises i de andre fanene'}</small></span>${sw(on)}</button>`;
 }
 
 /* =====================================================================
@@ -119,7 +119,7 @@ export function foldHome() {
       <span class="p41-fk">${esc(kick.charAt(0).toUpperCase() + kick.slice(1))}</span><b class="p41-ft">${esc(greetOf())},<br>${esc(firstName())}</b>
       ${w ? `<a class="p41-fw" href="#/vaer" data-p41="fwx"><b>${w.temp != null ? Math.round(w.temp) + '°' : '–'}</b><span>${esc(w.text ?? '')}${w.updated ? ` · ${esc(hm(w.updated))}` : ''} ›</span></a>` : ''}
       <div class="p41-fbot">${A.h12 ? `<div class="p41-fbr">${A.h12}</div>` : ''}<div class="p41-fsr">${A.h1}</div></div></div></aside>`;
-  const tabs = `<div class="p41-ftabs" role="tablist" aria-label="Hjem">${FTABS.map(([k, n]) => `<button type="button" role="tab" class="${k === tab ? 'on' : ''}" aria-selected="${k === tab}" data-p41="ftab" data-k="${k}">${n}</button>`).join('')}</div>`;
+  const tabs = `<div class="p41-ftabs" role="tablist" aria-label="Oversikt">${FTABS.map(([k, n]) => `<button type="button" role="tab" class="${k === tab ? 'on' : ''}" aria-selected="${k === tab}" data-p41="ftab" data-k="${k}">${n}</button>`).join('')}</div>`;
   return `${main}<div class="pp-home p41-fr">${tabs}${edBlocks('hl', blocks, { full: Object.keys(blocks) })}</div>`;
 }
 const greetOf = () => { const h = new Date().getHours(); return h < 5 ? 'God natt' : h < 10 ? 'God morgen' : h < 12 ? 'God formiddag' : h < 18 ? 'God ettermiddag' : 'God kveld'; };
@@ -390,7 +390,7 @@ async function hurra() {
 }
 export function holidayGroup() {
   const opt = (k, n, s2) => `<button type="button" class="opt-row p17-row" data-p41="mai" data-v="${k}"><span class="m-grow p17-rt"><b>${n}</b><small>${s2}</small></span><span class="sval" style="${MAI.s === k ? 'color:var(--pp-pos);opacity:1;font-weight:700' : ''}">${MAI.s === k ? '✓ Valgt' : ''}</span></button>`;
-  return `<span class="pp-lab p17-gl" data-hl="mai17">HØYTIDER · 17. MAI-DESIGN</span><div class="list p17-list">${opt('auto', 'Automatisk 17. mai', 'Rød topp, program og «Hipp hipp hurra!» på selve dagen')}${opt('pa', 'Vis nå', 'Forhåndsvisning på Hjem')}${opt('av', 'Av', 'Vanlig Hjem også 17. mai')}</div>
+  return `<span class="pp-lab p17-gl" data-hl="mai17">HØYTIDER · 17. MAI-DESIGN</span><div class="list p17-list">${opt('auto', 'Automatisk 17. mai', 'Rød topp, program og «Hipp hipp hurra!» på selve dagen')}${opt('pa', 'Vis nå', 'Forhåndsvisning på Oversikt')}${opt('av', 'Av', 'Vanlig Oversikt også 17. mai')}</div>
     <div class="snote">Figurene får flagg 14.–17. mai (styres av Høytider i Innstillinger → Glimt og AI → Glimt, samme som julemodus).</div>`;
 }
 async function maiSet(v) {

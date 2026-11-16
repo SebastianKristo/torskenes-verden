@@ -54,7 +54,7 @@ function preview(tabs, k, big) {
 /** STIL · FORHÅNDSVISNING og de tre stil-kortene. tabs = [[rute, navn, ikon], …] fra hovedlinja. */
 export function styleSection(tabs) {
   const base = tabs.filter(([k]) => k !== 'mer').slice(0, 4).map(([, n, ic]) => [/[<]/.test(String(ic)) ? '•' : ic, n]);
-  const PV = [...(base.length ? base : [['⌂', 'Hjem'], ['kr', 'Økonomi'], ['◐', 'Mat']]), ['⋯', 'Mer']], cur = navStyle();
+  const PV = [...(base.length ? base : [['⌂', 'Oversikt'], ['kr', 'Økonomi'], ['◐', 'Mat']]), ['⋯', 'Mer']], cur = navStyle();
   return `<span class="pp-lab p25-sl">STIL · FORHÅNDSVISNING</span>
     <div class="p25-pvbg"><div class="p25-pvbar big ${NS_CLS[cur]}">${preview(PV, cur, true)}${globalThis.P41?.scanHome?.() === false ? '' : '<span class="p25-pvplus" aria-hidden="true">+</span>'}</div></div>
     <div class="p25-styles" role="radiogroup" aria-label="Fanelinje-stil">${NAV_STYLES.map(([k, n]) => `<button class="p25-style" data-p25="ns" data-k="${k}" role="radio" aria-checked="${cur === k}"><span class="p25-pvbar sm" aria-hidden="true">${preview(PV.slice(0, 3), k, false)}</span><b>${esc(n)}</b></button>`).join('')}</div>`;

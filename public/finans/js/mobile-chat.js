@@ -553,7 +553,7 @@ export function openChat(prompt = '') {
 /** Prompt 41: åpner Chat med spørsmålet og svaret fra søkepillen (ikke spør på nytt når svaret er ferdig). */
 export function openChatWith(q, answer, src = 'glimt', srcLabel = '') {
   // Prompt 43 (claude-code-sok-ai-svarboble.md): samme svar som i boblen, med kilden («Kilde: MET Norway»). Ingen ny forespørsel.
-  const lab = String(srcLabel ?? '').replace(/^✦\s*/, '').trim(), st = lab && !/^(glimt|system-ai)$/i.test(lab) ? `Kilde: ${lab}` : 'Fra søket på Hjem';
+  const lab = String(srcLabel ?? '').replace(/^✦\s*/, '').trim(), st = lab && !/^(glimt|system-ai)$/i.test(lab) ? `Kilde: ${lab}` : 'Fra søket på Oversikt';
   if (m.screen !== 'chat') C.from = m.screen;
   C.inp = ''; C.att = []; C.sh = null; C.drawer = false; C.data = true;
   if (location.hash !== '#/chat') location.hash = '#/chat';

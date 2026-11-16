@@ -24,11 +24,11 @@ const svg = (d, s = 24, w = 2.2) => `<svg width="${s}" height="${s}" viewBox="0 
    1. Hjem-knapp i fanelinja
    ===================================================================== */
 export const NH_OPTS = [
-  ['standard', 'Standard', '«‹ Hjem» øverst, som i dag'],
-  ['1a', 'Egen Hjem-knapp', 'Rund knapp til venstre for fanelinja'],
-  ['1b', 'Hjem først i linjen', 'Hjem-ikon som første plass, skilt med en strek'],
-  ['1c', 'Hjem i midten', 'Hevet rød knapp midt i fanelinja'],
-  ['1d', 'Modulvelger', '«kr Finans ▴» åpner Hjem og alle moduler'],
+  ['standard', 'Standard', '«‹ Homelab» øverst, som i dag'],
+  ['1a', 'Egen Oversikt-knapp', 'Rund knapp til venstre for fanelinja'],
+  ['1b', 'Oversikt først i linjen', 'Oversikt-ikon som første plass, skilt med en strek'],
+  ['1c', 'Oversikt i midten', 'Hevet rød knapp midt i fanelinja'],
+  ['1d', 'Modulvelger', '«kr Økonomi ▴» åpner Oversikt og alle moduler'],
 ];
 const NH_OK = new Set(NH_OPTS.map(([k]) => k));
 const normNh = (v) => (v === 'std' ? 'standard' : NH_OK.has(v) ? v : null);
@@ -48,7 +48,7 @@ export function setNavHome(v, push = true) {
 export function take42(r) { const k = normNh(r?.homeButton ?? r?.home_button); if (k && k !== navHome()) { lsSet('papir_navhome', k); return true; } return false; }
 
 // Modulvelgeren (1d): Hjem (rød) og alle modulene i et rutenett med tre kolonner.
-const MODN = [['hl', 'Hjem', '⌂'], ['hjem', 'Økonomi', 'kr'], ['mat', 'Mat', '◐'], ['spor', 'Sporing', '▣'], ['dom', 'Domener', '◎'], ['fam', 'Familie', '◉'], ['dir', 'Boliger', '⌂'], ['sub', 'Abonnement', '↻'], ['kal', 'Kalender', '▦'], ['huske', 'Gjøremål', '☐'], ['chat', 'Chat', '✉'], ['mer', 'Alle', '⋯']];
+const MODN = [['hl', 'Oversikt', '⌂'], ['hjem', 'Økonomi', 'kr'], ['mat', 'Mat', '◐'], ['spor', 'Sporing', '▣'], ['dom', 'Domener', '◎'], ['fam', 'Familie', '◉'], ['dir', 'Boliger', '⌂'], ['sub', 'Abonnement', '↻'], ['kal', 'Kalender', '▦'], ['huske', 'Gjøremål', '☐'], ['chat', 'Chat', '✉'], ['mer', 'Alle', '⋯']];
 const domOk = () => (m.me?.role ? m.me.role === 'admin' : true);
 function curMod(scr) {
   if (scr === 'hl') return 'hl';
@@ -74,12 +74,12 @@ export function nav42(html, scr) {
   nav.classList.add('p42-n', `p42-n${v}`);
   const tabs = [...nav.children].filter((x) => !x.matches('.pp-scan, .p25-home, .p42-nhb, .p42-nhc, .p42-nhd'));
   if (v === '1a') {
-    nav.insertAdjacentHTML('beforebegin', `<a class="p42-nha${home ? ' on' : ''}" href="${homeHref()}" data-p42="home" aria-label="Hjem"${home ? ' aria-current="page"' : ''}>${svg(HOUSE, 24, 2)}</a>`);
+    nav.insertAdjacentHTML('beforebegin', `<a class="p42-nha${home ? ' on' : ''}" href="${homeHref()}" data-p42="home" aria-label="Oversikt"${home ? ' aria-current="page"' : ''}>${svg(HOUSE, 24, 2)}</a>`);
   } else if (v === '1b') {
-    nav.insertAdjacentHTML('afterbegin', `<a class="p42-nhb${home ? ' on' : ''}" href="${homeHref()}" data-p42="home" aria-label="Hjem"${home ? ' aria-current="page"' : ''}>${svg(HOUSE, 22, 2)}</a>`);
+    nav.insertAdjacentHTML('afterbegin', `<a class="p42-nhb${home ? ' on' : ''}" href="${homeHref()}" data-p42="home" aria-label="Oversikt"${home ? ' aria-current="page"' : ''}>${svg(HOUSE, 22, 2)}</a>`);
   } else if (v === '1c') {
     const mid = Math.floor(tabs.length / 2), ref = tabs[mid] ?? nav.querySelector('.pp-scan');
-    const b = `<a class="p42-nhc${home ? ' on' : ''}" href="${homeHref()}" data-p42="home" aria-label="Hjem"${home ? ' aria-current="page"' : ''}>${svg(HOUSE, 24, 2.2)}</a>`;
+    const b = `<a class="p42-nhc${home ? ' on' : ''}" href="${homeHref()}" data-p42="home" aria-label="Oversikt"${home ? ' aria-current="page"' : ''}>${svg(HOUSE, 24, 2.2)}</a>`;
     if (ref) ref.insertAdjacentHTML('beforebegin', b); else nav.insertAdjacentHTML('beforeend', b);
   } else if (v === '1d') {
     const [, n, i] = MODN.find(([k]) => k === curMod(scr)) ?? ['mer', 'Moduler', '⋯'];
@@ -94,7 +94,7 @@ function pv(k) {
   const tab = (on, g) => (on ? `<span class="p42-pvon">${g}</span>` : `<span class="p42-pvt">${g}</span>`);
   const bar = (inner, cls = '') => `<span class="p42-pvbar${cls}">${inner}</span>`;
   const base = tab(true, '◎') + tab(false, '≡') + tab(false, '⌕');
-  if (k === 'standard') return `<span class="p42-pvcol"><span class="p42-pvback">‹ Hjem</span>${bar(base + tab(false, '⋯'))}</span>`;
+  if (k === 'standard') return `<span class="p42-pvcol"><span class="p42-pvback">‹ Homelab</span>${bar(base + tab(false, '⋯'))}</span>`;
   if (k === '1a') return `<span class="p42-pvrow"><span class="p42-pvha">⌂</span>${bar(base + tab(false, '⋯'), ' grow')}</span>`;
   if (k === '1b') return bar(`<span class="p42-pvhb">⌂</span>${base}${tab(false, '⋯')}`);
   if (k === '1c') return bar(`${tab(true, '◎')}${tab(false, '≡')}<span class="p42-pvhc">⌂</span>${tab(false, '⌕')}${tab(false, '⋯')}`, ' vis');
@@ -108,15 +108,15 @@ function optCard([k, n, d], compact) {
     ${compact ? `<span class="p42-nhot"><span class="m-grow"><b>${esc(n)}</b><small>${esc(d)}</small></span><span class="p42-ck" aria-hidden="true">${on ? '✓' : ''}</span></span>` : ''}</button>`;
 }
 /** Innstillinger → Tilpass → FANELINJE: «Hjem-knapp · Standard · velg og se forhåndsvisning  Velg ›». */
-export const nhRow = (row) => row('', 'Hjem-knapp', `${nhLabel()} · velg og se forhåndsvisning`, 'Velg', 'home', 'hjemknapp', 'data-p42="nhpick"');
-/** «Rediger fanelinjen»: HJEM-KNAPP · FORHÅNDSVISNING (kort i to kolonner). */
-export const nhSection = () => `<span class="pp-lab p42-sl">HJEM-KNAPP · FORHÅNDSVISNING</span><div class="p42-nhgrid" role="radiogroup" aria-label="Hjem-knapp">${NH_OPTS.map((o) => optCard(o, true)).join('')}</div>`;
+export const nhRow = (row) => row('', 'Oversikt-knapp', `${nhLabel()} · velg og se forhåndsvisning`, 'Velg', 'home', 'hjemknapp', 'data-p42="nhpick"');
+/** «Rediger fanelinjen»: OVERSIKT-KNAPP · FORHÅNDSVISNING (kort i to kolonner). */
+export const nhSection = () => `<span class="pp-lab p42-sl">OVERSIKT-KNAPP · FORHÅNDSVISNING</span><div class="p42-nhgrid" role="radiogroup" aria-label="Oversikt-knapp">${NH_OPTS.map((o) => optCard(o, true)).join('')}</div>`;
 function pickSheet() {
   if (!NH.pick) return '';
-  return `<div class="p37-scrim${NH.seen ? ' p42-still' : ''}" data-p42="nhx"></div><div class="p37-sheet p42-nhsheet${NH.seen ? ' p42-still' : ''}" role="dialog" aria-modal="true" aria-label="Hjem-knapp"><span class="p37-grab"></span>
-    <div class="p42-shh"><b class="pp-serif">Hjem-knapp</b><button type="button" class="p42-done" data-p42="nhx">Ferdig</button></div>
-    <span class="p42-mut">Velg hvordan du kommer tilbake til Hjem. Med en Hjem-knapp i fanelinja forsvinner «‹ Hjem» øverst.</span>
-    <div class="p42-nhlist" role="radiogroup" aria-label="Hjem-knapp">${NH_OPTS.map((o) => optCard(o, false)).join('')}</div></div>`;
+  return `<div class="p37-scrim${NH.seen ? ' p42-still' : ''}" data-p42="nhx"></div><div class="p37-sheet p42-nhsheet${NH.seen ? ' p42-still' : ''}" role="dialog" aria-modal="true" aria-label="Oversikt-knapp"><span class="p37-grab"></span>
+    <div class="p42-shh"><b class="pp-serif">Oversikt-knapp</b><button type="button" class="p42-done" data-p42="nhx">Ferdig</button></div>
+    <span class="p42-mut">Velg hvordan du kommer tilbake til Oversikt. Med en Oversikt-knapp i fanelinja forsvinner «‹ Homelab» øverst.</span>
+    <div class="p42-nhlist" role="radiogroup" aria-label="Oversikt-knapp">${NH_OPTS.map((o) => optCard(o, false)).join('')}</div></div>`;
 }
 // Arket glir bare inn første gang; et valg tegner siden på nytt uten at animasjonen starter igjen.
 const markSeen = () => { if (NH.pick) requestAnimationFrame(() => { NH.seen = true; }); else NH.seen = false; };

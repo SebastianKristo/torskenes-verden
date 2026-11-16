@@ -382,7 +382,7 @@ function gStep(n) {
    6. Innstillinger → Glimt (og ⚙-arket i briefen)
    ===================================================================== */
 const BRIEFS = [['morning', 'Morgenbrief', 'Vær, dagen og første avtale'], ['day', 'Dagsbrief', 'Resten av dagen og nyheter'], ['evening', 'Kveldsbrief', 'I morgen, vær og det du ikke rakk'], ['night', 'Nattbrief', 'Kort oppsummering før du legger deg']];
-const MAIN = [['brief', 'Glimt-brief', 'Lag briefer gjennom dagen'], ['briefGlimt', 'Glimt i briefen', 'Vis Glimt-figuren og vennene i briefen, på Hjem-kortet og i widgets'], ['readAloud', 'Les opp', 'Glimt og vennene leser briefen høyt'], ['guide', 'Vis meg rundt automatisk', 'Starter guide-runden når briefen åpnes'], ['friends', 'Venner av Glimt', 'Sky, Dråpe, Ugle og Gris tar over når temaet passer'], ['notify', 'Varsel når briefen er klar', 'Push til mobilen på klokkeslettet']];
+const MAIN = [['brief', 'Glimt-brief', 'Lag briefer gjennom dagen'], ['briefGlimt', 'Glimt i briefen', 'Vis Glimt-figuren og vennene i briefen, på kortet på Oversikt og i widgets'], ['readAloud', 'Les opp', 'Glimt og vennene leser briefen høyt'], ['guide', 'Vis meg rundt automatisk', 'Starter guide-runden når briefen åpnes'], ['friends', 'Venner av Glimt', 'Sky, Dråpe, Ugle og Gris tar over når temaet passer'], ['notify', 'Varsel når briefen er klar', 'Push til mobilen på klokkeslettet']];
 function engState(id) {
   const E = (cfg().engines ?? []).find((x) => x.id === id || (id === 'elevenlabs' && x.id === 'eleven'));
   return E ?? null;
@@ -414,7 +414,7 @@ export function glimtView() {
   return `<div class="p35-gl"><div class="p35-glh"><b>Glimt</b><button type="button" class="p34-done" data-p35="glclose" data-p34back>Ferdig</button></div>
     <span class="p35-lab">GLIMT-FIGUR</span>
     <div class="p35-figs" data-hl="gl-fig">${FIGS.map(([k, n]) => `<button type="button" class="p35-fg${k === 'natt' ? ' dark' : ''}" data-p35="char" data-v="${k}" aria-pressed="${sel === k}"><span class="p35-fgi">${fig(k, 54, sel === k ? 'glad' : 'idle', { noJul: true })}</span><b>${esc(n)}</b></button>`).join('')}</div>
-    <span class="p35-note">Figuren er verten i briefen, på Hjem-kortet, i widgets og i Glimt-chat. Er «Glimt» valgt, blir verten Glimt Natt mellom 21 og 06. Vennene (Sky, Dråpe, Ugle, Gris …) tar over når temaet passer, om det er slått på under.</span>
+    <span class="p35-note">Figuren er verten i briefen, på kortet på Oversikt, i widgets og i Glimt-chat. Er «Glimt» valgt, blir verten Glimt Natt mellom 21 og 06. Vennene (Sky, Dråpe, Ugle, Gris …) tar over når temaet passer, om det er slått på under.</span>
     ${globalThis.P40?.julCard?.() ?? '' /* prompt 40: Julemodus (Auto · Av · På) */}
     ${cfgBody(false)}${P38.cardsCfg()}${P37B.bibleSettings()}${P39.tipsCfg() /* prompt 39 */}</div>`;
 }

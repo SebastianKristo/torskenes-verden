@@ -174,7 +174,7 @@ export function kalSetPage() {
   const g = (IG.list ?? []).find((x) => x.id === 'calendars') ?? (IG.list ?? []).find((x) => x.id === 'calendar');
   const school = g ? `${lbl('SKOLE OG CANVAS')}<div class="p26-card">${fieldRows(g)}</div>` : IG.miss ? '' : IG.list ? '' : '<div class="m-spin"></div>';
   return `<div class="p26">${school}${BD.d ? calCard() : BD.err ? `<div class="snote" style="color:var(--pp-lab)">${esc(BD.err)}</div>` : '<div class="m-spin"></div>'}
-    <div class="p26-card">${row('href="#/kal"', '<span class="m-grow p26-rt"><b>Kalender</b><span>Timeplan, prøver og frister</span></span><span class="p26-ch">›</span>')}${row('href="#/bd"', '<span class="m-grow p26-rt"><b>Bursdager</b><span>Vises i Kalender og på Hjem</span></span><span class="p26-ch">›</span>')}</div></div>`;
+    <div class="p26-card">${row('href="#/kal"', '<span class="m-grow p26-rt"><b>Kalender</b><span>Timeplan, prøver og frister</span></span><span class="p26-ch">›</span>')}${row('href="#/bd"', '<span class="m-grow p26-rt"><b>Bursdager</b><span>Vises i Kalender og på Oversikt</span></span><span class="p26-ch">›</span>')}</div></div>`;
 }
 /** Lenkeraden nederst på Bursdager (KALENDERE-kortet ligger nå under Innstillinger → Kalendere). */
 export function bdCalLink() {

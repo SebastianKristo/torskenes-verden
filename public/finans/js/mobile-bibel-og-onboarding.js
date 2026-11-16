@@ -300,7 +300,7 @@ function obView() {
       <span class="m-grow"></span><button type="button" class="p37-obtn" data-p37b="oblink" ${OB.busy ? 'disabled' : ''}>${OB.busy ? 'Kobler …' : 'Koble og fortsett'}</button>`;
   } else {
     const nm = first(OB.prof?.name ?? P.name), n = Object.entries(OB.ln).filter(([k, v]) => v && (!OB.isNew || k !== 'subs')).length;
-    body = `<span class="m-grow"></span><span class="p37-opop">${av(OB.prof ?? P, 96)}</span><b class="p37-oh c">Hei, ${esc(nm)}!</b><span class="p37-os c">@${esc(user)} er nå koblet til ${esc(OB.prof?.name ?? P.name)}. ${n} ting er satt opp for deg, og resten av husstanden ser deg som ${esc(nm)}.</span><span class="m-grow"></span><button type="button" class="p37-obtn" data-p37b="obdone">Gå til Hjem</button>`;
+    body = `<span class="m-grow"></span><span class="p37-opop">${av(OB.prof ?? P, 96)}</span><b class="p37-oh c">Hei, ${esc(nm)}!</b><span class="p37-os c">@${esc(user)} er nå koblet til ${esc(OB.prof?.name ?? P.name)}. ${n} ting er satt opp for deg, og resten av husstanden ser deg som ${esc(nm)}.</span><span class="m-grow"></span><button type="button" class="p37-obtn" data-p37b="obdone">Gå til Oversikt</button>`;
   }
   return `<div class="p37-ob" role="dialog" aria-modal="true" aria-label="Koble til profil"><div class="p37-obi"><div class="p37-obt">${OB.st > 1 && OB.st < 3 ? `<button type="button" class="p37-cx" data-p37b="obback" aria-label="Tilbake">${svg('M15 6l-6 6 6 6', 16, 2.6)}</button>` : '<span class="p37-cx sp"></span>'}<span class="p37-odots">${dots}</span>${OB.st < 3 ? '<button type="button" class="p37-oskip" data-p37b="obskip">Hopp over</button>' : '<span class="p37-cx sp"></span>'}</div><div class="p37-obb">${body}</div></div></div>`;
 }

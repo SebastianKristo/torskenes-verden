@@ -499,7 +499,7 @@ export function kontoGroups() {
 function asSheet() {
   const u = AS.pick && (AS.users ?? []).find((x) => x.id === AS.pick); if (!u || m.screen !== 'set') { AS.pick = null; return ''; }
   const L = AS.lay[u.id] ?? {}, lk = !!L.locked;
-  const upd = L.updatedBy ? `Sist endret av ${L.updatedByName ?? L.updatedBy}${L.updatedAt ? ` · ${fmtDate(L.updatedAt)}` : ''}` : 'Hjem, fanelinje og Mer';
+  const upd = L.updatedBy ? `Sist endret av ${L.updatedByName ?? L.updatedBy}${L.updatedAt ? ` · ${fmtDate(L.updatedAt)}` : ''}` : 'Oversikt, fanelinje og Mer';
   return `<div class="sheet-bg" data-p44="asx"></div><div class="pp-sheet p44-ash" role="dialog" aria-modal="true" aria-label="${esc(u.name)}"><span class="pp-grab"></span>
     <div class="p44-ashh">${av(u, 52)}<span class="m-grow"><b class="pp-serif">${esc(u.name)}</b><small class="pp-mut">${esc([u.device, u.role === 'admin' ? 'Admin' : 'Bruker'].filter(Boolean).join(' · '))}</small></span><button type="button" class="p44-x" data-p44="asx" aria-label="Lukk">✕</button></div>
     <button type="button" class="p44-big red" data-p44="asgo" ${AS.busy || u.role === 'admin' || u.owner ? 'disabled' : ''}>${AS.busy ? 'Logger inn …' : `Logg inn som ${esc(first(u.name))}`}</button>

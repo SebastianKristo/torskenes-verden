@@ -359,7 +359,7 @@ function menuSheet(th) {
     <div class="m-row" style="gap:12px"><span class="m-av${avatarUrl() ? ' img' : ''}">${avInner()}</span><div class="m-grow"><b>${esc(meName())}</b><div style="font-size:13px;opacity:.65">${who}</div></div><button class="mini" data-mact="menu" aria-label="Lukk">${icon('close', 18)}</button></div>
     ${(() => {
       // Startsiden står øverst; resten ligger under «Andre OS».
-      const hl = row('#/hl', 'hlhome', 'Homelab', 'Oversikt, søk og snarveier', scr === 'hl'), fin = row(`#/${startFin() ? startScr() : 'hjem'}`, 'wallet', 'Økonomi', 'Hjem, liste, budsjett og mer', FIN.includes(scr));
+      const hl = row('#/hl', 'hlhome', 'Homelab', 'Oversikt, søk og snarveier', scr === 'hl'), fin = row(`#/${startFin() ? startScr() : 'hjem'}`, 'wallet', 'Økonomi', 'Oversikt, transaksjoner, budsjett og mer', FIN.includes(scr));
       const rest = others.map(([k, n, s2, ic]) => row('#/' + k, ic, n, s2, scr === k)).join('');
       return `<div class="list ${th === 'ios' ? 'glass2' : ''}">${startFin() ? fin : hl}</div><div class="sec">Andre OS</div><div class="list ${th === 'ios' ? 'glass2' : ''}">${startFin() ? hl : fin}${rest}</div>`;
     })()}

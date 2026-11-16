@@ -67,8 +67,6 @@ const UNNTAK = [
   ['apps/android/app/src/main/java/no/kristo/finanshub/Moduler.kt', /setOf\(/, 'GAMLE_NAVN: gamle fanenavn → modul'],
   ['apps/ios/FinansHub/Sources/ModulSider.swift', /"Subscription OS"|"Now Brief"|"Nyhetsleser"/, 'gamleNavn: gamle fanenavn → modul'],
   ['public/js/settings-search.js', /\[\/\^Nyhetsleser\$\/|'Nyhetsleser'/, 'TITLE66: gamle titler i søkeindeksen → nye'],
-  // Mobil-web (/finans/ på telefon) kaller fortsatt startskjermen «Hjem» i fanelinja (mobile-fanelinje.js, mobile-oversikt-knapp.js). Rettes sammen med fanenavnet.
-  ['public/finans/js/mobile', /Hjem/, 'mobil-web: fanen heter fortsatt Hjem'],
   // Hjem som sted (sone i Familie) og som liste i Gjøremål, ikke startsiden.
   ['', /Legg til Hjem, Skole|til Hjem som sone|«Hjem» får navnet/, 'Hjem som sted eller kategori'],
 ];

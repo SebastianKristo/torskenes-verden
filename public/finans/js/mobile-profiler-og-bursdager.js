@@ -33,7 +33,7 @@ const PROF_DEF = {
   finans_boliger: { startRoute: 'finans/boliger', homeNav: ['finans'], finNav: ['boliger', 'sok', 'liste', 'oversikt', 'kvitteringer'] },
   boliger: { startRoute: 'finans/boliger', homeNav: ['finans', 'domener'], finNav: ['boliger', 'kvitteringer', 'oversikt', 'sok'] },
 };
-const PROF_N = [['standard', 'Standard', 'Hjem, Finans, Mat og Mer · vanlige Finans-faner'], ['finans_boliger', 'Finans + Boliger', 'Åpner i Boliger · Boliger, Søk, Liste, Oversikt, Kvitteringer · Hjem under Mer'], ['boliger', 'Boliger-profil', 'Bare Finans og Domener, med Boliger først']];
+const PROF_N = [['standard', 'Standard', 'Oversikt, Økonomi, Mat og Mer · vanlige Økonomi-faner'], ['finans_boliger', 'Finans + Boliger', 'Åpner i Boliger · Boliger, Søk, Liste, Oversikt, Kvitteringer · Homelab under Mer'], ['boliger', 'Boliger-profil', 'Bare Finans og Domener, med Boliger først']];
 let PROFS = PROF_DEF, profT = 0, applying = false;
 /** Prompt 39: navnet på valgt profil (undertekst på raden Appprofil). */
 export const profName = () => (profile() === 'custom' ? 'Egendefinert' : PROF_N.find(([k]) => k === profile())?.[1] ?? 'Standard');
@@ -131,9 +131,9 @@ const IDX = [
   ['bank', 'Bankimport', 'Økonomi', '#/set/bank', 'bank dnb csv import'], ['t212', 'Aksjer · Trading 212', 'Økonomi', '#/set/t212', 'aksje trading212 t212 fond'], ['fanelinje', 'Fanelinje og Mer i Økonomi', 'Økonomi', '#/set/fanelinje', 'fane faner navigasjon'], ['sub', 'Faste betalinger', 'Økonomi', '#/sub', 'abonnement'],
   // Prompt 39: alt med utseende og farger ligger i Homelab → Tilpass (#/set/tilpass).
   ['tilpass', 'Tilpass', 'Homelab', '#/set/tilpass', 'tilpass utseende tema farge farger ikon navn fanelinje bakgrunn customize mørk lys papir', 'theme'],
-  ['appnavn', 'Navn på appen', 'Homelab · Tilpass', '#/set/tilpass', 'navn app tittel'], ['appikon', 'App-ikon', 'Homelab · Tilpass', '#/set/tilpass', 'ikon logo app'], ['hjemnav', 'Fanelinje i Hjem', 'Homelab · Tilpass', '#/set/fanelinje', 'fane faner hjem navigasjon'], ['navstil', 'Fanelinje-stil', 'Homelab · Tilpass', '#/set/tilpass', 'fane fanelinje stil ikoner tekst navn navigasjon'],
+  ['appnavn', 'Navn på appen', 'Homelab · Tilpass', '#/set/tilpass', 'navn app tittel'], ['appikon', 'App-ikon', 'Homelab · Tilpass', '#/set/tilpass', 'ikon logo app'], ['hjemnav', 'Fanelinje på Oversikt', 'Homelab · Tilpass', '#/set/fanelinje', 'fane faner hjem navigasjon'], ['navstil', 'Fanelinje-stil', 'Homelab · Tilpass', '#/set/tilpass', 'fane fanelinje stil ikoner tekst navn navigasjon'],
   ['mod', 'Moduler', 'Homelab', '#/set/mod', 'modul widget sporing domener mat'], ['rss', 'Nyheter', 'Homelab', '#/nyheter', 'rss nyheter kilder ikon'],
-  ['look', 'Tema og farger', 'Homelab · Tilpass', '#/set/tilpass', 'tema mørk lys farge farger papir utseende ikonfarger aksent', 'theme'], ['bakgrunn', 'Bakgrunn på Hjem', 'Homelab · Tilpass', '#/set/bakgrunn', 'bakgrunn bilde planeter vær oslo', 'bg'],
+  ['look', 'Tema og farger', 'Homelab · Tilpass', '#/set/tilpass', 'tema mørk lys farge farger papir utseende ikonfarger aksent', 'theme'], ['bakgrunn', 'Bakgrunn på Oversikt', 'Homelab · Tilpass', '#/set/bakgrunn', 'bakgrunn bilde planeter vær oslo', 'bg'],
   ['haptic', 'Haptikk', 'App · Varsler og haptikk', '#/set/hap', 'haptikk vibrasjon vibrer', 'haptic'], ['varsler', 'Varsler og haptikk', 'App', '#/set/varsler', 'varsel push lyd bursdager', 'push'], ['quiet', 'Stille timer', 'App · Varsler', '#/set/varsler', 'stille timer natt lyd', 'quiet'], ['kal', 'Kalendere', 'App', '#/set/kal', 'kalender google home assistant ha ical canvas skole timeplan synk'], ['integ', 'Integrasjoner', 'App', '#/set/integ', 'integrasjon nøkkel api'],
   ['bd', 'Bursdager', 'Mer', '#/bd', 'bursdag'], ['kalside', 'Kalender', 'Mer', '#/kal', 'timeplan prøver frister skole uke måned agenda'],
 ];
@@ -417,7 +417,7 @@ export function ruterView() {
       <span class="p24-dm"><b>${mn == null ? '–' : mn <= 0 ? 'nå' : `${mn} min`}</b><small>${esc(clock)}</small></span></button><div class="p28-col${open ? ' on' : ''}" data-depcol="${esc(k)}"><div>${stopList(d, k, c, name)}</div></div></div>`; // prompt 28: alltid i layout, høyden animeres
   }).join('');
   return `<div class="p24-rv"><div class="p24-rvh" style="${heroBg('avg')}">
-      <div class="p24-rvt"><a class="p24-gp" href="#/hl" data-swipeback>‹ Hjem</a><span class="m-grow"></span><button class="p24-gp" data-p24="rvref" aria-label="Oppdater">↻ ${esc(hm(AV.t || Date.now()))}</button></div>
+      <div class="p24-rvt"><a class="p24-gp" href="#/hl" data-swipeback>‹ Oversikt</a><span class="m-grow"></span><button class="p24-gp" data-p24="rvref" aria-label="Oppdater">↻ ${esc(hm(AV.t || Date.now()))}</button></div>
       <div class="p24-rvk"><span>Sanntid · Ruter</span><h1>${esc(name)}</h1><small>${esc(sub)}</small></div></div>
     <div class="p24-rvb">${globalThis.P41?.tripRuter?.() ?? '' /* prompt 41: MIN REISE · SEBASTIAN */}${pills}${ed}
       ${loading && !failed ? '<span class="p24-st">Henter sanntid fra Entur …</span>' : ''}${failed ? '<span class="p24-st lab">Fikk ikke kontakt med Entur. Trykk ↻ for å prøve igjen.</span>' : ''}

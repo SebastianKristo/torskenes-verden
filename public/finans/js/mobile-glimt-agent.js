@@ -345,7 +345,7 @@ export function showZoneBanner(B) { ZA.demo = B; clearTimeout(ZA.demoT); ZA.demo
 export function modGroup(grp, row) {
   return grp('MODULER', [
     row('#/set/media', 'Media', 'Varsler, Kalender, avspilling og tjenester', '', 'look', 'media45'),
-    row('#/set/ruter', 'Ruter', `Anbefalte reiser: ${RU.n} · Min reise på Hjem`, '', 'globe', 'ruter45'),
+    row('#/set/ruter', 'Ruter', `Anbefalte reiser: ${RU.n} · Min reise på Oversikt`, '', 'globe', 'ruter45'),
     row('#/vaer', 'Vær', 'Steder, Min posisjon og varsler', '', 'look', 'vaer45'),
     row('#/set/nyheter', 'Nyheter', 'Kilder, kategorier og Glimt-sammendrag', '', 'list', 'nyheter46'), // prompt 46: flyttet fra Nyheter-siden
     row('#/studie', 'Studie', 'Vitnemål, karakterer og dokumenter', '', 'list', 'studie45'),
@@ -359,7 +359,7 @@ export function mediaSet() {
 export function ruterSet() {
   recoLoad();
   return `<span class="pp-lab p17-gl">MIN REISE</span><div class="list p17-list p45-rset"><div class="opt-row p17-row p45-rsrow"><span class="m-grow p17-rt"><b>Antall anbefalte reiser</b><small>Kortet «Anbefalt for min reise» viser nøyaktig så mange</small></span>${recoSeg()}</div></div>
-    <div class="snote">Samme valg brukes på Ruter-siden og Hjem-kortet, og synkes mellom enhetene dine. Er det færre avganger enn valgt, vises det som finnes.</div>
+    <div class="snote">Samme valg brukes på Ruter-siden og kortet på Oversikt, og synkes mellom enhetene dine. Er det færre avganger enn valgt, vises det som finnes.</div>
     <a class="opt-row p17-row p44-hlink" href="#/avg"><span class="m-grow p17-rt"><b>Åpne Ruter</b><small>Avganger og Min reise</small></span><span class="p17-chev" aria-hidden="true">›</span></a>`;
 }
 /* Glimt-personlighet (AI-kontroll): Av · Litt · Full rakker. GET/PUT /api/glimt/agent/settings. */

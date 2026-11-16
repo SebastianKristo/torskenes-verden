@@ -152,7 +152,7 @@ export function updNoteRow(tg) {
   if (UP.cfg == null) upLoad();
   const c = UP.cfg;
   if (!updAdmin() || !c || typeof c !== 'object') return '';
-  return tg('data-p30="uptog" data-k="notify_updates"', 'Varsle om nye versjoner', 'Nordlys OS · banner på Hjem og push', c.notify_updates !== false);
+  return tg('data-p30="uptog" data-k="notify_updates"', 'Varsle om nye versjoner', 'Nordlys OS · banner på Oversikt og push', c.notify_updates !== false);
 }
 
 /** Passord-arket for Oppdater nå / Gjenopprett. Legges i draw() sammen med de andre arkene. */

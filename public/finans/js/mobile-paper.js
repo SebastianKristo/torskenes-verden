@@ -164,7 +164,7 @@ const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 export const FIN_MAIN = ['hjem', 'liste', 'finn', 'fmer'];
 export const FIN_SUB = ['budsjett', 'kv', 'fast', 'konto', 'aks', 'sub', 'dir', 'imp', 'rap', 'sok', 'skann', 'opp'];
 export const ctxOf = (scr) => (scr === 'dom' ? 'dom' : FIN_MAIN.includes(scr) || FIN_SUB.includes(scr) ? 'fin' : 'main');
-const ABO_BACK = { mer: 'Mer', hl: 'Hjem', hjem: 'Oversikt', fmer: 'Mer', liste: 'Liste', finn: 'Finn', sok: 'Søk', set: 'Innstillinger', brief: 'Brief', huske: 'Gjøremål', kal: 'Kalender' };
+const ABO_BACK = { mer: 'Mer', hl: 'Homelab', hjem: 'Oversikt', fmer: 'Mer', liste: 'Liste', finn: 'Finn', sok: 'Søk', set: 'Innstillinger', brief: 'Brief', huske: 'Gjøremål', kal: 'Kalender' };
 const NAMES = { hl: 'Homelab', mer: 'Mer', fmer: 'Mer', hjem: 'Oversikt', liste: 'Transaksjoner', finn: 'Finn', mat: 'Mat', spor: 'Sporing', set: 'Innstillinger', sok: 'Søk', dom: 'Domener' };
 // Hvor pila øverst til venstre går: Finans-fanene og de andre hovedfanene går hjem, undersider til forelderen.
 // Prompt 24: i profilene Finans + Boliger og Boliger-profil er Boliger roten. Finans-fanene og Finans → Mer har ingen
@@ -185,19 +185,19 @@ function parentOf0(scr) {
   if (scr === 'set' && m.sub) return ['set', 'Alle innstillinger'];
   if (scr === 'mat' && m.sub) return ['mat', 'Mat'];
   // Domener: pila (og sveip tilbake) går alltid hjem, også når Domener ble åpnet fra Mer.
-  if (scr === 'dom') return m.sub === 'admin' ? ['dom', 'Domener'] : ['hl', 'Hjem'];
+  if (scr === 'dom') return m.sub === 'admin' ? ['dom', 'Domener'] : ['hl', 'Homelab'];
   if (scr === 'skann' && m.rc) return ['back', 'Kvitteringer'];
   if (scr === 'aks' && m.sub) return ['aks', 'Aksjer'];
   if (scr === 'dir' && m.sub) return ['dir', 'Boliger'];
-  if (['avg', 'fam', 'vaer', 'huske'].includes(scr)) return ['hl', 'Hjem'];
+  if (['avg', 'fam', 'vaer', 'huske'].includes(scr)) return ['hl', 'Homelab'];
   if (scr === 'imp') return ['set', 'Innstillinger']; // O3: Import bor i Innstillinger
   if (finScreens().includes(scr) || scr === 'fmer' || scr === 'hjem') return ['hl', 'Homelab'];
   // Prompt 38: Abonnement går tilbake dit det ble åpnet fra (Mer, Hjem, Oversikt, Finans → Mer, Innstillinger, brief).
   if (scr === 'sub' && m.aboFrom && m.aboFrom !== 'sub' && ABO_BACK[m.aboFrom]) return [m.aboFrom, ABO_BACK[m.aboFrom]];
   if (FIN_SUB.includes(scr)) return ['fmer', 'Mer'];
   if (['media', 'nyheter'].includes(scr)) return ['mer', 'Mer'];
-  if (scr === 'set') return [m.setFrom && m.setFrom !== 'set' ? m.setFrom : 'hl', NAMES[m.setFrom] ?? 'Hjem'];
-  return ['hl', 'Hjem'];
+  if (scr === 'set') return [m.setFrom && m.setFrom !== 'set' ? m.setFrom : 'hl', NAMES[m.setFrom] ?? 'Homelab'];
+  return ['hl', 'Homelab'];
 }
 
 /** Fase 6 (Q4): filtrene øverst på Faste betalinger (Abonnementer = sub, Faste utgifter = fast, Planlagte trekk = egen side med saldoprognose). */
@@ -491,7 +491,7 @@ export function paperMer() {
   // fanelinja tas ut. I profilene Finans + Boliger og Boliger-profil står Hjem øverst.
   const n = onWay(), inBar = new Set(mainTabs('mer').map(([k]) => k)); // inBar: bare for valget Sporing/Domener under
   const mod = inBar.has('spor') ? (domOk() ? ['dom', 'Domener', 'Trafikk, besøk og oppetid'] : null) : ['spor', 'Sporing', n ? `${n} pakke${n === 1 ? '' : 'r'} på vei` : 'Pakker og sendinger'];
-  const rows = [...(P24.profRoot() ? [['hl', 'Hjem', 'Pakker, avganger og widgets']] : []), ['brief', 'Brief', P36.briefMerSub()], ...(P37B.bibleOn() ? [['bibel', 'Bibel', 'Dagens vers, rekke og leseplan']] : []), // prompt 37: bare med bibelvers-modulen // prompt 36: Now Brief øverst i Mer
+  const rows = [...(P24.profRoot() ? [['hl', 'Oversikt', 'Pakker, avganger og widgets']] : []), ['brief', 'Brief', P36.briefMerSub()], ...(P37B.bibleOn() ? [['bibel', 'Bibel', 'Dagens vers, rekke og leseplan']] : []), // prompt 37: bare med bibelvers-modulen // prompt 36: Now Brief øverst i Mer
      ...(mod ? [mod] : []), ['kal', 'Kalender', 'Timeplan, prøver og frister'], ['bd', 'Bursdager', 'Hvem har bursdag snart'], ['huske', 'Gjøremål', 'To-do for hele familien'], ['fam', 'Familie og kart', 'Posisjon, soner og helse'], ['tkart', 'Kart', 'Holdeplasser, sanntid og soner'] /* prompt 46 */,
     ['chat', 'Chat', 'Ollama, Gemini og Groq · historikk'], ['media', 'Media', 'Sonarr, Radarr og nedlastinger'], ['hjem', 'Økonomi', 'Oversikt, transaksjoner, Finn og mer'], ['sub', 'Faste betalinger', 'Abonnementer, faste utgifter og planlagte trekk'], ['nyheter', 'Nyheter', 'RSS med AI-sammendrag'], ['studie', 'Studie', 'Vitnemål, karakterer og snitt med Glimt'], ['avspilling', 'Avspilling', 'Plex og Jellyfin · spilles nå og historikk'] /* prompt 44 */, ['set', 'Innstillinger', 'Tema, bakgrunn og konto']]
     ; // prompt 40 (claude-code-fanelinje-alle-sider.md): faner i fanelinja vises fortsatt i Mer

@@ -19,7 +19,7 @@ P31.hooks31({ trialSaved: () => { SB.sheet = false; SB.mode = null; }, subsReloa
 Object.assign(ICONS, { sins: 'M4 20V10M10 20V4M16 20v-7M22 20H2', shist: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 7v5l3 2', shome: 'M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z' });
 
 export const SB = { d: null, err: '', tab: 'home', sheet: false, mode: null, f: { name: '', price: '', day: '', cycle: 'monthly' }, cand: null, candErr: '', busy: false, mon: null, done: null };
-const TABS = [['home', 'Hjem', 'shome'], ['ins', 'Innsikt', 'sins'], ['hist', 'Historikk', 'shist']];
+const TABS = [['home', 'Oversikt', 'shome'], ['ins', 'Innsikt', 'sins'], ['hist', 'Historikk', 'shist']];
 const TITLE = { home: 'Abonnementer', ins: 'Innsikt', hist: 'Historikk' }; // Fase 6: en del av Faste betalinger
 const CAT_C = { Underholdning: '#FF7A3D', Produktivitet: '#7AA7FF', 'Lagring og sky': '#F2C14E', 'Helse og trening': '#5FD3A8', Transport: '#B79CFF', Annet: '#A0A0AA' };
 const CAT_RE = [['Underholdning', /netflix|spotify|hbo|max\b|viaplay|disney|youtube|storytel|tv ?2|apple tv|tidal|audible|nrk|discovery|amazon prime|xbox|playstation|nintendo/i],
