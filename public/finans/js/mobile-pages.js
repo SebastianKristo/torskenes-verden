@@ -140,7 +140,7 @@ function konto() {
   const a = accs(), tot = a.reduce((x, y) => x + (y.balance ?? 0), 0), goals = S.boot?.goals ?? [];
   const TYPE = { checking: 'Brukskonto', savings: 'Sparekonto', credit: 'Kreditt', cash: 'Kontanter' };
   return page({ back: ['#/mer', 'Tilbake til Mer'], title: 'Kontoer', hero: { l: 'Total saldo', v: krS(tot), s: `${a.length} kontoer` },
-    groups: [G('Kontoer', a.map((x) => R.item({ ini: x.name.slice(0, 2), iniStyle: 'font-size:13px', t: x.name, s: [x.bank, x.last4 ? `•••• ${x.last4}` : '', TYPE[x.type] ?? ''].filter(Boolean).join(' · '), v: `${x.balance < 0 ? '−' : ''}${n2(x.balance)}`, vc: x.balance < 0 ? '#FFB08A' : 'inherit', attrs: `data-pd="konto" data-id="${x.id}"` }))),
+    groups: [G('Kontoer', a.map((x) => R.item({ ini: x.name.slice(0, 2), iniStyle: 'font-size:13px', t: x.name, s: [x.bank, x.last4 ? `•••• ${x.last4}` : '', TYPE[x.type] ?? ''].filter(Boolean).join(' · '), v: `${x.balance < 0 ? '−' : ''}${n2(x.balance)}`, vc: x.balance < 0 ? 'var(--pp-lab)' : 'inherit', attrs: `data-pd="konto" data-id="${x.id}"` }))),
       goals.length ? G('Sparemål', goals.map((g) => R.bar(g.name, `${n0(g.saved)} / ${n0(g.target)} kr`, g.target ? (g.saved / g.target) * 100 : 0, g.saved >= g.target ? '#9FE3C6' : 'var(--m-acc)', g.saved >= g.target ? 'Nådd ✓' : `${Math.round(g.target ? (g.saved / g.target) * 100 : 0)} % · ${n0(g.target - g.saved)} kr igjen`))) : ''] });
 }
 
@@ -151,7 +151,7 @@ function rap() {
   const inn = yr ? ms.reduce((a, x) => a + x.inn, 0) : cur.inn, ut = yr ? ms.reduce((a, x) => a + x.ut, 0) : cur.ut;
   const mx = Math.max(1, ...(r.byCategory ?? []).map((c) => c.amount));
   const lbl = yr ? curM().slice(0, 4) : cap(monthName(curM()));
-  return page({ back, title: 'Rapporter', kpis: [{ l: 'Inn', v: kr(inn), s: lbl, c: '#9FE3C6' }, { l: 'Ut', v: kr(ut), s: lbl }, { l: 'Spart', v: krS(inn - ut), s: 'Inn − ut' }, { l: 'Sparerate', v: `${inn ? Math.round(((inn - ut) / inn) * 100) : 0} %`, s: 'Av inntekt' }],
+  return page({ back, title: 'Rapporter', kpis: [{ l: 'Inn', v: kr(inn), s: lbl, c: 'var(--pp-pos)' }, { l: 'Ut', v: kr(ut), s: lbl }, { l: 'Spart', v: krS(inn - ut), s: 'Inn − ut' }, { l: 'Sparerate', v: `${inn ? Math.round(((inn - ut) / inn) * 100) : 0} %`, s: 'Av inntekt' }],
     groups: [G('', [R.chips('Periode', [{ n: 'Denne måneden', on: !yr, attrs: 'data-pa="rapm" data-v="month"' }, { n: 'Hittil i år', on: yr, attrs: 'data-pa="rapm" data-v="year"' }])]),
       G('Per kategori', (r.byCategory ?? []).map((c) => R.bar(c.category, kr(c.amount), (c.amount / mx) * 100, c.color))),
       (r.merchants ?? []).length ? G('Topp butikker', r.merchants.map((x) => R.item({ logo: { description: x.name }, t: x.name, s: `${x.count} kjøp`, v: `−${n0(x.amount)} kr`, attrs: `data-pd="merch" data-name="${esc(x.name)}"` }))) : '',
@@ -167,7 +167,7 @@ function imp() {
         `<label class="opt-row col"><span style="font-size:13px;opacity:.7">Eller lim inn tekst</span><textarea class="sinp" id="m-imptxt" rows="4" placeholder="10/10/26  Ruterappen  238,00" style="height:auto;padding:10px 12px;font-family:var(--mono);font-size:13px">${esc(I.text)}</textarea></label>`,
         a.length > 1 ? R.chips('Konto', a.map((x) => ({ n: x.name, on: (I.acc ?? a[0].id) === x.id, attrs: `data-pa="impacc" data-v="${x.id}"` }))) : '',
         R.btn(I.busy ? 'Leser …' : 'Les inn tekst', 'data-pa="imptxt"')], { note: 'DNB-format støttes: Dato, Forklaring, Rentedato, Ut, Inn. Tekst som «Visa 100021» og «Varekjøp» fjernes. Den opprinnelige bankraden lagres uendret.' }),
-      rows ? G(`Forhåndsvisning · ${rows.length} poster`, rows.slice(0, 80).map((r) => R.item({ logo: { description: r.description, domain: r.domain }, t: r.description, s: `${dd(r.date)} · ${r.raw ?? ''}`, ai: r.aiShort, tags: [r.category ? { n: r.category } : null, r.duplicate ? { n: 'Finnes fra før', k: 'warn' } : null].filter(Boolean), v: sgn(r.amount), vc: r.amount > 0 ? '#9FE3C6' : 'inherit' })), { act: { l: 'Tøm', attrs: 'data-pa="impclear"' } }) : '',
+      rows ? G(`Forhåndsvisning · ${rows.length} poster`, rows.slice(0, 80).map((r) => R.item({ logo: { description: r.description, domain: r.domain }, t: r.description, s: `${dd(r.date)} · ${r.raw ?? ''}`, ai: r.aiShort, tags: [r.category ? { n: r.category } : null, r.duplicate ? { n: 'Finnes fra før', k: 'warn' } : null].filter(Boolean), v: sgn(r.amount), vc: r.amount > 0 ? 'var(--pp-pos)' : 'inherit' })), { act: { l: 'Tøm', attrs: 'data-pa="impclear"' } }) : '',
       rows ? G('', [R.btn(`Importer ${rows.filter((r) => !r.duplicate).length} poster`, 'data-pa="impgo"')]) : '',
     ] });
 }
@@ -293,7 +293,7 @@ async function rowClick(e, d) {
     const k = x.dataset.pd, id = x.dataset.id;
     if (k === 'fast') {
       const r = PG.rec.find((y) => String(y.id) === id);
-      await openDetail({ title: r.name, sub: r.category, v: kr(r.amount), vs: recWhen(r), groups: [['Trekk', [['Trekkdato', recWhen(r)], ['Kategori', r.category], ['Per måned', kr(monthly(r))], ['Per år', kr(monthly(r) * 12)], ['Neste trekk', r.next ? `${dd(r.next)}.${r.next.slice(0, 4)}` : '–'], ['Status', r.active ? 'Aktiv' : 'Av', r.active ? '#9FE3C6' : ''], ['Oppdaget fra', r.detected ? 'Gjentakende transaksjoner' : 'Lagt inn manuelt']]]] }, { q: word(r.name), limit: 30 });
+      await openDetail({ title: r.name, sub: r.category, v: kr(r.amount), vs: recWhen(r), groups: [['Trekk', [['Trekkdato', recWhen(r)], ['Kategori', r.category], ['Per måned', kr(monthly(r))], ['Per år', kr(monthly(r) * 12)], ['Neste trekk', r.next ? `${dd(r.next)}.${r.next.slice(0, 4)}` : '–'], ['Status', r.active ? 'Aktiv' : 'Av', r.active ? 'var(--pp-pos)' : ''], ['Oppdaget fra', r.detected ? 'Gjentakende transaksjoner' : 'Lagt inn manuelt']]]] }, { q: word(r.name), limit: 30 });
     } else if (k === 'konto') {
       const a = accs().find((y) => String(y.id) === id);
       await openDetail({ title: a.name, sub: a.bank ?? '', hl: 'Saldo', v: `${a.balance < 0 ? '−' : ''}${kr2(Math.abs(a.balance))}`, vs: 'Startsaldo + transaksjoner', groups: [['Konto', [['Bank', a.bank ?? '–'], ['Kontonummer', a.last4 ? `•••• ${a.last4}` : '–', '', true], ['Startsaldo', kr2(a.openingBalance ?? 0)], ['Notat', a.note || '–']]]] }, { account: a.id, limit: 30 });

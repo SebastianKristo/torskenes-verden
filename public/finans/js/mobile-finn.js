@@ -108,20 +108,20 @@ function shipBox(d) {
   const sh = d.shipment;
   if (!sh?.trackingNo) return '';
   const eta = sh.eta ? (/^\d{4}-\d{2}-\d{2}/.test(sh.eta) ? day(sh.eta, true) : sh.eta) : '';
-  return `<section class="mf-adbox" aria-label="Sending"><div class="t"><b>Sending · ${esc(sh.statusText || 'Sporing')}</b><a href="#/spor" style="color:#FFB08A;font-size:13px">Åpne i Sporing ›</a></div>
+  return `<section class="mf-adbox" aria-label="Sending"><div class="t"><b>Sending · ${esc(sh.statusText || 'Sporing')}</b><a href="#/spor" class="m-tx-lab" style="font-size:13px">Åpne i Sporing ›</a></div>
     <small class="mono">${esc(sh.trackingNo)}</small>${[sh.pickupPoint ? `Hentested: ${sh.pickupPoint}` : '', eta ? `${sh.status === 'delivered' ? 'Levert' : 'Ventet'} ${eta}` : ''].filter(Boolean).map((x) => `<small>${esc(x)}</small>`).join('')}</section>`;
 }
 
 function adBox(d) {
   const a = d.ad;
   const form = `<form class="url" data-mfad><input name="url" type="url" inputmode="url" placeholder="Lenke til annonsen på finn.no eller Finn-kode" value="${esc(F.adUrl || a?.url || d.adUrl || d.adUrlGuess || '')}" aria-label="Lenke til annonsen"><button ${F.busy === 'ad' ? 'disabled' : ''}>${F.busy === 'ad' ? 'Henter …' : '✦ Hent'}</button></form>
-    <small>Hentes fra finn.no med bilder og lagres her. Eller <label style="color:#FFB08A;cursor:pointer">last opp annonsen som PDF eller skjermbilde<input type="file" accept="image/*,application/pdf" data-mfup="ad" hidden></label>.</small>`;
+    <small>Hentes fra finn.no med bilder og lagres her. Eller <label class="m-tx-lab" style="cursor:pointer">last opp annonsen som PDF eller skjermbilde<input type="file" accept="image/*,application/pdf" data-mfup="ad" hidden></label>.</small>`;
   if (!a) return F.adForm || F.err ? `<section class="mf-adbox" aria-label="Annonsen"><div class="t"><b>Annonsen</b></div>${F.err ? `<small style="color:#FF8A80">${esc(F.err)}</small>` : ''}${form}</section>` : '';
   return `<section class="mf-adbox" aria-label="Annonsen"><div class="t"><b>${esc(a.title ?? 'Annonsen')}</b>${a.price != null ? `<b class="mono">${kr(a.price)}</b>` : ''}</div>
     <small>${[a.place, a.source === 'upload' ? 'Lastet opp' : a.fetched ? `Hentet ${day(a.fetched, true)}` : null].filter(Boolean).map(esc).join(' · ')}</small>
     ${a.description ? `<p>${esc(a.description)}</p>` : ''}
     ${a.file ? `<div class="mf-files" style="background:#0F0F13"><div><span class="ext">${esc(ext(a.file.name))}</span><a href="${esc(a.file.url)}" target="_blank" rel="noopener">${esc(a.file.name)}</a><button data-mfrm="${a.file.id}" aria-label="Fjern ${esc(a.file.name)}">×</button></div></div>` : ''}
-    <small>${a.url ? `<a href="${esc(a.url)}" target="_blank" rel="noopener" style="color:#FFB08A">Åpne på finn.no ↗</a> · ` : ''}<button data-mfa="adform" style="border:0;background:none;color:#FFB08A;padding:0;font:inherit;cursor:pointer">${F.adForm ? 'Skjul' : 'Hent på nytt'}</button></small>
+    <small>${a.url ? `<a href="${esc(a.url)}" target="_blank" rel="noopener" class="m-tx-lab">Åpne på finn.no ↗</a> · ` : ''}<button data-mfa="adform" class="m-tx-lab" style="border:0;background:none;padding:0;font:inherit;cursor:pointer">${F.adForm ? 'Skjul' : 'Hent på nytt'}</button></small>
     ${F.err ? `<small style="color:#FF8A80">${esc(F.err)}</small>` : ''}${F.adForm ? form : ''}</section>`;
 }
 

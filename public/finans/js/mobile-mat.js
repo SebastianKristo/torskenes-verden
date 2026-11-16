@@ -101,7 +101,7 @@ function todayCard() {
       <div class="mp2-tname">${esc(td.name || 'Ingen rett i dag')}</div>
       <div class="mp2-tcook">${esc(cook)}</div>
       ${steps.length ? `<button class="mp2-step" data-mp="step" data-id="${esc(td.dishId)}"><span class="mp2-sl">STEG ${k + 1} AV ${steps.length} · trykk for neste</span><span class="mp2-st">${esc(steps[k])}</span>
-        <span class="mp2-dots">${steps.map((_, i) => `<i style="background:${i <= k ? '#141A06' : 'rgba(20,26,6,.18)'}"></i>`).join('')}</span></button>` : ''}
+        <span class="mp2-dots">${steps.map((_, i) => `<i${i <= k ? ' class="on"' : ''}></i>`).join('')}</span></button>` : ''}
     </div>`;
 }
 

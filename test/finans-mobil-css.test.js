@@ -17,7 +17,13 @@ test('mobile.css har ingen regler for det slettede iOS-temaet (.ios)', () => {
   assert.doesNotMatch(utenKommentarer, /\.ios(?![\w-])/);
 });
 
+test('stegprikkene i Mat og fargene i Kvitteringer/Finn er klasser, ikke inline stil som CSS må overstyre', () => {
+  assert.match(js('mobile-mat.js'), /<i\$\{i <= k \? ' class="on"' : ''\}><\/i>/);
+  assert.doesNotMatch(utenKommentarer, /mp2-dots i\[style/);
+  for (const f of ['mobile.js', 'mobile-finn.js']) assert.doesNotMatch(js(f), /style="[^"]*color:#(9FE3C6|FFB08A)/i, f);
+});
+
 test('antall !important i mobile.css går bare ned', () => {
   const n = (utenKommentarer.match(/!important/g) || []).length;
-  assert.ok(n <= 850, `${n} !important (maks 850)`);
+  assert.ok(n <= 806, `${n} !important (maks 806; 861 før oppryddingen)`);
 });
