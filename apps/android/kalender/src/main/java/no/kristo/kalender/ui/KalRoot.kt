@@ -152,6 +152,8 @@ private fun KalApp(vm: KalVm, onBackToHomelab: () -> Unit) {
         Column(Modifier.fillMaxSize()) {
             Spacer(Modifier.windowInsetsTopHeight(WindowInsets.statusBars))
             TopBar(vm, onBackToHomelab)
+            // Q34 (E-B12): «Slå sammen kalenderne: 6 → 4?» med ja/nei, til brukeren har svart.
+            MigForslag(vm)
             // Visningen: sveip venstre/høyre bytter periode, sveip inn fra venstre kant (28 dp) åpner Kalendere.
             // Prompt 35: zoom-animasjonen og pinch ligger rundt visningen (ZoomBox35); berøring lukker tastaturet.
             ZoomBox35(vm, reduce, onTouch = { focus.clearFocus() }, modifier = Modifier.weight(1f).fillMaxWidth()) {
