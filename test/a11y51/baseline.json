@@ -1,5 +1,5 @@
 {
-  "updated": "2026-11-15T13:23:59.714Z",
+  "updated": "2026-11-16T15:28:47.961Z",
   "counts": {
     "login|papir-lys|1440": {},
     "login|papir-lys|390": {},
@@ -25,12 +25,8 @@
     },
     "nyheter|papir-lys|1440": {},
     "nyheter|papir-lys|390": {},
-    "nyheter|papir-mork|1440": {
-      "kontrast": 1
-    },
-    "nyheter|papir-mork|390": {
-      "kontrast": 1
-    },
+    "nyheter|papir-mork|1440": {},
+    "nyheter|papir-mork|390": {},
     "nyheter|glass|1440": {
       "beroringsflate": 4
     },
@@ -67,6 +63,18 @@
     "media|glass|390": {
       "beroringsflate": 3
     },
+    "media-kommer|papir-lys|1440": {},
+    "media-kommer|papir-lys|390": {
+      "beroringsflate": 9
+    },
+    "media-kommer|papir-mork|1440": {},
+    "media-kommer|papir-mork|390": {
+      "beroringsflate": 9
+    },
+    "media-kommer|glass|1440": {},
+    "media-kommer|glass|390": {
+      "beroringsflate": 9
+    },
     "media-bibliotek|papir-lys|1440": {},
     "media-bibliotek|papir-lys|390": {},
     "media-bibliotek|papir-mork|1440": {},
@@ -91,24 +99,12 @@
     "media-nedlastinger|glass|390": {
       "beroringsflate": 7
     },
-    "media-avspilling|papir-lys|1440": {
-      "kontrast": 2
-    },
-    "media-avspilling|papir-lys|390": {
-      "kontrast": 2
-    },
-    "media-avspilling|papir-mork|1440": {
-      "kontrast": 2
-    },
-    "media-avspilling|papir-mork|390": {
-      "kontrast": 2
-    },
-    "media-avspilling|glass|1440": {
-      "kontrast": 2
-    },
-    "media-avspilling|glass|390": {
-      "kontrast": 2
-    },
+    "media-avspilling|papir-lys|1440": {},
+    "media-avspilling|papir-lys|390": {},
+    "media-avspilling|papir-mork|1440": {},
+    "media-avspilling|papir-mork|390": {},
+    "media-avspilling|glass|1440": {},
+    "media-avspilling|glass|390": {},
     "media-nrk|papir-lys|1440": {},
     "media-nrk|papir-lys|390": {},
     "media-nrk|papir-mork|1440": {},
@@ -125,37 +121,59 @@
     "familie|papir-lys|390": {},
     "familie|papir-mork|1440": {},
     "familie|papir-mork|390": {},
-    "familie|glass|1440": {
-      "kontrast": 2
-    },
+    "familie|glass|1440": {},
     "familie|glass|390": {},
+    "familie-kart|papir-lys|1440": {},
+    "familie-kart|papir-lys|390": {},
+    "familie-kart|papir-mork|1440": {},
+    "familie-kart|papir-mork|390": {},
+    "familie-kart|glass|1440": {},
+    "familie-kart|glass|390": {},
+    "reise|papir-lys|1440": {},
+    "reise|papir-lys|390": {},
+    "reise|papir-mork|1440": {},
+    "reise|papir-mork|390": {},
+    "reise|glass|1440": {},
+    "reise|glass|390": {},
+    "reise-kart|papir-lys|1440": {
+      "beroringsflate": 4
+    },
+    "reise-kart|papir-lys|390": {
+      "beroringsflate": 3
+    },
+    "reise-kart|papir-mork|1440": {
+      "beroringsflate": 4
+    },
+    "reise-kart|papir-mork|390": {
+      "beroringsflate": 3
+    },
+    "reise-kart|glass|1440": {
+      "beroringsflate": 4
+    },
+    "reise-kart|glass|390": {
+      "beroringsflate": 3
+    },
     "mat|papir-lys|1440": {
-      "kontrast": 8,
       "beroringsflate": 5,
       "etikett": 2
     },
     "mat|papir-lys|390": {
-      "kontrast": 8,
       "beroringsflate": 5,
       "etikett": 2
     },
     "mat|papir-mork|1440": {
-      "kontrast": 5,
       "beroringsflate": 5,
       "etikett": 2
     },
     "mat|papir-mork|390": {
-      "kontrast": 5,
       "beroringsflate": 5,
       "etikett": 2
     },
     "mat|glass|1440": {
-      "kontrast": 5,
       "beroringsflate": 5,
       "etikett": 2
     },
     "mat|glass|390": {
-      "kontrast": 5,
       "beroringsflate": 5,
       "etikett": 2
     },
@@ -172,11 +190,9 @@
     "skjold|glass|1440": {},
     "skjold|glass|390": {},
     "studie|papir-lys|1440": {
-      "kontrast": 1,
       "beroringsflate": 2
     },
     "studie|papir-lys|390": {
-      "kontrast": 1,
       "beroringsflate": 2
     },
     "studie|papir-mork|1440": {
@@ -233,6 +249,12 @@
     "smarthjem|papir-mork|390": {},
     "smarthjem|glass|1440": {},
     "smarthjem|glass|390": {},
+    "mer|papir-lys|1440": {},
+    "mer|papir-lys|390": {},
+    "mer|papir-mork|1440": {},
+    "mer|papir-mork|390": {},
+    "mer|glass|1440": {},
+    "mer|glass|390": {},
     "innst-utseende|papir-lys|1440": {},
     "innst-utseende|papir-lys|390": {},
     "innst-utseende|papir-mork|1440": {},
@@ -245,18 +267,12 @@
     },
     "innst-integrasjoner|papir-lys|1440": {},
     "innst-integrasjoner|papir-lys|390": {},
-    "innst-integrasjoner|papir-mork|1440": {
-      "kontrast": 8
-    },
-    "innst-integrasjoner|papir-mork|390": {
-      "kontrast": 8
-    },
+    "innst-integrasjoner|papir-mork|1440": {},
+    "innst-integrasjoner|papir-mork|390": {},
     "innst-integrasjoner|glass|1440": {
-      "kontrast": 8,
       "beroringsflate": 4
     },
     "innst-integrasjoner|glass|390": {
-      "kontrast": 8,
       "beroringsflate": 4
     },
     "innst-konto|papir-lys|1440": {},
@@ -295,18 +311,32 @@
     },
     "innst-varsler|papir-lys|1440": {},
     "innst-varsler|papir-lys|390": {},
-    "innst-varsler|papir-mork|1440": {
-      "kontrast": 1
-    },
-    "innst-varsler|papir-mork|390": {
-      "kontrast": 1
-    },
+    "innst-varsler|papir-mork|1440": {},
+    "innst-varsler|papir-mork|390": {},
     "innst-varsler|glass|1440": {
-      "kontrast": 1,
       "beroringsflate": 4
     },
     "innst-varsler|glass|390": {
-      "kontrast": 1,
+      "beroringsflate": 4
+    },
+    "innst-enheter|papir-lys|1440": {},
+    "innst-enheter|papir-lys|390": {},
+    "innst-enheter|papir-mork|1440": {},
+    "innst-enheter|papir-mork|390": {},
+    "innst-enheter|glass|1440": {
+      "beroringsflate": 4
+    },
+    "innst-enheter|glass|390": {
+      "beroringsflate": 4
+    },
+    "innst-husstand|papir-lys|1440": {},
+    "innst-husstand|papir-lys|390": {},
+    "innst-husstand|papir-mork|1440": {},
+    "innst-husstand|papir-mork|390": {},
+    "innst-husstand|glass|1440": {
+      "beroringsflate": 4
+    },
+    "innst-husstand|glass|390": {
       "beroringsflate": 4
     },
     "innst-reise|papir-lys|1440": {},
@@ -462,82 +492,6 @@
     "finans-planlegging|papir-mork|1440": {},
     "finans-planlegging|papir-mork|390": {},
     "finans-planlegging|glass|1440": {},
-    "finans-planlegging|glass|390": {},
-    "media-kommer|papir-lys|1440": {},
-    "media-kommer|papir-lys|390": {
-      "beroringsflate": 9
-    },
-    "media-kommer|papir-mork|1440": {},
-    "media-kommer|papir-mork|390": {
-      "beroringsflate": 9
-    },
-    "media-kommer|glass|1440": {},
-    "media-kommer|glass|390": {
-      "beroringsflate": 9
-    },
-    "familie-kart|papir-lys|1440": {},
-    "familie-kart|papir-lys|390": {},
-    "familie-kart|papir-mork|1440": {},
-    "familie-kart|papir-mork|390": {},
-    "familie-kart|glass|1440": {
-      "kontrast": 2
-    },
-    "familie-kart|glass|390": {
-      "kontrast": 2
-    },
-    "reise-kart|papir-lys|1440": {
-      "kontrast": 1,
-      "beroringsflate": 4
-    },
-    "reise-kart|papir-lys|390": {
-      "kontrast": 1,
-      "beroringsflate": 3
-    },
-    "reise-kart|papir-mork|1440": {
-      "kontrast": 1,
-      "beroringsflate": 4
-    },
-    "reise-kart|papir-mork|390": {
-      "kontrast": 1,
-      "beroringsflate": 3
-    },
-    "reise-kart|glass|1440": {
-      "kontrast": 2,
-      "beroringsflate": 4
-    },
-    "reise-kart|glass|390": {
-      "kontrast": 2,
-      "beroringsflate": 3
-    },
-    "innst-enheter|papir-lys|1440": {},
-    "innst-enheter|papir-lys|390": {},
-    "innst-enheter|papir-mork|1440": {},
-    "innst-enheter|papir-mork|390": {},
-    "innst-enheter|glass|1440": {
-      "beroringsflate": 4
-    },
-    "innst-enheter|glass|390": {
-      "beroringsflate": 4
-    },
-    "innst-husstand|papir-lys|1440": {
-      "kontrast": 2
-    },
-    "innst-husstand|papir-lys|390": {
-      "kontrast": 2
-    },
-    "innst-husstand|papir-mork|1440": {
-      "kontrast": 3
-    },
-    "innst-husstand|papir-mork|390": {
-      "kontrast": 3
-    },
-    "innst-husstand|glass|1440": {
-      "kontrast": 1,
-      "beroringsflate": 4
-    },
-    "innst-husstand|glass|390": {
-      "kontrast": 1,
-      "beroringsflate": 4
-    }
+    "finans-planlegging|glass|390": {}
   }
 }
