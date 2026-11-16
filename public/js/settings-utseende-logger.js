@@ -147,7 +147,7 @@ export function usersGroups44(h, users = [], rerender) {
     out.push(h.group('Server · eier', [
       h.row({ t: 'Eier av serveren', ini: initials(o.name), ic: '#7a3b6b', s: `${o.name}${isOwner ? ' (deg)' : ''}${o.since ? ` · startet serveren ${dd(o.since)}` : ''}`, k: 'eier server owner' }),
       pend && isOwner ? `<div class="sg-row ow44-pend"><span class="sg-txt"><b>${esc(pendTxt)}</b><span>${esc(pend.byName ?? pend.by?.name ?? 'En admin')} vil overføre serveren.</span></span><span class="ow44-pb"><button type="button" class="sg-btn2" data-ow44-ok="${esc(pend.id)}">Godkjenn</button><button type="button" class="sg-btn2 danger" data-ow44-no="${esc(pend.id)}">Avslå</button></span></div>` : pend ? h.row({ t: pendTxt, s: 'Eieren må godkjenne innen 48 timer.' }) : null,
-      canT && !pend ? h.row({ t: 'Overfør eierskap', tc: '#d0503e', s: isOwner ? 'Gi serveren til en annen bruker. Du blir admin.' : OW.d?.me?.needsApproval === false ? 'Gi serveren til en annen bruker.' : 'Eieren må godkjenne (gyldig i 48 t).', btn: 'Overfør', act: 'data-ow44-start', k: 'overfør eierskap eier transfer owner' }) : null,
+      canT && !pend ? h.row({ t: 'Overfør eierskap', tc: 'var(--ds-danger)', s: isOwner ? 'Gi serveren til en annen bruker. Du blir admin.' : OW.d?.me?.needsApproval === false ? 'Gi serveren til en annen bruker.' : 'Eieren må godkjenne (gyldig i 48 t).', btn: 'Overfør', act: 'data-ow44-start', k: 'overfør eierskap eier transfer owner' }) : null,
     ].filter(Boolean), 'Ny eier må ha totrinnsbekreftelse på. Kan ikke angres her, men ny eier kan overføre tilbake.'));
   } else if (OW.loading) out.push(h.group('Server · eier', [h.row({ t: 'Eier av serveren', s: 'Henter …' })]));
   if (admin()) {

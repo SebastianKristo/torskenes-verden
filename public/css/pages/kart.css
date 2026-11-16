@@ -58,9 +58,9 @@ html:not([data-hl="2c"]) .k46-chip:not(.on),html[data-mode="dark"] .k46-chip:not
 
 .k46-tt b{font:500 30px/1 Newsreader,Georgia,serif}
 
-.k46-src{font:600 10.5px 'IBM Plex Mono',ui-monospace,monospace;letter-spacing:.1em;color:#2f7a4f}
+.k46-src{font:600 10.5px 'IBM Plex Mono',ui-monospace,monospace;letter-spacing:.1em;color:var(--ds-success)}
 
-.k46-src.demo{color:#a8661a}
+.k46-src.demo{color:color-mix(in srgb,var(--ds-warning) 80%,var(--ds-text-primary))} /* M9: varselfargen alene er 4,0:1 mot flaten i Papir lys */
 
 .k46-q{position:relative}
 
@@ -244,3 +244,5 @@ html:not([data-hl="2c"]) .k46-stn,html[data-mode="dark"] .k46-stn{color:#f3efe6;
   html:not([data-hl="2c"]) .k46{height:max(440px,calc(100vh - 200px))}}
 
 .k46-pb>*{flex:none}
+/* M9: lenken i kildehenvisningen arver tekstfargen (Leaflets blå var 3,3:1 i Glass). */
+.k46 .leaflet-control-attribution a{color:inherit;text-decoration:underline}

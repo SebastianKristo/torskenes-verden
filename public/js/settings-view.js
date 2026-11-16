@@ -76,7 +76,7 @@ export const svg = (d, s = 20) => `<svg width="${s}" height="${s}" viewBox="0 0 
 export function row(o) {
   const icon = o.ico ? `<span class="sg-av sg-ico38" style="background:${o.ic ?? '#2b5d8a'}" aria-hidden="true">${o.ico}</span>` : o.logo !== undefined ? logoImg(o.logo, o.ini ?? o.t, 'sg-lg')
     : o.img ? `<span class="sg-av"><img src="${esc(o.img)}" alt=""></span>`
-      : o.ini ? `<span class="sg-av" style="background:${o.ic ?? '#2a3346'}">${esc(o.ini)}</span>` : '';
+      : o.ini ? `<span class="sg-av sg-av-ini" style="background:${o.ic ?? '#2a3346'}">${esc(o.ini)}</span>` : ''; // sg-av-ini: lys tekst på brukerens farge (M9)
   const txt = `<span class="sg-txt"><b${o.tc ? ` style="color:${o.tc}"` : ''}>${esc(o.t)}</b>${o.s ? `<span>${esc(o.s)}</span>` : ''}</span>`;
   const val = o.v != null && o.v !== '' ? `<span class="sg-v"${o.vc ? ` style="color:${o.vc}"` : ''}>${esc(o.v)}</span>` : '';
   const isTog = o.tog !== undefined, click = o.go || o.act || isTog;
