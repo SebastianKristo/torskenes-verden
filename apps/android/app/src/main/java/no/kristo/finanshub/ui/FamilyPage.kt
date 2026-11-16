@@ -86,7 +86,7 @@ import no.kristo.finanshub.ui.designsystem.DsPalette
 /* ---------------- Familie og kart ---------------- */
 
 /**
- * Familie: posisjon, soner og helse. Selve siden er tegnet etter Familie.dc.html i FamilyLegacy.kt (prompt 22).
+ * Familie: posisjon, soner og helse (Family50Screen). Soneikonene og sonevarslene ligger i FamilyZones.kt.
  * Her ligger tillatelsene (posisjon, «Alltid», varsler) og personvern-/helsearket.
  */
 @Composable
@@ -107,13 +107,28 @@ internal fun FamilyScreen(vm: AppViewModel) {
         if (FamilyService.hasLocation(ctx)) vm.famSetSharing("on")
         else { shareAfter = true; locPerm.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)) }
     }
-    val askLocation: () -> Unit = {
-        shareAfter = false
-        locPerm.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION))
-    }
-    // Prompt 50: Familie i nytt design (ui/FamilyPage.kt). Eldre server uten /api/family/people50: den forrige siden.
-    if (vm.fam50.missing) Family22Screen(vm, startSharing, askLocation) else Family50Screen(vm, startSharing)
+    // Prompt 50: Familie i nytt design. Q19: en server uten /api/family/people50 (eldre enn 5.0) får beskjed om å oppdatere,
+    // i stedet for den gamle siden som ble holdt i live for den.
+    if (vm.fam50.missing) FamilyServerTooOld(vm) else Family50Screen(vm, startSharing)
     if (vm.famPrivacy) PrivacySheet(vm, startSharing)
+}
+
+/** Q19: serveren mangler /api/family/people50 (eldre enn Homelab 5.0). Den gamle Familie-siden er fjernet; brukeren får beskjed. */
+@Composable
+private fun FamilyServerTooOld(vm: AppViewModel) {
+    val p = HomelabTheme.colors
+    BackHandler { vm.closeFamily() }
+    Column(
+        Modifier.fillMaxSize().background(p.surface).statusBarsPadding().padding(24.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterVertically), horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text("Familie trenger en nyere server", color = p.textPrimary, fontSize = HomelabType.title3.fontSize, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center)
+        Text("Oppdater Homelab-serveren til 5.0 eller nyere for å se folk, steder og helse.", color = p.textSecondary, fontSize = HomelabType.subheadline.fontSize, textAlign = TextAlign.Center)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            androidx.compose.material3.TextButton(onClick = { vm.closeFamily() }) { Text("Tilbake", color = p.textPrimary, fontWeight = FontWeight.SemiBold) }
+            androidx.compose.material3.TextButton(onClick = { vm.loadFam50() }) { Text("Prøv igjen", color = p.accent, fontWeight = FontWeight.Bold) }
+        }
+    }
 }
 
 /** Personvern og helse: pause/av, nøyaktig eller omtrentlig posisjon, og hvilke helsedata som deles (Health Connect). */

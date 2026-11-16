@@ -4,7 +4,7 @@
 // Ingen Android SDK her: CI-jobben «Mobilapper» er fasit for at koden kompilerer.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync, readdirSync } from 'node:fs';
+import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -97,6 +97,21 @@ test('Struktur: Domener har egen ViewModel med StateFlow og repository; AppViewM
   assert.match(vm, /tokens = null; domener\.nullstill\(\)/, 'utlogging tømmer Domener');
   // Siden tegnes fra StateFlow-en.
   assert.match(strip(raw(join(APP, 'ui/Domains.kt'))), /val t by vm\.domener\.tilstand\.collectAsStateWithLifecycle\(\)/);
+});
+
+test('Q19: den gamle Familie-siden for servere uten people50 er borte; soneikonene og sonevarslene er beholdt', () => {
+  assert.ok(!existsSync(join(APP, 'ui/FamilyLegacy.kt')));
+  const zones = strip(raw(join(APP, 'ui/FamilyZones.kt')));
+  assert.match(zones, /internal fun fam22IconPath\(key: String\): String/);
+  assert.match(zones, /internal fun ZoneAlertsCard45\(vm: AppViewModel\)/);
+  assert.match(zones, /internal fun ZoneAlertsToggle45\(vm: AppViewModel\)/);
+  assert.doesNotMatch(zones, /Family22Screen|Family45Wide|Fam24Devices/);
+  for (const p of ktFiles(join(AND, 'app/src/main'))) assert.doesNotMatch(strip(raw(p)), /\bFamily22Screen\b/, p);
+  const page = strip(raw(join(APP, 'ui/FamilyPage.kt')));
+  assert.match(page, /if \(vm\.fam50\.missing\) FamilyServerTooOld\(vm\) else Family50Screen\(vm, startSharing\)/);
+  assert.match(page, /"Oppdater Homelab-serveren til 5\.0 eller nyere/);
+  // Serveren har ruten som avgjør (people50) – ellers ville siden aldri vises.
+  assert.match(raw(join(ROOT, 'server/familie/places.js')), /family50Api\.get\('\/people50'/);
 });
 
 test('E-B12/Q34 Homelab-appen: kalenderen viser forslaget med «Slå sammen» og «Ikke nå», og «Angre» etterpå', () => {

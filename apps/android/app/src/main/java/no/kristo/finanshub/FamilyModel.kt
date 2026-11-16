@@ -39,7 +39,7 @@ import java.util.Locale
  *    (samme mekanisme som skolesonene i LiveReise.kt, uten Play-tjenester) og som sonekanter for delingstjenesten (FamilyPrefs).
  *    Hentes på nytt ved WebSocket `family {kind:'places'}`.
  *  - Varsler for innsjekk/forespørsel med handlingene 👍 / Ring / Hent; «Hent meg» i egen kanal «sjekkinn-hast».
- * Eldre server (404 på people50): Familie faller tilbake til den gamle siden (Family22Screen).
+ * Eldre server (404 på people50): Familie ber brukeren oppdatere serveren (Q19; den gamle siden er fjernet).
  */
 
 /* ======================= Modeller ======================= */
