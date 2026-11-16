@@ -190,7 +190,7 @@ struct Qr46ShowView: View {
                 }
                 Text("Logg inn med QR-kode").font(PF.serif(30, medium: true)).foregroundStyle(p.ink).multilineTextAlignment(.center)
                 content
-                Text("Åpne Papir Finans på en mobil som er logget inn → Innstillinger → Logg inn på annen enhet, og skann koden.")
+                Text("Åpne Homelab på en mobil som er logget inn → Innstillinger → Enheter og widgets → Logg inn på annen enhet, og skann koden.")
                     .font(PF.ui(13.5)).foregroundStyle(p.mut).multilineTextAlignment(.center).fixedSize(horizontal: false, vertical: true)
                 Button { m.close() } label: {
                     Text("Logg inn med brukernavn og passord").font(PF.ui(13.5, .semibold)).foregroundStyle(p.mut).underline()

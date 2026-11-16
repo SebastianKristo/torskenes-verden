@@ -324,7 +324,7 @@ struct MacAddCal35Sheet: View {
             .frame(maxHeight: 300)
             accRow("iCloud", "App-spesifikt passord")
             accRow("Outlook / Microsoft 365", "Koble til")
-            Text("Kontoer kobles til i Homelab → Innstillinger → Integrasjoner. Google-kalenderne du velger her vises i sidemenyen med merket «Google».")
+            Text("Kontoer kobles til i Homelab → Innstillinger → Tilkoblinger. Google-kalenderne du velger her vises i sidemenyen med merket «Google».")
                 .font(MacFont.ui(11.5)).foregroundColor(t.mut).fixedSize(horizontal: false, vertical: true)
         }
     }

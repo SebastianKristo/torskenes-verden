@@ -425,13 +425,13 @@ enum Plat51Bus {
 
 struct NextBus51Intent: AppIntent {
     static var title: LocalizedStringResource = "Når går bussen"
-    static var description: IntentDescription = IntentDescription("De neste avgangene fra stoppene på Hjem.")
+    static var description: IntentDescription = IntentDescription("De neste avgangene fra stoppene på Oversikt.")
     static var openAppWhenRun: Bool = false
 
     init() {}
 
     func perform() async throws -> some IntentResult & ProvidesDialog {
-        guard let s = await Plat51Bus.load() else { return .result(dialog: "Fant ingen avganger. Legg til et stopp under Avganger i appen.") }
+        guard let s = await Plat51Bus.load() else { return .result(dialog: "Fant ingen avganger. Legg til et stopp under Reise → Avganger i appen.") }
         let now: Date = Date()
         var parts: [String] = []
         for stop in s.stops.prefix(2) {

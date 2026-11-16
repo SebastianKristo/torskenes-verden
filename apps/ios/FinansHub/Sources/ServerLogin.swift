@@ -269,7 +269,7 @@ struct Server41Sheet: View {
         switch kind {
         case "local": return "Brukes når du er hjemme på Wi-Fi."
         case "external": return "Brukes når du er borte, f.eks. " + Server47.defaultExternal + "."
-        default: return "Adressen til Homelab-serveren din. Den lagres og kan endres senere i Innstillinger → Konto → Server."
+        default: return "Adressen til Homelab-serveren din. Den lagres og kan endres senere i Innstillinger → Konto og sikkerhet → Server."
         }
     }
 

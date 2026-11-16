@@ -68,7 +68,7 @@ struct AppName24Sheet: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 12) {
                 Text("Navn på appen").font(PF.serif(24, medium: true)).foregroundStyle(p.ink)
-                Text("Brukes på Hjem, i widgets og i varsler.").font(PF.ui(13)).foregroundStyle(p.mut)
+                Text("Brukes på Oversikt, i widgets og i varsler.").font(PF.ui(13)).foregroundStyle(p.mut)
                 preview
                 HStack(alignment: .firstTextBaseline) {
                     TextField("Navn", text: $name)

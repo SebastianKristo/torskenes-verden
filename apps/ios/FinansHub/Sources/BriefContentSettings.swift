@@ -49,7 +49,7 @@ final class Brief73Model {
         ("skole", "Skole og jobb", "Prøver og frister neste 7 dager", true),
         ("bursdager", "Bursdager", "Neste bursdager", true),
         ("nordlys", "Nordlys i natt", "Når Kp er høy nok", true),
-        ("aksjer", "Aksjer", "Porteføljen fra Finans", false),
+        ("aksjer", "Aksjer", "Porteføljen fra Økonomi", false),
     ]
     static var defaults: [Brief73Item] {
         catalog.map { (x: (String, String, String, Bool)) -> Brief73Item in Brief73Item(key: x.0, title: x.1, sub: x.2, on: x.3) }

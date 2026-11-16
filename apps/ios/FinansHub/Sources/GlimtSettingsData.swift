@@ -213,7 +213,7 @@ final class G67Flags {
     ], user: ["weekly"], server: []) // prompt 68: bryterne for alle ligger i «Innstillinger for nattlig eval» (G67EvalSet)
 
     static let understand: G67Flags = G67Flags("/glimt/agent/understand", [
-        G67FlagDef(key: "state", label: "Samtaletilstand", help: "Glimt husker forrige spørsmål i samtalen, så «og i Bergen?» og «flytt den til 11» forstås. Utløper etter 30 min i søket på Hjem og 12 t i Chat."),
+        G67FlagDef(key: "state", label: "Samtaletilstand", help: "Glimt husker forrige spørsmål i samtalen, så «og i Bergen?» og «flytt den til 11» forstås. Utløper etter 30 min i søket på Oversikt og 12 t i Chat."),
         G67FlagDef(key: "entities", label: "Entitetsregister", help: "Personer, steder, butikker, abonnementer og faste hendelser med aliaser («hytta», «jobben»), brukt i minne, kalendersøk, vær og finans."),
         G67FlagDef(key: "choices", label: "Valgknapper ved usikkerhet", help: "Glimt spør med konkrete valg («Mener du A eller B?») i stedet for å gjette, og forstår «den første»."),
     ])

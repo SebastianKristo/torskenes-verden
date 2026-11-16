@@ -30,7 +30,7 @@ struct KalApprove51Wait: View {
 
     private var explain: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Godkjenn innloggingen fra en enhet som allerede er logget inn – Kalender eller Homelab-appen (Innstillinger → Sikkerhet), eller Homelab på web.")
+            Text("Godkjenn innloggingen fra en enhet som allerede er logget inn – Kalender (Innstillinger → Sikkerhet) eller Homelab-appen (Innstillinger → Konto og sikkerhet), eller Homelab på web.")
                 .font(KalFont.ui(13.5)).foregroundStyle(t.ink)
                 .fixedSize(horizontal: false, vertical: true)
             Text("Er du hjemme? Logg inn på hjemmenettet, så trengs ingen godkjenning. Du kan også avbryte og bruke «Logg inn med Homelab-appen» eller QR-kode.")

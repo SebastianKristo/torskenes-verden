@@ -73,7 +73,7 @@ struct Musikk88View: View {
     private var notSet: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("Musikk er ikke satt opp").font(PF.serif(22, medium: true)).foregroundStyle(p.ink)
-            Text("Legg inn adressen til yubal under Integrasjoner. Da kan du laste ned album og spillelister fra YouTube Music til musikkbiblioteket.")
+            Text("Legg inn adressen til yubal under Tilkoblinger. Da kan du laste ned album og spillelister fra YouTube Music til musikkbiblioteket.")
                 .font(PF.ui(13.5)).foregroundStyle(p.mut).fixedSize(horizontal: false, vertical: true)
             Button {
                 Haptics.shared.tap()

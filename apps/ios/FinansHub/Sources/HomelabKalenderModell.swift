@@ -412,7 +412,7 @@ final class Cal27Model {
                 await self.base.load(store, force: true)
                 self.flash("Hendelsen er slettet")
             } catch let er as APIError {
-                self.flash(er.status == 409 ? "Koble til Google på nytt i Innstillinger → Kalendere" : er.message)
+                self.flash(er.status == 409 ? "Koble til Google på nytt i Innstillinger → Tilkoblinger" : er.message)
             } catch {
                 self.flash(error.localizedDescription)
             }
@@ -429,7 +429,7 @@ final class Cal27Model {
                 Haptics.shared.success()
             } catch let er as APIError {
                 if er.status == 409 { self.reconnect = true }
-                self.flash(er.status == 409 ? "Koble til Google på nytt i Innstillinger → Kalendere" : er.message)
+                self.flash(er.status == 409 ? "Koble til Google på nytt i Innstillinger → Tilkoblinger" : er.message)
             } catch {
                 self.flash(error.localizedDescription)
             }

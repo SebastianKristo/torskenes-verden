@@ -345,7 +345,7 @@ struct PaperNotifySettings: View {
                         // Prompt 45: «Vis svaret i appen også» (n_ai_in) er fjernet – svar mens appen er lukket kommer bare som varsel.
                         // Prompt 39: flyttet hit fra PROGRAMVARE (samme nøkkel, notify_updates / upd_note).
                         if Update28Model.isAdmin(store) {
-                            toggleRow("Varsle om nye versjoner", "Nordlys OS · banner på Hjem og push", Update30Model.shared.notifyUpdates) { Update30Model.shared.setSetting("notify_updates", $0, store) }
+                            toggleRow("Varsle om nye versjoner", "Nordlys OS · banner på Oversikt og push", Update30Model.shared.notifyUpdates) { Update30Model.shared.setSetting("notify_updates", $0, store) }
                             sep
                         }
                     }
@@ -1177,7 +1177,7 @@ struct PaperAiSettings: View {
             // Prompt 67: «Send til Chat etter» (prompt 32) og GLIMT HUSKER (prompt 33) ligger nå på Innstillinger → Glimt (som web).
             PLabel(text: "Glimt").padding(.leading, 4).padding(.top, 14)
             PaperLinkList(rows: [
-                PaperLinkRow(name: "Glimt husker og «Send til Chat etter»", sub: "Flyttet til Innstillinger → Glimt", value: "Glimt ›", valueColor: p.lab, icon: "sparkle") { store.paperGo("innst-glimt") },
+                PaperLinkRow(name: "Glimt husker og «Send til Chat etter»", sub: "Flyttet til Innstillinger → Glimt og AI → Glimt", value: "Glimt ›", valueColor: p.lab, icon: "sparkle") { store.paperGo("innst-glimt") },
             ])
             // Prompt 23: tidsgrense per motor, nye forsøk og hva som skjer ved tidsavbrudd (AiTimeoutSettings.swift).
             AiTimeouts23(locked: !canEdit)
@@ -1215,7 +1215,7 @@ struct PaperAiSettings: View {
                     }
                 }
             }
-            Text(canEdit ? "Nøkler for Gemini, Groq og Roboflow legges inn i Homelab i nettleseren (Innstillinger → AI-motor). De lagres kryptert på serveren." : "AI-motorer og nøkler settes opp av administrator.")
+            Text(canEdit ? "Nøkler for Gemini, Groq og Roboflow legges inn i Homelab i nettleseren (Innstillinger → Glimt og AI → AI). De lagres kryptert på serveren." : "AI-motorer og nøkler settes opp av administrator.")
                 .font(PF.ui(12)).foregroundStyle(p.mut).padding(.horizontal, 6).padding(.top, 10).fixedSize(horizontal: false, vertical: true)
         }
         .task { await m.load(store) }

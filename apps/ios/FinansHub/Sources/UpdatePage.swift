@@ -136,7 +136,7 @@ struct Update28Page: View {
 
     private var note: String {
         if m.missing || (m.loaded && !m.available) {
-            return "Kjør update.sh én gang fra Proxmox for å slå på oppdatering fra appen. Kommandoen finnes på nettsiden under Innstillinger → System."
+            return "Kjør update.sh én gang fra Proxmox for å slå på oppdatering fra appen. Kommandoen finnes på nettsiden under Innstillinger → Server → System."
         }
         return "Trykk Oppdater nå og skriv passordet ditt på nytt. Serveren tar backup av databasen og starter på nytt (vanligvis 2–5 minutter). Du kan også starte oppdateringen fra nettleseren."
     }

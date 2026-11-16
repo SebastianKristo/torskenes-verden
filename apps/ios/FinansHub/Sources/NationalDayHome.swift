@@ -292,7 +292,7 @@ struct Mai17Settings41: View {
                     .frame(width: 32, height: 32)
                 VStack(alignment: .leading, spacing: 1) {
                     Text("17. mai").font(PF.ui(15, .bold)).foregroundStyle(Brief34C.ink)
-                    Text(cur == "av" ? "Vanlig Hjem og figurer uten flagg" : (cur == "pa" ? "Vises nå (forhåndsvisning)" : "Glimt med flagg 14.–17. mai · eget Hjem på dagen"))
+                    Text(cur == "av" ? "Vanlig Oversikt og figurer uten flagg" : (cur == "pa" ? "Vises nå (forhåndsvisning)" : "Glimt med flagg 14.–17. mai · egen Oversikt på dagen"))
                         .font(PF.ui(12.5)).foregroundStyle(Brief34C.mut).fixedSize(horizontal: false, vertical: true)
                 }
             }

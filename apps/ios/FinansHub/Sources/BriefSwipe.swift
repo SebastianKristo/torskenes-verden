@@ -117,7 +117,7 @@ final class Brief36Model {
     }
 
     /// Undertekst på «Now Brief» i Mer.
-    var merSub: String { hiddenNow ? "Skjult på Hjem · trykk for å åpne" : "Glimt oppsummerer dagen" }
+    var merSub: String { hiddenNow ? "Skjult på Oversikt · trykk for å åpne" : "Glimt oppsummerer dagen" }
 }
 
 /// Hjem-kortet (h12) som kan sveipes bort mot høyre.

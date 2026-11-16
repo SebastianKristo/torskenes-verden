@@ -484,7 +484,7 @@ struct Voice56SettingsGroup: View {
                     choice("På enheten", "Apples talegjenkjenning på norsk", on: !v.useServer) { v.setServer(false) }
                 }
             }
-            Text("Gjelder mikrofonen i Chat og i søkefeltet på Hjem. Opptaket sendes bare til serveren i huset og lagres ikke. Uten motor på serveren brukes enheten.")
+            Text("Gjelder mikrofonen i Chat og i søkefeltet på Oversikt. Opptaket sendes bare til serveren i huset og lagres ikke. Uten motor på serveren brukes enheten.")
                 .font(PF.ui(12)).foregroundStyle(p.mut).padding(.horizontal, 6).padding(.top, 4)
                 .fixedSize(horizontal: false, vertical: true)
         }

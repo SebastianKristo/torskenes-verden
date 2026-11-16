@@ -251,7 +251,7 @@ struct Profile37LinkView: View {
         }
         .padding(.horizontal, 14)
         .background(p.card, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-        Text("Du kan endre koblingen senere i Innstillinger → Konto → Profil. Admin får beskjed om nye koblinger.")
+        Text("Du kan endre koblingen senere i Innstillinger → Konto og sikkerhet → Profil. Admin får beskjed om nye koblinger.")
             .font(PF.ui(12.5)).foregroundStyle(p.mut).fixedSize(horizontal: false, vertical: true)
         HStack(spacing: 10) {
             PLineButton(title: "Tilbake", height: 50, full: true) { withAnimation(.easeOut(duration: 0.2)) { m.step = 0 } }

@@ -1099,7 +1099,7 @@ struct Media43SettingsContent: View {
                     m.open = false
                     store.paperGo("innst-integ")
                 } label: {
-                    Text("Innstillinger → Integrasjoner → Media ›").font(PF.ui(13.5, .semibold)).foregroundStyle(p.ink).frame(maxWidth: .infinity, minHeight: 44)
+                    Text("Innstillinger → Tilkoblinger → Media ›").font(PF.ui(13.5, .semibold)).foregroundStyle(p.ink).frame(maxWidth: .infinity, minHeight: 44)
                         .overlay(Capsule().stroke(p.line, lineWidth: 1))
                 }
                 .buttonStyle(.plain)

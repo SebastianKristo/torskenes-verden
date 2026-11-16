@@ -147,7 +147,7 @@ struct HaHealthPage42: View {
             } else if !m.supported {
                 note("Serveren støtter ikke helse fra Home Assistant ennå. Oppdater Homelab.")
             } else if !m.connected {
-                note(m.error.isEmpty ? "Koble til Home Assistant på nytt under Innstillinger → Integrasjoner." : m.error)
+                note(m.error.isEmpty ? "Koble til Home Assistant på nytt under Innstillinger → Tilkoblinger." : m.error)
                 Button { store.paperGo("innst-integ") } label: {
                     Text("Åpne Integrasjoner ›").font(PF.ui(13.5, .bold)).foregroundStyle(p.lab)
                 }

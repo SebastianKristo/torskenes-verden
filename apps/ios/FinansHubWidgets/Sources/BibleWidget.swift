@@ -99,7 +99,7 @@ struct BibleOff37: View {
         VStack(alignment: .leading, spacing: 4) {
             Text(rect ? "✝︎ Bibelvers" : "BIBELVERS").font(.system(size: rect ? 13 : 10.5, weight: .semibold, design: .monospaced))
                 .foregroundStyle(rect ? Color.primary : bvRed)
-            Text("Ikke slått på for denne brukeren. Slå det på i Homelab → Innstillinger → Glimt.")
+            Text("Ikke slått på for denne brukeren. Slå det på i Homelab → Innstillinger → Glimt og AI → Glimt.")
                 .font(.system(size: rect ? 12 : 12.5)).foregroundStyle(rect ? Color.secondary : bvMut)
                 .lineLimit(rect ? 2 : 5)
         }

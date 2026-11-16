@@ -272,7 +272,7 @@ struct AiCtl34KeysTab: View {
             if !m.fin { AiTokens34(admin: admin) }
             if m.fin {
                 Button { m.close(); store.paperGo("innst-ai") } label: {
-                    Text("Eldre AI-oppsett i Finans ›").font(PF.ui(13, .bold)).foregroundStyle(p.mut)
+                    Text("Eldre AI-oppsett i Økonomi ›").font(PF.ui(13, .bold)).foregroundStyle(p.mut)
                 }
                 .buttonStyle(.plain)
                 .padding(.horizontal, 4)

@@ -15,7 +15,7 @@ struct MacApprove51Wait: View {
         VStack(spacing: 14) {
             ProgressView().controlSize(.regular)
             VStack(alignment: .leading, spacing: 8) {
-                Text("Godkjenn innloggingen fra en enhet som allerede er logget inn – Kalender eller Homelab-appen (Innstillinger → Sikkerhet), eller Homelab på web.")
+                Text("Godkjenn innloggingen fra en enhet som allerede er logget inn – Kalender (Innstillinger → Sikkerhet) eller Homelab-appen (Innstillinger → Konto og sikkerhet), eller Homelab på web.")
                     .font(MacFont.ui(13)).foregroundColor(t.ink)
                     .fixedSize(horizontal: false, vertical: true)
                 Text("Er du hjemme? Logg inn på hjemmenettet, så trengs ingen godkjenning. Du kan også avbryte og bruke «Logg inn med Homelab-appen» eller QR-kode.")

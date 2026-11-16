@@ -267,7 +267,7 @@ private struct Memory33Pick: View {
             .buttonStyle(.plain)
             .disabled(l.type.isEmpty || l.busy)
             .opacity(l.type.isEmpty ? 0.45 : 1)
-            Text("Glimt bruker dette neste gang en melding fra samme avsender legges inn. Se Innstillinger → Glimt → Glimt husker.")
+            Text("Glimt bruker dette neste gang en melding fra samme avsender legges inn. Se Innstillinger → Glimt og AI → Glimt → Glimt husker.")
                 .font(PF.ui(12.5)).foregroundStyle(p.mut).fixedSize(horizontal: false, vertical: true)
         }
     }

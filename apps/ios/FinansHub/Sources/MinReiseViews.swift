@@ -372,7 +372,7 @@ struct MinReise41HomeSetting: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             MinReise45Count()
-            PLabel(text: "På Hjem når du forlater skolen")
+            PLabel(text: "På Oversikt når du forlater skolen")
             HStack(spacing: 6) {
                 chip("over", "Over Ruter-kortet")
                 chip("instead", "I stedet")

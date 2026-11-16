@@ -430,7 +430,7 @@ struct Konto44SheetRows: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            row("Kopier mitt oppsett hit", "Hjem, fanelinje og Mer") { askCopy = true }
+            row("Kopier mitt oppsett hit", "Oversikt, fanelinje og Mer") { askCopy = true }
             Rectangle().fill(p.line).frame(height: 1)
             row("Tilbakestill til standard", "Oppsettet til \(u.name) blir som nytt") { k.layoutAction(u, "reset", store) }
             Rectangle().fill(p.line).frame(height: 1)

@@ -67,7 +67,7 @@ struct KalGoogle36Section: View {
             }
             Text(g.configured || !g.error.isEmpty
                  ? "Logg inn med Google i Homelab. Deretter velger du hovedkalenderen her."
-                 : "Google Kalender er ikke satt opp på serveren ennå (Homelab → Innstillinger → Integrasjoner).")
+                 : "Google Kalender er ikke satt opp på serveren ennå (Homelab → Innstillinger → Tilkoblinger).")
                 .font(KalFont.ui(12)).foregroundStyle(t.mut).fixedSize(horizontal: false, vertical: true)
             KalPill(title: "Koble til Google", height: 36) { login() }
         }
@@ -113,7 +113,7 @@ struct KalGoogle36Section: View {
             if let u = await KalGoogleAPI36.loginURL() {
                 await MainActor.run { UIApplication.shared.open(u) }
             } else {
-                error = "Fikk ikke åpnet innloggingen. Logg inn med Google i Homelab → Innstillinger → Integrasjoner."
+                error = "Fikk ikke åpnet innloggingen. Logg inn med Google i Homelab → Innstillinger → Tilkoblinger."
             }
         }
     }

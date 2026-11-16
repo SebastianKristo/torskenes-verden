@@ -132,7 +132,7 @@ struct Fam22HealthTab: View {
             ForEach(m.members) { mem in
                 Fam22HealthCard(mem: mem, isMe: mem.id == m.meId)
             }
-            Text("Kildene (Apple Health, Health Connect og Home Assistant) velges i Innstillinger → Helse (Familie). Bare det personen har valgt å dele, vises her.")
+            Text("Kildene (Apple Health, Health Connect og Home Assistant) velges i Innstillinger → Husstand → Helse. Bare det personen har valgt å dele, vises her.")
                 .font(PF.ui(12)).foregroundStyle(t.mut).lineSpacing(3).fixedSize(horizontal: false, vertical: true)
                 .padding(.horizontal, 4)
                 .frame(maxWidth: .infinity, alignment: .leading)

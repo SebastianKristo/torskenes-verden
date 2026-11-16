@@ -235,7 +235,7 @@ struct RuterHomeCard27: View {
     @ViewBuilder private var legacy: some View {
         let lines: [RuterLine] = store.mobileHome?.ruter ?? []
         let list = Array(lines.flatMap { l in l.departures.map { (l.to, $0) } }.prefix(4))
-        if list.isEmpty { Text("Hold inne Hjem og trykk «Rediger widget» for å velge stopp.").font(PF.ui(13)).foregroundStyle(p.mut) }
+        if list.isEmpty { Text("Hold inne på Oversikt og trykk «Rediger widget» for å velge stopp.").font(PF.ui(13)).foregroundStyle(p.mut) }
         ForEach(Array(list.enumerated()), id: \.offset) { _, d in
             PaperRuterRow(line: d.1.line, color: d.1.ruterColor, textColor: d.1.ruterTextColor, dest: d.1.to ?? d.0, minutes: d.1.min, time: d.1.time)
         }
@@ -308,7 +308,7 @@ struct RuterPick27Sheet: View {
     private var top: some View {
         HStack(alignment: .center) {
             VStack(alignment: .leading, spacing: 2) {
-                PLabel(text: "Hjem · Ruter-kortet")
+                PLabel(text: "Oversikt · Avganger-kortet")
                 Text("Velg stopp").font(PF.serif(24, medium: true)).foregroundStyle(p.ink)
             }
             Spacer()

@@ -304,7 +304,7 @@ struct ProfileMenu: View {
                             .font(.footnote).foregroundStyle(Color.skinFg.opacity(0.65)).lineLimit(1)
                     }
                 }
-                row("Homelab", "Dashbord, søk og snarveier", "square.grid.3x3.fill", store.module == .homelab) { store.open(.homelab) }.glass(24)
+                row("Homelab", "Oversikt, søk og snarveier", "square.grid.3x3.fill", store.module == .homelab) { store.open(.homelab) }.glass(24)
                 SectionLabel(text: "Andre OS")
                 VStack(spacing: 0) {
                     row("Økonomi", "Oversikt, transaksjoner, budsjett og mer", "banknote", store.module == nil || store.module?.isFinance == true) { store.go(Tab.home) }

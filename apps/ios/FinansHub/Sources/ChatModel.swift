@@ -669,7 +669,7 @@ final class ChatStore27 {
 
     func toggleData() {
         if !myDataAllowed {
-            flash("Slått av i Innstillinger → AI og tolkning")
+            flash("Slått av i Innstillinger → Glimt og AI")
             return
         }
         dataOn.toggle()

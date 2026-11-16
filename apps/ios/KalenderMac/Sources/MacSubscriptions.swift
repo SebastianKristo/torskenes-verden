@@ -104,7 +104,7 @@ struct MacAbDetail42: View {
             .padding(.horizontal, 14)
             .background(RoundedRectangle(cornerRadius: 16).fill(t.card))
             HStack(spacing: 8) {
-                MacPill(title: "Åpne i Finans ›") {
+                MacPill(title: "Åpne i Økonomi ›") {
                     if let u = KalAb42.webURL() { _ = NSWorkspace.shared.open(u) }
                 }
                 if let u = URL(string: x.cancelUrl), !x.cancelUrl.isEmpty, x.cancelled.isEmpty {
@@ -112,7 +112,7 @@ struct MacAbDetail42: View {
                 }
                 Spacer()
             }
-            Text("Endres i Finans → Abonnementer").font(MacFont.ui(12)).foregroundColor(t.mut)
+            Text("Endres i Økonomi → Faste betalinger").font(MacFont.ui(12)).foregroundColor(t.mut)
         }
     }
 }

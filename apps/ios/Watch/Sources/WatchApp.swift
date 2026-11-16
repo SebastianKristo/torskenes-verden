@@ -190,7 +190,7 @@ struct W51DeparturesView: View {
     var body: some View {
         List {
             if store.stops.isEmpty {
-                Text(store.flash.isEmpty ? "Ingen avganger. Velg stopp under Avganger i appen på iPhone." : store.flash).font(.footnote)
+                Text(store.flash.isEmpty ? "Ingen avganger. Velg stopp under Reise → Avganger i appen på iPhone." : store.flash).font(.footnote)
             }
             ForEach(store.stops) { (s: W51Stop) in
                 Section(s.name) {

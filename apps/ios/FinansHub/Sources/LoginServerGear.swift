@@ -211,7 +211,7 @@ struct Login89Sheet: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
                 header
-                Text("Adressene til Homelab-serveren. De samme verdiene finnes i Innstillinger → Server etter innlogging.")
+                Text("Adressene til Homelab-serveren. De samme verdiene finnes i Innstillinger → Konto og sikkerhet etter innlogging.")
                     .font(PF.ui(13)).foregroundStyle(p.mut).fixedSize(horizontal: false, vertical: true)
                 field("Ekstern adresse", Server47.defaultExternal, $external, extResult)
                 field("Lokal adresse", Server47.defaultLocal, $local, locResult)

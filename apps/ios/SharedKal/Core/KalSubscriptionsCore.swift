@@ -241,7 +241,7 @@ enum KalAb42 {
             .sorted { (a: KalEvent, b: KalEvent) -> Bool in a.day < b.day }
         let steps: [String] = ["Ser i Abonnementer", "Regner sammen trekk"]
         if subs.isEmpty {
-            return (steps, "Jeg finner ingen kommende trekk i Abonnementer. Er kalenderen slått på i Finans?", [])
+            return (steps, "Jeg finner ingen kommende trekk i Abonnementer. Er kalenderen slått på i Økonomi?", [])
         }
         // «Når trekkes Netflix?»
         if ql.contains("når") {

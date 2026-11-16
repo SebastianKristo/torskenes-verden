@@ -174,11 +174,11 @@ struct PaperLookSettings: View {
                 // Prompt 51 (IOSFEAT51): automatisk etter solnedgang eller klokkeslett, synket mellom enheter (ThemeSync.swift).
                 PaperLinkRow(name: "Automatisk", sub: "Etter solnedgang eller klokkeslett", value: store.paperMode.hasPrefix(Theme51.autoPrefix) ? "✓" : "›", valueColor: p.pos, icon: "sunset") { Theme51.shared.sheet = true },
                 // Prompt 50: Liquid Glass (GlassTheme.swift) – slår også på flisene på Hjem.
-                PaperLinkRow(name: "Liquid Glass", sub: "Mørkt glass, fargeskyer og fliser på Hjem", value: store.glass50 ? "✓" : "", valueColor: p.pos, icon: "drop") { store.setGlass50() },
+                PaperLinkRow(name: "Liquid Glass", sub: "Mørkt glass, fargeskyer og fliser på Oversikt", value: store.glass50 ? "✓" : "", valueColor: p.pos, icon: "drop") { store.setGlass50() },
             ])
             // Prompt 50: «Hjem som fliser» (papir_home_tiles, HomeTiles.swift).
             Home50TilesToggle().padding(.top, 8)
-            PLabel(text: "Bakgrunn på Hjem").padding(.leading, 4).padding(.top, 14)
+            PLabel(text: "Bakgrunn på Oversikt").padding(.leading, 4).padding(.top, 14)
             bgGrid
             BgTuning()
             PLabel(text: "Ikonfarger").padding(.leading, 4).padding(.top, 14)

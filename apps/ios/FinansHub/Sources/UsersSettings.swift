@@ -78,7 +78,7 @@ struct Users68Note: View {
     let admin: Bool
 
     private var text: String {
-        if admin { return "Admin kan legge til og fjerne brukere. Bruker ser dashbordet og styrer egen totrinnsbekreftelse." }
+        if admin { return "Admin kan legge til og fjerne brukere. Bruker ser Oversikt og styrer egen totrinnsbekreftelse." }
         return "Brukere legges til av administrator. Du styrer egen totrinnsbekreftelse."
     }
 

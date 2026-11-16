@@ -90,7 +90,7 @@ struct MacQR38Panel: View {
     private var detail: String {
         if m.state == "scanned" { return "Godkjenn på mobilen … Sjekk at tallet " + m.match + " også vises der." }
         // Prompt 46: Papir Finans (eller en innlogget Kalender) på mobilen skanner koden.
-        return "Skann med Papir Finans på mobilen: Innstillinger → Logg inn på annen enhet. En innlogget Kalender på mobilen kan også skanne."
+        return "Skann med Homelab på mobilen: Innstillinger → Enheter og widgets → Logg inn på annen enhet. En innlogget Kalender på mobilen kan også skanne."
     }
 
     private var twofa: some View {

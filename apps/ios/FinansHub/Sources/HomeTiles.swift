@@ -398,7 +398,7 @@ struct Home50TilesToggle: View {
         Button { Haptics.shared.select(); withAnimation(.easeOut(duration: 0.2)) { t.set(!on) } } label: {
             HStack(spacing: 12) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Hjem som fliser").font(PF.ui(15, .semibold)).foregroundStyle(p.ink)
+                    Text("Oversikt som fliser").font(PF.ui(15, .semibold)).foregroundStyle(p.ink)
                     Text("Avgang, Finans, Middag, Familie og Domener som fliser").font(PF.ui(12.5)).foregroundStyle(p.mut).lineLimit(2)
                 }
                 Spacer(minLength: 8)
@@ -409,7 +409,7 @@ struct Home50TilesToggle: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .accessibilityLabel("Hjem som fliser")
+        .accessibilityLabel("Oversikt som fliser")
         .accessibilityValue(on ? "På" : "Av")
     }
 }

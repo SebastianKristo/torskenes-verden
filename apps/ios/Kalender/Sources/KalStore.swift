@@ -1059,7 +1059,7 @@ extension KalStore {
         if let u = URL(string: "finanshub://glimt"), UIApplication.shared.canOpenURL(u) {
             UIApplication.shared.open(u)
         } else {
-            showToast("Glimt stilles inn i Homelab → Innstillinger → Glimt", undo: "")
+            showToast("Glimt stilles inn i Homelab → Innstillinger → Glimt og AI → Glimt", undo: "")
         }
     }
 

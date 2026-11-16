@@ -70,7 +70,7 @@ enum TasksFetch {
 /// Kryss av en oppgave rett i widgeten (PATCH /api/tasks/:id {done: true}).
 struct ToggleTaskIntent: AppIntent {
     static var title: LocalizedStringResource = "Fullfør oppgave"
-    static var description = IntentDescription("Krysser av en oppgave i huskelisten.")
+    static var description = IntentDescription("Krysser av en oppgave i Gjøremål.")
 
     @Parameter(title: "Oppgave")
     var taskId: String

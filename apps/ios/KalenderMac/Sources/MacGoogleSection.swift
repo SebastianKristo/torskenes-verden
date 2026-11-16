@@ -59,7 +59,7 @@ struct MacGoogle36Section: View {
             }
             Text(g.configured || !g.error.isEmpty
                  ? "Logg inn med Google i Homelab (åpnes i nettleseren). Deretter velger du hovedkalenderen her."
-                 : "Google Kalender er ikke satt opp på serveren ennå (Homelab → Innstillinger → Integrasjoner).")
+                 : "Google Kalender er ikke satt opp på serveren ennå (Homelab → Innstillinger → Tilkoblinger).")
                 .font(MacFont.ui(11.5)).foregroundColor(t.mut).fixedSize(horizontal: false, vertical: true)
             HStack(spacing: 8) {
                 Button("Koble til Google") { login() }
@@ -110,7 +110,7 @@ struct MacGoogle36Section: View {
             if let u = await KalGoogleAPI36.loginURL() {
                 await MainActor.run { _ = NSWorkspace.shared.open(u) }
             } else {
-                error = "Fikk ikke åpnet innloggingen. Logg inn med Google i Homelab → Innstillinger → Integrasjoner."
+                error = "Fikk ikke åpnet innloggingen. Logg inn med Google i Homelab → Innstillinger → Tilkoblinger."
             }
         }
     }

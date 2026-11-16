@@ -155,15 +155,15 @@ final class Media44 {
         if a.status == 401 && a.code != "HOMELAB_AUTH" { return "Serveren avviste kallet (401), men innloggingen din er gyldig. Trykk for detaljer." }
         if let up = Media44.upstreamAuth(a) { return up }
         switch a.status {
-        case 401: return "Utlogget fra Homelab. Logg inn igjen under Innstillinger → Kontoer og brukere."
+        case 401: return "Utlogget fra Homelab. Logg inn igjen under Innstillinger → Konto og sikkerhet."
         case 403: return "Du har ikke tilgang til Media. Be en administrator om modulen «media»."
         case 404: return "Serveren har ikke Media ennå (oppdater Homelab)."
         case 0, 502, 503, 504: return "Svarer ikke akkurat nå. " + (a.status == 0 ? a.message : "Prøv igjen om litt.")
         default: break
         }
-        if a.code == "not_configured" || a.message.lowercased().contains("ikke satt opp") { return "Ikke satt opp. Legg inn tjenesten under Innstillinger → Integrasjoner → MEDIA." }
+        if a.code == "not_configured" || a.message.lowercased().contains("ikke satt opp") { return "Ikke satt opp. Legg inn tjenesten under Innstillinger → Tilkoblinger → Media." }
         // Serveren kan svare «Ikke logget inn» fra Sonarr/Radarr selv om Homelab-innloggingen er i orden.
-        if a.message.lowercased().contains("ikke logget inn") { return "Tjenesten avviste nøkkelen på serveren. Sjekk API-nøkkelen under Integrasjoner → MEDIA." }
+        if a.message.lowercased().contains("ikke logget inn") { return "Tjenesten avviste nøkkelen på serveren. Sjekk API-nøkkelen under Tilkoblinger → Media." }
         return a.message
     }
 
@@ -172,9 +172,9 @@ final class Media44 {
         let m: String = a.message.lowercased()
         guard a.code == "UPSTREAM_AUTH" || m.contains("feil api-nøkkel") || m.contains("feil brukernavn eller passord") else { return nil }
         for (k, n) in [("sonarr", "Sonarr"), ("radarr", "Radarr"), ("prowlarr", "Prowlarr"), ("qbit", "qBittorrent")] where m.contains(k) {
-            return n + " avviser " + (k == "qbit" ? "brukernavnet eller passordet" : "API-nøkkelen") + ". Sjekk under Innstillinger → Integrasjoner → MEDIA."
+            return n + " avviser " + (k == "qbit" ? "brukernavnet eller passordet" : "API-nøkkelen") + ". Sjekk under Innstillinger → Tilkoblinger → Media."
         }
-        return "Tjenesten avviser nøkkelen på serveren. Sjekk under Innstillinger → Integrasjoner → MEDIA."
+        return "Tjenesten avviser nøkkelen på serveren. Sjekk under Innstillinger → Tilkoblinger → Media."
     }
 
     /// Samme status som Innstillinger: GET /api/integrations/status → services med configured/connected/state.

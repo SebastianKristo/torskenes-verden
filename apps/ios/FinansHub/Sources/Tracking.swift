@@ -876,7 +876,7 @@ struct TrackingView: View {
         return VStack(alignment: .leading, spacing: 0) {
             VStack(alignment: .leading, spacing: 2) {
                 Text("Transportører").fontWeight(.semibold)
-                Text("Nøkler legges inn i Innstillinger → Integrasjoner → Sporing (web)").font(.caption).foregroundStyle(Color.skinFg.opacity(0.6))
+                Text("Nøkler legges inn i Innstillinger → Tilkoblinger → Reise og pakker (web)").font(.caption).foregroundStyle(Color.skinFg.opacity(0.6))
             }
             .padding(.bottom, 8)
             ForEach(Array(list.enumerated()), id: \.element.id) { i, c in

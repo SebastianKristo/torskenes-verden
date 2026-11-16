@@ -254,7 +254,7 @@ struct Sec51WaitView: View {
         case "expired": return "Ingen godkjente innloggingen innen 15 minutter. Logg inn på nytt for å prøve igjen."
         default:
             let dev: String = (m.wait?.device ?? "").isEmpty ? "Denne enheten" : "Denne enheten (\(m.wait?.device ?? ""))"
-            return "\(dev) er ny for kontoen din. Godkjenn innloggingen fra en enhet som allerede er logget inn (Innstillinger → Sikkerhet), "
+            return "\(dev) er ny for kontoen din. Godkjenn innloggingen fra en enhet som allerede er logget inn (Innstillinger → Konto og sikkerhet), "
                 + "eller logg inn hjemme på samme nett. En administrator kan også godkjenne."
         }
     }

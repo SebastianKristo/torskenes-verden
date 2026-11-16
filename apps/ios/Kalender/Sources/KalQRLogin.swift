@@ -91,7 +91,7 @@ struct KalQRLogin38Panel: View {
     private var detail: String {
         if m.state == "scanned" { return "Godkjenn på mobilen … Sjekk at tallet " + m.match + " også vises der." }
         // Prompt 46: Papir Finans (eller en innlogget Kalender) på mobilen skanner koden.
-        return "Skann med Papir Finans på mobilen: Innstillinger → Logg inn på annen enhet. En innlogget Kalender kan også skanne."
+        return "Skann med Homelab på mobilen: Innstillinger → Enheter og widgets → Logg inn på annen enhet. En innlogget Kalender kan også skanne."
     }
 
     private var twofa: some View {
@@ -168,7 +168,7 @@ struct KalLoginQRButton46: View {
                 .contentShape(Capsule())
         }
         .buttonStyle(.plain)
-        .accessibilityHint("Vis en QR-kode som du skanner med Papir Finans på mobilen")
+        .accessibilityHint("Vis en QR-kode som du skanner med Homelab på mobilen")
     }
 }
 
@@ -283,7 +283,7 @@ final class KalQRScan46Model {
     nonisolated static func message(_ e: KalNetError) -> String {
         switch e.status {
         case 0: return "Fikk ikke kontakt med serveren. Prøv igjen."
-        case 403: return "Denne innloggingen kan ikke godkjenne andre enheter. Bruk Papir Finans på mobilen, eller logg inn på nytt."
+        case 403: return "Denne innloggingen kan ikke godkjenne andre enheter. Bruk Homelab på mobilen, eller logg inn på nytt."
         case 404, 405: return "Serveren har ikke QR-innlogging ennå. Oppdater Homelab-serveren."
         case 409, 410: return "Koden er allerede brukt eller utløpt. Be om en ny kode på den andre enheten."
         case 429: return "For mange forsøk. Vent litt og prøv igjen."
@@ -316,7 +316,7 @@ final class KalQRScan46Model {
                 } else if two {
                     self.text = "Godkjent. Skriv koden fra autentiseringsappen på den andre enheten for å fullføre."
                 } else {
-                    self.text = a.device + " er logget inn som " + a.account + ". Du finner den under Innstillinger → Enheter i Homelab."
+                    self.text = a.device + " er logget inn som " + a.account + ". Du finner den under Innstillinger → Enheter og widgets i Homelab."
                 }
             } catch let e as KalNetError {
                 self.phase = "err"

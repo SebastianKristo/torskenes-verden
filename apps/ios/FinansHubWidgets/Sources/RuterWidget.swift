@@ -103,7 +103,7 @@ struct RuterWidget27: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: Ruter27Shared.widgetKind, provider: RuterProvider27()) { e in RuterWidgetView27(entry: e) }
             .configurationDisplayName("Ruter-avganger")
-            .description("Sanntid fra stoppene på Ruter-kortet på Hjem.")
+            .description("Sanntid fra stoppene på Avganger-kortet på Oversikt.")
             .supportedFamilies([.systemSmall, .systemMedium, .systemLarge, .accessoryCircular, .accessoryRectangular])
     }
 }
@@ -166,7 +166,7 @@ private struct RuterEmpty27: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text("Avganger").font(.system(size: 12, weight: .semibold)).opacity(0.75)
                 Spacer(minLength: 0)
-                Text(linked ? "Velg stopp på Ruter-kortet på Hjem" : "Åpne appen og logg inn").font(.system(size: 13, weight: .semibold))
+                Text(linked ? "Velg stopp på Avganger-kortet på Oversikt" : "Åpne appen og logg inn").font(.system(size: 13, weight: .semibold))
             }
             .foregroundStyle(Color.white)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)

@@ -433,12 +433,12 @@ struct Fam50PlaceEdit: View {
     /// «Brukes av Ruter (Min reise starter når du forlater Skole) og varsler for Pål.»
     private var usedText: String {
         guard let pl = place else {
-            return type == "skole" ? "Et sted med type Skole brukes av Ruter (Min reise starter når du forlater skolen)." : "Ingen bruker stedet ennå."
+            return type == "skole" ? "Et sted med type Skole brukes av Reise (Min reise starter når du forlater skolen)." : "Ingen bruker stedet ennå."
         }
         var parts: [String] = []
-        if pl.usedBy.contains("ruter") { parts.append("Ruter (Min reise starter når du forlater " + pl.name + ")") }
+        if pl.usedBy.contains("ruter") { parts.append("Reise (Min reise starter når du forlater " + pl.name + ")") }
         if !pl.notifyText.isEmpty { parts.append("varsler (" + pl.notifyText.replacingOccurrences(of: "Varsler når ", with: "når ") + ")") }
-        if parts.isEmpty { return pl.usedByText.isEmpty ? "Brukes ikke av Ruter eller varsler." : pl.usedByText + "." }
+        if parts.isEmpty { return pl.usedByText.isEmpty ? "Brukes ikke av Reise eller varsler." : pl.usedByText + "." }
         return "Brukes av " + parts.joined(separator: " og ") + "."
     }
 

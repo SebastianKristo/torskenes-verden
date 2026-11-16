@@ -23,7 +23,7 @@ final class Scan41 {
     }
 
     static var sub: String {
-        Scan41.shared.onHome ? "Vises på Hjem" : "Skjult på Hjem · vises i de andre fanene"
+        Scan41.shared.onHome ? "Vises på Oversikt" : "Skjult på Oversikt · vises i de andre fanene"
     }
 }
 
@@ -46,7 +46,7 @@ struct Scan41Row: View {
                 .background(p.lab, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
                 .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 1) {
-                Text("Skanneknapp på Hjem").font(PF.ui(15, .semibold)).foregroundStyle(p.ink)
+                Text("Skanneknapp på Oversikt").font(PF.ui(15, .semibold)).foregroundStyle(p.ink)
                 Text(Scan41.sub).font(PF.ui(12.5)).foregroundStyle(p.mut).fixedSize(horizontal: false, vertical: true)
             }
             Spacer(minLength: 8)

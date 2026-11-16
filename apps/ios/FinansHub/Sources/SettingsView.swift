@@ -268,7 +268,7 @@ private struct AccountsPage: View {
             if store.accounts.count > 1 {
                 Button { store.logoutOthers() } label: { Text("Logg ut andre kontoer").frame(maxWidth: .infinity, minHeight: 48) }.buttonStyle(.plain).glass(24)
             }
-            Note(text: "Nye brukere opprettes av admin i Homelab → Innstillinger → Innlogging.")
+            Note(text: "Nye brukere opprettes av admin i Homelab → Innstillinger → Konto og sikkerhet.")
             // Prompt 38: «Logg inn på ny enhet» (QR) og ØKT – Lås skjermen, Logg ut, Logg ut av alle enheter (Konto38.swift).
             Konto38Session()
         }
@@ -419,7 +419,7 @@ private struct LookPage: View {
             Group {
                 SectionLabel(text: "Oppstart")
                 Card {
-                    ForEach(Array([("homelab", "Homelab"), ("home", "Finans · Hjem"), ("list", "Finans · Liste"), ("budget", "Finans · Budsjett")].enumerated()), id: \.offset) { i, o in
+                    ForEach(Array([("homelab", "Homelab"), ("home", "Økonomi · Oversikt"), ("list", "Økonomi · Transaksjoner"), ("budget", "Økonomi · Budsjett")].enumerated()), id: \.offset) { i, o in
                         if i > 0 { Sep() }
                         Choice(label: o.1, on: store.startPage == o.0) { store.startPage = o.0 }
                     }

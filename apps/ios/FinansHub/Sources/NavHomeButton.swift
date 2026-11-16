@@ -18,11 +18,11 @@ final class NavHome42 {
     static let key: String = "papir_navhome"
     static let ids: [String] = ["std", "1a", "1b", "1c", "1d"]
     static let options: [(String, String, String)] = [
-        ("std", "Standard", "«‹ Hjem» øverst, som i dag"),
+        ("std", "Standard", "«‹ Oversikt» øverst, som i dag"),
         ("1a", "Egen Hjem-knapp", "Rund knapp til venstre for fanelinja"),
-        ("1b", "Hjem først i linjen", "Hjem-ikon som første plass, skilt med en strek"),
-        ("1c", "Hjem i midten", "Hevet rød knapp midt i fanelinja"),
-        ("1d", "Modulvelger", "«kr Finans ▴» åpner Hjem og alle moduler"),
+        ("1b", "Oversikt først i linjen", "Hjem-ikon som første plass, skilt med en strek"),
+        ("1c", "Oversikt i midten", "Hevet rød knapp midt i fanelinja"),
+        ("1d", "Modulvelger", "«kr Økonomi ▴» åpner Oversikt og alle moduler"),
     ]
 
     var value: String = {
@@ -227,7 +227,7 @@ struct NavHomeSheet42: View {
                         SheetButton30(kind: .primary, title: "Ferdig") { NavHome42.shared.picking = false }
                     }
                 }
-                Text("Velg hvordan du kommer hjem fra modulene. Med en Hjem-knapp i fanelinja forsvinner «‹ Hjem» øverst på modulens sider.")
+                Text("Velg hvordan du kommer hjem fra modulene. Med en Oversikt-knapp i fanelinja forsvinner «‹ Oversikt» øverst på modulens sider.")
                     .font(PF.ui(12.5)).foregroundStyle(p.mut).fixedSize(horizontal: false, vertical: true)
                 ForEach(NavHome42.options, id: \.0) { o in NavHomeCard42(id: o.0, name: o.1, sub: o.2) }
             }

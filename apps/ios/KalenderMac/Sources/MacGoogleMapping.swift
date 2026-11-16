@@ -241,7 +241,7 @@ struct MacGoogleMap39Sheet: View {
             if let u = await KalGoogleAPI36.loginURL(returnTo: "/kalender") {
                 await MainActor.run { _ = NSWorkspace.shared.open(u) }
             } else {
-                error = "Fikk ikke åpnet innloggingen. Logg inn med Google i Homelab → Innstillinger → Integrasjoner."
+                error = "Fikk ikke åpnet innloggingen. Logg inn med Google i Homelab → Innstillinger → Tilkoblinger."
             }
         }
     }

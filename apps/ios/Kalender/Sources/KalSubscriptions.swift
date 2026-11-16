@@ -113,13 +113,13 @@ struct KalAbDetail42: View {
             }
             .overlay(alignment: .top) { Rectangle().fill(t.line2).frame(height: 1) }
             HStack(spacing: 8) {
-                KalPill(title: "Åpne i Finans ›") { KalAbOpen42.finans(e) }
+                KalPill(title: "Åpne i Økonomi ›") { KalAbOpen42.finans(e) }
                 if let u = URL(string: x.cancelUrl), !x.cancelUrl.isEmpty, x.cancelled.isEmpty {
                     KalPill(title: "Si opp …", filled: false) { UIApplication.shared.open(u, options: [:], completionHandler: nil) }
                 }
                 Spacer(minLength: 0)
             }
-            Text("Endres i Finans → Abonnementer").font(KalFont.ui(12.5)).foregroundStyle(t.mut)
+            Text("Endres i Økonomi → Faste betalinger").font(KalFont.ui(12.5)).foregroundStyle(t.mut)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -185,7 +185,7 @@ struct KalAbNotifyRow42: View {
     @State private var mode: String = KalAbNotify42.mode
 
     var body: some View {
-        KalSegRow35(title: "Abonnementer", sub: "Trekk fra Finans → Abonnementer", options: KalAbNotify42.options, selected: mode) { (v: String) in
+        KalSegRow35(title: "Abonnementer", sub: "Trekk fra Økonomi → Faste betalinger", options: KalAbNotify42.options, selected: mode) { (v: String) in
             KalHaptic.tap()
             mode = v
             UserDefaults.standard.set(v, forKey: KalAbNotify42.key)
@@ -203,7 +203,7 @@ struct KalEventMenu42: View {
 
     var body: some View {
         if KalAb42.isSub(e) {
-            Button(action: { KalAbOpen42.finans(e) }) { Label("Åpne i Finans", systemImage: "arrow.up.forward.app") }
+            Button(action: { KalAbOpen42.finans(e) }) { Label("Åpne i Økonomi", systemImage: "arrow.up.forward.app") }
             Button(action: { KalStore.shared.openDetail(e) }) { Label("Vis", systemImage: "info.circle") }
         } else {
             Button(action: { KalStore.shared.openDetail(e) }) { Label("Rediger", systemImage: "pencil") }

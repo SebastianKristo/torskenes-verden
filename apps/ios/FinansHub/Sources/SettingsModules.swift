@@ -17,7 +17,7 @@ enum Settings45 {
         // Prompt 46: Nyhetsinnstillingene ligger her (ikke på Nyheter-siden).
         out.append(PaperLinkRow(name: "Nyheter", sub: "Kilder, kategorier, For deg og Glimt-sammendrag", icon: "newspaper") { store.paperGo("innst-nyheter") })
         let n: Int = MinReise41.shared.recoCount
-        out.append(PaperLinkRow(name: "Ruter", sub: "Anbefalte reiser: \(n) · Min reise på Hjem", icon: "tram") { store.paperGo("innst-ruter") })
+        out.append(PaperLinkRow(name: "Reise", sub: "Anbefalte reiser: \(n) · Min reise på Oversikt", icon: "tram") { store.paperGo("innst-ruter") })
         let z: String = Zone45.shared.on ? "På · per person og sone" : "Av"
         out.append(PaperLinkRow(name: "Sonevarsler", sub: "Familie · " + z, icon: "mappin.and.ellipse") { store.paperGo("innst-sone") })
         return out

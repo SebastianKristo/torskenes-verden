@@ -116,7 +116,7 @@ struct Nrk87View: View {
     private var notSet: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("NRK-nedlasteren er ikke satt opp").font(PF.serif(22, medium: true)).foregroundStyle(p.ink)
-            Text("Legg inn adressen og tokenet til nrk-dl under Integrasjoner. Tjenesten kjører bak en egen VPN-tunnel til Norge.")
+            Text("Legg inn adressen og tokenet til nrk-dl under Tilkoblinger. Tjenesten kjører bak en egen VPN-tunnel til Norge.")
                 .font(PF.ui(13.5)).foregroundStyle(p.mut).fixedSize(horizontal: false, vertical: true)
             Button {
                 Haptics.shared.tap()

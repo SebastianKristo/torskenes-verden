@@ -603,7 +603,7 @@ struct Glimt35UsersLink: View {
                 Brief34Model.shared.open = false
                 store.paperGo(Users68.key)
             } label: {
-                Text("Standardfigur per bruker ligger under Brukere og familie ›").font(PF.ui(13.5, .bold)).foregroundStyle(Brief34C.red)
+                Text("Standardfigur per bruker ligger under Husstand ›").font(PF.ui(13.5, .bold)).foregroundStyle(Brief34C.red)
                     .multilineTextAlignment(.leading)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .contentShape(Rectangle())

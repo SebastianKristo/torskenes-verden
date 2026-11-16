@@ -633,7 +633,7 @@ struct G67SchedBriefs: View {
                         G67BriefRow(b: b)
                     }
                 }
-                G67Note(text: "Briefene er de samme som under Innstillinger → Glimt. «Flytt morgenbriefen til 06:30» til Glimt endrer klokkeslettet her.")
+                G67Note(text: "Briefene er de samme som under Innstillinger → Glimt og AI → Glimt. «Flytt morgenbriefen til 06:30» til Glimt endrer klokkeslettet her.")
             }
         }
     }

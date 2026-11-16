@@ -118,7 +118,7 @@ struct PaperLoginView: View {
         Qr46LoginButton()
         // Prompt 51 (IOSFEAT51): ny i familien – skann invitasjons-QR-en (OnboardingInvite.swift).
         Onboard51Button()
-        Text("Nye brukere opprettes av admin i Homelab → Innstillinger → Innlogging.").font(PF.ui(12.5)).foregroundStyle(p.mut)
+        Text("Nye brukere opprettes av admin i Homelab → Innstillinger → Konto og sikkerhet.").font(PF.ui(12.5)).foregroundStyle(p.mut)
     }
 
     @ViewBuilder private func twoFactor(_ pd: PendingLogin, _ p: PaperPalette) -> some View {
@@ -221,7 +221,7 @@ struct PaperOnboardingView: View {
     }
 
     @ViewBuilder private func backgrounds(_ p: PaperPalette) -> some View {
-        PLabel(text: "Bakgrunn på Hjem")
+        PLabel(text: "Bakgrunn på Oversikt")
         let list: [(String, String, String)] = [("cur", "Nåværende", "Mørk gradient"), ("oslo", "Oslo", "Bilde av Oslo"), ("weather", "Vær nå", "Følger været"), ("planets", "Planeter", "Ny planet hver dag (NASA)")]
         ForEach(list, id: \.0) { k in
             optionRow(k.1, k.2, [Color(hex: "#4a5a6a"), Color(hex: "#1d242c")], store.photo == k.0, p) { store.setPhoto(k.0) }
@@ -246,7 +246,7 @@ struct PaperOnboardingView: View {
             }
         }
         .background(p.card, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-        Text("Alt kan endres senere under Innstillinger. «Logg ut» ligger under Innstillinger → Konto.").font(PF.ui(12.5)).foregroundStyle(p.mut)
+        Text("Alt kan endres senere under Innstillinger. «Logg ut» ligger under Innstillinger → Konto og sikkerhet.").font(PF.ui(12.5)).foregroundStyle(p.mut)
     }
 
     private func optionRow(_ n: String, _ s: String, _ sw: [Color], _ on: Bool, _ p: PaperPalette, _ act: @escaping () -> Void) -> some View {
