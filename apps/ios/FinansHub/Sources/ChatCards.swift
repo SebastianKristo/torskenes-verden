@@ -332,10 +332,9 @@ struct Chat31Calendar: View {
 
     private func open() {
         Haptics.shared.select()
-        // Prompt 33: Kalender-appen (dagen, eller Liste) når den er installert.
+        // Prompt 33: Kalender (dagen, eller Liste) – den innebygde eller Kalender-appen.
         if let d = JS.str(o, "date"), d.count >= 10 { if KalLink33.day(d) { return } } else if KalLink33.list() { return }
         store.paperGo("kalender")
-        if let d = JS.str(o, "date"), d.count >= 10 { Cal27Model.shared.goDay(String(d.prefix(10))) }
     }
 }
 

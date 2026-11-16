@@ -8,7 +8,8 @@ import UserNotifications
 // SharedKal/Core) er med i FinansHub-målet med flagget KAL_EMBED (project.yml). Innstillinger → «Kalender i appen»
 // (kal84_embed, standard på). På: alt som i dag åpner Kalender-appen (KalLink33 – Hjem-kortet og -flisen, kalenderfanen,
 // Mer → Kalender, Glimt, varsler, Chat-kort, briefen, finanshub://kalender fra widgetene) åpner i stedet den innebygde
-// Kalenderen i fullskjerm, med «‹ Homelab» øverst. Av: som før (Kalender-appen hvis den er installert, ellers Homelabs side).
+// Kalenderen i fullskjerm, med «‹ Homelab» øverst. Av: Kalender-appen hvis den er installert, ellers også den innebygde
+// (Q26: Homelabs gamle kalenderside er fjernet; alt den kunne, finnes i Kalender).
 // Presentasjonen er en UIKit-fullskjerm (samme som SwiftUI fullScreenCover) fra øverste kontroller, så den virker også over
 // andre fullskjermer (briefen, Vær …) – og «‹ Homelab» går tilbake dit man var.
 // Innlogging: samme konto som Homelab. Kalender-økten ligger i App Group-en (kal.token, delt med den frittstående appen og
@@ -325,7 +326,8 @@ struct Kal84Settings: View {
         }
     }
 
-    static let sub: String = "Bruk hele Kalender-appen inni Homelab. Nyttig når du sideloader og bare har plass til én app."
+    /// Q26: av = Kalender-appen når den er installert, ellers den innebygde (Homelab har ikke lenger en egen kalenderside).
+    static let sub: String = "Bruk hele Kalender-appen inni Homelab. Nyttig når du sideloader og bare har plass til én app. Av: Kalender-appen åpnes når den er installert."
 }
 
 extension View {
