@@ -4,7 +4,7 @@
 // Data: GET /api/weather/full?place=<id> (MET/yr via serveren). Nye felt (7 dager time for time, compare) brukes når de finnes,
 // ellers fylles det inn fra døgnverdiene. Storm (tidligere «Pent»): full.compare eller GET /api/weather/compare (eldre format).
 // Steder: GET/POST/DELETE /api/weather/places, PUT /api/weather/places/order. Prompt 28: søk i GET /api/weather/places?q=
-// (Open-Meteo + OpenStreetMap via serveren, {name, sub, lat, lon, country, source}); eldre server: /api/weather/search?q=.
+// (Open-Meteo + OpenStreetMap via serveren, {name, sub, lat, lon, country, source}).
 // Prompt 28: ny værbakgrunn (weather-fx.js, fasit WxFx). Prompt 30: to flytende knapper nederst (kart · steder, ingen
 // linje), lett haptikk når et ark/popup lukkes (sentralt i paintLayer), Yr mot Storm i fullskjerm med Ferdig-pille,
 // «Pent» heter Storm overalt, logoer fra /assets/brands/ (yr.png, storm.png), og hele «Yr og Storm»-kortet er trykkbart.
@@ -38,7 +38,7 @@ const pick = (o, ...ks) => { for (const k of ks) if (o?.[k] != null) return o[k]
 
 /* ---------------- Tilstand ---------------- */
 const S = {
-  places: null, placesOk: true, cur: lsGet('wx_city'), full: null, d: null, cmp: null, cmpBusy: false, cmpErr: false, src: 'Henter …', mode: (() => { try { return sessionStorage.getItem('wx_mode') || 'temp'; } catch { return 'temp'; } })(),
+  places: null, cur: lsGet('wx_city'), full: null, d: null, cmp: null, cmpBusy: false, cmpErr: false, src: 'Henter …', mode: (() => { try { return sessionStorage.getItem('wx_mode') || 'temp'; } catch { return 'temp'; } })(),
   sh: null, feel: false, ms: null, msD: 1, cmpOpen: false, plOpen: false, plQ: '', plRes: null, plBusy: false, mpOpen: false, mpL: 'rain', sc: 0,
   swOpen: null, drag: null,
 };
@@ -137,20 +137,23 @@ function adaptCmp(c) {
 }
 
 async function loadPlaces() {
-  try { const l = await api('/weather/places'); S.places = Array.isArray(l) && l.length ? l : DEFP; S.placesOk = true; }
-  catch (e) {
-    S.placesOk = e.status !== 404 && S.placesOk;
-    try { const v = JSON.parse(lsGet('wx_places_local') ?? 'null'); S.places = Array.isArray(v) && v.length ? v : DEFP; } catch { S.places = DEFP; }
-  }
+  // Q19: serveren har alltid stedene (per bruker). Uten svar vises standardstedene til neste lasting.
+  try { const l = await api('/weather/places'); S.places = Array.isArray(l) && l.length ? l : DEFP; } catch { S.places ??= DEFP; }
 }
 const place = () => S.places?.find((p) => p.id === S.cur) ?? S.places?.[0] ?? DEFP[0];
-const savePlacesLocal = () => { if (!S.placesOk) lsSet('wx_places_local', JSON.stringify(S.places)); };
+
+const fullUrl = (P) => `/weather/full?${!P.local ? `place=${encodeURIComponent(P.id)}` : `lat=${P.lat}&lon=${P.lon}&name=${encodeURIComponent(P.name)}`}`;
+// E-B11: været for det sist valgte stedet (eller Oslo) hentes samtidig med stedslista, ikke etter den. load() bruker svaret
+// når stedet viser seg å være det samme; ellers hentes det på nytt.
+let preFull = null;
+function prefetchFull(id) { const u = fullUrl({ id }); preFull = { u, p: api(u) }; preFull.p.catch(() => {}); }
+function fetchFull(P) { const u = fullUrl(P), pre = preFull; preFull = null; return pre?.u === u ? pre.p : api(u); }
 
 async function load() {
   const P = place(), id = ++ldId;
   S.src = 'Henter …'; paintTop();
   let full = null;
-  try { full = await api(`/weather/full?${!P.local ? `place=${encodeURIComponent(P.id)}` : `lat=${P.lat}&lon=${P.lon}&name=${encodeURIComponent(P.name)}`}`); } catch (e) { full = null; S.err = e.message; }
+  try { full = await fetchFull(P); } catch (e) { full = null; S.err = e.message; }
   if (id !== ldId) return;
   S.full = full;
   if (full) {
@@ -439,7 +442,7 @@ async function loadAll(force) {
   } catch { got = null; }
   if (!got) {
     got = {};
-    await Promise.all(L.map(async (P) => { try { got[P.id] = fromFull(await api(`/weather/full?${!P.local ? `place=${encodeURIComponent(P.id)}` : `lat=${P.lat}&lon=${P.lon}&name=${encodeURIComponent(P.name)}`}`)); } catch { /* stedet vises uten vær */ } }));
+    await Promise.all(L.map(async (P) => { try { got[P.id] = fromFull(await api(fullUrl(P))); } catch { /* stedet vises uten vær */ } }));
   }
   S.pw = { ...(S.pw ?? {}), ...got };
   const side = root()?.querySelector('.wxp-side');
@@ -607,7 +610,7 @@ function placesSheet() {
     <span class="wxp-cap">MINE STEDER</span>
     <div class="wxp-pls" data-wx-pls>${list}</div>
     <span class="wxp-mut" style="font-size:12px;padding:0 4px">Hold inne for å flytte · sveip mot høyre for å slette</span>
-    <span class="wxp-mut" style="font-size:12px;line-height:1.45">Værdata fra Meteorologisk institutt (yr.no, api.met.no). Stedssøk via Open-Meteo og OpenStreetMap.${S.placesOk ? '' : ' Stedene lagres i denne nettleseren.'}</span>`, 'pl');
+    <span class="wxp-mut" style="font-size:12px;line-height:1.45">Værdata fra Meteorologisk institutt (yr.no, api.met.no). Stedssøk via Open-Meteo og OpenStreetMap.</span>`, 'pl');
 }
 
 const LAYERS = [['rain', 'Nedbør'], ['temp', 'Temperatur'], ['wind', 'Vind'], ['clouds', 'Skyer']];
@@ -693,16 +696,12 @@ async function search(q) {
   catch { if (id === sqId) { S.plRes = []; S.plErr = true; } }
   if (id === sqId) { S.plBusy = false; paintRes(); }
 }
-// Prompt 28: GET /api/weather/places?q= gir søketreff ({name, sub, …, source}). En eldre server svarer med de lagrede
-// stedene (uten source/sub) og ignorerer q; da brukes /api/weather/search?q= som før.
+// Prompt 28: GET /api/weather/places?q= gir søketreff ({name, sub, …, source}). Q19: reserven via det gamle stedssøket (eldre
+// server) er fjernet; ruten står på serveren for eldre apper.
 export async function searchPlaces(q) {
   const norm = (x) => ({ ...x, name: x.name, lat: +x.lat, lon: +x.lon, sub: x.sub ?? [x.region, x.country].filter(Boolean).join(', ') });
-  try {
-    const r = await api(`/weather/places?q=${encodeURIComponent(q)}`), L = Array.isArray(r) ? r : r?.results ?? r?.items ?? null;
-    if (Array.isArray(L) && L.every((x) => x && ('source' in x || 'sub' in x))) return L.slice(0, 10).map(norm);
-  } catch (e) { if (e.status && e.status !== 404 && e.status !== 405) throw e; }
-  const r = await api(`/weather/search?q=${encodeURIComponent(q)}`);
-  return (Array.isArray(r) ? r : r?.results ?? []).slice(0, 10).map(norm);
+  const r = await api(`/weather/places?q=${encodeURIComponent(q)}`), L = Array.isArray(r) ? r : r?.results ?? r?.items ?? [];
+  return L.slice(0, 10).map(norm);
 }
 function paintRes() { const r = root()?.querySelector('[data-wx-resbox]'); if (!r) return; const tmp = document.createElement('div'); tmp.innerHTML = placesSheet(); r.replaceWith(tmp.querySelector('[data-wx-resbox]')); }
 function selectPlace(id) { setTimeout(() => loadAll(), 0); S.cur = id; lsSet('wx_city', id); S.plOpen = false; S.plQ = ''; S.plRes = null; S.sh = null; S.ms = null; S.cmp = null; paintLayer(); load(); }
@@ -710,25 +709,20 @@ async function addPlace(r) {
   const have = S.places.find((x) => Math.abs(x.lat - r.lat) < 0.05 && Math.abs(x.lon - r.lon) < 0.05);
   if (have) return selectPlace(have.id);
   const body = { name: r.name, lat: +r.lat, lon: +r.lon, region: r.region ?? String(r.sub ?? '').split(',')[0].trim(), ...(r.country ? { country: r.country } : {}) };
-  if (S.placesOk) {
-    try { const l = await api('/weather/places', { method: 'POST', json: body }); if (Array.isArray(l)) S.places = l; const n = S.places.find((x) => Math.abs(x.lat - body.lat) < 0.01 && Math.abs(x.lon - body.lon) < 0.01); return selectPlace(n?.id ?? S.places.at(-1).id); }
-    catch (e) { if (e.status !== 404) { alert(e.message); return; } S.placesOk = false; }
-  }
-  const n = { ...body, id: `l${Date.now().toString(36)}`, local: true }; S.places = [...S.places, n]; savePlacesLocal(); selectPlace(n.id);
+  try { const l = await api('/weather/places', { method: 'POST', json: body }); if (Array.isArray(l)) S.places = l; const n = S.places.find((x) => Math.abs(x.lat - body.lat) < 0.01 && Math.abs(x.lon - body.lon) < 0.01); return selectPlace(n?.id ?? S.places.at(-1).id); }
+  catch (e) { alert(e.message); }
 }
 async function removePlace(id) {
   if ((S.places?.length ?? 0) <= 1) { S.swOpen = null; return paintLayer(); } // det siste stedet kan ikke slettes
   const was = place().id;
   S.places = S.places.filter((x) => x.id !== id); S.swOpen = null;
-  if (S.placesOk) { try { const l = await api(`/weather/places/${encodeURIComponent(id)}`, { method: 'DELETE' }); if (Array.isArray(l) && l.length) S.places = l; } catch (e) { if (e.status !== 404) alert(e.message); } }
-  savePlacesLocal();
+  try { const l = await api(`/weather/places/${encodeURIComponent(id)}`, { method: 'DELETE' }); if (Array.isArray(l) && l.length) S.places = l; } catch (e) { if (e.status !== 404) alert(e.message); } // 404: allerede slettet
   try { navigator.vibrate?.(12); } catch { /* */ }
   if (was === id) { S.cur = S.places[0].id; lsSet('wx_city', S.cur); paintLayer(); return load(); }
   paintLayer();
 }
 async function saveOrder() {
-  savePlacesLocal();
-  if (S.placesOk) { try { await api('/weather/places/order', { method: 'PUT', json: { ids: S.places.map((x) => x.id) } }); } catch { /* beholdes lokalt til neste lasting */ } }
+  try { await api('/weather/places/order', { method: 'PUT', json: { ids: S.places.map((x) => x.id) } }); } catch { /* rekkefølgen står til neste lasting */ }
 }
 // Hold inne (0,45 s) og dra for å flytte, sveip mot høyre for å slette (> 60 px står åpen, > 60 % sletter).
 function bindPlaces(layer) {
@@ -856,6 +850,7 @@ export function render() {
     let rzT = null, was = isDk();
     const onRz = () => { if (!root()) { window.removeEventListener('resize', onRz); return; } clearTimeout(rzT); rzT = setTimeout(() => { if (isDk() !== was) { was = isDk(); paint(); loadAll(); } }, 120); };
     window.addEventListener('resize', onRz);
+    if (!S.d && !tempPlace() && !/^(pos|tmp:)/.test(S.cur ?? '')) prefetchFull(S.cur || DEFP[0].id);
     await loadPlaces();
     loadAll();
     // Prompt 35: «været i New York» i AI-søket åpner #/vaer?name=…&lat=…&lon=… – stedet legges midlertidig i lista (lagres ikke).
