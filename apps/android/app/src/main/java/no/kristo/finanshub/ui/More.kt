@@ -53,6 +53,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import no.kristo.finanshub.*
+import androidx.compose.ui.semantics.Role
 
 /* ---------------- Byggeklosser for Mer-sidene ---------------- */
 
@@ -144,7 +145,7 @@ internal fun MoreScreen(vm: AppViewModel) {
                     row.forEachIndexed { i, t ->
                         Column(
                             Modifier.weight(1f).clip(if (i == 0) RoundedCornerShape(28.dp, 10.dp, 10.dp, 28.dp) else RoundedCornerShape(10.dp, 28.dp, 28.dp, 10.dp)).background(C.surface1)
-                                .clickable { if (t.screen == Screen.Search) vm.go(Screen.Search) else vm.open(t.screen) }.padding(16.dp),
+                                .clickable(role = Role.Button) { if (t.screen == Screen.Search) vm.go(Screen.Search) else vm.open(t.screen) }.padding(16.dp),
                             verticalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -292,7 +293,7 @@ internal fun SearchScreen(vm: AppViewModel) {
                 }
                 val list = vm.aiHistory.take(8)
                 list.forEachIndexed { i, t ->
-                    Row(Modifier.fillMaxWidth().clip(itemShape(i, list.size)).background(C.surface1).clickable { search(t) }.padding(16.dp, 12.dp),
+                    Row(Modifier.fillMaxWidth().clip(itemShape(i, list.size)).background(C.surface1).clickable(role = Role.Button) { search(t) }.padding(16.dp, 12.dp),
                         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         Icon(Icons.Filled.History, null, tint = C.text2, modifier = Modifier.size(18.dp))
                         Text(t, maxLines = 1, overflow = TextOverflow.Ellipsis)

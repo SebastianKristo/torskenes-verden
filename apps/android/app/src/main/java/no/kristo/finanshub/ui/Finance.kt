@@ -201,7 +201,7 @@ internal fun BudgetScreen(vm: AppViewModel) {
             val days = maxOf(1, vm.summary?.daysLeft ?: 1)
             Column(
                 Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(if (vm.selectedBudget == b.categoryId) HomelabTheme.colors.line else HomelabTheme.colors.surfaceRaised)
-                    .clickable { vm.selectedBudget = b.categoryId }.padding(16.dp),
+                    .clickable(role = Role.Button, onClickLabel = "Åpne budsjettet") { vm.selectedBudget = b.categoryId }.padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -359,7 +359,7 @@ internal fun ScanQueue(vm: AppViewModel, scan: () -> Unit, pick: () -> Unit) {
                         q.forEachIndexed { i, r ->
                             Row(
                                 Modifier.fillMaxWidth().clip(itemShape(i, q.size)).background(if (vm.selectedReceipt == r.id) HomelabTheme.colors.line else HomelabTheme.colors.surfaceRaised)
-                                    .clickable { vm.selectedReceipt = r.id }.padding(14.dp),
+                                    .clickable(role = Role.Button, onClickLabel = "Åpne kvitteringen") { vm.selectedReceipt = r.id }.padding(14.dp),
                                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp),
                             ) {
                                 Thumb(vm, r.thumb)

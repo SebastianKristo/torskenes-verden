@@ -136,6 +136,7 @@ const P85E_RUNDE4 = {
   gjoremal: ['TasksComponents.kt', 'TasksPage.kt', 'TasksSubtasks.kt', 'TasksTabs.kt'],
   skjold: ['SkjoldPage.kt', 'SkjoldAIViews.kt', 'SkjoldProjectsViews.kt', 'SkjoldSpanViews.kt'],
   nyheter: ['NewsIcons.kt'],
+  okonomiRest: ['Finance.kt', 'Kvitteringer.kt', 'KvitteringKo.kt', 'LogoVelger.kt', 'FinnAnnonse.kt', 'More.kt', 'Mer.kt', 'FellesSok.kt'],
 };
 
 test('P85 E (runde 4): Abonnement, Aksjer og de andre sidene som sto igjen har rolle på trykkflatene', () => {

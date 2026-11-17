@@ -108,7 +108,7 @@ private fun Results51(vm: AppViewModel, r: JSONObject) {
     if (S51.q.isBlank() && recent.isNotEmpty()) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             PLabel("Nylige søk", p.mut, modifier = Modifier.weight(1f))
-            Text("Tøm", color = p.lab, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.heightIn(min = 48.dp).clickable {
+            Text("Tøm", color = p.lab, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.heightIn(min = 48.dp).clickable(role = Role.Button) {
                 vm.act51("recent-clear", "DELETE", "", "/api/search51/recent") { S51.res = S51.res?.let { JSONObject(it.toString()).put("recent", org.json.JSONArray()) } }
             }.padding(12.dp))
         }
@@ -282,7 +282,7 @@ internal fun Search51Hint(vm: AppViewModel, text: String) {
         res.forEachIndexed { i, r ->
             if (i > 0) Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
             Row(
-                Modifier.fillMaxWidth().heightIn(min = 48.dp).clickable { S51.q = q; run51(vm, r, r.arr51("actions").firstOrNull()?.takeIf { it.s43("confirm") == null }) }.padding(14.dp, 8.dp),
+                Modifier.fillMaxWidth().heightIn(min = 48.dp).clickable(role = Role.Button) { S51.q = q; run51(vm, r, r.arr51("actions").firstOrNull()?.takeIf { it.s43("confirm") == null }) }.padding(14.dp, 8.dp),
                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 Text(icon51(r.str51("icon")), fontSize = 14.sp, color = p.ink)
@@ -294,6 +294,6 @@ internal fun Search51Hint(vm: AppViewModel, text: String) {
         }
         if (res.isNotEmpty()) Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
         Text("Søk i alt etter «$q» ›", color = p.lab, fontWeight = FontWeight.SemiBold, fontSize = 13.5.sp,
-            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).clickable { S51.q = q; vm.open51("sok") }.padding(14.dp, 14.dp))
+            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).clickable(role = Role.Button) { S51.q = q; vm.open51("sok") }.padding(14.dp, 14.dp))
     }
 }

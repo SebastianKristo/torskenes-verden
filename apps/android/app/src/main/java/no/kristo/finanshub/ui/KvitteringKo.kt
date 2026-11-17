@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import no.kristo.finanshub.AppViewModel
 import no.kristo.finanshub.upload.PendingUpload
+import androidx.compose.ui.semantics.Role
 
 /*
  * Kvitteringer i Papir (prompt 18): ta bilde / velg filer, «Venter på opplasting», køen hos serveren og listen til gjennomgang.
@@ -41,7 +42,7 @@ internal fun PaperPendingCard(vm: AppViewModel) {
                     Text(pendingSub(u), color = p.mut, fontSize = 12.5.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 }
                 Text("Fjern", color = p.mut, fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.clip(RoundedCornerShape(10.dp)).clickable { vm.removePending(u.id) }.padding(8.dp, 6.dp))
+                    modifier = Modifier.clip(RoundedCornerShape(10.dp)).clickable(role = Role.Button) { vm.removePending(u.id) }.padding(8.dp, 6.dp))
             }
         }
         Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))

@@ -388,7 +388,7 @@ internal fun PrivacyLogos27(vm: AppViewModel) {
             }
             Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
             Row(
-                Modifier.fillMaxWidth().clickable { s.auditOpen = !s.auditOpen; if (s.auditOpen) vm.loadAiAudit27() }.padding(14.dp, 12.dp),
+                Modifier.fillMaxWidth().clickable(role = Role.Button, onClickLabel = "Vis eller skjul") { s.auditOpen = !s.auditOpen; if (s.auditOpen) vm.loadAiAudit27() }.padding(14.dp, 12.dp),
                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 Column(Modifier.weight(1f)) {
@@ -447,7 +447,7 @@ internal fun VelgLogo27(vm: AppViewModel, domain: String?, name: String, receipt
                 Text("Ingen logo", color = p.textTertiary, style = HomelabType.footnote, modifier = Modifier.weight(1f))
             }
             Box(
-                Modifier.minimumInteractiveComponentSize().height(32.dp).clip(CircleShape).border(1.dp, p.line, CircleShape).clickable { s.logoPick = if (open) null else LogoPick27(name, domain, receiptId); s.logoMsg = null }
+                Modifier.minimumInteractiveComponentSize().height(32.dp).clip(CircleShape).border(1.dp, p.line, CircleShape).clickable(role = Role.Button) { s.logoPick = if (open) null else LogoPick27(name, domain, receiptId); s.logoMsg = null }
                     .padding(horizontal = 12.dp),
                 contentAlignment = Alignment.Center,
             ) { Text(if (open) "Lukk" else "Velg logo", color = p.textPrimary, fontWeight = FontWeight.SemiBold, style = HomelabType.footnote) }
@@ -469,7 +469,7 @@ internal fun VelgLogo27(vm: AppViewModel, domain: String?, name: String, receipt
                     keyboardActions = KeyboardActions(onDone = { vm.logoDomain27(pk, dom) }),
                     decorationBox = { inner -> Box(contentAlignment = Alignment.CenterStart) { if (dom.isEmpty()) Text("Lim inn domene, f.eks. blomsterlandet.no", color = p.textTertiary, style = HomelabType.subheadline, maxLines = 1); inner() } },
                 )
-                Box(Modifier.minimumInteractiveComponentSize().height(34.dp).clip(CircleShape).background(p.textPrimary).clickable { vm.logoDomain27(pk, dom) }.padding(horizontal = 12.dp), contentAlignment = Alignment.Center) {
+                Box(Modifier.minimumInteractiveComponentSize().height(34.dp).clip(CircleShape).background(p.textPrimary).clickable(role = Role.Button) { vm.logoDomain27(pk, dom) }.padding(horizontal = 12.dp), contentAlignment = Alignment.Center) {
                     Text("Bruk", color = p.surface, fontWeight = FontWeight.Bold, style = HomelabType.footnote)
                 }
             }
