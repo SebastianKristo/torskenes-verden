@@ -90,7 +90,7 @@ internal fun CheckoutSheet82(vm: AppViewModel) {
     val pt = c.part
     val max = maxOut82(pt.qty)
     val active = s.projects.orEmpty().filter { !it.done }
-    Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = .4f)).clickable { s.sheet = null }, contentAlignment = Alignment.BottomCenter) {
+    Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = .4f)).clickable(role = Role.Button, onClickLabel = "Lukk") { s.sheet = null }, contentAlignment = Alignment.BottomCenter) {
         PCard(Modifier.fillMaxWidth().widthIn(max = 560.dp).imePadding().navigationBarsPadding().padding(12.dp), shadow = true) {
             Column(Modifier.clickable(enabled = false) {}.verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 PSerif("Sjekk ut", 22.sp)
@@ -280,7 +280,7 @@ private fun BomRow82(vm: AppViewModel, b: SkjBom82) {
                 Text("${ret.second}", color = p.textPrimary, fontFamily = PaperFonts.mono, fontWeight = FontWeight.Bold, fontSize = HomelabType.headline.fontSize, modifier = Modifier.widthIn(min = 28.dp), textAlign = TextAlign.Center)
                 Step82("+", "Én mer", ret.second < max) { s.returning = b.partId to (ret.second + 1).coerceAtMost(max); Haptics.select() }
                 PButton(if (s.busy) "…" else "Sjekk inn", Modifier.weight(1f)) { if (!s.busy) vm.returnPart82(b, ret.second) }
-                Icon(Icons.Filled.Close, contentDescription = "Avbryt", tint = p.textTertiary, modifier = Modifier.size(40.dp).clip(CircleShape).clickable { s.returning = null }.wrapContentSize().size(16.dp))
+                Icon(Icons.Filled.Close, contentDescription = "Avbryt", tint = p.textTertiary, modifier = Modifier.size(40.dp).clip(CircleShape).clickable(role = Role.Button) { s.returning = null }.wrapContentSize().size(16.dp))
             }
         }
     }

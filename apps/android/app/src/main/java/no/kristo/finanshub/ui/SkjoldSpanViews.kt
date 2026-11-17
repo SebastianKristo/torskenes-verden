@@ -15,6 +15,7 @@ import androidx.compose.ui.unit.sp
 import no.kristo.finanshub.*
 import no.kristo.finanshub.ui.designsystem.HomelabType
 import no.kristo.finanshub.ui.designsystem.HomelabTheme
+import androidx.compose.ui.semantics.Role
 
 /*
  * Prompt 81 (SPANAND): store skuffer og «Skjold Lab-hylla (3D-print)» i Skjold Lab på Android.
@@ -90,7 +91,7 @@ internal fun NewPresetAsk81(vm: AppViewModel) {
     val p = HomelabTheme.colors
     val a = Skjold81
     var name by remember { mutableStateOf("Skjold Lab-hylla") }
-    Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = .4f)).clickable { a.newAsk = false }, contentAlignment = Alignment.Center) {
+    Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = .4f)).clickable(role = Role.Button, onClickLabel = "Lukk") { a.newAsk = false }, contentAlignment = Alignment.Center) {
         PCard(Modifier.padding(24.dp).widthIn(max = 420.dp), shadow = true) {
             Column(Modifier.clickable(enabled = false) {}.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 PSerif("Nytt skap: Skjold Lab-hylla (3D)", 20.sp)
