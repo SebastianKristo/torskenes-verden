@@ -4,7 +4,7 @@
 // Nettsøk/Mine data, mikrofon (Web Speech API nb-NO, ellers /api/chat/transcribe), modeller-side og «Sende til sky?»-arket.
 // På mobil (smal skjerm) ligger historikken i en skuff (☰).
 // Alt går via vår server (/api/chat/*); serveren bruker Open WebUI når den er satt opp, ellers Ollama/Gemini/Groq direkte.
-// Mangler endepunktene (eldre server), vises en forklaring i stedet for feil.
+// Feiler endepunktene, vises feilen fra serveren.
 import { esc, isMobile } from './util.js';
 import { store } from './store.js';
 import { searchField } from './searchfield.js';
