@@ -264,7 +264,7 @@ internal fun QrLoginScreen46(vm: AppViewModel) {
                 Text(it, color = p.lab, fontSize = 13.5.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
                 PButton("Prøv igjen", Modifier.fillMaxWidth(), height = 46.dp) { val srv = vm.p46.qrSrv; vm.closeQrLogin46(); vm.openQrLogin46(srv) }
             }
-            Text("‹ Logg inn med passord i stedet", color = p.lab, fontWeight = FontWeight.SemiBold, modifier = Modifier.clickable { vm.closeQrLogin46() }.padding(8.dp))
+            Text("‹ Logg inn med passord i stedet", color = p.lab, fontWeight = FontWeight.SemiBold, modifier = Modifier.clickable(role = Role.Button) { vm.closeQrLogin46() }.padding(8.dp))
         }
     }
 }

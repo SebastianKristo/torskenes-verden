@@ -23,6 +23,7 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import androidx.compose.ui.semantics.Role
 
 /*
  * Prompt 51 (APPAND51): skjermene for Enhetsgodkjenning.kt, Krasjrapporter.kt og Ntfy.kt.
@@ -198,9 +199,9 @@ internal fun Overlays51(vm: AppViewModel) {
                 Text(listOf(a.device, a.countryOrIp(), time51(a.createdAt)).filter { it.isNotBlank() }.joinToString(" · "), color = p.bg.copy(alpha = .8f), fontSize = 12.5.sp)
                 Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                     Text("Se forespørselen", color = p.bg, fontWeight = FontWeight.SemiBold, fontSize = 13.5.sp,
-                        modifier = Modifier.clickable { vm.deepLink(android.net.Uri.parse("finanshub://settings/security")) })
+                        modifier = Modifier.clickable(role = Role.Button) { vm.deepLink(android.net.Uri.parse("finanshub://settings/security")) })
                     Text("Senere", color = p.bg.copy(alpha = .7f), fontSize = 13.5.sp,
-                        modifier = Modifier.clickable { vm.sec51.dismissed = vm.sec51.dismissed + pend.map { it.id } })
+                        modifier = Modifier.clickable(role = Role.Button) { vm.sec51.dismissed = vm.sec51.dismissed + pend.map { it.id } })
                 }
             }
         }

@@ -21,6 +21,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import no.kristo.finanshub.*
+import androidx.compose.ui.semantics.Role
+import androidx.compose.foundation.selection.selectable
 
 /*
  * Prompt 24 (A): Innstillinger → Navn på appen og App-ikon (Mobil Papir App.dc.html → HOMELAB).
@@ -69,7 +71,7 @@ internal fun AppNameSheet24(vm: AppViewModel) {
                 PButton("Lagre", Modifier.weight(1f), height = 50.dp) { vm.saveAppName(name); vm.appNameEdit = false }
             }
             if (!preset) Text("Legg til snarvei med eget navn ›", color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 13.5.sp,
-                modifier = Modifier.clip(RoundedCornerShape(8.dp)).clickable {
+                modifier = Modifier.clip(RoundedCornerShape(8.dp)).clickable(role = Role.Button) {
                     if (!pinNamedShortcut24(ctx, v, vm.appInfo.icon)) vm.flash("Hjemskjermen støtter ikke festede snarveier")
                 }.padding(vertical = 6.dp))
         }
@@ -89,7 +91,7 @@ internal fun AppIconSheet24(vm: AppViewModel) {
                     val on = vm.appInfo.icon == k
                     Column(
                         Modifier.weight(1f).clip(RoundedCornerShape(18.dp)).border(if (on) 2.dp else 1.dp, if (on) p.ink else p.line, RoundedCornerShape(18.dp))
-                            .clickable { if (!on) vm.setAppIcon(k) }.padding(10.dp),
+                            .selectable(selected = on, role = Role.RadioButton) { if (!on) vm.setAppIcon(k) }.padding(10.dp),
                         horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
                         AppIconPreview(k, vm.appName, Modifier.size(64.dp))

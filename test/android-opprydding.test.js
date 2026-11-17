@@ -137,6 +137,7 @@ const P85E_RUNDE4 = {
   skjold: ['SkjoldPage.kt', 'SkjoldAIViews.kt', 'SkjoldProjectsViews.kt', 'SkjoldSpanViews.kt'],
   nyheter: ['NewsIcons.kt'],
   okonomiRest: ['Finance.kt', 'Kvitteringer.kt', 'KvitteringKo.kt', 'LogoVelger.kt', 'FinnAnnonse.kt', 'More.kt', 'Mer.kt', 'FellesSok.kt'],
+  innstillingerRest: ['AiKontrollSkjerm.kt', 'ClaudeImport.kt', 'AppIkon.kt', 'Bakgrunn.kt', 'WidgetGalleri.kt', '../widget/WidgetConfigActivity.kt', 'Enhetsgodkjenning.kt', 'Innlogging.kt', 'Invitasjon.kt'],
 };
 
 test('P85 E (runde 4): Abonnement, Aksjer og de andre sidene som sto igjen har rolle på trykkflatene', () => {
@@ -156,6 +157,11 @@ test('P85 E (runde 4): Abonnement, Aksjer og de andre sidene som sto igjen har r
   const ps = strip(raw(join(APP, 'ui/PapirSider.kt')));
   assert.match(ps, /\.toggleable\(value = on, role = Role\.Switch\) \{ Haptics\.select\(\); onChange\(!on\) \}/, 'bryterradene i Papir er brytere');
   assert.match(ps, /\.selectable\(selected = on, role = Role\.Tab\) \{ Haptics\.select\(\); vm\.trkTab = tk/);
+  // Rader med egen avkrysningsboks eller bryter: raden er trykkflaten, og kontrollen inni er bare visning (én ting for TalkBack).
+  const imp = strip(raw(join(APP, 'ui/ClaudeImport.kt')));
+  assert.match(imp, /\.toggleable\(value = on, role = Role\.Checkbox\) \{ s\.impPick = if \(on\) s\.impPick - id else s\.impPick \+ id \}[^\n]*\n\s*Checkbox\(on, null,/);
+  assert.match(imp, /\.toggleable\(value = on, role = Role\.Switch\) \{ onChange\(!on\) \}[\s\S]{0,300}Switch\(on, null,/);
+  assert.match(strip(raw(join(APP, 'widget/WidgetConfigActivity.kt'))), /\.toggleable\(value = papir, role = Role\.Switch\) \{ papir = !papir \}[\s\S]{0,500}Switch\(papir, null\)/);
   assert.match(strip(raw(join(APP, 'ui/Boliger.kt'))), /\.toggleable\(value = on, role = Role\.Switch\) \{ vm\.b24PatchHome\(h\.id, JSONObject\(\)\.put\(t\.first, !on\)\) \}/);
 });
 
