@@ -82,6 +82,7 @@ import org.json.JSONObject
 import no.kristo.finanshub.ui.designsystem.HomelabType
 import no.kristo.finanshub.ui.designsystem.HomelabTheme
 import no.kristo.finanshub.ui.designsystem.DsPalette
+import androidx.compose.foundation.selection.selectable
 
 /* ---------------- Familie og kart ---------------- */
 
@@ -548,7 +549,7 @@ private fun ItemList50(vm: AppViewModel, items: List<FamItem50>, empty: String, 
         items.forEachIndexed { i, e ->
             if (i > 0) Box(Modifier.fillMaxWidth().height(1.dp).background(p.line.copy(alpha = .6f)))
             Row(
-                Modifier.fillMaxWidth().then(if (onClick != null) Modifier.clickable { onClick(e) } else Modifier).padding(14.dp, 9.dp),
+                Modifier.fillMaxWidth().then(if (onClick != null) Modifier.clickable(role = Role.Button, onClickLabel = "Åpne") { onClick(e) } else Modifier).padding(14.dp, 9.dp),
                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 Av50(vm, e.avatar, 28.dp, 10.5.sp)
@@ -624,7 +625,7 @@ private fun Kart50(vm: AppViewModel, embedded: Boolean) {
                 val fm = e.pr.fromMe
                 Row(
                     Modifier.align(BiasAlignment(e.bx, e.by)).shadow(6.dp, CircleShape).clip(CircleShape).background(p.surfaceRaised)
-                        .clickable { ctl.pick(e.pr.lat!!, e.pr.lon!!) }.padding(start = 4.dp, end = 12.dp).height(32.dp),
+                        .clickable(role = Role.Button, onClickLabel = "Vis på kartet") { ctl.pick(e.pr.lat!!, e.pr.lon!!) }.padding(start = 4.dp, end = 12.dp).height(32.dp),
                     verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
                     Av50(vm, e.pr.av, 24.dp, 10.sp)
@@ -652,7 +653,7 @@ private fun Kart50(vm: AppViewModel, embedded: Boolean) {
             Column(
                 Modifier.fillMaxWidth().pointerInput(Unit) {
                     detectVerticalDragGestures { _, dy -> if (dy > 6) open = false else if (dy < -6) open = true }
-                }.clickable { open = !open },
+                }.clickable(role = Role.Button, onClickLabel = "Vis eller skjul listen") { open = !open },
             ) {
                 Box(Modifier.align(Alignment.CenterHorizontally).padding(top = 8.dp, bottom = 10.dp).size(40.dp, 5.dp).clip(CircleShape).background(p.line))
                 T50("${people.size} personer", 24.sp, p.textPrimary, FontWeight.Medium, PaperFonts.serif, Modifier.padding(horizontal = 20.dp))
@@ -664,7 +665,7 @@ private fun Kart50(vm: AppViewModel, embedded: Boolean) {
                 people.forEachIndexed { i, pr ->
                     if (i > 0) Box(Modifier.fillMaxWidth().height(1.dp).background(p.line.copy(alpha = .6f)))
                     Row(
-                        Modifier.fillMaxWidth().heightIn(min = 68.dp).clickable { openPerson50(vm, pr.userId, "kart") }.padding(14.dp, 8.dp),
+                        Modifier.fillMaxWidth().heightIn(min = 68.dp).clickable(role = Role.Button, onClickLabel = "Åpne personen") { openPerson50(vm, pr.userId, "kart") }.padding(14.dp, 8.dp),
                         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
                         Av50(vm, pr.av, 42.dp, 14.sp)
@@ -744,7 +745,7 @@ private fun Person50(vm: AppViewModel, embedded: Boolean) {
                 T50(h?.text ?: "${first50(pr.name)} deler ikke helse med deg", 13.sp, p.textSecondary, modifier = Modifier.padding(horizontal = 4.dp), maxLines = 2)
             }
             if (pr.av.self) T50("Dette er deg. Personvern og deling ›", 13.sp, p.textPrimary, FontWeight.SemiBold,
-                modifier = Modifier.padding(horizontal = 4.dp).clickable { vm.famPrivacy = true })
+                modifier = Modifier.padding(horizontal = 4.dp).clickable(role = Role.Button) { vm.famPrivacy = true })
         }
     }
 }
@@ -907,7 +908,7 @@ private fun Sted50(vm: AppViewModel) {
                 Row(Modifier.fillMaxWidth().heightIn(min = 50.dp).padding(start = 14.dp, end = 8.dp, top = 4.dp, bottom = 4.dp),
                     verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     Box(Modifier.size(10.dp).clip(CircleShape).background(c.copy(alpha = .25f)).border(2.dp, c, CircleShape))
-                    T50(a.name, 14.5.sp, p.textPrimary, FontWeight.Bold, modifier = Modifier.weight(1f).then(if (canEdit) Modifier.clickable {
+                    T50(a.name, 14.5.sp, p.textPrimary, FontWeight.Bold, modifier = Modifier.weight(1f).then(if (canEdit) Modifier.clickable(role = Role.Button, onClickLabel = "Endre området") {
                         edit = AreaEdit50(pl?.id, a.id, a.name, a.radius, a.lat, a.lon)
                     } else Modifier))
                     Box(
@@ -1022,7 +1023,7 @@ private fun Helse50(vm: AppViewModel, wide: Boolean) {
         if (list == null) T50("Henter helse …", 13.sp, p.textSecondary, modifier = Modifier.padding(horizontal = 6.dp))
         list?.forEach { h -> HealthCard50(vm, h) }
         Spacer(Modifier.height(4.dp))
-        T50("Din deling: Personvern og helse ›", 13.sp, p.textPrimary, FontWeight.SemiBold, modifier = Modifier.padding(horizontal = 6.dp).clickable { vm.famPrivacy = true })
+        T50("Din deling: Personvern og helse ›", 13.sp, p.textPrimary, FontWeight.SemiBold, modifier = Modifier.padding(horizontal = 6.dp).clickable(role = Role.Button) { vm.famPrivacy = true })
     }
 }
 
@@ -1128,7 +1129,7 @@ private fun HealthPerson50(vm: AppViewModel) {
     }
     Row(
         Modifier.padding(14.dp, 8.dp, 14.dp, 0.dp).fillMaxWidth().clip(RoundedCornerShape(18.dp)).border(1.dp, p.line, RoundedCornerShape(18.dp))
-            .clickable { if (h.av.self) vm.famPrivacy = true else vm.flash(h.shareText ?: "${first50(h.av.name)} velger selv hva som deles") }.padding(14.dp, 12.dp),
+            .clickable(role = Role.Button, onClickLabel = "Personvern og deling") { if (h.av.self) vm.famPrivacy = true else vm.flash(h.shareText ?: "${first50(h.av.name)} velger selv hva som deles") }.padding(14.dp, 12.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         T50(h.shareText ?: "${h.av.name} deler helse med deg.", 13.sp, p.textSecondary, modifier = Modifier.weight(1f), maxLines = 2)
@@ -1222,7 +1223,7 @@ private fun Form50(vm: AppViewModel, c: FamCheckinTab50) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         T50("Svarer på forespørselen" + (replyFrom?.from?.let { " fra ${first50(it.name)}" } ?: ""), 13.sp, p.textPrimary, FontWeight.SemiBold, modifier = Modifier.weight(1f))
-        T50("✕", 14.sp, p.textTertiary, FontWeight.Bold, modifier = Modifier.clickable { s.replyTo = null })
+        T50("✕", 14.sp, p.textTertiary, FontWeight.Bold, modifier = Modifier.clickable(role = Role.Button, onClickLabel = "Avbryt svaret") { s.replyTo = null })
     }
     Column(Modifier.padding(horizontal = 14.dp).fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(p.surfaceRaised).padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -1231,12 +1232,12 @@ private fun Form50(vm: AppViewModel, c: FamCheckinTab50) {
                 T50(place?.title ?: "Ukjent sted", 16.sp, p.textPrimary, FontWeight.Bold)
                 T50(place?.let { pl -> (if (pl.source == "calendar") "Fra kalenderen · " else "") + (pl.label.removePrefix(pl.title).removePrefix(" · ").ifBlank { pl.detail ?: "" }) } ?: "Fant ingen posisjon", 12.5.sp, p.textSecondary)
             }
-            T50("Endre", 13.sp, RED50, FontWeight.Bold, modifier = Modifier.clickable { placeOpen = !placeOpen })
+            T50("Endre", 13.sp, RED50, FontWeight.Bold, modifier = Modifier.clickable(role = Role.Button) { placeOpen = !placeOpen })
         }
         if (placeOpen) Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             sugg.forEachIndexed { i, sg ->
                 Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(if (i == placeIdx && custom.isBlank()) p.surface else Color.Transparent)
-                    .clickable { placeIdx = i; custom = ""; placeOpen = false }.padding(10.dp, 8.dp)) {
+                    .selectable(selected = i == placeIdx && custom.isBlank(), role = Role.RadioButton) { placeIdx = i; custom = ""; placeOpen = false }.padding(10.dp, 8.dp)) {
                     T50(sg.label, 13.5.sp, p.textPrimary, FontWeight.SemiBold, maxLines = 2)
                 }
             }

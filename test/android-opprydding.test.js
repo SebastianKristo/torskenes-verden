@@ -130,6 +130,7 @@ test('P85 E: Nyheter, Mat, Domener, Vær, Avganger og kalendervisningen har roll
 const P85E_RUNDE4 = {
   okonomi: ['Abonnement.kt', 'Aksjer.kt'],
   papir: ['PapirSider.kt', 'PapirInnstillinger.kt', 'PapirByggeklosser.kt'],
+  familie: ['FamilyPage.kt', 'KartPage.kt'],
 };
 
 test('P85 E (runde 4): Abonnement, Aksjer og de andre sidene som sto igjen har rolle på trykkflatene', () => {
