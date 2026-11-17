@@ -371,15 +371,11 @@
     "finans-oversikt|papir-lys|390": {
       "beroringsflate": 3
     },
-    "finans-oversikt|papir-mork|1440": {
-      "kontrast": 5
-    },
+    "finans-oversikt|papir-mork|1440": {},
     "finans-oversikt|papir-mork|390": {
       "beroringsflate": 3
     },
-    "finans-oversikt|glass|1440": {
-      "kontrast": 5
-    },
+    "finans-oversikt|glass|1440": {},
     "finans-oversikt|glass|390": {
       "beroringsflate": 3
     },
@@ -396,88 +392,62 @@
     "finans-budsjett|glass|1440": {},
     "finans-budsjett|glass|390": {},
     "finans-abonnementer|papir-lys|1440": {
-      "kontrast": 11,
       "beroringsflate": 9
     },
     "finans-abonnementer|papir-lys|390": {},
     "finans-abonnementer|papir-mork|1440": {
-      "kontrast": 5,
       "beroringsflate": 9
     },
     "finans-abonnementer|papir-mork|390": {},
     "finans-abonnementer|glass|1440": {
-      "kontrast": 5,
       "beroringsflate": 9
     },
     "finans-abonnementer|glass|390": {},
-    "finans-faste|papir-lys|1440": {
-      "kontrast": 4
-    },
+    "finans-faste|papir-lys|1440": {},
     "finans-faste|papir-lys|390": {},
-    "finans-faste|papir-mork|1440": {
-      "kontrast": 4
-    },
+    "finans-faste|papir-mork|1440": {},
     "finans-faste|papir-mork|390": {},
-    "finans-faste|glass|1440": {
-      "kontrast": 4
-    },
+    "finans-faste|glass|1440": {},
     "finans-faste|glass|390": {},
-    "finans-kvitteringer|papir-lys|1440": {
-      "kontrast": 6
-    },
+    "finans-kvitteringer|papir-lys|1440": {},
     "finans-kvitteringer|papir-lys|390": {},
-    "finans-kvitteringer|papir-mork|1440": {
-      "kontrast": 2
-    },
+    "finans-kvitteringer|papir-mork|1440": {},
     "finans-kvitteringer|papir-mork|390": {},
-    "finans-kvitteringer|glass|1440": {
-      "kontrast": 2
-    },
+    "finans-kvitteringer|glass|1440": {},
     "finans-kvitteringer|glass|390": {},
     "finans-boliger|papir-lys|1440": {
       "beroringsflate": 1
     },
     "finans-boliger|papir-lys|390": {},
     "finans-boliger|papir-mork|1440": {
-      "kontrast": 1,
       "beroringsflate": 1
     },
     "finans-boliger|papir-mork|390": {},
     "finans-boliger|glass|1440": {
-      "kontrast": 1,
       "beroringsflate": 1
     },
     "finans-boliger|glass|390": {},
-    "finans-aksjer|papir-lys|1440": {
-      "kontrast": 7
-    },
+    "finans-aksjer|papir-lys|1440": {},
     "finans-aksjer|papir-lys|390": {
       "beroringsflate": 1
     },
-    "finans-aksjer|papir-mork|1440": {
-      "kontrast": 3
-    },
+    "finans-aksjer|papir-mork|1440": {},
     "finans-aksjer|papir-mork|390": {
       "beroringsflate": 1
     },
-    "finans-aksjer|glass|1440": {
-      "kontrast": 3
-    },
+    "finans-aksjer|glass|1440": {},
     "finans-aksjer|glass|390": {
       "beroringsflate": 1
     },
     "finans-import|papir-lys|1440": {
-      "kontrast": 2,
       "etikett": 2
     },
     "finans-import|papir-lys|390": {},
     "finans-import|papir-mork|1440": {
-      "kontrast": 5,
       "etikett": 2
     },
     "finans-import|papir-mork|390": {},
     "finans-import|glass|1440": {
-      "kontrast": 5,
       "etikett": 2
     },
     "finans-import|glass|390": {},
