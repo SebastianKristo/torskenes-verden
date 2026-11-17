@@ -69,7 +69,7 @@ const IC = {
 const svg = (d, s = 18, w = 2) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${d}"/></svg>`;
 
 const C = {
-  booted: false, ready70: false, show70: 30, missing: false, err: '', models: null, def: '', owui: false, set: { chat_my_data: true, chat_ask_cloud: true, chat_default_model: '', chat_theme: 'papir' },
+  booted: false, ready70: false, show70: 30, err: '', models: null, def: '', owui: false, set: { chat_my_data: true, chat_ask_cloud: true, chat_default_model: '', chat_theme: 'papir' },
   list: null, q: '', qList: null, cur: null, chat: null, draftModel: '', draftSet: { ...DEF }, open: {},
   inp: '', att: [], web: false, data: false, busy: null, sheet: null, menuId: null, guard: null, rem: false, edit: null,
   copied: '', speak: '', rec: false, toast: '', pulls: {}, mdel: '', kb: null, drawer: false, delArm: false, rn: '', nf: '', pn: '', theme: 'papir',
@@ -145,7 +145,6 @@ async function load70() {
   });
   const [m, s] = await Promise.allSettled([pm, ps]);
   if (run !== L70.run) return;
-  if (m.status === 'rejected' && m.reason?.status === 404) { C.missing = true; ready70(); return; }
   if (netErr70(m)) { if (!C.ready70) { fail70(); paint(); } return; }
   const l = readLocal();
   if (m.status === 'fulfilled') { C.models = m.value.models ?? []; C.def = m.value.default ?? ''; C.owui = !!m.value.openwebui; C.auto = m.value.auto?.id ? m.value.auto : null; C.err = ''; } else { C.models = []; C.err = m.reason?.message ?? ''; }
@@ -478,7 +477,6 @@ function sheetHtml() {
 }
 
 function body() {
-  if (C.missing) return `<div class="ch-miss"><b>Chat er ikke tilgjengelig ennå</b><span>Serveren mangler /api/chat. Oppdater Homelab-serveren for å bruke Chat med Ollama, Gemini og Groq.</span></div>`;
   const wide = !isMobile(), id = curModelId(), m = modelOf(id), sky = m.kind === 'sky';
   const hasMsgs = (C.chat?.messages ?? []).some((x) => x.role !== 'system') || C.busy;
   return `${wide ? sideHtml(false) : ''}<div class="ch-main">
@@ -592,7 +590,6 @@ async function sendInner(text, opt = {}) {
     C.busy = null; C.chat = before.chat; C.inp = t; C.att = before.att;
     // Prompt 40: ny samtale (✦ AI i søket): personvernvalget vises inne i samtalen, med spørsmålet over.
     if (res.status === 409 && d.needsConfirm) { const fresh = !before.chat && opt.editFrom == null; if (fresh) { C.chat = shown; C.inp = ''; } C.guard = { model: d.model || mName(model), leaves: d.leaves ?? [], hasData: !!payload.myData, text: t, opt, fresh }; C.rem = false; C.sheet = 'guard'; paint(); return; }
-    if (res.status === 404 && !d.error) { C.missing = true; paint(); return; }
     toast(d.error || `Feil ${res.status}`); return;
   }
   await readSse(res, ctl);
@@ -807,7 +804,7 @@ async function loadKb() {
 /* ---------------- Tale ---------------- */
 
 function speak(i) {
-  // Prompt 57: Glimt-stemmen (tts.voice) via POST /api/tts; 503/404/feil → nettleserens speechSynthesis som før.
+  // Prompt 57: Glimt-stemmen (tts.voice) via POST /api/tts; 503/feil → nettleserens speechSynthesis som før.
   const key = `${C.cur}:${i}`;
   if (C.speak === key) { stop57(); C.speak = ''; C.speakAi = false; paint(); return; }
   const m = (C.chat?.messages ?? []).filter((x) => x.role !== 'system')[i];
@@ -942,7 +939,7 @@ function bind(h) {
   css50();
   css52();
   // Prompt 50: hele chatområdet tar imot filer (dra og slipp); lim inn bilder i feltet.
-  bindDrop50(h, (fs) => { if (C.missing) return; addFiles('drop', fs); });
+  bindDrop50(h, (fs) => addFiles('drop', fs));
   if (h.dataset.chBound) return;
   h.dataset.chBound = '1';
   h.addEventListener('paste', (e) => {

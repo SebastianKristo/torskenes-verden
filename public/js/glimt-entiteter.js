@@ -14,7 +14,7 @@ export const TYPES60 = ['person', 'place', 'store', 'subscription', 'event'];
 const LABELS = { person: 'Personer', place: 'Steder', store: 'Butikker', subscription: 'Abonnementer', event: 'Faste hendelser' };
 const ONE = { person: 'Person', place: 'Sted', store: 'Butikk', subscription: 'Abonnement', event: 'Fast hendelse' };
 const WHERE = { family: 'Familie → Steder', subscriptions: 'Faste betalinger', weather: 'Vær', profile: 'Profil' };
-const S = { d: null, at: 0, loading: null, missing: false, err: '', msg: '', filter: '', edit: null, add: false, arm: null, busy: false, res: null };
+const S = { d: null, at: 0, loading: null, err: '', msg: '', filter: '', edit: null, add: false, arm: null, busy: false, res: null };
 
 /** «hytta, Hytta , jobben» → ['hytta', 'jobben'] (unike, uten tomme, maks 20). */
 export function parseAliases60(v) {
@@ -52,8 +52,7 @@ export async function loadEntities60(force = false) {
   S.loading = (async () => {
     try {
       const r = await fetch('/api/glimt/entities', { credentials: 'same-origin', cache: 'no-store' });
-      if (r.status === 404 || r.status === 405) S.missing = true;
-      else if (r.ok) { S.d = await r.json(); S.missing = false; S.err = ''; }
+      if (r.ok) { S.d = await r.json(); S.err = ''; }
       else S.err = (await r.json().catch(() => ({}))).error || `Feil ${r.status}`;
     } catch (e) { S.err = e.message; }
     S.at = Date.now(); S.loading = null;
@@ -84,7 +83,6 @@ function rowHtml(it) {
   return `<div class="sg-row e60-row" data-e60-row="${esc(it.id)}"><span class="sg-txt"><b data-no-i18n>${esc(it.name)}</b><span data-no-i18n>${esc(sub)}</span>${chips ? `<span class="e60-al">${chips}</span>` : ''}</span><button type="button" class="sg-btn2" data-e60-edit="${esc(it.id)}" aria-label="Rediger ${esc(it.name)}">Rediger</button></div>`;
 }
 export function entitiesHtml60() {
-  if (S.missing) return '<div class="sg-row"><span class="sg-txt"><span>Serveren har ikke entitetsregisteret ennå. Oppdater serveren.</span></span></div>';
   const d = S.d;
   if (!d) return `<div class="sg-row"><span class="sg-txt"><span>${S.err ? `Serveren svarte: ${esc(S.err)}` : 'Laster …'}</span></span></div>`;
   const items = Array.isArray(d.items) ? d.items : [], lab = (t) => d.labels?.[t] ?? LABELS[t];

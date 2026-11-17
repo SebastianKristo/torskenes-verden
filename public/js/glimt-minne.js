@@ -13,7 +13,7 @@
 // godkjenning), Motstrid (velg A / B / begge – samme valg som knappene fra del 3) og «Ikke brukt på lenge» (behold / slett – slett
 // bare når brukeren trykker to ganger, via den vanlige DELETE /api/glimt/memory/:id). (2) Brytere i AI-kontroll → Valg som fyller
 // [data-mem63set]. (3) Lenken fra morgen-pushen («Glimt har 3 forslag til minnet», url ROUTE63) åpner Innstillinger → AI og
-// blar ned til forslagene. Ingenting kommer inn i minnet uten at brukeren trykker. Eldre server (404): ingenting vises.
+// blar ned til forslagene. Ingenting kommer inn i minnet uten at brukeren trykker.
 import { loadMemory, deleteMemory } from './glimt-memory.js';
 import { parseAliases60 } from './glimt-entiteter.js';
 import { when62 } from './glimt-faste-oppgaver.js';
@@ -98,7 +98,7 @@ export function choices63(c = {}) {
 }
 
 /* ---------- Data ---------- */
-const M = { pend: null, conf: null, stale: null, hyg: null, at: 0, loading: null, missing: false, err: '', msg: '', smsg: '', edit: null, emsg: '', arm: null, busy: {}, sbusy: false, flash: 0 };
+const M = { pend: null, conf: null, stale: null, hyg: null, at: 0, loading: null, err: '', msg: '', smsg: '', edit: null, emsg: '', arm: null, busy: {}, sbusy: false, flash: 0 };
 async function call(path, method = 'GET', json) {
   const r = await fetch(`/api/glimt/memory${path}`, { method, credentials: 'same-origin', cache: 'no-store', headers: json ? { 'Content-Type': 'application/json' } : {}, body: json ? JSON.stringify(json) : undefined });
   const d = r.headers.get('content-type')?.includes('json') ? await r.json().catch(() => ({})) : {};
@@ -110,14 +110,10 @@ export async function loadMem63(force = false) {
   if (M.loading) return M.loading;
   M.loading = (async () => {
     const [p, c, s, h] = await Promise.allSettled([call('/pending'), call('/conflicts'), call('/stale'), call('/hygiene')]);
-    if (p.status === 'rejected' && (p.reason.status === 404 || p.reason.status === 405)) M.missing = true;
-    else {
-      M.missing = false;
-      M.pend = p.status === 'fulfilled' ? p.value : M.pend; M.conf = c.status === 'fulfilled' ? c.value : M.conf;
-      M.stale = s.status === 'fulfilled' ? s.value : M.stale; M.hyg = h.status === 'fulfilled' ? h.value : M.hyg;
-      const bad = [p, c, s, h].find((x) => x.status === 'rejected');
-      M.err = bad ? bad.reason.message : '';
-    }
+    M.pend = p.status === 'fulfilled' ? p.value : M.pend; M.conf = c.status === 'fulfilled' ? c.value : M.conf;
+    M.stale = s.status === 'fulfilled' ? s.value : M.stale; M.hyg = h.status === 'fulfilled' ? h.value : M.hyg;
+    const bad = [p, c, s, h].find((x) => x.status === 'rejected');
+    M.err = bad ? bad.reason.message : '';
     M.at = Date.now(); M.loading = null;
     return M;
   })();
@@ -156,7 +152,6 @@ function staleHtml(it) {
     <div class="m63-acts">${b(`data-m63-keep="${id}"`, 'Behold', 'pri', busy)}${b(`data-m63-del="${id}"`, M.arm === it.id ? 'Trykk igjen for å slette' : 'Slett', 'bad', busy)}</div></div>`;
 }
 export function memHtml63() {
-  if (M.missing) return '';
   if (!M.pend && !M.hyg) return `<div class="m63" data-m63><div class="sg-row"><span class="sg-txt"><span>${M.err ? `Serveren svarte: ${esc(M.err)}` : 'Laster forslag …'}</span></span></div></div>`;
   const P = (M.pend?.items ?? []).filter((x) => !x.status || x.status === 'pending'), C = (M.conf?.items ?? []).filter((x) => !x.status || x.status === 'open'), S = M.stale?.items ?? [];
   const h = M.hyg, sch = h?.schedule, cnt = countsLine63({ pending: P.length, conflicts: C.length, stale: S.length });
@@ -175,7 +170,6 @@ export function memHtml63() {
 const sw = (v) => `<span class="ac-sw${v ? ' on' : ''}" aria-hidden="true"><i></i></span>`;
 const lab = (k) => esc(M.hyg?.labels?.[k] ?? LAB[k]), help = (k) => esc(M.hyg?.help?.[k] && M.hyg.help[k] !== '…' ? M.hyg.help[k] : HELP[k]);
 export function settingsHtml63() {
-  if (M.missing) return '';
   const d = M.hyg;
   if (!d) return `<div class="ac-sec"><span class="ac-lab">MINNET HOLDER SEG RYDDIG</span><div class="ac-card ac-list"><div class="ac-mut" style="padding:12px 0">${M.err ? esc(M.err) : 'Laster …'}</div></div></div>`;
   const mine = KEYS63.map((k) => {

@@ -14,7 +14,7 @@ const HELP = {
   parallel: 'Uavhengige oppslag (kalender, vær, finans, nettsøk) kjøres samtidig. Modellkall går fortsatt ett om gangen.',
 };
 const USER_KEYS = ['cache', 'stream', 'parallel'], SERVER_KEYS = ['cache', 'warm', 'stream', 'parallel'];
-const S = { d: null, at: 0, busy: false, msg: '', missing: false, loading: null };
+const S = { d: null, at: 0, busy: false, msg: '', loading: null };
 
 async function load(force = false) {
   if (!force && S.at && Date.now() - S.at < 20_000) return;
@@ -22,8 +22,7 @@ async function load(force = false) {
   S.loading = (async () => {
     try {
       const r = await fetch('/api/glimt/agent/fast', { credentials: 'same-origin', cache: 'no-store' });
-      if (r.status === 404 || r.status === 405) S.missing = true;
-      else if (r.ok) { S.d = await r.json(); S.missing = false; }
+      if (r.ok) { S.d = await r.json(); }
       else S.msg = (await r.json().catch(() => ({}))).error || `Feil ${r.status}`;
     } catch (e) { S.msg = e.message; }
     S.at = Date.now(); S.loading = null;
@@ -42,7 +41,6 @@ const sw = (on) => `<span class="ac-sw${on ? ' on' : ''}" aria-hidden="true"><i>
 const ago = (iso) => { const t = Date.parse(iso ?? ''); if (!t) return ''; const m = Math.max(0, Math.round((Date.now() - t) / 60000)); return m < 1 ? 'nå nettopp' : m < 60 ? `for ${m} min siden` : m < 1440 ? `for ${Math.round(m / 60)} t siden` : `for ${Math.round(m / 1440)} d siden`; };
 
 export function fastHtml59() {
-  if (S.missing) return '';
   const d = S.d;
   if (!d) return `<div class="ac-sec"><span class="ac-lab">RASKERE SVAR</span><div class="ac-card ac-list"><div class="ac-mut" style="padding:12px 0">${S.msg ? esc(S.msg) : 'Laster …'}</div></div></div>`;
   const lab = (k) => esc(d.labels?.[k] ?? LAB[k]), help = (k) => esc(d.help?.[k] && d.help[k] !== '…' ? d.help[k] : HELP[k]);

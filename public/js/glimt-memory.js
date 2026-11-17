@@ -18,10 +18,10 @@ export function setMemoryBase(b) { M.base = b || '/api'; }
 async function call(path, method = 'GET', json) {
   const r = await fetch(M.base + '/glimt/memory' + path, { method, credentials: 'same-origin', cache: 'no-store', headers: json ? { 'Content-Type': 'application/json' } : {}, body: json ? JSON.stringify(json) : undefined });
   const d = r.headers.get('content-type')?.includes('json') ? await r.json().catch(() => ({})) : {};
-  if (!r.ok) throw Object.assign(new Error(d.error || (r.status === 404 ? 'Serveren støtter ikke «Glimt husker» ennå.' : `Feil ${r.status}`)), { status: r.status });
+  if (!r.ok) throw Object.assign(new Error(d.error || `Feil ${r.status}`), { status: r.status });
   return d;
 }
-/** Aliasene (cache). force = hent på nytt. Eldre server (404): tom liste. */
+/** Aliasene (cache). force = hent på nytt. Feiler kallet: forrige liste (eller tom), så tolkingen i parseQuick ikke stopper. */
 export function loadMemory(force = false) {
   if (!force && M.items && Date.now() - M.at < 5 * 60_000) return Promise.resolve(M.items);
   if (M.p && !force) return M.p;

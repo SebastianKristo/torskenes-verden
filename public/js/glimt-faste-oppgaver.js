@@ -10,7 +10,7 @@
 // Fire deler: (1) siden Innstillinger → Faste oppgaver (mountSched62 i [data-mount-host] fra settings-faste-oppgaver.js), (2) brytere i
 // AI-kontroll → Valg som fyller [data-sched62] (samme stil som «Glimt lærer»), (3) bekreftelseskortet for en ny/endret/stoppet
 // oppgave i Chat og Glimt-søket (schedCard62Html, brukt av glimt-agent.js og chat.js med de vanlige Ja/Avbryt-knappene fra
-// del 3), (4) kvitteringen etter «Ja» (schedDone62Html) med lenke til siden. Eldre server (404): «Oppdater serveren» / ingenting.
+// del 3), (4) kvitteringen etter «Ja» (schedDone62Html) med lenke til siden. Feil fra serveren vises som «Serveren svarte: …».
 // Selvstendig modul (ingen andre importer), så glimt-agent.js også kan bruke den fra FinansHub.
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
 export const ROUTE62 = '/#/innstillinger/faste-oppgaver';
@@ -161,15 +161,14 @@ async function call(path, method = 'GET', json) {
 const idPath = (id) => (/^brief:[a-z]+$/.test(id) ? `/${id}` : `/${encodeURIComponent(id)}`);
 
 /* ---------- Brytere (AI-kontroll → Valg, og øverst på siden) ---------- */
-const S = { d: null, at: 0, busy: false, msg: '', missing: false, loading: null };
+const S = { d: null, at: 0, busy: false, msg: '', loading: null };
 export async function loadSettings62(force = false) {
   if (!force && S.at && Date.now() - S.at < 20_000) return S.d;
   if (S.loading) return S.loading;
   S.loading = (async () => {
     try {
       const r = await fetch('/api/glimt/schedules/settings', { credentials: 'same-origin', cache: 'no-store' });
-      if (r.status === 404 || r.status === 405) S.missing = true;
-      else if (r.ok) { S.d = await r.json(); S.missing = false; S.msg = ''; }
+      if (r.ok) { S.d = await r.json(); S.msg = ''; }
       else S.msg = (await r.json().catch(() => ({}))).error || `Feil ${r.status}`;
     } catch (e) { S.msg = e.message; }
     S.at = Date.now(); S.loading = null;
@@ -184,7 +183,6 @@ const lab = (d, k) => esc(d?.labels?.[k] ?? LAB[k]), help = (d, k) => esc(d?.hel
 const sw = (on) => `<span class="ac-sw${on ? ' on' : ''}" aria-hidden="true"><i></i></span>`;
 /** AI-kontroll → Valg: «Faste oppgaver · for meg» (tre brytere + prisområde) og «for alle (admin)». */
 export function settingsHtml62() {
-  if (S.missing) return '';
   const d = S.d;
   if (!d) return `<div class="ac-sec"><span class="ac-lab">FASTE OPPGAVER</span><div class="ac-card ac-list"><div class="ac-mut" style="padding:12px 0">${S.msg ? esc(S.msg) : 'Laster …'}</div></div></div>`;
   const mine = KEYS62.map((k) => {
@@ -205,7 +203,7 @@ export function settingsHtml62() {
 /** Samme brytere i stil med resten av Innstillinger (øverst på siden Faste oppgaver). */
 function pageToggles() {
   const d = S.d;
-  if (!d || S.missing) return '';
+  if (!d) return '';
   const rows = KEYS62.map((k) => {
     const { srv, on } = effOn(d, k), locked = !srv || (k !== 'enabled' && !effOn(d, 'enabled').on);
     return `<button type="button" class="sg-row s62-tg" data-s62-user="${k}" role="switch" aria-checked="${on}"${S.busy || locked ? ' disabled' : ''}><span class="sg-txt"><b>${lab(d, k)}</b><span>${!srv ? 'Slått av for alle av administrator' : help(d, k)}</span></span><span class="sg-sw"></span></button>`;
@@ -217,15 +215,14 @@ function pageToggles() {
 async function putSettings(body) { const j = await call('/settings', 'PUT', body); S.d = j; S.at = Date.now(); return j; }
 
 /* ---------- Siden «Faste oppgaver» ---------- */
-const L = { d: null, at: 0, loading: null, missing: false, err: '', msg: '', filter: '', open: null, det: {}, edit: null, prev: null, arm: null, busy: {}, rmsg: {}, slot: null };
+const L = { d: null, at: 0, loading: null, err: '', msg: '', filter: '', open: null, det: {}, edit: null, prev: null, arm: null, busy: {}, rmsg: {}, slot: null };
 export async function loadSchedules62(force = false) {
   if (!force && L.at && Date.now() - L.at < 15_000) return L.d;
   if (L.loading) return L.loading;
   L.loading = (async () => {
     try {
       const r = await fetch('/api/glimt/schedules', { credentials: 'same-origin', cache: 'no-store' });
-      if (r.status === 404 || r.status === 405) L.missing = true;
-      else if (r.ok) { L.d = await r.json(); L.missing = false; L.err = ''; }
+      if (r.ok) { L.d = await r.json(); L.err = ''; }
       else L.err = (await r.json().catch(() => ({}))).error || `Feil ${r.status}`;
     } catch (e) { L.err = e.message; }
     L.at = Date.now(); L.loading = null;
@@ -281,7 +278,6 @@ function briefHtml(b) {
     ${canOn ? `<button type="button" class="s62-sw" data-s62-bon="${id}" role="switch" aria-checked="${b.on !== false}" aria-label="${esc(b.title)} på"${busy ? ' disabled' : ''}><span class="sg-sw"></span></button>` : ''}</div>`;
 }
 export function pageHtml62() {
-  if (L.missing) return '<section class="sg"><div class="sg-box"><div class="sg-row"><span class="sg-txt"><span>Serveren har ikke faste oppgaver ennå. Oppdater serveren.</span></span></div></div></section>';
   const d = L.d;
   if (!d) return `<section class="sg"><div class="sg-box"><div class="sg-row"><span class="sg-txt"><span>${L.err ? `Serveren svarte: ${esc(L.err)}` : 'Laster …'}</span></span></div></div></section>`;
   const items = Array.isArray(d.items) ? d.items : [], c = d.counts ?? {};

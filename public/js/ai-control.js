@@ -3,7 +3,7 @@
 // Brukes i Innstillinger → AI (web), i Chat (Modeller og Samtaleinnstillinger → «Full AI-kontroll ›») og i FinansHub → Innstillinger → AI.
 // Selvstendig modul (ingen import), så FinansHub kan laste den fra /assets/js/ai-control.js.
 //
-// Data (SERVER34, claude-code-ai-kontroll.md). Svarer et endepunkt 404 (eldre server), vises det tydelig, og resten virker:
+// Data (SERVER34, claude-code-ai-kontroll.md). Feiler et endepunkt, vises feilen fra serveren der, og resten virker:
 //   GET  /api/ai/status            → {providers:[{id,name,state:'ok'|'degraded'|'off',label,ms,model,error,keyTail,url}], routes:[…], gpu?, server?, disk?}
 //   GET  /api/ai/models            → installerte (Ollama /api/tags + /api/ps) og sky-modeller
 //   GET  /api/ai/library?q=        → biblioteket på ollama.com (med størrelser)
@@ -79,13 +79,13 @@ const sw = (on) => `<span class="ac-sw${on ? ' on' : ''}" aria-hidden="true"><i>
 async function call(path, o = {}) {
   const r = await fetch('/api/ai' + path, { method: o.method ?? 'GET', credentials: 'same-origin', headers: o.json !== undefined ? { 'Content-Type': 'application/json' } : {}, body: o.json !== undefined ? JSON.stringify(o.json) : undefined, signal: o.signal });
   const d = r.headers.get('content-type')?.includes('json') ? await r.json().catch(() => ({})) : {};
-  if (!r.ok) throw Object.assign(new Error(d.error || (r.status === 404 ? 'Serveren har ikke dette ennå' : r.status === 403 ? 'Bare administrator kan endre dette' : `Feil ${r.status}`)), { status: r.status, data: d });
+  if (!r.ok) throw Object.assign(new Error(d.error || (r.status === 403 ? 'Bare administrator kan endre dette' : `Feil ${r.status}`)), { status: r.status, data: d });
   return d;
 }
 /** Leser et SSE-svar (text/event-stream) eller et vanlig JSON-svar. onEvent(data, event). */
 async function stream(path, json, onEvent, signal) {
   const r = await fetch('/api/ai' + path, { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json', Accept: 'text/event-stream' }, body: JSON.stringify(json ?? {}), signal });
-  if (!r.ok) { const d = await r.json().catch(() => ({})); throw Object.assign(new Error(d.error || (r.status === 404 ? 'Serveren har ikke dette ennå' : r.status === 403 ? 'Bare administrator kan gjøre dette' : `Feil ${r.status}`)), { status: r.status }); }
+  if (!r.ok) { const d = await r.json().catch(() => ({})); throw Object.assign(new Error(d.error || (r.status === 403 ? 'Bare administrator kan gjøre dette' : `Feil ${r.status}`)), { status: r.status }); }
   if (!r.headers.get('content-type')?.includes('event-stream')) { const d = await r.json().catch(() => ({})); onEvent(d, 'done'); return; }
   const rd = r.body.getReader(), dec = new TextDecoder();
   let buf = '';
@@ -107,7 +107,7 @@ async function stream(path, json, onEvent, signal) {
 /* ---------------- Tilstand (delt mellom alle panelene) ---------------- */
 
 const G = {
-  status: null, models: null, lib: null, routing: null, jobs: null, usage: null, tokens: null, missing: {}, err: {}, loading: {}, at: {},
+  status: null, models: null, lib: null, routing: null, jobs: null, usage: null, tokens: null, err: {}, loading: {}, at: {},
   pulls: {}, selftest: null, toast: '', eye: {}, test: {}, q: '', cat: 'alle', per: '30', paused: false, fresh: null, admin: false, libQ: null, open: {}, msub: 'inst',
 };
 const inst = new Set(); // monterte paneler {el, o, tab}
@@ -117,23 +117,13 @@ function toast(t) { G.toast = t; clearTimeout(toastT); redraw(); toastT = setTim
 
 async function get(key, path, map = (x) => x) {
   if (G.loading[key]) return G.loading[key];
-  G.loading[key] = call(path).then((d) => { G[key] = map(d); G.missing[key] = false; G.err[key] = ''; G.at[key] = Date.now(); })
-    .catch((e) => { G.missing[key] = e.status === 404; G.err[key] = e.message; if (G[key] == null) G[key] = e.status === 404 ? null : G[key]; })
+  G.loading[key] = call(path).then((d) => { G[key] = map(d); G.err[key] = ''; G.at[key] = Date.now(); })
+    .catch((e) => { G.err[key] = e.message; })
     .finally(() => { G.loading[key] = null; redraw(); });
   return G.loading[key];
 }
 const loadStatus = (force) => get('status', `/status${force ? '?fresh=1' : ''}`);
-// Eldre server (uten /api/ai/models): installerte modeller fra Chat (/api/chat/models), bare til visning.
-const loadModels = () => get('models', '/models').then(async () => {
-  if (!G.missing.models || G.legacy) return;
-  try {
-    const r = await fetch('/api/chat/models', { credentials: 'same-origin' }); if (!r.ok) return;
-    const d = await r.json(), L = d.models ?? [];
-    G.models = { installed: L.filter((m) => m.kind !== 'sky' && m.installed).map((m) => ({ name: m.id, desc: m.name, sizeGb: parseFloat(String(m.size ?? '').replace(',', '.')) || null, kind: m.vision ? 'bilde' : 'tekst' })),
-      cloud: L.filter((m) => m.kind === 'sky').map((m) => ({ id: m.id, provider: m.provider, desc: m.name })) };
-    G.legacy = true; redraw();
-  } catch { /* ingen Chat heller */ }
-});
+const loadModels = () => get('models', '/models');
 /** GET /api/ai/routing: tasks kan være en liste [{id, name, desc, fin, personal, model, fallback, warning}] → kart + liste. */
 function normRouting(d) {
   if (!d || typeof d !== 'object') return d;
@@ -157,8 +147,8 @@ const loadUsage = () => get('usage', `/usage?days=${G.per}`);
 const loadTokens = () => get('tokens', '/tokens', (d) => (Array.isArray(d) ? d : d.tokens ?? d.items ?? []));
 function loadLib(q = '') {
   G.libQ = q;
-  return call(`/library?q=${encodeURIComponent(q)}`).then((d) => { G.lib = (Array.isArray(d) ? d : d.items ?? d.models ?? []).map((m) => ({ id: m.id ?? m.name, d: m.desc ?? m.description ?? '', gb: m.sizeGb ?? m.gb ?? m.size ?? null, k: m.cat ?? m.kind ?? m.k ?? 'tekst', fit: m.fit ?? null, inst: !!m.installed })); G.missing.lib = false; })
-    .catch((e) => { G.missing.lib = e.status === 404; G.lib = null; }).finally(redraw);
+  return call(`/library?q=${encodeURIComponent(q)}`).then((d) => { G.lib = (Array.isArray(d) ? d : d.items ?? d.models ?? []).map((m) => ({ id: m.id ?? m.name, d: m.desc ?? m.description ?? '', gb: m.sizeGb ?? m.gb ?? m.size ?? null, k: m.cat ?? m.kind ?? m.k ?? 'tekst', fit: m.fit ?? null, inst: !!m.installed })); G.err.lib = ''; })
+    .catch((e) => { G.err.lib = e.message; G.lib = null; }).finally(redraw);
 }
 
 /* ---------------- Normalisering ---------------- */
@@ -183,7 +173,7 @@ function cloud() {
 }
 /* Prompt 38 (claude-code-ai-maskin-mac-mini.md): AI-maskinen er en Mac mini M4 med 16 GB samlet minne og 2 TB ekstern disk.
    server.hw:{model, chip, memGb, gpuBudgetGb, disk:{name, totalGb, freeGb, external, mounted}, source} kommer fra Ollama-verten.
-   Eldre server uten hw: standardmaskinen (samme standard som serveren), aldri RTX 2080. */
+   Uten hw fra Ollama-verten: standardmaskinen (samme standard som serveren), aldri RTX 2080. */
 const HW0 = { model: 'Mac mini M4', chip: 'Apple M4', memGb: 16, gpuBudgetGb: 10.7, disk: { name: 'Ekstern disk', totalGb: 2000, external: true, mounted: true } };
 function gpu() {
   const S = G.status ?? {}, M = G.models ?? {}, hw = S.server?.hw ?? S.hw ?? M.hw ?? null, g = S.server?.gpu ?? S.gpu ?? M.gpu ?? {};
@@ -246,7 +236,7 @@ function selftest(quiet = false) {
     const bad = Object.values(S.res).filter((x) => !x.ok).length;
     if (!S.quiet || bad) toast(bad ? `${bad} AI-funksjoner virker ikke · se Oversikt` : 'Alle AI-funksjoner svarer');
     loadStatus(); redraw();
-  }).catch((e) => { const S = G.selftest; if (S) { S.done = true; S.err = e.status === 404 ? 'Serveren har ikke selvtest ennå. Oppdater serveren.' : e.message; } redraw(); });
+  }).catch((e) => { const S = G.selftest; if (S) { S.done = true; S.err = e.message; } redraw(); });
 }
 
 function pull(id) {
@@ -339,7 +329,7 @@ function markJobsSeen() {
   G.seenLocal = true;
   if (Date.now() - seenPost < 5000) return;
   seenPost = Date.now();
-  call('/jobs/seen', { method: 'POST', json: {} }).then(() => { G.unseenFailed = 0; G.seenLocal = false; }).catch(() => { /* eldre server: bare lokalt */ });
+  call('/jobs/seen', { method: 'POST', json: {} }).then(() => { G.unseenFailed = 0; G.seenLocal = false; }).catch(() => { /* uten nett: bare lokalt til neste gang */ });
 }
 /** Kort årsak på én linje (serverens short/reason, ellers tolket fra feilmeldingen). */
 function shortReason(j) {
@@ -377,10 +367,7 @@ function phaseText(j) {
 }
 async function retryJobs(ids, group) {
   try { await call('/jobs/retry', { method: 'POST', json: group ? { group, ids } : { ids } }); vibe(); toast(`Prøver ${ids.length} på nytt`); }
-  catch (e) {
-    if (e.status !== 404) { toast(e.message); }
-    else { for (const id of ids) await call(`/jobs/${encodeURIComponent(id)}/retry`, { method: 'POST' }).catch(() => {}); toast(`Prøver ${ids.length} på nytt`); }
-  }
+  catch (e) { toast(e.message); }
   loadJobs();
 }
 
@@ -474,7 +461,7 @@ const PERS45 = [['off', 'Av', 'Bare saklige svar.'], ['little', 'Litt', 'Varm og
 function loadPers45() {
   if (G.pers45 !== undefined) return;
   G.pers45 = null;
-  fetch('/api/glimt/agent/settings', { credentials: 'same-origin', cache: 'no-store' }).then((r) => (r.ok ? r.json() : r.status === 404 ? { missing: true } : null)).then((j) => { G.pers45 = j ?? { personality: 'little' }; redraw(); }).catch(() => { G.pers45 = { personality: 'little' }; redraw(); });
+  fetch('/api/glimt/agent/settings', { credentials: 'same-origin', cache: 'no-store' }).then((r) => (r.ok ? r.json() : null)).then((j) => { G.pers45 = j ?? { personality: 'little' }; redraw(); }).catch(() => { G.pers45 = { personality: 'little' }; redraw(); });
 }
 async function setPers45(v) {
   const prev = G.pers45; G.pers45 = { ...(prev ?? {}), personality: v }; vibe(); redraw();
@@ -590,7 +577,7 @@ export { ui65 };
 const { row, sec, seg, sel, swb, fld, banner, kpis } = ui65;
 const btn = ui65.btn;
 const vtxt = (t, c = '') => `<span class="ac-v${c ? ` ${c}` : ''}">${esc(t)}</span>`;
-const missingNote = (what) => `<p class="ac-note">${esc(what)} er ikke tilgjengelig på serveren ennå. Oppdater serveren (Innstillinger → Server → System), så dukker det opp her.</p>`;
+const errNote = (msg) => `<p class="ac-note">Serveren svarte: ${esc(msg)}</p>`;
 
 /* ---------------- Faner og nøkler ---------------- */
 
@@ -669,7 +656,6 @@ function selfRows(o) {
   return head + rows;
 }
 function ovTab(o) {
-  if (G.missing.status) return missingNote('AI-kontroll') + sec('SELVTEST', selfRows(o));
   const I = installed(), J = G.jobs ?? [], run = J.filter((j) => j.status === 'run').length, q = J.filter((j) => j.status === 'queue').length;
   const failT = J.filter((j) => isFail(j) && today(j));
   const U = G.usage?.totals, B = G.usage?.budget ?? G.status?.budget, g = gpu(), loaded = I.filter((m) => m.loaded);
@@ -682,7 +668,7 @@ function ovTab(o) {
     [g.hw && g.external ? 'Modeller på ekstern disk' : 'Modeller på disk', 'disk', g.diskTot ? `${nb(g.diskUsed, 1)} / ${nb(g.diskTot)} GB` : `${nb(g.diskUsed, 1)} GB`, g.diskTot ? (g.diskUsed / g.diskTot) * 100 : 0, 'var(--ink)'],
     ['Sky-budsjett denne måneden', 'money', B?.monthlyKr ? `${krs(B.monthCostKr)} / ${nb(B.monthlyKr)} kr` : `${krs(B?.monthCostKr ?? 0)} · ingen grense`, B?.monthlyKr ? (B.monthCostKr / B.monthlyKr) * 100 : 0, 'var(--acc)']]
     .map(([l, ic, v, w, c]) => row({ ic, t: l, sh: bar(w, c), right: vtxt(v) })).join('');
-  const machNote = g.hw ? `Apple Silicon gir GPU-en ca. ⅔ av samlet minne (${nb(g.vram, 1)} av ${nb(g.mem)} GB); resten trengs til macOS og serveren.${g.source === 'standard' ? ' Standardverdier – serveren har ikke meldt maskinen ennå.' : ''}` : '';
+  const machNote = g.hw ? `Apple Silicon gir GPU-en ca. ⅔ av samlet minne (${nb(g.vram, 1)} av ${nb(g.mem)} GB); resten trengs til macOS og serveren.${g.source === 'standard' ? ' Standardverdier – Ollama-verten har ikke meldt maskinen ennå.' : ''}` : '';
   const P = provs();
   const svcH = P.length ? P.map((p) => row({ ic: SVC_IC[p.id] ?? 'server', dot: p.state === 'ok' ? 'ok' : p.state === 'degraded' ? 'warn' : 'off', t: p.name, s: [p.label, p.url?.replace(/^https?:\/\//, ''), p.model, p.state !== 'ok' ? p.error : ''].filter(Boolean).join(' · '), right: vtxt(p.ms != null ? ms2(p.ms) : '–'), attrs: `data-ac-svc="${esc(SVC_FROM_PROV[p.id] ?? p.id)}" role="button" tabindex="0"`, cls: 'ac-click' })).join('')
     : row({ ic: 'server', t: G.status ? 'Ingen leverandører' : G.err.status ? G.err.status : 'Sjekker leverandørene …' });
@@ -704,7 +690,6 @@ function recSec() {
 
 const KIND_IC = { tekst: 'chip', bilde: 'image', embedding: 'layers', resonnering: 'brain' };
 function modTab(o) {
-  if (G.missing.models && !G.legacy) return missingNote('Modelloversikten');
   const sub = G.msub ?? 'inst';
   const top = `<div class="ac-subbar">${seg([['inst', 'Installert'], ['dl', 'Last ned'], ['sky', 'Sky']], sub, (v) => `data-ac-msub="${v}"`, 'Modeller')}</div>`;
   return top + (sub === 'dl' ? modDl() : sub === 'sky' ? modSky() : modInst());
@@ -724,7 +709,7 @@ function modInst() {
       panel: () => `<div class="ac-btns">${!isDef && !emb && m.k !== 'bilde' ? btn('Bruk som standard', `data-ac-mdef="${esc(m.id)}"`) : ''}${admin ? btn(`Slett · frigjør ${gbs(m.gb ?? 0)}`, `data-ac-mdel="${esc(m.id)}"`, 'red') : ''}</div><p class="ac-note">${m.loaded ? `Lastet i minnet · holdes ${has ? keepL(mk[m.id]) : defKeep} etter bruk (0 = lastes ut når køen for modellen er tom, aldri midt i et svar).` : 'Ikke lastet.'} Brukes av: ${ub.length ? esc(ub.join(', ')) : 'ingen oppgaver'}.</p>` });
   }).join('') || row({ ic: 'chip', t: G.models ? 'Ingen lokale modeller' : G.err.models ? G.err.models : 'Laster …', s: G.models ? 'Last ned en under «Last ned»' : '' });
   const pulls = pullRows();
-  return `${G.legacy ? missingNote('Full modellstyring (laste inn/ut, slette, standard)') : ''}${pulls ? sec('LASTER NED', pulls) : ''}
+  return `${pulls ? sec('LASTER NED', pulls) : ''}
     ${sec(`INSTALLERT · ${I.length}`, rows, { right: `${gbs(I.reduce((a, m) => a + (m.gb ?? 0), 0)) || '0 GB'} på disk`, hl: 'ai-mod' })}${extH53()}${dalSec()}`;
 }
 function pullRows() {
@@ -743,7 +728,7 @@ function modDl() {
   const search = `<div class="ac-search">${ico('search', 15)}<input data-ac-q value="${esc(G.q)}" placeholder="Søk eller skriv modellnavn, f.eks. qwen3:14b" autocomplete="off" spellcheck="false" aria-label="Søk i Ollama-biblioteket"${admin ? '' : ' disabled'}>${q && okName && admin && !lib.some((l) => l.id === q) && !I.some((m) => m.id === q) ? btn('Last ned', `data-ac-pull="${esc(q)}"`, 'ink') : ''}</div>
     <div class="ac-chips">${[['alle', 'Alle'], ['tekst', 'Tekst'], ['bilde', 'Bilde'], ['resonnering', 'Resonnering'], ['embedding', 'Embeddings']].map(([k, n]) => `<button type="button" class="${G.cat === k ? 'on' : ''}" aria-pressed="${G.cat === k}" data-ac-cat="${k}">${n}</button>`).join('')}</div>`;
   return `${pulls ? sec('LASTER NED', pulls) : ''}${recModSec()}<section class="ac-sec"><div class="ac-lab"><span>LAST NED FRA OLLAMA</span></div>${search}<div class="ac-card">${libH}</div>
-    ${admin ? '' : '<p class="ac-note">Bare administrator kan laste ned og slette modeller.</p>'}${G.missing.lib === true ? '<p class="ac-note">Viser et utvalg. Serveren har ikke biblioteksøk ennå.</p>' : ''}</section>`;
+    ${admin ? '' : '<p class="ac-note">Bare administrator kan laste ned og slette modeller.</p>'}${G.err.lib ? `<p class="ac-note">Viser et utvalg. Serveren svarte: ${esc(G.err.lib)}</p>` : ''}</section>`;
 }
 function modSky() {
   const cl = cloud(), admin = G.admin;
@@ -818,7 +803,7 @@ function taskRows(L, all, o) {
 }
 const TASK_IC = { chat: 'chat', sok: 'search', glimt: 'cal', brief: 'doc', rc: 'receipt', kat: 'tag', fsok: 'money', bar: 'image', dom: 'globe', kb: 'book' };
 function taskTab(o) {
-  if (G.missing.routing) return missingNote('Ruting per oppgave');
+  if (!G.routing && G.err.routing) return errNote(G.err.routing);
   const fin = o.scope === 'finans', R = routingOf(), all = allModelOpts(), admin = G.admin;
   if (!fin) { need('o58'); need('g65'); }
   const rw = (G.routing?.warnings ?? []).filter(Boolean);
@@ -826,7 +811,7 @@ function taskTab(o) {
   let L;
   if (fin) {
     const fr = finRows();
-    if (!all.length && !fr.some((r) => r.options?.length) && (G.models || G.missing.models)) return `${rwBox}${sec('HVILKEN MODELL GJØR HVA I FINANS', row({ ic: 'chip', t: 'Ingen modeller ennå', s: 'Installer en lokal modell (f.eks. qwen2.5vl:7b for kvitteringer) eller koble til en sky-modell', right: btn('Installer modell ›', 'data-ac-instmod', 'ink') }))}${finRules(R, admin)}`;
+    if (!all.length && !fr.some((r) => r.options?.length) && (G.models || G.err.models)) return `${rwBox}${sec('HVILKEN MODELL GJØR HVA I FINANS', row({ ic: 'chip', t: 'Ingen modeller ennå', s: 'Installer en lokal modell (f.eks. qwen2.5vl:7b for kvitteringer) eller koble til en sky-modell', right: btn('Installer modell ›', 'data-ac-instmod', 'ink') }))}${finRules(R, admin)}`;
     L = fr.map((r) => ({ id: r.id, name: r.n, desc: r.d, model: r.model, fallback: r.fallback, def: r.def, defF: r.defF, options: r.options, warning: r.warning, small: r.small, fin: true, personal: false }));
   } else {
     L = tasksOf().map(([k, n, s, isFin, personal]) => { const r = R.tasks?.[k] ?? {}; return { id: k, name: n, desc: s, model: r.model ?? '', fallback: r.fallback ?? '', isFinTask: !!isFin, personal: !!personal, small: !!(G.routing?.taskList ?? []).find((t) => t.id === k)?.smallModel }; });
@@ -930,7 +915,7 @@ function svcList(o) {
   const [olD, olT] = btD('ollama', [ol.state ? pdot(ol) : 'off', ol.label ? `${ol.label}${ol.ms != null && ol.state === 'ok' ? ` · ${ms2(ol.ms)}` : ''}` : 'Sjekker …']);
   L.push({ id: 'ollama', group: 'KJØRING', name: 'Ollama', s: [(B?.ollama?.url ?? ol.url ?? '').replace(/^https?:\/\//, ''), 'hjemmeserveren', B?.effective === 'ollama' ? 'i bruk' : ''].filter(Boolean).join(' · '), dot: olD, text: olT,
     panel: () => `<div class="ac-form">${fld('Adresse', urlInput('data-ac-be="ollamaUrl"', B?.ollama?.url ?? ol.url, 'http://192.168.1.30:11434', admin && !!B))}<div class="ac-btns">${admin && B ? btn('Lagre', 'data-ac-besave="ollamaUrl"', 'ink') : ''}${admin ? btn('Test', 'data-ac-betest="ollama"') : btn('Test', 'data-ac-test="ollama"')}</div></div>${testLine(bt.ollama ? { busy: bt.ollama.busy, ok: bt.ollama.ok, err: bt.ollama.err } : G.test.ollama)}<p class="ac-note">Test: /api/version og /api/tags. Embeddings og innlasting går alltid direkte til Ollama.</p>` });
-  if (!fin && B && !G.missing.backend) {
+  if (!fin && B) {
     const ow = pv('openwebui'), [owD, owT] = btD('openwebui', [B.openwebui?.configured ? (ow.state ? pdot(ow) : 'ok') : 'off', B.openwebui?.configured ? (ow.label ?? 'Satt opp') : 'Ikke satt opp']);
     L.push({ id: 'owui', group: 'KJØRING', name: 'Open WebUI', s: [(B.openwebui?.url ?? '').replace(/^https?:\/\//, ''), B.effective === 'openwebui' ? 'i bruk' : 'kunnskapsbase, nettsøk og tale'].filter(Boolean).join(' · '), dot: owD, text: owT,
       panel: () => `<div class="ac-form">${fld('Adresse', urlInput('data-ac-be="openwebuiUrl"', B.openwebui?.url, 'http://192.168.1.30:8080', admin))}${keyInput('data-ac-be="openwebuiKey"', 'Nøkkel', !!B.openwebui?.configured, 'sk-…', admin)}
@@ -978,7 +963,7 @@ function svcList(o) {
   if (!fin) {
     L.push({ id: 'glimtapi', group: 'ANDRE', name: 'Glimt-API', s: `POST ${location.origin}/api/glimt · personlige nøkler for egne skript`, dot: (G.tokens ?? []).length ? 'ok' : 'off', text: `${(G.tokens ?? []).length} ${(G.tokens ?? []).length === 1 ? 'nøkkel' : 'nøkler'}`,
       panel: () => `${G.fresh ? `<div class="ac-fresh"><span>Kopier nå. Nøkkelen vises bare én gang.</span><b class="ac-mono">${esc(G.fresh)}</b></div>` : ''}
-        ${G.missing.tokens ? '<p class="ac-note">Serveren har ikke personlige Glimt-nøkler ennå.</p>' : (G.tokens ?? []).map((t) => row({ ic: 'key', t: t.name ?? 'Nøkkel', s: `hl_••••${t.tail ?? t.last4 ?? ''} · opprettet ${t.createdAt ?? t.created ? new Date(t.createdAt ?? t.created).toLocaleDateString('nb-NO', { day: 'numeric', month: 'short' }) : '–'} · ${t.lastUsed ? `brukt ${ago(t.lastUsed)}` : 'aldri brukt'}`, right: btn('Trekk tilbake', `data-ac-deltok="${esc(t.id)}"`, 'red') })).join('') || '<p class="ac-note">Ingen nøkler ennå.</p>'}
+        ${!G.tokens && G.err.tokens ? errNote(G.err.tokens) : (G.tokens ?? []).map((t) => row({ ic: 'key', t: t.name ?? 'Nøkkel', s: `hl_••••${t.tail ?? t.last4 ?? ''} · opprettet ${t.createdAt ?? t.created ? new Date(t.createdAt ?? t.created).toLocaleDateString('nb-NO', { day: 'numeric', month: 'short' }) : '–'} · ${t.lastUsed ? `brukt ${ago(t.lastUsed)}` : 'aldri brukt'}`, right: btn('Trekk tilbake', `data-ac-deltok="${esc(t.id)}"`, 'red') })).join('') || '<p class="ac-note">Ingen nøkler ennå.</p>'}
         <div class="ac-btns">${btn('+ Ny nøkkel', 'data-ac-newtok', 'ink')}</div>` });
     L.push({ id: 'import', group: 'ANDRE', name: 'Importer fra Claude', s: 'Minne og samtaler fra en Claude-eksport', dot: '', text: '', panel: () => '<div class="ac-imp43" data-ac-imp43></div>' });
   }
@@ -988,7 +973,7 @@ function svcTab(o) {
   const fin = o.scope === 'finans', admin = G.admin, B = G.backend;
   if (!fin) { need('r48'); need('o58'); need('v54'); need('v57'); } else need('r48');
   const L = svcList(o);
-  const be = !fin && B && !G.missing.backend ? sec('BACKEND', row({ ic: 'branch', t: 'Hvor AI-kallene går', s: B.note || 'Automatisk = Open WebUI når adresse og nøkkel er satt, ellers Ollama direkte. Køen er felles.', sc: B.note ? 'warn' : '',
+  const be = !fin && B ? sec('BACKEND', row({ ic: 'branch', t: 'Hvor AI-kallene går', s: B.note || 'Automatisk = Open WebUI når adresse og nøkkel er satt, ellers Ollama direkte. Køen er felles.', sc: B.note ? 'warn' : '',
     right: seg(BE_SEG, B.mode ?? 'auto', (v) => `data-ac-bemode="${v}"`, 'Backend', !admin) + vtxt(beName(B.effective)) })) : '';
   const groups = [...new Set(L.map((x) => x.group))];
   return `${admin ? '' : '<p class="ac-note">Bare administrator kan endre adresser og nøkler. Du ser status og kan teste.</p>'}${be}
@@ -1000,7 +985,6 @@ function svcTab(o) {
 
 function jobTab(o) {
   if (!jt41) jt41 = setInterval(() => { if (document.querySelector('.ac-jt41')) redraw(); }, 60000);
-  if (G.missing.jobs) return missingNote('Jobbloggen');
   const J = jobsF(o.scope === 'finans'), run = J.filter((j) => j.status === 'run'), q = J.filter((j) => j.status === 'queue'), done = J.filter((j) => ['ok', 'fail', 'cancel', 'cancelled'].includes(j.status));
   const par = routingOf().params?.ollamaConcurrency ?? 1;
   const jrow = (j) => {
@@ -1038,7 +1022,6 @@ function jobTab(o) {
 
 const BUD = [[0, 'Ingen'], [50, '50 kr'], [100, '100 kr'], [200, '200 kr'], [500, '500 kr']];
 function useTab(o) {
-  if (G.missing.usage) return missingNote('Forbruk');
   const U = G.usage, fin = o.scope === 'finans', T = U?.totals ?? {}, B = U?.budget ?? {};
   const per = `<div class="ac-subbar">${seg([['1', 'I dag'], ['7', '7 dager'], ['30', '30 dager']], G.per, (v) => `data-ac-per="${v}"`, 'Periode')}</div>`;
   if (!U) return `${per}${sec('', row({ ic: 'bars', t: G.err.usage ? G.err.usage : 'Laster …' }))}`;
@@ -1064,7 +1047,7 @@ function glimtTab() {
   const g = need('g65');
   loadPers45();
   const P = G.pers45, cur = P?.personality ?? 'little', d = PERS45.find((x) => x[0] === cur) ?? PERS45[1];
-  const pers = P?.missing ? '' : sec('PERSONLIGHET', row({ ic: 'spark', t: 'Personlighet', s: d[2], hl: 'glimt-pers65', right: seg(PERS45.map(([k, n]) => [k, n]), cur, (v) => `data-ac-pers45="${v}"`, 'Personlighet', !P) }),
+  const pers = sec('PERSONLIGHET', row({ ic: 'spark', t: 'Personlighet', s: d[2], hl: 'glimt-pers65', right: seg(PERS45.map(([k, n]) => [k, n]), cur, (v) => `data-ac-pers45="${v}"`, 'Personlighet', !P) }),
     { note: 'Bekreftelsen av hva som faktisk skjedde kommer alltid først. Gjelder Glimt i hele appen (Oversikt, Kalender, Gjøremål, Økonomi, Chat).' });
   const hs = g ? sec('GLIMT I SØKEFELTET', g.hsRow65(ui65)) : '';
   const web = webSec();
@@ -1251,12 +1234,12 @@ function bind(el) {
     if (d.acCat) { G.cat = d.acCat; vibe(); redraw(); return; }
     if (d.acMload) return modelAct(d.acMload, 'load');
     if (d.acMdel) return modelAct(d.acMdel, 'del');
-    if (d.acMdef) { try { const r = await call('/models/default', { method: 'PUT', json: { model: d.acMdef } }); if (r?.tasks) G.routing = normRouting(r); toast(`${d.acMdef} er standard i Chat`); vibe(); } catch (err) { if (err.status === 404) return saveRouting({ tasks: { chat: { model: d.acMdef } } }, `${d.acMdef} er standard i Chat`); toast(err.message); } loadRouting(); loadModels(); return; }
+    if (d.acMdef) { try { const r = await call('/models/default', { method: 'PUT', json: { model: d.acMdef } }); if (r?.tasks) G.routing = normRouting(r); toast(`${d.acMdef} er standard i Chat`); vibe(); } catch (err) { toast(err.message); } loadRouting(); loadModels(); return; }
     if (d.acDal != null) { try { const r = await fetch('/api/admin/dal53/preload', { method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json' }, body: JSON.stringify(d.acDal ? { models: [d.acDal] } : {}) }).then((x) => x.json()); G.dalMsg = r.started?.length ? `Laster ${r.started.join(', ')} i bakgrunnen …` : 'Ingenting å laste.'; } catch (err) { G.dalMsg = err.message; } G.dal = undefined; loadDal(); return; }
     if ('acDalmore' in d) { import('./lokale-modeller.js').then((m) => m.openModels53()).catch((err) => toast(err.message)); return; }
     if (d.acCloud) {
       const c = cloud().find((x) => x.id === d.acCloud), on = !c?.on; vibe();
-      try { await call('/cloud', { method: 'PUT', json: { id: d.acCloud, on } }); } catch (err) { if (err.status !== 404) { toast(err.message); return; } return saveRouting({ cloudOn: { [d.acCloud]: on } }); }
+      try { await call('/cloud', { method: 'PUT', json: { id: d.acCloud, on } }); } catch (err) { toast(err.message); return; }
       loadModels(); loadRouting(); return;
     }
     if (d.acRule) { vibe(); return saveRouting({ rules: { [d.acRule]: !routingOf().rules?.[d.acRule] } }); }
@@ -1323,7 +1306,7 @@ function bind(el) {
   });
   el.addEventListener('input', (e) => {
     const t = e.target;
-    if (t.matches('[data-ac-q]')) { G.q = t.value; redraw(); clearTimeout(libT); if (!G.missing.lib) libT = setTimeout(() => loadLib(G.q.trim()), 350); }
+    if (t.matches('[data-ac-q]')) { G.q = t.value; redraw(); clearTimeout(libT); libT = setTimeout(() => loadLib(G.q.trim()), 350); }
     if (t.matches('[data-ac-r48in]')) { if (t.dataset.acR48in === 'url') MOD.r48?.r48Act.setUrl(t.value); else MOD.r48?.r48Act.setKey(t.value); }
   });
   el.addEventListener('focusout', () => { const p = el._acP; if (p?.pending) setTimeout(() => { if (!el.contains(document.activeElement) || !document.activeElement?.matches?.('input,textarea')) paint(p); }, 0); });

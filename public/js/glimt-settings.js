@@ -1,8 +1,8 @@
 // Prompt 35 (WEB35): Glimt-innstillinger (figur, brief, opplesning, stemme og venner) og opplesning med ekte TTS.
 // Felles for ⚙ i briefen og Innstillinger → GLIMT → Glimt (fasit Glimt Brief.dc.html mode="settings" / cfg-arket).
-// Data: GET/PUT /api/glimt/settings (per bruker, delvis PUT). Eldre server: /api/brief/settings (notify, guide) + lokal kopi.
+// Data: GET/PUT /api/glimt/settings (per bruker, delvis PUT). Lokal kopi til serveren har svart (og uten nett); feil vises som serveren sender dem.
 // Nøkler: PUT /api/ai/keys/openai|elevenlabs|azure (bare admin). Nøkkelen lagres aldri i nettleseren.
-// Opplesning: POST /api/tts {text, character, voice, rate, lang} → audio/mpeg. 503/404/feil → nettleserens stemme.
+// Opplesning: POST /api/tts {text, character, voice, rate, lang} → audio/mpeg. 503/feil → nettleserens stemme.
 import { api, esc } from './util.js';
 import { store } from './store.js';
 import { fig, FIGS, hostFor, setJul, julOn, julAuto, JUL_PHASES, julPhaseName, setMai17, mai17Auto } from './glimt-figs.js';
@@ -18,7 +18,7 @@ export const DEF = {
   jul: 'auto', julPhase: null, snow: true, julSound: 'av', // prompt 40: julemodus (per bruker, synkes)
 };
 const LS = 'glimt_settings35';
-const G = { s: null, loaded: false, loading: null, err: '', legacy: false, keyMsg: {}, keyBusy: '' };
+const G = { s: null, loaded: false, loading: null, err: '', keyMsg: {}, keyBusy: '' };
 export const glimtState = G;
 
 const merge = (a, b) => ({
@@ -44,14 +44,8 @@ export const gs = () => G.s ?? (G.s = merge(DEF, readLocal()));
 export function loadGlimt(redraw, force = false) {
   if (G.loading) return G.loading.then(() => redraw?.());
   if (G.loaded && !force) return Promise.resolve();
-  G.loading = api('/glimt/settings').then((r) => { G.s = merge(DEF, { ...readLocal(), ...(r ?? {}) }); G.legacy = false; G.err = ''; setJul({ jul: G.s.jul, julPhase: G.s.julPhase, julActive: r?.julActive ?? null }); setMai17({ mai17: G.s.mai17 ?? 'auto', mai17Active: r?.mai17Active ?? null }); })
-    .catch(async (e) => {
-      if (e.status !== 404) G.err = e.message;
-      // Eldre server: bare varsel og guide finnes i /api/brief/settings. Resten er en lokal kopi.
-      G.legacy = true;
-      const b = await api('/brief/settings').catch(() => null);
-      G.s = merge(DEF, { ...readLocal(), ...(b ? { notify: b.notify ?? true, guide: b.guide ?? true } : {}) });
-    })
+  G.loading = api('/glimt/settings').then((r) => { G.s = merge(DEF, { ...readLocal(), ...(r ?? {}) }); G.err = ''; setJul({ jul: G.s.jul, julPhase: G.s.julPhase, julActive: r?.julActive ?? null }); setMai17({ mai17: G.s.mai17 ?? 'auto', mai17Active: r?.mai17Active ?? null }); })
+    .catch((e) => { G.err = e.message; G.s = merge(DEF, readLocal()); })
     .finally(() => { G.loaded = true; G.loading = null; writeLocal(gs()); redraw?.(); });
   return G.loading;
 }
@@ -77,11 +71,8 @@ async function flush() {
   const body = Object.fromEntries(Object.keys(pendingKeys).map((k) => [k, gs()[k]]));
   for (const k of Object.keys(pendingKeys)) delete pendingKeys[k];
   if (!Object.keys(body).length) return;
-  if (!G.legacy) {
-    try { const r = await api('/glimt/settings', { method: 'PUT', json: body }); if (r && typeof r === 'object') { G.s = merge(gs(), { engines: r.engines ?? gs().engines, chars: r.chars ?? gs().chars }); } return; }
-    catch (e) { if (e.status !== 404) { G.err = e.message; return; } G.legacy = true; }
-  }
-  if ('notify' in body || 'guide' in body) api('/brief/settings', { method: 'PUT', json: { notify: gs().notify, guide: gs().guide } }).catch(() => {});
+  try { const r = await api('/glimt/settings', { method: 'PUT', json: body }); if (r && typeof r === 'object') { G.s = merge(gs(), { engines: r.engines ?? gs().engines, chars: r.chars ?? gs().chars }); } }
+  catch (e) { G.err = e.message; }
 }
 
 /* ---------- Stemmer, motorer og tempo (fasit VOICES / ENG / CHV) ---------- */
@@ -158,7 +149,7 @@ export async function say(text, ch = 'glimt', { force = false } = {}) {
         return;
       }
       const j = /json/.test(ct) ? await r.json().catch(() => ({})) : {};
-      T.err = r.status === 503 ? (j.error || 'Ingen stemmemotor er satt opp. Bruker nettleserens stemme.') : r.status === 404 ? '' : (j.error || `Stemmen svarte ikke (${r.status}). Bruker nettleserens stemme.`);
+      T.err = r.status === 503 ? (j.error || 'Ingen stemmemotor er satt opp. Bruker nettleserens stemme.') : (j.error || `Stemmen svarte ikke (${r.status}). Bruker nettleserens stemme.`);
     } catch (e) { if (e?.name === 'AbortError' || seq !== T.seq) return; T.err = 'Stemmen svarte ikke. Bruker nettleserens stemme.'; }
   }
   if (seq !== T.seq) return;
@@ -279,7 +270,7 @@ function adminChars52() {
   if (!admin52()) return '';
   if (!A52.users && !A52.loading && !A52.err) {
     A52.loading = true;
-    api('/admin/glimt-char52').then((r) => { A52.users = r.users ?? []; A52.chars = r.chars ?? null; }).catch((e) => { A52.err = e.status === 404 ? 'Serveren støtter ikke standardfigur per bruker ennå.' : e.message; })
+    api('/admin/glimt-char52').then((r) => { A52.users = r.users ?? []; A52.chars = r.chars ?? null; }).catch((e) => { A52.err = e.message; })
       .finally(() => { A52.loading = false; document.querySelectorAll('[data-gs52-adm]').forEach((el) => { el.innerHTML = adminRows52(); }); });
   }
   return `<span class="gs-h">STANDARDFIGUR PER BRUKER</span><div data-gs52-adm>${adminRows52()}</div><p class="gs-note">Bare for administrator. Standarden gjelder til brukeren velger figur selv, og følger brukeren på alle enheter.</p>`;
@@ -360,7 +351,7 @@ export async function glimtSubmit(e, redraw) {
     await api(`/ai/keys/${id}`, { method: 'PUT', json: { key, ...(id === 'azure' ? { region: region || undefined } : {}) } });
     G.keyMsg[id] = { text: 'Nøkkelen er lagret på serveren.', ok: true };
     await loadGlimt(null, true);
-  } catch (err) { G.keyMsg[id] = { text: err.status === 404 ? 'Serveren støtter ikke dette ennå. Legg inn nøkkelen under AI → API og nøkler.' : err.message }; }
+  } catch (err) { G.keyMsg[id] = { text: err.message }; }
   G.keyBusy = '';
   redraw();
   return true;

@@ -75,7 +75,7 @@ export function chatRows65(ui) {
     const th = /^n/i.test(String(ch.chat_theme ?? 'papir')) ? 'noytral' : 'papir';
     out.push(ui.row({ ic: 'chat', t: 'Tema i Chat', s: 'Papir eller nøytral (mørk) – samme valg som i Chat', right: ui.seg([['papir', 'Papir'], ['noytral', 'Nøytral']], th, (v) => `data-g65-theme="${v}"`, 'Tema i Chat') }));
     out.push(ui.row({ ic: 'chip', t: 'Standardmodell i nye samtaler', s: 'Ditt eget valg i Chat. Serverens modell per oppgave står i tabellen over.', right: ui.sel(L, cur, 'data-g65-def aria-label="Standardmodell i Chat"') }));
-  } else out.push(ui.row({ ic: 'chat', dot: 'off', t: 'Chat er ikke tilgjengelig', s: A.chatErr ? `Serveren svarte: ${A.chatErr}` : 'Oppdater serveren' }));
+  } else out.push(ui.row({ ic: 'chat', dot: 'off', t: 'Chat er ikke tilgjengelig', s: `Serveren svarte: ${A.chatErr || 'tomt svar'}` }));
   if (A.think != null) out.push(ui.row({ ic: 'brain', t: 'La modellen tenke før den svarer', s: 'Lokal AI i korte oppgaver (Glimt, rask time, logoer, oppsummeringer). Tregere, men noen ganger smartere. Gjelder bare deg.', right: swb(ui, A.think, 'data-g65-think', 'La modellen tenke før den svarer') }));
   if (A.priv || A.audit) {
     const L = A.audit ?? [];
@@ -91,7 +91,7 @@ export function chatRows65(ui) {
 export function logoRows65(ui) {
   const pv = A.priv;
   if (!A.loaded) return { tolk: [ui.row({ ic: 'receipt', t: 'Personvern', s: 'Laster …' })], logo: [] };
-  if (!pv) { const r = ui.row({ ic: 'shield', dot: 'off', t: 'Personvern og logoer er ikke tilgjengelig', s: A.privErr ? `Serveren svarte: ${A.privErr}` : 'Oppdater serveren' }); return { tolk: [r], logo: [] }; }
+  if (!pv) { const r = ui.row({ ic: 'shield', dot: 'off', t: 'Personvern og logoer er ikke tilgjengelig', s: `Serveren svarte: ${A.privErr || 'tomt svar'}` }); return { tolk: [r], logo: [] }; }
   return {
     tolk: [ui.row({ ic: 'home', t: 'Les kvitteringer lokalt', s: 'Ollama på hjemmeserveren leser hele kvitteringen. Ingenting sendes ut', right: swb(ui, !!pv.logo_local_receipts, 'data-g65-ptog="logo_local_receipts"', 'Les kvitteringer lokalt') })],
     logo: [ui.row({ ic: 'globe', t: 'Finn logo i Wikidata', s: 'Wikidata får bare butikknavnet. Åpne data, ingen AI', right: swb(ui, pv.logo_wikidata !== false, 'data-g65-ptog="logo_wikidata"', 'Finn logo i Wikidata') }),
@@ -111,7 +111,7 @@ export function memorySec65(ui) {
   const note = 'Det du lærer Glimt, f.eks. at «Påhåret» er frisøren din. Brukes når du legger inn timer og spør «når er neste frisørtime». Lagres bare for deg og sendes aldri til sky.';
   const head = '<div class="ac-slot" data-mem63 data-hl="ai-mem63"></div>';
   if (!A.loaded) return ui.sec('GLIMT HUSKER', head + ui.row({ ic: 'brain', t: 'Laster …' }), { note, hl: 'ai-mem63' });
-  if (!A.mem) return ui.sec('GLIMT HUSKER', ui.row({ ic: 'brain', dot: 'off', t: 'Ikke tilgjengelig', s: A.memErr ? `Serveren svarte: ${A.memErr}` : 'Oppdater serveren' }), { note });
+  if (!A.mem) return ui.sec('GLIMT HUSKER', ui.row({ ic: 'brain', dot: 'off', t: 'Ikke tilgjengelig', s: `Serveren svarte: ${A.memErr || 'tomt svar'}` }), { note });
   const rows = A.mem.map((m) => ui.row({ ic: 'tag', th: `<span data-no-i18n>${esc(m.match)}</span>`, t: m.match, tag: m.stale ? 'IKKE BRUKT PÅ LENGE' : '', sh: `<span data-no-i18n>${esc(m.kind === 'fact' && m.note ? `er ${m.note}` : memoryLine(m))}</span>`,
     right: ui.btn('Slett', `data-g65-mdel="${esc(m.id)}" aria-label="Slett ${esc(m.match)}"`, 'red') }));
   if (!rows.length) rows.push('<p class="ac-note">Glimt husker ingenting ennå. Skriv f.eks. «husk at Påhåret er frisøren min» til Glimt.</p>');

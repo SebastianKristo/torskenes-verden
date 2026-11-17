@@ -85,9 +85,9 @@ test('kildene: endepunktene, Kjør nå/Avbryt, rapporten som tekst og at eval-de
   // Ikke-admin (403 på /runs eller admin:false) ser bare ukerapporten.
   assert.match(Q, /if \(Q\.admin403 \|\| \(Q\.set && !Q\.set\.admin\)\) return '';/);
   assert.match(Q, /Q\.admin403 = r\.reason\.status === 403/);
-  // Eldre server: ingenting i AI-kontroll, «Oppdater serveren» på siden.
-  assert.match(Q, /if \(Q\.missing\) return '';/);
-  assert.match(Q, /Oppdater serveren/);
+  // Q19 (runde 4): ingen «eldre server»-grein. Feiler innstillingene, vises feilen fra serveren.
+  assert.doesNotMatch(Q, /Q\.missing|Oppdater serveren/);
+  assert.match(Q, /Q\.setErr = s\.reason\.message/);
   // Pollingen mens evalen kjører bruker /runs (ferskest), ikke en gammel settings.running.
   assert.match(Q, /const running = \(\) => \(Q\.runs \? Q\.runs\.running \?\? null : Q\.set\?\.running \?\? null\);/);
 });

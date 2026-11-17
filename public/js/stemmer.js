@@ -4,7 +4,7 @@
 //  - Stemmer per bruker: GET/POST /api/voices57, POST /api/voices57/:id/preview, DELETE /api/voices57/:id (SERVER57-API.md).
 //    Kloning: MediaRecorder 10–30 s med en foreslått norsk lesetekst, eller en lydfil (5–60 s). Samtykke må krysses av.
 //  - speak57(): opplesning for nyhetsleseren og «Les høyt» i chat via POST /api/tts (med voice). Lang tekst deles i biter
-//    (serveren tar maks 1500 tegn). 503/404/feil → nettleserens speechSynthesis som før. Avspilt serverlyd merkes «KI-stemme».
+//    (serveren tar maks 1500 tegn). 503/feil → nettleserens speechSynthesis som før. Avspilt serverlyd merkes «KI-stemme».
 //  - AI-kontroll: kortet «VoxCPM2 på Mac mini-en» (adresse/nøkkel/test, bare admin) legges rett etter [data-v54-ai].
 import { api, esc } from './util.js';
 import { store } from './store.js';
@@ -69,7 +69,7 @@ export function unlockAudio57() { try { const C = actx(); if (C?.state === 'susp
 
 /* ---------------- Stemmelista (per bruker) ---------------- */
 
-const V = { list: null, engineReady: null, loading: null, err: '', unsupported: false, msg: null, busy: '', open: '', preview: null, clone: null, design: null };
+const V = { list: null, engineReady: null, loading: null, err: '', msg: null, busy: '', open: '', preview: null, clone: null, design: null };
 export const voices57 = V;
 const isVox = (s = gs()) => s.tts.engine === 'voxcpm';
 const repaint = () => { for (const el of document.querySelectorAll('[data-v57]')) { el.innerHTML = inner(); } };
@@ -77,8 +77,8 @@ const repaint = () => { for (const el of document.querySelectorAll('[data-v57]')
 export function loadVoices57(force = false) {
   if (V.loading) return V.loading;
   if (V.list && !force) return Promise.resolve(V.list);
-  V.loading = api('/voices57').then((r) => { V.list = Array.isArray(r?.voices) ? r.voices : []; V.engineReady = r?.engineReady ?? null; V.configured = r?.configured ?? null; V.sample = r?.sampleText || ''; V.consent = r?.consentText || ''; V.limits = r?.limits ?? null; V.err = ''; V.unsupported = false; })
-    .catch((e) => { V.list = V.list ?? []; if (e.status === 404) V.unsupported = true; else V.err = e.message; })
+  V.loading = api('/voices57').then((r) => { V.list = Array.isArray(r?.voices) ? r.voices : []; V.engineReady = r?.engineReady ?? null; V.configured = r?.configured ?? null; V.sample = r?.sampleText || ''; V.consent = r?.consentText || ''; V.limits = r?.limits ?? null; V.err = ''; })
+    .catch((e) => { V.list = V.list ?? []; V.err = e.message; })
     .finally(() => { V.loading = null; repaint(); });
   return V.loading;
 }
@@ -134,8 +134,7 @@ function cloneBox() {
 function inner() {
   const s = gs();
   if (!isVox(s)) return `${newsSelect(s)}<p class="gs-note">Velg <b>VoxCPM2 (Mac mini, lokal)</b> som stemmemotor for å lage egne stemmer fra en beskrivelse eller klone en stemme.</p>`;
-  if (V.list === null && !V.unsupported) { loadVoices57(); return '<p class="gs-note">Henter stemmer …</p>'; }
-  if (V.unsupported) return '<p class="gs-note">Serveren støtter ikke VoxCPM-stemmer ennå.</p>';
+  if (V.list === null) { loadVoices57(); return '<p class="gs-note">Henter stemmer …</p>'; }
   const L = V.list ?? [], sel = s.tts.voice;
   const st = V.configured === false ? '<p class="gs-msg">VoxCPM2 på Mac mini-en er ikke satt opp ennå (administrator: AI → Tale til tekst). Du kan lage stemmer nå; de brukes når den er klar.</p>'
     : V.engineReady === false ? '<p class="gs-msg">VoxCPM2 på Mac mini-en svarer ikke nå. Opplesningen bruker neste motor eller nettleserens stemme til den er tilbake.</p>' : '';
@@ -449,7 +448,7 @@ export async function speak57(text, { purpose = 'chat', lang, onState } = {}) {
   for (let i = 0; i < parts.length; i++) {
     const got = await next;
     if (seq !== P.seq || !got) return;
-    if (got.fail !== undefined) { browserSay(parts.slice(i).join(' '), L, seq); return; } // 503/404/feil: resten i nettleseren
+    if (got.fail !== undefined) { browserSay(parts.slice(i).join(' '), L, seq); return; } // 503/feil: resten i nettleseren
     next = i + 1 < parts.length ? fetchChunk(parts[i + 1], voice, L, rate, seq, apiPurpose).catch((e) => (e?.name === 'AbortError' ? null : { fail: 0 })) : null;
     let h;
     try { h = await playBlob57(got.blob); } catch (e) { if (seq !== P.seq) return; if (e?.name === 'NotAllowedError') { setState('idle', { needTap: true }); return; } browserSay(parts.slice(i).join(' '), L, seq); return; }

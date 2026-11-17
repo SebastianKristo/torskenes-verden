@@ -82,8 +82,9 @@ test('«Glimt husker»: plassen for forslag/motstrid/ubrukte, merket på minnera
   assert.match(M, /if \(M\.arm !== id\) \{ M\.arm = id;/);
   assert.match(M, /'Godkjenn', 'pri', busy \|\| !!p\.conflictId\)/);
   assert.match(M, /if \(er\.status === 409\)/);
-  // Eldre server: ingenting vises
-  assert.match(M, /if \(M\.missing\) return '';/);
+  // Q19 (runde 4): ingen «eldre server»-grein; feilen fra serveren vises («Serveren svarte: …»).
+  assert.doesNotMatch(M, /M\.missing/);
+  assert.match(M, /Serveren svarte: \$\{esc\(M\.err\)\}/);
 });
 
 test('HTML: forslag, motstrid og ubrukte tegnes fra serverens former', async () => {

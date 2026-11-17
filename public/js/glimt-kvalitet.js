@@ -9,7 +9,7 @@
 // [data-mount-host]-plass, se settings-kvalitet.js): ukerapporten (inneværende og tidligere uker) og – for admin – nattlige eval-kjøringer
 // med status, bestått, svartid p50/p90, regresjoner, rapporten og «Kjør nå»/«Avbryt». (2) Brytere i AI-kontroll → Valg som fyller
 // [data-q64set]. (3) Lenkene fra pushene (#/innstillinger/kvalitet/run/<id> og …/uke/<uke>) åpner siden på riktig kjøring/uke.
-// Eldre server (404): siden sier «Oppdater serveren», og ingenting vises i AI-kontroll.
+// Feil fra serveren vises som «Serveren svarte: …».
 import { when62 } from './glimt-faste-oppgaver.js';
 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
@@ -115,7 +115,7 @@ export function serverBody64(key, v) {
 export const userWeeklyBody64 = (next, srv) => ({ scope: 'user', weekly: next === srv ? null : next });
 
 /* ---------- Data ---------- */
-const Q = { runs: null, runsErr: '', admin403: false, set: null, wk: null, wkErr: '', week: null, missing: false, at: 0, loading: null, open: null, det: {}, md: {}, msg: '', smsg: '', busy: false, sbusy: false, want: null, poll: 0 };
+const Q = { runs: null, runsErr: '', admin403: false, set: null, wk: null, wkErr: '', week: null, setErr: '', at: 0, loading: null, open: null, det: {}, md: {}, msg: '', smsg: '', busy: false, sbusy: false, want: null, poll: 0 };
 async function call(path, method = 'GET', json, raw = false) {
   const r = await fetch(`/api/glimt/quality${path}`, { method, credentials: 'same-origin', cache: 'no-store', headers: json ? { 'Content-Type': 'application/json' } : {}, body: json ? JSON.stringify(json) : undefined });
   if (raw && r.ok) return r.text();
@@ -129,13 +129,9 @@ export async function loadQuality64(force = false) {
   if (Q.loading) return Q.loading;
   Q.loading = (async () => {
     const [s, w, r] = await Promise.allSettled([call('/settings'), call(`/weekly${wkQ()}`), call('/runs?limit=30')]);
-    if (s.status === 'rejected' && [404, 405].includes(s.reason.status)) Q.missing = true;
-    else {
-      Q.missing = false;
-      if (s.status === 'fulfilled') Q.set = s.value;
-      if (w.status === 'fulfilled') { Q.wk = w.value; Q.wkErr = ''; } else Q.wkErr = w.reason.message;
-      if (r.status === 'fulfilled') { Q.runs = r.value; Q.runsErr = ''; Q.admin403 = false; } else { Q.admin403 = r.reason.status === 403; Q.runsErr = Q.admin403 ? '' : r.reason.message; }
-    }
+    if (s.status === 'fulfilled') { Q.set = s.value; Q.setErr = ''; } else Q.setErr = s.reason.message;
+    if (w.status === 'fulfilled') { Q.wk = w.value; Q.wkErr = ''; } else Q.wkErr = w.reason.message;
+    if (r.status === 'fulfilled') { Q.runs = r.value; Q.runsErr = ''; Q.admin403 = false; } else { Q.admin403 = r.reason.status === 403; Q.runsErr = Q.admin403 ? '' : r.reason.message; }
     Q.at = Date.now(); Q.loading = null;
     pollIfRunning();
     return Q;
@@ -228,8 +224,7 @@ function pageToggles() {
   return `<section class="sg"><h3 class="sg-t">Valg</h3><div class="sg-box">${rows.join('')}</div>${Q.smsg ? `<div class="sg-note" role="status">${esc(Q.smsg)}</div>` : ''}<div class="sg-note">Flere valg (kjøringer per case, tidsgrense, hvor lenge rapportene lagres) i AI-kontroll → Valg.</div></section>`;
 }
 export function pageHtml64() {
-  if (Q.missing) return '<section class="sg"><div class="sg-box"><div class="sg-row"><span class="sg-txt"><span>Serveren har ikke kvalitetsrapporter ennå. Oppdater serveren.</span></span></div></div></section>';
-  if (!Q.set && !Q.wk) return `<section class="sg"><div class="sg-box">${empty('Laster …')}</div></section>`;
+  if (!Q.set && !Q.wk) return `<section class="sg"><div class="sg-box">${empty(Q.setErr ? `Serveren svarte: ${esc(Q.setErr)}` : 'Laster …')}</div></section>`;
   return `<div class="q64" data-q64>${weeklyHtml()}${evalHtml()}${pageToggles()}</div>`;
 }
 
@@ -241,9 +236,8 @@ const seg = (k, name, sub, opts, fmt, dis) => {
   return `<div class="ac-par"><span class="ac-row ac-sb"><span class="ac-col"><b>${name}</b><span>${sub}</span></span><b class="ac-mono">${esc(cur != null ? fmt(cur) : '–')}</b></span><div class="ac-seg" role="group" aria-label="${name}">${opts.map((n) => `<button type="button" class="${n === cur ? 'on' : ''}" data-q64-par="${k}" data-v="${n}" aria-pressed="${n === cur}"${dis ? ' disabled' : ''}>${esc(fmt(n))}</button>`).join('')}</div></div>`;
 };
 export function settingsHtml64() {
-  if (Q.missing) return '';
   const d = Q.set;
-  if (!d) return `<div class="ac-sec"><span class="ac-lab">KVALITET OVER TID</span><div class="ac-card ac-list"><div class="ac-mut" style="padding:12px 0">Laster …</div></div></div>`;
+  if (!d) return `<div class="ac-sec"><span class="ac-lab">KVALITET OVER TID</span><div class="ac-card ac-list"><div class="ac-mut" style="padding:12px 0">${Q.setErr ? esc(Q.setErr) : 'Laster …'}</div></div></div>`;
   const srvW = d.server?.weekly !== false, own = d.user?.weekly, onW = srvW && (own ?? srvW);
   const mine = `<button type="button" class="ac-li" data-q64-user="weekly" role="switch" aria-checked="${onW}"${Q.sbusy || !srvW ? ' disabled' : ''}><span class="ac-col ac-grow"><b>${lab('weekly')}</b><span>${!srvW ? 'Slått av for alle av administrator' : `${help('weekly')}${own == null ? '' : ' · Ditt eget valg'}`}</span></span>${sw(onW)}</button>`;
   const link = '<button type="button" class="ac-li" data-q64-go><span class="ac-col ac-grow"><b>Se kvalitet</b><span>Innstillinger → Glimt og AI → Kvalitet: ukerapporten og nattlige eval-kjøringer</span></span><span aria-hidden="true">›</span></button>';

@@ -2,7 +2,7 @@
 // og fyller [data-understand60]. Tre brytere, hver for seg, standard på (se $S/SERVER60-API.md §5):
 //   GET /api/glimt/agent/understand → {settings, server, user, admin, labels, help, ttl}
 //   PUT /api/glimt/agent/understand {scope:'user'|'server', state?, entities?, choices?}  (user: null = følg serveren)
-// Effektiv verdi = server OG bruker. Er en bryter av for alle, er den låst av for brukeren. Eldre server (404): ingenting vises.
+// Effektiv verdi = server OG bruker. Er en bryter av for alle, er den låst av for brukeren.
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
 export const KEYS60 = ['state', 'entities', 'choices'];
 const LAB = { state: 'Samtaletilstand', entities: 'Entitetsregister', choices: 'Valgknapper ved usikkerhet' };
@@ -11,7 +11,7 @@ const HELP = {
   entities: 'Personer, steder, butikker, abonnementer og faste hendelser med aliaser («hytta», «jobben»), brukt i minne, kalendersøk, vær og finans.',
   choices: 'Glimt spør med konkrete valg («Mener du A eller B?») i stedet for å gjette, og forstår «den første».',
 };
-const S = { d: null, at: 0, busy: false, msg: '', missing: false, loading: null };
+const S = { d: null, at: 0, busy: false, msg: '', loading: null };
 
 export async function loadUnderstand60(force = false) {
   if (!force && S.at && Date.now() - S.at < 20_000) return S.d;
@@ -19,8 +19,7 @@ export async function loadUnderstand60(force = false) {
   S.loading = (async () => {
     try {
       const r = await fetch('/api/glimt/agent/understand', { credentials: 'same-origin', cache: 'no-store' });
-      if (r.status === 404 || r.status === 405) S.missing = true;
-      else if (r.ok) { S.d = await r.json(); S.missing = false; S.msg = ''; }
+      if (r.ok) { S.d = await r.json(); S.msg = ''; }
       else S.msg = (await r.json().catch(() => ({}))).error || `Feil ${r.status}`;
     } catch (e) { S.msg = e.message; }
     S.at = Date.now(); S.loading = null;
@@ -40,7 +39,6 @@ export const understandOn60 = (k) => { const d = S.d; if (!d) return true; if (d
 
 const sw = (on) => `<span class="ac-sw${on ? ' on' : ''}" aria-hidden="true"><i></i></span>`;
 export function understandHtml60() {
-  if (S.missing) return '';
   const d = S.d;
   if (!d) return `<div class="ac-sec"><span class="ac-lab">FORSTÅR SAMTALER</span><div class="ac-card ac-list"><div class="ac-mut" style="padding:12px 0">${S.msg ? esc(S.msg) : 'Laster …'}</div></div></div>`;
   const lab = (k) => esc(d.labels?.[k] ?? LAB[k]), help = (k) => esc(d.help?.[k] && d.help[k] !== '…' ? d.help[k] : HELP[k]);

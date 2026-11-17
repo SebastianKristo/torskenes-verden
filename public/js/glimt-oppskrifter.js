@@ -8,7 +8,7 @@
 //   GET/PUT /api/glimt/recipes/settings {scope, save?, fewshot?, fast?, learn?} · GET /api/glimt/recipes/stats
 // Tre deler: (1) siden «Glimt lærer» i Innstillinger → AI fyller [data-learn61], (2) brytere i AI-kontroll → Valg fyller
 // [data-recipes61] (samme stil som «Forstår samtaler»), (3) tommel opp/ned på Glimt-svar (thumbs61Html + klikk på [data-th61]).
-// Eldre server (404): ingenting vises / «Oppdater serveren».
+// Feil fra serveren vises som «Serveren svarte: …».
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
 export const KEYS61 = ['save', 'fewshot', 'fast', 'learn'];
 const LAB = { save: 'Lagre oppskrifter', fewshot: 'Bruk som eksempler', fast: 'Hurtigvei', learn: 'Lær av rettelser' };
@@ -125,15 +125,14 @@ export async function sendVote61(traceId, vote) {
 }
 
 /* ---------- Brytere i AI-kontroll → Valg ---------- */
-const S = { d: null, at: 0, busy: false, msg: '', missing: false, loading: null };
+const S = { d: null, at: 0, busy: false, msg: '', loading: null };
 export async function loadSettings61(force = false) {
   if (!force && S.at && Date.now() - S.at < 20_000) return S.d;
   if (S.loading) return S.loading;
   S.loading = (async () => {
     try {
       const r = await fetch('/api/glimt/recipes/settings', { credentials: 'same-origin', cache: 'no-store' });
-      if (r.status === 404 || r.status === 405) S.missing = true;
-      else if (r.ok) { S.d = await r.json(); S.missing = false; S.msg = ''; }
+      if (r.ok) { S.d = await r.json(); S.msg = ''; }
       else S.msg = (await r.json().catch(() => ({}))).error || `Feil ${r.status}`;
     } catch (e) { S.msg = e.message; }
     S.at = Date.now(); S.loading = null;
@@ -143,7 +142,6 @@ export async function loadSettings61(force = false) {
 }
 const sw = (on) => `<span class="ac-sw${on ? ' on' : ''}" aria-hidden="true"><i></i></span>`;
 export function settingsHtml61() {
-  if (S.missing) return '';
   const d = S.d;
   if (!d) return `<div class="ac-sec"><span class="ac-lab">GLIMT LÆRER</span><div class="ac-card ac-list"><div class="ac-mut" style="padding:12px 0">${S.msg ? esc(S.msg) : 'Laster …'}</div></div></div>`;
   const lab = (k) => esc(d.labels?.[k] ?? LAB[k]), help = (k) => esc(d.help?.[k] && d.help[k] !== '…' ? d.help[k] : HELP[k]);
@@ -163,17 +161,16 @@ export function settingsHtml61() {
 async function putSettings(body) { const j = await call('/settings', 'PUT', body); S.d = j; S.at = Date.now(); return j; }
 
 /* ---------- Siden «Glimt lærer» ---------- */
-const L = { d: null, at: 0, loading: null, missing: false, err: '', msg: '', filter: '', q: '', open: null, det: {}, edit: null, arm: null, busy: false, test: {}, stats: null };
+const L = { d: null, at: 0, loading: null, err: '', msg: '', filter: '', q: '', open: null, det: {}, edit: null, arm: null, busy: false, test: {}, stats: null };
 export async function loadRecipes61(force = false) {
   if (!force && L.at && Date.now() - L.at < 20_000) return L.d;
   if (L.loading) return L.loading;
   L.loading = (async () => {
     try {
       const r = await fetch('/api/glimt/recipes', { credentials: 'same-origin', cache: 'no-store' });
-      if (r.status === 404 || r.status === 405) L.missing = true;
-      else if (r.ok) { L.d = await r.json(); L.missing = false; L.err = ''; }
+      if (r.ok) { L.d = await r.json(); L.err = ''; }
       else L.err = (await r.json().catch(() => ({}))).error || `Feil ${r.status}`;
-      if (!L.missing) L.stats = await call('/stats').catch(() => null);
+      L.stats = await call('/stats').catch(() => null);
     } catch (e) { L.err = e.message; }
     L.at = Date.now(); L.loading = null;
     return L.d;
@@ -237,7 +234,6 @@ function rowHtml(it) {
   return `<div class="r61-item${open ? ' open' : ''}" data-r61-row="${esc(it.id)}"><button type="button" class="sg-row r61-head" data-r61-toggle="${esc(it.id)}" aria-expanded="${open}"><span class="sg-txt"><b data-no-i18n>${esc(it.queryTemplate || it.exampleQuery)}</b><span>${pill(it.status)} ${esc(statLine61(it))}${it.lastUsedAt ? ` · sist ${esc(when(it.lastUsedAt))}` : ''}</span><span class="r61-plan1" data-no-i18n>${esc(readable61(it).join(' → '))}</span></span><span aria-hidden="true" class="r61-chev">${open ? '▾' : '›'}</span></button>${open ? detailHtml(it) : ''}</div>`;
 }
 export function learnHtml61() {
-  if (L.missing) return '<div class="sg-row"><span class="sg-txt"><span>Serveren har ikke «Glimt lærer» ennå. Oppdater serveren.</span></span></div>';
   const d = L.d;
   if (!d) return `<div class="sg-row"><span class="sg-txt"><span>${L.err ? `Serveren svarte: ${esc(L.err)}` : 'Laster …'}</span></span></div>`;
   const items = Array.isArray(d.items) ? d.items : [], c = d.counts ?? {};
