@@ -153,7 +153,7 @@ async function save(id, render) {
   if (!Object.keys(ch).length) { msg[id] = { text: 'Ingen endringer', ok: true }; render(); return false; }
   msg[id] = { text: 'Lagrer …', ok: true }; render();
   try { await api(`/integrations/${encodeURIComponent(id)}`, { method: 'PUT', json: ch }); msg[id] = { text: 'Lagret ✓', ok: true }; delete test[id]; resetInteg(); await loadInteg(); }
-  catch (e) { msg[id] = { text: e.status === 404 ? 'Serveren har ikke Media-integrasjonene ennå.' : e.message, ok: false }; }
+  catch (e) { msg[id] = { text: e.message, ok: false }; }
   render(); return true;
 }
 /** Feilmelding fra testen gjort forståelig (401 = feil nøkkel, ECONNREFUSED = feil adresse/port). */
@@ -169,7 +169,7 @@ async function runTest(id, render) {
   try {
     const r = await api(`/integrations/${encodeURIComponent(id)}/test`, { method: 'POST' });
     test[id] = { ok: !!r.ok, msg: r.ok ? r.message ?? `✓ ${s2.name}${r.version ? ` v${r.version}` : ''} svarte${r.ms ? ` på ${r.ms} ms` : ''}` : why(r.message ?? r.error), ms: r.ms, at: Date.now() };
-  } catch (e) { test[id] = { ok: false, msg: e.status === 404 ? 'Serveren har ikke test for denne tjenesten ennå.' : why(e.message), at: Date.now() }; }
+  } catch (e) { test[id] = { ok: false, msg: why(e.message), at: Date.now() }; }
   render();
 }
 

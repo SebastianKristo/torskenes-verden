@@ -2,7 +2,7 @@
 // - Media (varsler, Vis i Kalender, Spill av med, tjenester, tilgang) – før tannhjulet i Media.      GET /api/media/status, PUT /api/media/settings, GET/PUT /api/media/access
 // - Ruter (Antall anbefalte reiser 1 · 2 · 3) – også i kortets ⋯-meny.                              GET/PUT /api/ruter/settings {recoCount}
 // - Familie → Sonevarsler (hovedbryter, per person, per sone) – speiles i Varsler.                    GET/PUT /api/family/zone-alerts
-// Alle kall tåler 404 (eldre server): da står det hva som mangler.
+// Feiler et kall, står feilen fra serveren i gruppen (med «Prøv igjen» der det passer).
 import { esc } from './util.js';
 import { store } from './store.js';
 import { TAB_IC } from './settings-search.js';
@@ -42,13 +42,12 @@ function loadMedia(force) {
   if (MD.loading || (!force && MD.st && Date.now() - MD.at < 30_000)) return;
   MD.loading = true;
   j('/api/media/status').then((s) => { MD.st = s; MD.err = ''; if (s?.admin && !MD.access) j('/api/media/access').then((a) => { MD.access = a; rr(); }).catch((e) => { MD.accErr = e.message; rr(); }); })
-    .catch((e) => { MD.st = null; MD.err = e.status === 404 ? 'missing' : e.message; })
+    .catch((e) => { MD.st = null; MD.err = e.message; })
     .finally(() => { MD.loading = false; MD.at = Date.now(); rr(); });
 }
 export function mediaView45(H) {
   const { group, row, note } = H;
   loadMedia();
-  if (MD.err === 'missing') return { groups: [group('Media', [row({ t: 'Media er ikke klart på serveren ennå', s: 'Oppdater Homelab-serveren, og sett opp tjenestene under Tilkoblinger → Media.', go: 'int', btn: 'Tilkoblinger' })])] };
   if (MD.err) return { groups: [group('Media', [row({ t: 'Fikk ikke hentet innstillingene', s: MD.err, act: 'data-s45="mretry"', btn: 'Prøv igjen' })])] };
   const S = MD.st, p = S?.settings ?? {};
   const svc = !S ? [row({ t: 'Henter …' })] : (S.services ?? []).map((s) => row({ t: s.name, s: s.url ?? (s.configured ? '' : 'Ikke satt opp'), v: s.ok ? s.text ?? 'OK' : s.configured ? s.error ?? 'Feil' : s.mock ? 'demodata' : 'Mangler', vc: s.ok ? '#2f7a4f' : s.configured ? '#b23a2a' : '', k: 'tjeneste sonarr radarr qbittorrent prowlarr plex jellyfin' }));
@@ -109,7 +108,7 @@ const RT = { s: null, err: '', loading: false };
 function loadRuter() {
   if (RT.loading || RT.s || RT.err) return;
   RT.loading = true;
-  j('/api/ruter/settings').then((s) => { RT.s = s ?? {}; }).catch((e) => { RT.err = e.status === 404 ? 'missing' : e.message; RT.s = {}; }).finally(() => { RT.loading = false; rr(); });
+  j('/api/ruter/settings').then((s) => { RT.s = s ?? {}; }).catch((e) => { RT.err = e.message; RT.s = {}; }).finally(() => { RT.loading = false; rr(); });
 }
 export const recoCount = () => { const v = +(RT.s?.recoCount ?? store.me?.ui?.recoCount ?? 2); return [1, 2, 3].includes(v) ? v : 2; };
 export async function setRecoCount(n) {
@@ -117,7 +116,7 @@ export async function setRecoCount(n) {
   RT.s = { ...(RT.s ?? {}), recoCount: n }; rr();
   try { navigator.vibrate?.(8); } catch { /* */ }
   try { const r = await j('/api/ruter/settings', { method: 'PUT', body: JSON.stringify({ recoCount: n }) }); if (r) RT.s = { ...RT.s, ...r }; }
-  catch (e) { if (e.status !== 404) toast(e.message); }
+  catch (e) { toast(e.message); }
   try { document.dispatchEvent(new CustomEvent('hl:ruter-reco', { detail: n })); } catch { /* */ }
 }
 export function ruterView45(H) {
@@ -126,7 +125,7 @@ export function ruterView45(H) {
   const cur = recoCount();
   const seg = `<div class="s45-seg" role="radiogroup" aria-label="Antall anbefalte reiser">${[1, 2, 3].map((n) => `<button type="button" role="radio" aria-checked="${cur === n}" data-s45-reco="${n}">${n}</button>`).join('')}</div>`;
   return { groups: [group('Min reise', [{ html: `<div class="sg-row"><span class="sg-txt"><b>Antall anbefalte reiser</b><span>Kortet «Anbefalt for min reise» viser nøyaktig så mange (på Oversikt og i appen)</span></span>${seg}</div>`, q: 'ruter anbefalt antall reiser min reise kollektiv' }],
-    RT.err === 'missing' ? 'Serveren lagrer ikke valget ennå – det gjelder bare denne nettleseren til Homelab er oppdatert.' : 'Lagres på brukeren og synkes mellom enhetene dine.')] };
+    RT.err ? `Serveren svarte: ${esc(RT.err)}` : 'Lagres på brukeren og synkes mellom enhetene dine.')] };
 }
 
 /* ---------------- Sonevarsler (Familie + Varsler) ---------------- */
@@ -134,14 +133,13 @@ const ZA = { d: null, err: '', loading: false };
 function loadZa(force) {
   if (ZA.loading || (!force && (ZA.d || ZA.err))) return;
   ZA.loading = true;
-  j('/api/family/zone-alerts').then((d) => { ZA.d = d; ZA.err = ''; }).catch((e) => { ZA.err = e.status === 404 ? 'missing' : e.message; }).finally(() => { ZA.loading = false; rr(); });
+  j('/api/family/zone-alerts').then((d) => { ZA.d = d; ZA.err = ''; }).catch((e) => { ZA.err = e.message; }).finally(() => { ZA.loading = false; rr(); });
 }
 const zIcon = (z, s = 30) => (z.iconUrl ? `<img src="${esc(z.iconUrl)}" alt="" width="${s}" height="${s}" style="border-radius:${Math.round(s * 0.28)}px">` : `<span class="s45-zi" style="background:${esc(z.color ?? '#2f7a4f')};width:${s}px;height:${s}px">${esc(String(z.name ?? '?').slice(0, 1))}</span>`);
 /** Gruppen «Sonevarsler». where = 'familie' | 'varsel'. */
 export function zoneGroups45(H, where = 'familie') {
   const { group, row } = H;
   loadZa();
-  if (ZA.err === 'missing') return [group('Sonevarsler', [row({ t: 'Serveren har ikke sonevarsler ennå', s: 'Oppdater Homelab for å slå varsler av og på per person og sone.' })])];
   if (ZA.err) return [group('Sonevarsler', [row({ t: 'Fikk ikke hentet sonevarslene', s: ZA.err, act: 'data-s45="zretry"', btn: 'Prøv igjen' })])];
   const d = ZA.d;
   if (!d) return [group('Sonevarsler', [row({ t: 'Henter …' })])];
@@ -162,7 +160,7 @@ export function zoneGroups45(H, where = 'familie') {
 async function putZa(body, rollback) {
   rr();
   try { ZA.d = await j('/api/family/zone-alerts', { method: 'PUT', body: JSON.stringify(body) }); }
-  catch (e) { rollback(); toast(e.status === 404 ? 'Serveren har ikke sonevarsler ennå' : e.message); }
+  catch (e) { rollback(); toast(e.message); }
   rr();
 }
 

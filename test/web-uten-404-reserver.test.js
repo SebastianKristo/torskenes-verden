@@ -71,13 +71,40 @@ const GRUPPER = {
       'ai-control.js': [/404/, /G\.missing/, /G\.legacy/, /missingNote/, OPPDATER], 'chat.js': [/C\.missing/, /Serveren mangler/], 'stemmer.js': [/404/, /unsupported/, OPPDATER],
     },
   },
+  'Innstillinger og system': {
+    endepunkter: [
+      ['/api/me/server'], ['/api/me/server', 'PUT', { auto: true }], ['/api/backup/settings'], ['/api/backup/list'], ['/api/backup/status'],
+      ['/api/media/status'], ['/api/ruter/settings'], ['/api/ruter/settings', 'PUT', { recoCount: 2 }], ['/api/family/zone-alerts'],
+      ['/api/update/versions'], ['/api/update/rollback', 'POST', {}], ['/api/server/owner'], ['/api/server/owner/transfer', 'POST', {}], ['/api/auth/reauth', 'POST', { password: 'feil' }],
+      ['/api/users/owner/layout'], ['/api/users/owner/layout/copy-from-me', 'POST', {}], ['/api/users/owner/layout/reset', 'POST', {}], ['/api/users/owner/layout/lock', 'PUT', { locked: false }],
+      ['/api/family/health/ha'], ['/api/domains/gsc/sites'], ['/api/gsc'], ['/api/domains/token/verify', 'POST', { token: 'x' }],
+      ['/api/tracking'], ['/api/tracking/refresh', 'POST', {}], ['/api/tracking/keys'], ['/api/tracking/sources46'], ['/api/integrations/sonarr/test', 'POST', {}],
+      ['/api/me/notify'], ['/api/me/notify', 'PUT', {}], ['/api/skjold/ai/settings'], ['/api/me/sessions'], ['/api/background/oslo', 'POST', {}],
+      ['/api/system/update'], ['/api/system/update/check', 'POST', {}], ['/api/system/update/rollback', 'POST', {}], ['/api/system/version'],
+      ['/api/system/obs51/health'], ['/api/me/ntfy51'], ['/api/system/containers'], ['/api/system/logs?limit=10'], ['/api/ops51/summary'],
+      ['/api/admin/impersonate', 'POST', {}], ['/api/admin/impersonate/exit', 'POST', {}], ['/api/auth/logout-all', 'POST', {}], ['/api/app'], ['/api/auth/app-code', 'POST', {}],
+      ['/api/profiles'], ['/api/push/vapid'], ['/api/push/presence', 'POST', { visible: true }], ['/finans/api/receipts/health'], ['/api/smb/list', 'POST', {}],
+    ],
+    filer: Object.fromEntries([
+      'settings-server.js', 'settings-backup.js', 'settings-moduler.js', 'settings-utseende-logger.js', 'settings-helse.js', 'settings-domains.js',
+      'settings-sporing.js', 'settings-sporing-nokler.js', 'settings-sporing-kontoer.js', 'settings-integ.js', 'settings-integ-media.js', 'settings-notify.js',
+      'settings-skjold.js', 'settings-media-diagnose.js', 'settings-system.js', 'sysupdate.js', 'drift.js', 'logger.js', 'backup-oppdatering.js', 'upd-banner.js',
+      'logg-inn-som.js', 'account-session.js', 'app-auth.js', 'appicon.js', 'onboarding.js', 'webpush.js', 'receipts-settings.js', 'smb-wizard.js', 'login-qr.js',
+    ].map((f) => [f, [/status === 404|\/404\/|'missing'|\.missing\b/, OPPDATER]]).concat([
+      ['settings-sporing.js', [/status === 404|'missing'|\/tracking\/check/, OPPDATER]], ['smb-wizard.js', [/status === 404|'\/browse'/, OPPDATER]],
+      ['upd-banner.js', [/status === 404/, /eldre server/i, /Oppdater Homelab/]],       ['settings-sporing-nokler.js', [/status === 404|K\.err === 404/, OPPDATER]],       ['settings-view.js', [/\/backgrounds\/oslo/, OPPDATER]], ['settings-system.js', [/U\.st === 'missing'/, OPPDATER]],
+    ])),
+  },
 };
 
 for (const [navn, g] of Object.entries(GRUPPER)) {
   test(`${navn}: serveren har endepunktene`, async () => {
     for (const [path, method = 'GET', body] of g.endepunkter) {
       const r = await A(path, method, body);
-      assert.notEqual(r.status, 404, `${method} ${path}`);
+      // En rute som mangler, gir 404 med standardteksten «Finnes ikke». En rute som finnes, kan svare 404 med egen tekst
+      // («Fant ikke brukeren»), og den teksten er det klienten nå viser.
+      const err = r.status === 404 ? (await r.json().catch(() => ({}))).error : null;
+      assert.ok(!(r.status === 404 && err === 'Finnes ikke'), `${method} ${path} mangler på serveren`);
       assert.notEqual(r.status, 405, `${method} ${path}`);
     }
   });

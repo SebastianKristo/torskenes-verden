@@ -1,7 +1,7 @@
 // Prompt 37 (claude-code-sporing-delte-nokler.md → UI): Innstillinger → Integrasjoner → Sporing (alle brukere).
 // API-nøkler for sporing er delt i husstanden (admin legger dem inn). Pakker og sporingsnumre er alltid private.
 // GET /api/tracking/keys → {providers:[{id, name, set, tail, status, addedBy, updatedAt}], quota:{used, mine, limit, perUserPct}, admin}
-// PUT /api/tracking/keys/:id {key} (admin), DELETE /api/tracking/keys/:id fjerner. Test: POST …/:id/test (valgfri). Eldre server (404): ingen seksjon.
+// PUT /api/tracking/keys/:id {key} (admin), DELETE /api/tracking/keys/:id fjerner. Test: POST …/:id/test. Feiler lastingen, viser gruppen feilen fra serveren.
 import { api, esc } from './util.js';
 
 const K = { d: null, loading: false, err: null, msg: {}, test: {} };
@@ -9,9 +9,9 @@ const DOM = { parcelsapp: 'parcelsapp.com', postnord: 'postnord.no', posten: 'po
 const ST = { ok: ['OK', 'var(--ds-success)'], error: ['Feil', 'var(--ds-danger)'], quota: ['Kvote brukt opp', 'var(--ds-warning)'], missing: ['Ikke satt', 'var(--ds-text-secondary)'] };
 
 export async function loadTrackKeys(rerender, force = false) {
-  if (K.loading || (K.d && !force) || K.err === 404) return;
+  if (K.loading || ((K.d || K.err) && !force)) return; // en feil vises til neste lasting (ingen ny runde ved hver tegning)
   K.loading = true;
-  try { K.d = await api('/tracking/keys'); K.err = null; } catch (e) { K.err = e.status ?? e.message; K.d = null; }
+  try { K.d = await api('/tracking/keys'); K.err = null; } catch (e) { K.err = e.message; K.d = null; }
   K.loading = false;
   rerender?.();
 }
@@ -34,10 +34,10 @@ export function quotaLine(d = K.d) {
   return `Bruker husstandens ${pa.name}-nøkkel${left != null ? ` · ${left} oppslag igjen` : ''}${mine}`;
 }
 
-/** Gruppen i Integrasjoner-oversikten (null før data / på eldre server). */
+/** Gruppen i Integrasjoner-oversikten (null før data, feilen fra serveren hvis lastingen feilet). */
 export function trackGroup(row, group) {
   const d = K.d;
-  if (!d?.providers?.length) return null;
+  if (!d?.providers?.length) return K.err ? group('Sporing · delt i husstanden', [row({ t: 'Fikk ikke hentet sporingsnøklene', s: K.err, k: 'sporing api nøkkel' })]) : null;
   const rows = d.providers.map((p) => {
     const [v, vc] = stOf(p);
     return row({ t: p.name, s: p.set ? `${byLine(p)} · ${mask(p)}` : keyless41(p) ? byLine(p) : 'Ikke satt opp', k: 'sporing api nøkkel', logo: DOM[p.id] ?? null, ini: p.name, v, vc, btn: d.admin ? 'Endre' : 'Vis', go: `int|trk37:${p.id}` });
@@ -66,7 +66,7 @@ export function trackSub(id, note) {
 
 async function put(id, key, render, field = null) {
   K.msg[id] = { text: key ? 'Lagrer …' : 'Fjerner …', ok: true }; render();
-  try { await (key ? api(`/tracking/keys/${encodeURIComponent(id)}`, { method: 'PUT', json: field && field !== 'key' ? { fields: { [field]: key } } : { key } }) : api(`/tracking/keys/${encodeURIComponent(id)}`, { method: 'DELETE' }).catch((e) => (e.status === 404 ? api(`/tracking/keys/${encodeURIComponent(id)}`, { method: 'PUT', json: { key: null } }) : Promise.reject(e)))); K.msg[id] = { text: key ? 'Lagret ✓' : 'Fjernet ✓', ok: true }; await loadTrackKeys(null, true); }
+  try { await (key ? api(`/tracking/keys/${encodeURIComponent(id)}`, { method: 'PUT', json: field && field !== 'key' ? { fields: { [field]: key } } : { key } }) : api(`/tracking/keys/${encodeURIComponent(id)}`, { method: 'DELETE' })); K.msg[id] = { text: key ? 'Lagret ✓' : 'Fjernet ✓', ok: true }; await loadTrackKeys(null, true); }
   catch (e) { K.msg[id] = { text: e.status === 403 ? 'Bare admin kan endre nøklene' : e.message, ok: false }; }
   render();
 }
@@ -76,7 +76,7 @@ export async function trackClick(e, render) {
   if (tb) {
     const id = tb.dataset.trk37Test; K.test[id] = 'run'; render();
     try { const r = await api(`/tracking/keys/${encodeURIComponent(id)}/test`, { method: 'POST' }); K.msg[id] = { text: r.ok === false ? `Feilet: ${r.message ?? r.error ?? ''}` : `✓ OK${r.message ? ` · ${r.message}` : ''}`, ok: r.ok !== false }; }
-    catch (er) { K.msg[id] = { text: er.status === 404 ? 'Serveren kan ikke teste nøkkelen ennå' : er.message, ok: false }; }
+    catch (er) { K.msg[id] = { text: er.message, ok: false }; }
     delete K.test[id]; render(); return true;
   }
   const del = e.target.closest('[data-trk37-del]');

@@ -5,7 +5,7 @@
 //   TRANSPORTØRER (høyre: «Nøkler i Integrasjoner ›»): Posten og Bring, PostNord, DHL, UPS og 17TRACK med logo, beskrivelse og
 //     status (grønn «Tilkoblet» / oransje «Mangler nøkkel»). Trykk åpner nøklene i Integrasjoner → Sporing.
 // Bryterne lagres per bruker på serveren (PUT /api/tracking/sources {email|finn|autoArchive}) og speiles i localStorage
-// «papir_spor_set» = {uid, mail, finn, arch}, så siden tegnes riktig med en gang. «Sjekk nå» = POST /api/tracking/refresh (/check på eldre server).
+// «papir_spor_set» = {uid, mail, finn, arch}, så siden tegnes riktig med en gang. «Sjekk nå» = POST /api/tracking/refresh.
 // Data: GET /api/tracking (sources, lastRun, carriers, items for tellingene). Ingen nøkler hentes eller vises her.
 import { api, esc, hm } from './util.js';
 import { is2c } from './hltheme.js';
@@ -55,7 +55,7 @@ function load(force = false) {
   if (SP.loading || (!force && SP.d && Date.now() - SP.at < 30_000)) return;
   SP.loading = true;
   api('/tracking').then((d) => { SP.d = d; SP.err = ''; saveLocal(d?.sources); })
-    .catch((e) => { SP.err = e.status === 404 ? 'missing' : e.message; })
+    .catch((e) => { SP.err = e.message; })
     .finally(() => { SP.loading = false; SP.at = Date.now(); rr(); });
 }
 
@@ -85,7 +85,6 @@ export function sporView70(H, rerender) {
   if (rerender) rr = rerender;
   css();
   load();
-  if (SP.err === 'missing') return { groups: [group('Sporing', [row({ t: 'Sporing er ikke klart på serveren ennå', s: 'Oppdater Homelab-serveren for å bruke pakkesporing.', k: KW })])] };
   const d = SP.d, items = d?.items ?? [];
   const nM = items.filter((t) => t.source === 'email').length, nF = items.filter((t) => t.source === 'finn').length;
   const subs = { email: d ? `${nM} funnet i innboksen` : 'Henter …', finn: d ? `${nF} fra handler` : 'Henter …', autoArchive: 'Leverte pakker flyttes til arkivet' };
@@ -112,8 +111,7 @@ async function check() {
   if (SP.busy) return;
   SP.busy = true; SP.msg = ''; rr();
   try {
-    let r;
-    try { r = await api('/tracking/refresh', { method: 'POST' }); } catch (e) { if (e.status !== 404) throw e; r = await api('/tracking/check', { method: 'POST' }); }
+    const r = await api('/tracking/refresh', { method: 'POST' });
     SP.msg = r?.message ?? 'Status er oppdatert';
   } catch (e) { SP.msg = e.message; }
   SP.busy = false;

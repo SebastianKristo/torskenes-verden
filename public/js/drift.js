@@ -22,7 +22,7 @@ function loadAll(force = false) {
   if (O.hLoading || (!force && O.h && Date.now() - O.hAt < 60_000)) return;
   O.hLoading = true;
   Promise.allSettled([j(`/api/system/obs51/health${force ? '?force=1' : ''}`), j('/api/system/obs51/heal'), j('/api/system/obs51/traces?limit=15'), j('/api/system/obs51/proxmox')]).then(([h, he, tr, pv]) => {
-    if (h.status === 'fulfilled') { O.h = h.value; O.hErr = ''; } else O.hErr = /404/.test(h.reason?.message) ? 'Serveren har ikke Drift ennå. Oppdater serveren.' : h.reason?.message;
+    if (h.status === 'fulfilled') { O.h = h.value; O.hErr = ''; } else O.hErr = h.reason?.message;
     if (he.status === 'fulfilled') O.heal = he.value;
     if (tr.status === 'fulfilled') O.tr = tr.value;
     if (pv.status === 'fulfilled') O.pve = pv.value;
@@ -134,14 +134,15 @@ export function obs51PartHtml(part) {
 function loadNtfy() {
   if (O.ntfy || O.nLoading) return;
   O.nLoading = true;
-  j('/api/me/ntfy51').then((x) => { O.ntfy = x; }).catch((e) => { O.nErr = /404/.test(e.message) ? '' : e.message; O.ntfy = /404/.test(e.message) ? { missing: true } : null; }).finally(() => { O.nLoading = false; R(); });
+  j('/api/me/ntfy51').then((x) => { O.ntfy = x; }).catch((e) => { O.ntfy = { error: e.message }; }).finally(() => { O.nLoading = false; R(); });
 }
 /** Gruppen «ntfy» på Varsler-siden. h = { group, row } fra settings.js. */
 export function ntfyGroup51(h) {
   css();
   loadNtfy();
   const n = O.ntfy;
-  if (!n || n.missing) return '';
+  if (!n) return '';
+  if (n.error) return h.group('ntfy (selvhostet push)', [h.row({ t: 'ntfy', s: `Serveren svarte: ${n.error}` })]);
   if (!n.enabled) return h.group('ntfy (selvhostet push)', [h.row({ t: 'ntfy', s: n.help })]);
   const rows = n.topics.map((t) => `<div class="sg-row"><span class="sg-txt"><b>${esc(t.device)}</b><span data-no-i18n class="o51-mono">${esc(t.subscribeUrl ?? t.topic)}</span><span>${t.lastOk ? `Sist levert ${esc(ago(t.lastOk))}` : 'Ikke levert ennå'}${t.fails ? ` · ${t.fails} feil` : ''}</span></span><button type="button" class="o51-btn" data-o51="ncopy:${esc(t.id)}">${O.copied === t.id ? 'Kopiert' : 'Kopier'}</button><button type="button" class="o51-btn" data-o51="ndel:${esc(t.id)}">Fjern</button></div>`);
   rows.push(`<form class="sg-row" data-o51-form="ntfy"><span class="sg-txt"><b>Legg til enhet</b><span>Hver enhet får sitt eget, hemmelige emne. Abonner på adressen i ntfy-appen.</span></span><input name="device" maxlength="60" placeholder="F.eks. iPhone" value="${esc(O.dev)}" data-o51-dev aria-label="Enhetsnavn"><button type="submit" class="o51-btn pri">Legg til</button></form>`);

@@ -26,7 +26,6 @@ export async function logoutAll() {
     try { r = await fetch('/api/auth/logout-all', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: pw }) }); } catch { toast('Fikk ikke kontakt med serveren.', { tone: 'danger' }); return; }
     const j = await r.json().catch(() => ({}));
     if (r.ok) { alert(`Logget ut av ${j.count ?? 'alle'} ${j.count === 1 ? 'enhet' : 'enheter'}.`); await logout(); return; }
-    if (r.status === 404) { toast('Serveren støtter ikke dette ennå. Oppdater Homelab.', { tone: 'danger' }); return; }
     if (r.status === 429) { toast(j.error || 'For mange forsøk. Vent litt.', { tone: 'danger' }); return; }
     if (r.status !== 401 && r.status !== 403) { toast(j.error || `Kunne ikke logge ut (feil ${r.status}).`, { tone: 'danger' }); return; }
   }

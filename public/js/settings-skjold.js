@@ -40,7 +40,7 @@ export function loadSet77(force = false) {
   if (!force && st.set && Date.now() - st.at < 30_000) return Promise.resolve(st.set);
   st.loading = api('/skjold/ai/settings')
     .then((d) => { st.set = norm(d?.settings ?? d); st.err = ''; saveLocal(st.set); })
-    .catch((e) => { st.set = norm(null); st.err = e.status === 404 ? 'missing' : e.message; })
+    .catch((e) => { st.set = norm(null); st.err = e.message; })
     .finally(() => { st.loading = null; st.at = Date.now(); rr(); });
   return st.loading.then(() => st.set);
 }
@@ -63,7 +63,7 @@ export function skjView77(H, rerender) {
   loadSet77();
   const s = set77();
   const g = group('Glimt i Skjold Lab', ROWS.map(([k, t, sub, kw]) => row({ t, s: sub, tog: s[k], act: `data-skj77-set="${k}"`, k: `${KW} ${kw}` })),
-    st.err && st.err !== 'missing' ? `Fikk ikke lagret: ${esc(st.err)}` : st.err === 'missing' ? 'Serveren har ikke Skjold Lab-AI ennå. Bryterne lagres på denne enheten til den er oppdatert.' : '');
+    st.err ? `Serveren svarte: ${esc(st.err)}` : '');
   const g2 = group('Rydd opp', [row({ t: 'Rydd opp med Glimt', s: 'Åpnes fra ⋯ i Skjold Lab. Ingenting endres før du godkjenner.', k: `${KW} rydd opp gjennomgang` })]);
   return { groups: [g, g2] };
 }

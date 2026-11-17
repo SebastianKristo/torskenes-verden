@@ -50,8 +50,7 @@ async function req(path, body) {
   const r = await fetch(BASE + path, { method: 'POST', credentials: 'same-origin', cache: 'no-store', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body ?? {}) });
   const d = r.headers.get('content-type')?.includes('json') ? await r.json().catch(() => null) : null;
   if (!r.ok) {
-    const msg = r.status === 404 ? 'Serveren har ikke veiviseren ennå. Oppdater Homelab under Innstillinger → Server → System.'
-      : r.status === 403 ? 'Bare administrator kan sette opp nettverksdisk.' : r.status === 401 ? 'Du er logget ut. Logg inn på nytt.' : d?.error || `Serveren svarte ${r.status}`;
+    const msg = r.status === 403 ? 'Bare administrator kan sette opp nettverksdisk.' : r.status === 401 ? 'Du er logget ut. Logg inn på nytt.' : d?.error || `Serveren svarte ${r.status}`;
     throw Object.assign(new Error(msg), { status: r.status, kind: d?.kind ?? (r.status >= 500 ? 'host' : null), char: d?.char ?? null, name: d?.name ?? null });
   }
   return d;
@@ -134,12 +133,10 @@ async function openDir(path) {
   if (!W) return;
   W.busy = false; draw();
 }
-// Prompt 36: POST /api/smb/list {host, share, path, …} (navigerer i undermapper); eldre server: /api/smb/browse.
+// Prompt 36: POST /api/smb/list {host, share, path, …} (navigerer i undermapper).
 // Hver mappe kan ha locked/access:false (🔒 «Ingen tilgang for {bruker}»). Skjulte (punktum foran) vises bare med «Vis skjulte».
 async function listDir(path) {
-  let r;
-  try { r = await req('/list', { ...target(path), hidden: W.hidden }); }
-  catch (e) { if (e.status !== 404 || e.kind) throw e; r = await req('/browse', target(path)); }
+  const r = await req('/list', { ...target(path), hidden: W.hidden });
   const L = Array.isArray(r) ? r : r?.dirs ?? r?.items ?? r?.folders ?? [];
   return L.filter((d) => d && (d.dir !== false && d.type !== 'file')).map((d) => (typeof d === 'string' ? { name: d } : d));
 }

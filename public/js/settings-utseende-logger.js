@@ -4,7 +4,7 @@
 // - Gjøremål (Synk med Home Assistant), samme kort som i Gjøremål (tasks-ha.js).             claude-code-gjoremal-synk-i-innstillinger.md
 // - System → TIDLIGERE VERSJONER under «Krev passord …», med Installer → dialog.             claude-code-rull-tilbake-versjon.md
 // - Brukere → SERVER · EIER (Overfør eierskap) og FAMILIE · LOGG INN SOM (web).              claude-code-overfor-servereier.md, claude-code-rediger-andres-oppsett.md
-// Alle kall tåler 404 (eldre server): da står det hva som mangler, i stedet for feil.
+// Feiler et kall, vises feilen fra serveren der det hører hjemme.
 import { esc, initials } from './util.js';
 import { store } from './store.js';
 import { MODE_CARDS, webMode, setMode } from './mode.js';
@@ -60,7 +60,7 @@ function loadVersions(force) {
   if (RB.loading || (!force && RB.list && Date.now() - RB.at < 60_000)) return;
   RB.loading = true;
   j('/api/update/versions').then((d) => { const L = Array.isArray(d) ? d : d?.versions ?? d?.items ?? []; RB.list = L.slice(0, 10).map((x) => ({ v: String(x.version ?? x.v ?? ''), date: x.date ?? x.at ?? '', notes: Array.isArray(x.notes) ? x.notes[0] ?? '' : x.notes ?? x.note ?? '', hasBackup: !!(x.hasBackup ?? x.backup), backupAt: x.backupAt ?? x.backup?.at ?? null, compatible: x.compatible !== false, current: !!x.current, previous: !!x.previous, changes: x.changesSince ?? x.lost ?? null })).filter((x) => x.v); RB.err = ''; })
-    .catch((e) => { RB.list = []; RB.err = e.status === 404 ? 'missing' : e.message; })
+    .catch((e) => { RB.list = []; RB.err = e.message; })
     .finally(() => { RB.loading = false; RB.at = Date.now(); rr(); });
 }
 const dd = (t) => { const d = new Date(typeof t === 'number' && t < 1e12 ? t * 1000 : t); return Number.isNaN(+d) ? String(t ?? '') : d.toLocaleDateString('nb-NO', { day: 'numeric', month: 'short', year: d.getFullYear() === new Date().getFullYear() ? undefined : 'numeric' }).replace('.', ''); };
@@ -72,7 +72,6 @@ export function versionsHtml44(onChange) {
   loadVersions();
   let body;
   if (!RB.list) body = '<span class="ny-note">Henter versjoner …</span>';
-  else if (RB.err === 'missing') body = '<span class="ny-note">Serveren har ikke tilbakerulling ennå. Oppdater Nordlys først.</span>';
   else if (RB.err) body = `<span class="ny-note red">${esc(RB.err)}</span>`;
   else if (!RB.list.length) body = '<span class="ny-note">Updateren har ikke tatt vare på noen tidligere versjoner ennå.</span>';
   else body = `<div class="rb44-list">${RB.list.map((x) => {
@@ -109,7 +108,7 @@ async function rollback(form) {
     U.prev = { sha: U.d?.installed?.sha ?? null, version: U.d?.installed?.version ?? null };
     U.d = { ...(U.d ?? {}), status: { ...(U.d?.status ?? {}), id: U.jobId, state: 'downloading', step: 'downloading', action: 'rollback', version: d.x.v, error: null, startedAt: new Date().toISOString(), finishedAt: null } };
     RB.dlg = null; watch(); loadUpdate();
-  } catch (e) { d.err = e.status === 404 ? 'Serveren har ikke tilbakerulling ennå. Oppdater Nordlys først.' : (e.status === 401 || e.status === 403) && /passord|password/i.test(e.message) ? 'Feil passord.' : e.message; }
+  } catch (e) { d.err = (e.status === 401 || e.status === 403) && /passord|password/i.test(e.message) ? 'Feil passord.' : e.message; }
   RB.busy = false; dlg(); rr();
 }
 
@@ -118,7 +117,7 @@ const OW = { d: null, loading: false, err: '', at: 0, dlg: null, users: null };
 function loadOwner(force) {
   if (OW.loading || (!force && OW.d && Date.now() - OW.at < 60_000)) return;
   OW.loading = true;
-  j('/api/server/owner').then((d) => { OW.d = d ?? {}; OW.err = ''; }).catch((e) => { OW.d = null; OW.err = e.status === 404 ? 'missing' : e.message; }).finally(() => { OW.loading = false; OW.at = Date.now(); rr(); });
+  j('/api/server/owner').then((d) => { OW.d = d ?? {}; OW.err = ''; }).catch((e) => { OW.d = null; OW.err = e.message; }).finally(() => { OW.loading = false; OW.at = Date.now(); rr(); });
 }
 const ownerOf = () => { const d = OW.d; if (!d) return null; const o = d.owner ?? d; return { id: o.id ?? o.userId ?? d.ownerId, name: o.name ?? o.username ?? '', since: o.since ?? o.createdAt ?? d.since ?? null }; };
 /** Låst oppsett per bruker (GET /api/users/:id/layout → locked). Hentes én gang. */
@@ -140,7 +139,7 @@ export function usersGroups44(h, users = [], rerender) {
   if (admin() || OW.d) loadOwner();
   const o = ownerOf(), me = meId();
   const isOwner = OW.d?.me?.isOwner ?? (o && o.id === me), canT = OW.d?.me?.canTransfer ?? (isOwner || admin());
-  if (OW.err === 'missing') out.push(h.group('Server · eier', [h.row({ t: 'Eier av serveren', s: 'Serveren har ikke eierskap ennå. Oppdater Nordlys først.', k: 'eier overfør eierskap' })]));
+  if (OW.err && !o) out.push(h.group('Server · eier', [h.row({ t: 'Eier av serveren', s: `Serveren svarte: ${OW.err}`, k: 'eier overfør eierskap' })]));
   else if (o) {
     const pend = Array.isArray(OW.d?.pending) ? OW.d.pending[0] : OW.d?.pending;
     const pendTxt = pend ? `Venter på godkjenning: overføring til ${pend.toName ?? pend.to?.name ?? pend.toUser?.name ?? 'ny eier'}${pend.expiresAt ? ` · gyldig til ${dd(pend.expiresAt)} ${hm(pend.expiresAt)}` : ''}` : '';
@@ -179,14 +178,14 @@ async function owSubmit() {
   const d = OW.dlg; if (!d) return;
   d.busy = true; d.err = ''; dlg();
   try {
-    try { await j('/api/auth/reauth', { method: 'POST', body: JSON.stringify({ password: d.pw }) }); } catch (e) { if (e.status !== 404) throw Object.assign(e, { reauth: true }); }
+    try { await j('/api/auth/reauth', { method: 'POST', body: JSON.stringify({ password: d.pw }) }); } catch (e) { throw Object.assign(e, { reauth: true }); }
     const r = await j('/api/server/owner/transfer', { method: 'POST', body: JSON.stringify({ toUserId: d.to, password: d.pw }) });
     const nm = (OW.users ?? []).find((x) => x.id === d.to); const n = nm?.name || nm?.username || 'Ny eier';
     OW.dlg = null; dlg(); loadOwner(true);
     flash(r?.pending || r?.status === 'pending' ? `Venter på at eieren godkjenner overføringen til ${n} (48 t).` : `${n} eier nå serveren. Du er fortsatt admin. ${n} har fått e-post og varsel.`);
   } catch (e) {
     d.busy = false;
-    d.err = e.status === 404 ? 'Serveren har ikke overføring av eierskap ennå.' : e.reauth || /passord|password/i.test(e.message) ? 'Feil passord.' : /2fa|totp/i.test(e.message) ? e.message : e.message;
+    d.err = e.reauth || /passord|password/i.test(e.message) ? 'Feil passord.' : /2fa|totp/i.test(e.message) ? e.message : e.message;
     dlg();
   }
 }
@@ -234,9 +233,9 @@ export async function click44(e, render) {
   if (x('[data-ow44-start]')) { e.preventDefault(); OW.dlg = { step: 1, to: null, typed: '', pw: '', err: '' }; dlg(); return true; }
   if ((b = x('[data-ow44-ok],[data-ow44-no]'))) { e.preventDefault(); const ok = !!b.dataset.ow44Ok, id = b.dataset.ow44Ok ?? b.dataset.ow44No; const pw = ok ? prompt('Bekreft med passordet ditt for å godkjenne overføringen.') : ''; if (ok && !pw) return true; try { await j(`/api/server/owner/transfer/${encodeURIComponent(id)}/${ok ? 'approve' : 'reject'}`, { method: 'POST', body: JSON.stringify(ok ? { password: pw } : {}) }); flash(ok ? 'Overføringen er godkjent.' : 'Overføringen er avslått.'); } catch (er) { flash(er.message); } loadOwner(true); return true; }
   if ((b = x('[data-as44]'))) { e.preventDefault(); const u = (OW.users ?? []).find((y) => y.id === b.dataset.as44); if (u) await startAs(u); return true; }
-  if ((b = x('[data-as44-copy]'))) { e.preventDefault(); const u = (OW.users ?? []).find((y) => y.id === b.dataset.as44Copy); if (!confirm(`Kopiere oppsettet ditt (Oversikt, fanelinje og Mer) til ${u?.name || 'personen'}? Det som er der nå, erstattes.`)) return true; try { await j(`/api/users/${encodeURIComponent(b.dataset.as44Copy)}/layout/copy-from-me`, { method: 'POST', body: '{}' }); flash(`Oppsettet ditt er kopiert til ${u?.name || 'personen'}.`); } catch (er) { flash(er.status === 404 ? 'Serveren har ikke dette ennå.' : er.message); } return true; }
-  if ((b = x('[data-as44-reset]'))) { e.preventDefault(); const u = (OW.users ?? []).find((y) => y.id === b.dataset.as44Reset); if (!confirm(`Tilbakestille oppsettet til ${u?.name || 'personen'} til standard?`)) return true; try { await j(`/api/users/${encodeURIComponent(b.dataset.as44Reset)}/layout/reset`, { method: 'POST', body: '{}' }); flash('Tilbakestilt til standard.'); } catch (er) { flash(er.status === 404 ? 'Serveren har ikke dette ennå.' : er.message); } return true; }
-  if ((b = x('[data-as44-lock]'))) { e.preventDefault(); const lock = b.dataset.locked !== '1'; try { await j(`/api/users/${encodeURIComponent(b.dataset.as44Lock)}/layout/lock`, { method: 'PUT', body: JSON.stringify({ locked: lock }) }); LK.set(b.dataset.as44Lock, lock); flash(lock ? 'Oppsettet er låst. Bare du kan endre det.' : 'Personen kan endre oppsettet selv igjen.'); render?.(); } catch (er) { flash(er.status === 404 ? 'Serveren har ikke dette ennå.' : er.message); } return true; }
+  if ((b = x('[data-as44-copy]'))) { e.preventDefault(); const u = (OW.users ?? []).find((y) => y.id === b.dataset.as44Copy); if (!confirm(`Kopiere oppsettet ditt (Oversikt, fanelinje og Mer) til ${u?.name || 'personen'}? Det som er der nå, erstattes.`)) return true; try { await j(`/api/users/${encodeURIComponent(b.dataset.as44Copy)}/layout/copy-from-me`, { method: 'POST', body: '{}' }); flash(`Oppsettet ditt er kopiert til ${u?.name || 'personen'}.`); } catch (er) { flash(er.message); } return true; }
+  if ((b = x('[data-as44-reset]'))) { e.preventDefault(); const u = (OW.users ?? []).find((y) => y.id === b.dataset.as44Reset); if (!confirm(`Tilbakestille oppsettet til ${u?.name || 'personen'} til standard?`)) return true; try { await j(`/api/users/${encodeURIComponent(b.dataset.as44Reset)}/layout/reset`, { method: 'POST', body: '{}' }); flash('Tilbakestilt til standard.'); } catch (er) { flash(er.message); } return true; }
+  if ((b = x('[data-as44-lock]'))) { e.preventDefault(); const lock = b.dataset.locked !== '1'; try { await j(`/api/users/${encodeURIComponent(b.dataset.as44Lock)}/layout/lock`, { method: 'PUT', body: JSON.stringify({ locked: lock }) }); LK.set(b.dataset.as44Lock, lock); flash(lock ? 'Oppsettet er låst. Bare du kan endre det.' : 'Personen kan endre oppsettet selv igjen.'); render?.(); } catch (er) { flash(er.message); } return true; }
   return false;
 }
 export { asState };

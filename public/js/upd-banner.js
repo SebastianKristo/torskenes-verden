@@ -5,7 +5,7 @@
 // - «Oppdater nå», «Prøv igjen» og «Gjenopprett» åpner et passord-ark. Start: POST …/start {password}.
 //   Gjenopprett: POST /api/system/update/rollback {password} (updateren laster ned forrige vellykkede versjon; data beholdes).
 // - ✕ på Dashboard skjuler banneret i 24 t (localStorage «hl_upd_hide»). Under og etter oppdatering vises det alltid.
-// - Fremdrift: status.steps [{key, state}] og status.pct fra SERVER30; eldre server: anslag ut fra steget.
+// - Fremdrift: status.steps [{key, state}] og status.pct fra SERVER30; mangler de: anslag ut fra steget.
 // Prompt 31: navnet er Nordlys OS («Nordlys 4.22 er klar»). Trykk på kortet åpner Innstillinger → System; knappene
 // (Oppdater nå, Hva er nytt, ✕, Ferdig) gjør fortsatt sin egen handling. Oppdater nå starter uten passord, med mindre
 // admin har slått på «Krev passord for å oppdatere» (da passordarket).
@@ -70,7 +70,7 @@ async function loadNotes() {
   try {
     const r = await fetch('/api/system/version', { cache: 'no-store', credentials: 'same-origin' });
     if (r.ok) { const j = await r.json(); if (Array.isArray(j?.notes) && j.notes.length) { B.notes = j.notes.map(String); return; } }
-  } catch { /* eldre server */ }
+  } catch { /* uten nett: endringene fra updateren */ }
   B.notes = (U.d?.changes ?? []).flatMap((c) => c.items ?? []).slice(0, 8);
 }
 
@@ -134,7 +134,7 @@ async function rollback(password) {
   const r = await fetch('/api/system/update/rollback', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(password ? { password } : {}) });
   const j = await r.json().catch(() => ({}));
   if (!password && (r.status === 401 || r.status === 403) && /passord|password/i.test(j.error ?? '')) throw Object.assign(new Error(''), { needpw: true });
-  if (!r.ok) throw new Error(r.status === 404 ? 'Serveren har ikke gjenoppretting ennå. Oppdater Homelab først, eller kjør update.sh på serveren.' : j.error || `Serveren svarte ${r.status}`);
+  if (!r.ok) throw new Error(j.error || `Serveren svarte ${r.status}`);
   U.jobId = j.id ?? null;
   U.d = { ...(U.d ?? {}), status: { ...(U.d?.status ?? {}), id: j.id, state: 'downloading', step: 'downloading', error: null, startedAt: new Date().toISOString(), finishedAt: null } };
   watch();

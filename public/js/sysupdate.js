@@ -1,6 +1,6 @@
 // Oppdatering av hele systemet fra nettsiden (Innstillinger → System → Oppdatering). Felles logikk for web og PWA;
 // hver klient tegner selv. API: GET /api/system/update, POST …/check, POST …/start {password}, GET …/log.
-// - 404 (eldre server uten API-et) → «ikke tilgjengelig». available:false → updater-containeren kjører ikke.
+// - Feil → «ikke tilgjengelig» med feilen fra serveren. available:false → updater-containeren kjører ikke.
 // - Under en jobb hentes status hvert 2. s. Når serveren er nede (restart), pinges /healthz hvert 3. s; når den
 //   svarer og jobben er ferdig (eller ny versjon er installert), lastes siden på nytt.
 import { reloadOnce } from './upd-reload.js';
@@ -10,7 +10,7 @@ export const UPD_CMD = 'bash -c "$(curl -fsSL https://raw.githubusercontent.com/
 export const STEPS = [['downloading', 'Laster ned'], ['building', 'Bygger'], ['restarting', 'Starter på nytt'], ['done', 'Ferdig']];
 const RUNNING = ['downloading', 'building', 'restarting'];
 
-/** st: 'idle' (ikke hentet) | 'loading' | 'ok' | 'missing' (API finnes ikke) | 'forbidden' | 'error' */
+/** st: 'idle' (ikke hentet) | 'loading' | 'ok' | 'forbidden' | 'error' */
 export const U = { st: 'idle', d: null, err: '', checking: false, sheet: false, pw: '', starting: false, startErr: '', waiting: false, waitSince: 0, logOpen: false, log: null, prev: null, jobId: null, copied: false };
 const subs = new Set();
 export const onUpdate = (fn) => { subs.add(fn); return () => subs.delete(fn); };
@@ -60,8 +60,7 @@ export function loadUpdate() {
   loadP = (async () => {
     try { U.d = await req(''); U.st = 'ok'; U.err = ''; }
     catch (e) {
-      if (e.status === 404 || e.status === 405) U.st = 'missing';
-      else if (e.status === 401 || e.status === 403) U.st = 'forbidden';
+      if (e.status === 401 || e.status === 403) U.st = 'forbidden';
       else { U.st = U.d ? 'ok' : 'error'; U.err = e.message; }
     }
     loadP = null;
@@ -73,7 +72,7 @@ export function loadUpdate() {
 
 export async function checkUpdate() {
   U.checking = true; U.err = ''; emit();
-  try { await req('/check', { method: 'POST' }); } catch (e) { if (e.status === 404) U.st = 'missing'; else U.err = e.message; }
+  try { await req('/check', { method: 'POST' }); } catch (e) { U.err = e.message; }
   U.checking = false;
   await loadUpdate();
 }
@@ -82,8 +81,7 @@ export function openSheet(on = true) { U.sheet = on; U.pw = ''; U.startErr = '';
 
 /**
  * Starter oppdateringen. Prompt 31: passord bare når admin har slått på «Krev passord for å oppdatere»
- * (settings.require_password). opt.allowEmpty = start uten passord; svarer serveren at passord kreves (eldre server
- * eller bryteren er på), returneres 'needpw' så klienten kan vise passordarket.
+ * (settings.require_password). opt.allowEmpty = start uten passord; svarer serveren at passord kreves (bryteren er på), returneres 'needpw' så klienten kan vise passordarket.
  */
 export async function startUpdate(password = U.pw, opt = {}) {
   if (!password && !opt.allowEmpty) { U.startErr = 'Skriv inn passordet ditt.'; emit(); return false; }
@@ -102,7 +100,7 @@ export async function startUpdate(password = U.pw, opt = {}) {
   } catch (e) {
     U.starting = false;
     if (!password && (e.status === 401 || e.status === 403) && /passord|password/i.test(e.message)) { U.startErr = ''; emit(); return 'needpw'; }
-    U.startErr = e.status === 404 ? 'Serveren har ikke oppdatering fra appen ennå.' : e.message;
+    U.startErr = e.message;
     emit(); return false;
   }
 }
@@ -187,7 +185,7 @@ export async function control46(action) {
     const r = await req(`/${action}`, { method: 'POST', json: {} });
     U.ctl = { busy: null, msg: r?.message ?? (action === 'prune' ? 'Rydder …' : action === 'abort' ? 'Avbryter …' : 'Prøver på nytt …'), err: '' };
     if (r?.id && action === 'retry' && r.mode !== 'step') U.jobId = r.id;
-  } catch (e) { U.ctl = { busy: null, msg: '', err: e.status === 404 ? 'Serveren støtter ikke dette ennå. Oppdater Homelab-serveren.' : e.message }; }
+  } catch (e) { U.ctl = { busy: null, msg: '', err: e.message }; }
   emit();
   await loadUpdate();
   if (running()) watch();

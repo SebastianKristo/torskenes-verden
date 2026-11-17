@@ -11,17 +11,17 @@ const DOM = { posten: 'posten.no', 'postnord-number': 'postnord.no', postnord: '
 const COL = { ok: 'var(--ds-success)', reauth: 'var(--ds-warning)', compat: 'var(--ds-danger)', error: 'var(--ds-danger)', off: 'var(--ds-text-secondary)' };
 
 export async function loadTrack46(rerender, force = false) {
-  if (T.loading || (T.d && !force) || T.err === 404) return;
+  if (T.loading || ((T.d || T.err) && !force)) return; // en feil vises til neste lasting (ingen ny runde ved hver tegning)
   T.loading = true;
-  try { T.d = await api('/tracking/sources46'); T.err = null; } catch (e) { T.err = e.status ?? e.message; T.d = null; }
+  try { T.d = await api('/tracking/sources46'); T.err = null; } catch (e) { T.err = e.message; T.d = null; }
   T.loading = false;
   rerender?.();
 }
 
-/** Gruppen på Integrasjoner-siden (null når serveren ikke har kontoene ennå). */
+/** Gruppen på Integrasjoner-siden (null før data, feilen fra serveren hvis lastingen feilet). */
 export function trackGroup46(row, group) {
   const d = T.d;
-  if (!d?.sources?.length) return null;
+  if (!d?.sources?.length) return T.err ? group('Sporing · kontoer', [row({ t: 'Fikk ikke hentet sporingskontoene', s: T.err, k: 'sporing posten bring postnord konto' })]) : null;
   const rows = d.sources.map((s) => row({ t: s.name, s: s.text, k: 'sporing posten bring postnord konto logg inn pakker', logo: DOM[s.id] ?? null, ini: s.name,
     v: s.kind === 'number' ? 'Alltid på' : s.connected ? (s.state === 'ok' ? 'Tilkoblet' : s.state === 'reauth' ? 'Logg inn' : 'Feil') : 'Av', vc: COL[s.kind === 'number' ? 'ok' : s.connected ? s.state : 'off'],
     btn: s.kind === 'number' ? 'Vis' : s.connected ? 'Endre' : 'Logg inn', go: `int|trk46:${s.id}` }));
@@ -61,7 +61,7 @@ export async function trackClick46(e, render) {
       const r = await api(`/tracking/accounts/${encodeURIComponent(id)}/start`, { method: 'POST', json: { brand } });
       T.start[id] = r; say(id, 'Logg inn i fanen som åpnet seg, og lim inn adressen under.');
       if (w && r.authorizeUrl) { try { w.opener = null; } catch { /* */ } w.location.href = r.authorizeUrl; } else if (r.authorizeUrl) window.open(r.authorizeUrl, '_blank', 'noopener');
-    } catch (er) { try { w?.close(); } catch { /* */ } say(id, er.status === 404 ? 'Serveren støtter ikke kontoinnlogging ennå' : er.message, false); }
+    } catch (er) { try { w?.close(); } catch { /* */ } say(id, er.message, false); }
     delete T.busy[id]; render(); return true;
   }
   if ((b = e.target.closest('[data-trk46-sync]'))) {

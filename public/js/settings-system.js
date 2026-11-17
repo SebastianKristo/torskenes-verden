@@ -44,7 +44,7 @@ export function loadSystem(onChange) {
   if (admin()) { loadUpdate(); loadVersion(); settings30(); }
 }
 
-/** Kreves passord? Serveren sier det i settings.require_password (eldre server: aldri spurt, 403 gir passordarket). */
+/** Kreves passord? Serveren sier det i settings.require_password (403 ved start gir også passordarket). */
 export const requirePw = () => SET.require_password === true || U.d?.settings?.require_password === true;
 
 /** Tilstanden siden viser. */
@@ -124,7 +124,7 @@ function notesHtml(ph, d) {
 }
 
 // Prompt 36: TIDLIGERE VERSJONER. GET /api/system/changelog?limit=20&before=<v> → {items:[{version, date, notes[], installedAt?, failed?}], more}.
-// Eldre server: changes fra /api/system/update. Én åpen om gangen, «Vis flere» henter neste side.
+// Feiler den (f.eks. uten nett): changes fra /api/system/update. Én åpen om gangen, «Vis flere» henter neste side.
 const HI = { items: null, more: false, open: '', busy: false, key: '', err: '' };
 const cleanNotes = (a) => (a ?? []).map((x) => String(x ?? '').trim()).filter((x) => x && !/^[^.!?]{1,60}:$/.test(x) && !/^[-–:.\s]*$/.test(x));
 function loadHist(before, more = false) {
@@ -209,7 +209,6 @@ function sheetHtml() {
 export function systemView(h) {
   if (!admin()) return { groups: [h.group('Oppdatering', [h.row({ t: 'Bare for administrator', s: 'Oppdatering av serveren gjøres av en administrator.' })])] };
   const d = U.d, ph = phase(), st = settings30();
-  if (U.st === 'missing') return { html: heroHtml('error', null) + setupHtml('Serveren har ikke oppdatering fra appen ennå.') };
   if (U.st === 'forbidden') return { groups: [h.group('Oppdatering', [h.row({ t: 'Oppdatering fra appen', v: 'Ikke tilgjengelig', s: 'Bare administrator kan se og starte oppdateringer.' })])] };
   // Prompt 39: «Varsle om nye versjoner» ligger under Varsler (updNotifyRow).
   // Prompt 65 (System.dc.html): nordlys-hero, oppdater-knappen og «Krev passord» øverst; resten i faner under.
@@ -255,16 +254,17 @@ export function updNotifyRow(h) {
   return h.row({ t: 'Varsle om nye versjoner', k: 'varsel push banner nordlys os versjon oppdatering', s: 'Nordlys OS · banner på Oversikt og push', tog: st.notify_updates !== false, act: 'data-upd-set="notify_updates"', disabled: !st.loaded });
 }
 
-/* Brukervalg for oppdatering (GET/PUT /api/system/update/settings). Eldre server: fra U.d.settings, ellers standard. */
+/* Brukervalg for oppdatering (GET/PUT /api/system/update/settings). Fra U.d.settings når statusen har dem, ellers standard til svaret kommer. */
 const SET = { auto_update: false, notify_updates: true, require_password: false, loaded: false, loading: false, err: '' };
 function settings30() {
   if (!SET.loaded && !SET.loading) {
     if (U.d?.settings) { Object.assign(SET, U.d.settings); SET.loaded = true; }
     else {
       SET.loading = true;
-      fetch('/api/system/update/settings', { credentials: 'same-origin', cache: 'no-store' }).then((r) => (r.ok ? r.json() : null))
-        .then((j) => { if (j) Object.assign(SET, j); SET.loaded = !!j; if (!j) SET.err = 'Serveren har ikke disse valgene ennå.'; })
-        .catch(() => { SET.err = 'Fikk ikke hentet valgene.'; }).finally(() => { SET.loading = false; rerender(); });
+      fetch('/api/system/update/settings', { credentials: 'same-origin', cache: 'no-store' })
+        .then(async (r) => (r.ok ? r.json() : Promise.reject(new Error((await r.json().catch(() => null))?.error || `Serveren svarte ${r.status}`))))
+        .then((j) => { Object.assign(SET, j ?? {}); SET.loaded = true; })
+        .catch((e) => { SET.err = `Fikk ikke hentet valgene: ${e.message}`; SET.loaded = true; }).finally(() => { SET.loading = false; rerender(); });
     }
   }
   return SET;
@@ -277,7 +277,6 @@ async function saveSetting(k) {
     const j = await r.json().catch(() => null);
     if (!r.ok) throw new Error(j?.error || `Serveren svarte ${r.status}`);
     Object.assign(SET, j ?? {});
-    if (k === 'require_password' && !(j && 'require_password' in j)) { SET[k] = !v; throw new Error('Serveren kjenner ikke dette valget ennå. Oppdater Nordlys først.'); }
     if (U.d) U.d.settings = { ...(U.d.settings ?? {}), ...SET };
   } catch (err) { SET[k] = !v; SET.err = err.message; }
   rerender();

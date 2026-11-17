@@ -31,7 +31,7 @@ export async function loadNotify(onChange) {
   const [n, t, live, me] = await Promise.all([api('/me/notify').catch((e) => ({ __err: e })), api('/tracking').catch(() => null), api('/live/innstillinger').catch(() => null), api('/me').catch(() => null)]);
   S.live = live && typeof live === 'object' ? live : null;
   S.admin = (me?.me ?? me)?.role === 'admin';
-  if (n?.__err) { S.n = { ...DEF, groups: { ...DEF.groups } }; S.err = /404|finnes ikke|Not Found/i.test(n.__err.message) ? 'Serveren lagrer ikke varselinnstillinger ennå. Valgene gjelder bare denne nettleseren til Homelab er oppdatert.' : n.__err.message; }
+  if (n?.__err) { S.n = { ...DEF, groups: { ...DEF.groups } }; S.err = n.__err.message; }
   else { S.n = { ...DEF, ...n, groups: { ...DEF.groups, ...(n.groups ?? {}) } }; S.err = null; }
   S.pkg = t?.prefs ?? null;
   S.push = await pushState().catch(() => null);
@@ -42,7 +42,7 @@ async function save(patch) {
   Object.assign(S.n, patch);
   rerender();
   try { const r = await api('/me/notify', { method: 'PUT', json: patch }); if (r && typeof r === 'object') S.n = { ...S.n, ...r, groups: { ...S.n.groups, ...(r.groups ?? {}) } }; S.msg = ''; }
-  catch (e) { S.msg = /404|Not Found/i.test(e.message) ? 'Lagret bare i denne økten (serveren mangler varsel-API-et).' : e.message; }
+  catch (e) { S.msg = e.message; }
   rerender();
 }
 

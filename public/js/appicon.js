@@ -59,12 +59,12 @@ export async function applyAppIdentity(v = {}) {
   document.dispatchEvent(new CustomEvent('hl:app', { detail: { ...app } }));
 }
 
-/** Henter navn og ikon fra serveren. Eldre servere uten /api/app beholder «Homelab» og standardikonet. */
+/** Henter navn og ikon fra serveren. Uten svar beholdes «Homelab» og standardikonet. */
 export async function loadAppIdentity() {
   try {
     const r = await fetch('/api/app', { credentials: 'same-origin' });
     if (r.ok) { const j = await r.json(); await applyAppIdentity({ name: j.name, icon: j.icon }); return { ...app }; }
-  } catch { /* eldre server */ }
+  } catch { /* uten nett */ }
   return { ...app };
 }
 
@@ -72,7 +72,7 @@ export async function loadAppIdentity() {
 export async function saveAppIdentity(patch) {
   const r = await fetch('/api/app', { method: 'PUT', credentials: 'same-origin', headers: { 'content-type': 'application/json' }, body: JSON.stringify(patch) });
   const j = await r.json().catch(() => ({}));
-  if (!r.ok) throw new Error(j.error || (r.status === 404 ? 'Serveren støtter ikke appnavn ennå. Oppdater Homelab.' : `Serveren svarte ${r.status}`));
+  if (!r.ok) throw new Error(j.error || `Serveren svarte ${r.status}`);
   await applyAppIdentity({ name: j.name ?? patch.name, icon: j.icon ?? patch.icon });
   return { ...app };
 }

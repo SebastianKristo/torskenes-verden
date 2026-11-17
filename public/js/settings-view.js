@@ -165,7 +165,7 @@ function profileRow37() {
   const p = myProfile();
   return row({ t: 'Profil i husstanden', k: 'profil koble husstand onboarding', s: p ? 'Posisjon, delte lister, abonnementer og kalendere følger profilen.' : 'Koble brukeren til personen din i husstanden.', v: p ? p.name : 'Ikke koblet', vc: p ? undefined : 'var(--ds-warning)', btn: p ? 'Bytt' : 'Koble', act: 'data-onb37' });
 }
-/* Prompt 38: antall økter (GET /api/me/sessions → {count} eller {sessions:[…]}); eldre server (404) = uten antall. */
+/* Prompt 38: antall økter (GET /api/me/sessions → {count} eller {sessions:[…]}); feil = uten antall. */
 let sessCount38 = null, sessAt38 = 0;
 function loadSessions38() {
   if (Date.now() - sessAt38 < 30_000) return;
@@ -1259,12 +1259,7 @@ export function bindSettings() {
       if (!files.length) return;
       const fd = new FormData(); files.forEach((f) => fd.append('file', f));
       try {
-        const r = await api('/background/oslo', { method: 'POST', body: fd }).catch(async (err) => {
-          if (err.status !== 404) throw err;
-          // Eldre server: ett og ett bilde til de gamle Oslo-plassene.
-          for (const f of files) { const one = new FormData(); one.append('file', f); store.me.bgCustom = (await api('/backgrounds/oslo', { method: 'POST', body: one })).bgCustom; }
-          return { added: files, items: null };
-        });
+        const r = await api('/background/oslo', { method: 'POST', body: fd });
         if (r.items) osloList = r.items;
         bgMsg = `${r.added?.length ?? files.length} bilde${(r.added?.length ?? files.length) === 1 ? '' : 'r'} lagt til${r.errors?.length ? ` · ${r.errors.join(', ')}` : ''}`;
         if (bgState().type === 'oslo') { bgPrevAt = 0; document.dispatchEvent(new Event('hl:bg')); }

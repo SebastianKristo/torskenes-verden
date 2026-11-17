@@ -50,7 +50,7 @@ function gscGuideHtml() {
   </div></div>`;
 }
 async function loadGsc() {
-  try { S.gsc = await api('/domains/gsc/sites'); S.gscErr = ''; } catch (e) { S.gsc = e.status === 404 ? { missing: true } : null; S.gscErr = e.status === 404 ? '' : e.message; }
+  try { S.gsc = await api('/domains/gsc/sites'); S.gscErr = ''; } catch (e) { S.gsc = null; S.gscErr = e.message; }
   try { S.imp = await api('/domains/import'); } catch { S.imp = null; }
   // Prompt 45: autentisering (OAuth / servicekonto), forsinkelse og dataState fra GET /api/gsc.
   try { S.gscCfg = await api('/gsc'); } catch { S.gscCfg = null; }
@@ -59,7 +59,7 @@ async function loadGsc() {
 /* Prompt 45 (claude-code-search-console-statistikk.md): servicekonto som alternativ til OAuth (bare admin, nøkkelen blir på serveren). */
 function saHtml() {
   const C = S.gscCfg;
-  if (!C || S.gsc?.missing) return '';
+  if (!C) return '';
   const sa = C.serviceAccount;
   const row = sa ? `<div class="sg-row">${domIc40('gsc')}<span class="sg-txt"><b>Servicekonto</b><span class="mono">${esc(sa.email ?? '')}${sa.projectId ? ` · ${esc(sa.projectId)}` : ''}</span></span><button type="button" class="sg-pill danger" data-dom45-saoff>Fjern</button></div>`
     : `<label class="sg-row gsc45-sa">${domIc40('gsc')}<span class="sg-txt"><b>Bruk servicekonto i stedet</b><span>Last opp JSON-nøkkelfila fra Google Cloud. Legg så til e-posten til servicekontoen som bruker på eiendommen i Search Console.</span></span><span class="sg-btn2">${S.saBusy ? 'Laster opp …' : 'Velg fil'}</span><input type="file" accept="application/json,.json" data-dom45-sa hidden${S.saBusy ? ' disabled' : ''}></label>`;
@@ -72,7 +72,7 @@ async function uploadSa(file) {
     const json = await file.text();
     const r = await api('/gsc/service-account', { method: 'POST', json: { json } });
     S.saMsg = r?.message || `Servicekontoen ${r?.email ?? ''} ser ${(r?.sites ?? []).length} eiendommer.`;
-  } catch (e) { S.saErr = e.status === 404 ? 'Serveren støtter ikke servicekonto ennå. Oppdater Homelab.' : e.message; }
+  } catch (e) { S.saErr = e.message; }
   S.saBusy = false;
   await loadGsc();
 }
@@ -81,7 +81,6 @@ function gscHtml() {
   const G = S.gsc, q = '<button type="button" class="cfg-qbtn" data-dom-gscguide aria-label="Slik kobler du til Search Console" title="Slik kobler du til Search Console">?</button>';
   let box;
   if (!G) box = `<div class="sg-row"><span class="sg-txt"><span>${S.gscErr ? esc(S.gscErr) : 'Henter …'}</span></span></div>`;
-  else if (G.missing) box = '<div class="sg-row"><span class="sg-txt"><b>Ikke tilgjengelig ennå</b><span>Serveren har ikke Search Console-oppsettet. Oppdater Homelab.</span></span></div>';
   else if (!G.connected) box = `<div class="sg-row">${domIc40('gsc')}<span class="sg-txt"><b>Klikk, visninger og søkeord fra Google</b><span>${G.configured === false ? 'Google-appen er ikke satt opp på serveren (Tilkoblinger → Google).' : 'Kun lesetilgang · webmasters.readonly'}</span></span><button type="button" class="sg-btn2 gsc39-g" data-dom-gscconnect>${GLOGO}Koble til med Google</button></div>`;
   else {
     // Prompt 43: «Test» per eiendom → GET /api/domains/:domain/gsc/test {siteUrl, permissionLevel, scope, scopeOk, lastFetch, dataTo, rows28, ok, error}.
@@ -136,7 +135,7 @@ async function testToken() {
     const missing = (r.permissions ?? []).filter((p) => !p.ok).map((p) => p.name);
     S.test = { ...r, message: r.message || (r.ok ? `✓ Tokenet virker · ${n} av ${tot} tillatelser` : r.active === false ? '✕ Cloudflare godtok ikke tokenet' : `Tokenet virker, men mangler ${missing.join(', ')}`) };
   } catch (e) {
-    S.test = { ok: false, message: e.status === 404 ? 'Serveren kan ikke teste tokenet ennå. Oppdater Homelab.' : e.message };
+    S.test = { ok: false, message: e.message };
   }
   rerender();
 }
@@ -203,7 +202,7 @@ export async function domainsClick(e) {
   if (gt) {
     e.preventDefault(); const domain = gt.dataset.dom43Gtest; S.gscTest = { domain, busy: true }; rerender();
     try { S.gscTest = { domain, res: await api(`/domains/${encodeURIComponent(domain)}/gsc/test`) }; }
-    catch (er) { S.gscTest = { domain, err: er.status === 404 ? 'Serveren har ikke test for Search Console ennå.' : er.message }; }
+    catch (er) { S.gscTest = { domain, err: er.message }; }
     rerender(); return true;
   }
   const gu = e.target.closest('[data-dom-gscuse]');

@@ -4,14 +4,14 @@
 //   Apple Health · Health Connect (leses av Homelab-appen på telefonen; status fra enhetene dine i GET /api/family)
 //   Home Assistant · Mobilapp → underside: HA-enhetene, koble til person, velg sensorer, Lagre (første synk henter 30 dager).
 //   Hva deles med familien → skritt, søvn, puls og aktivitet (PUT /api/family/me {shareHealth}).
-// API (SERVER42, tåles 404):
+// API (SERVER42; feil fra serveren vises på siden):
 //   GET /api/family/health/ha → {connected, error?, message?, devices:[{id, name, model, platform:'android'|'ios', entities, sensors:[{key, entity}],
 //                                 personId|null, suggestedPersonId?, selected:[key], lastSeen?, unavailableSince?}]}
 //   PUT /api/family/health/ha {devices:[{id, personId, sensors:[key]}]} → samme som GET
 import { api, esc } from './util.js';
 import { toast } from './toast.js';
 
-const F = { fam: null, ha: null, haMissing: false, haErr: '', loading: null, draft: null, busy: false };
+const F = { fam: null, ha: null, haErr: '', loading: null, draft: null, busy: false };
 const SENS = {
   steps: 'Skritt', heart_rate: 'Puls', resting_heart_rate: 'Hvilepuls', sleep_duration: 'Søvn', active_calories_burned: 'Aktive kalorier', total_calories_burned: 'Kalorier totalt',
   distance: 'Distanse', floors_climbed: 'Etasjer', floors_ascended: 'Etasjer opp', floors_descended: 'Etasjer ned', weight: 'Vekt', body_fat: 'Fettprosent', oxygen_saturation: 'Oksygenmetning',
@@ -49,8 +49,8 @@ export function loadFam42(onChange) {
   F.loading = (async () => {
     const [fam, ha] = await Promise.all([api('/family').catch(() => null), api('/family/health/ha').then((r) => ({ r })).catch((e) => ({ e }))]);
     F.fam = fam;
-    if (ha.e) { F.haMissing = ha.e.status === 404 || ha.e.status === 405; F.haErr = F.haMissing ? '' : ha.e.message; F.ha = null; }
-    else { F.ha = ha.r; F.haMissing = false; F.haErr = ''; }
+    if (ha.e) { F.haErr = ha.e.message; F.ha = null; }
+    else { F.ha = ha.r; F.haErr = ''; }
     F.loading = null;
     onChange?.();
   })();
@@ -74,7 +74,7 @@ export function fam42View(H, sub) {
   if (!F.fam && !F.loading) loadFam42();
   const ap = platformStatus('apple'), hc = platformStatus('hc');
   const devs = devicesOf(F.ha), linked = devs.filter((d) => d.personId).length;
-  const haS = F.haMissing ? 'Serveren har ikke Home Assistant-helse ennå' : F.haErr ? F.haErr : !F.ha ? 'Henter …' : F.ha.connected === false
+  const haS = F.haErr ? F.haErr : !F.ha ? 'Henter …' : F.ha.connected === false
     ? (F.ha.error === 'token' ? 'Koble til Home Assistant på nytt (tokenet er utløpt)' : F.ha.message || 'Home Assistant er ikke satt opp under Tilkoblinger')
     : `Hent helsesensorer fra HA Companion · ${devs.length} ${devs.length === 1 ? 'enhet' : 'enheter'}`;
   const sh = F.fam?.me?.shareHealth ?? {};
@@ -102,7 +102,6 @@ function haView(H) {
   const { note } = H;
   if (!F.fam && !F.loading) loadFam42();
   const base = { title: 'Home Assistant', sub: 'Helse fra mobilappen · les skritt, puls og søvn fra Home Assistant-appen på telefonene. Hver person godkjenner delingen første gang.' };
-  if (F.haMissing) return { ...base, html: `<div class="sg-empty">Serveren har ikke Home Assistant-helse ennå. Oppdater Homelab, så vises HA-enhetene her.</div>` };
   if (F.haErr) return { ...base, html: `<div class="sg-empty">${esc(F.haErr)}</div>` };
   if (!F.ha) return { ...base, html: '<div class="sg-empty">Henter enhetene fra Home Assistant …</div>' };
   if (F.ha.connected === false) return { ...base, html: `<div class="sg-empty">${esc(F.ha.error === 'token' ? 'Tokenet til Home Assistant er utløpt. Koble til Home Assistant på nytt under Tilkoblinger.' : F.ha.message || 'Home Assistant er ikke satt opp. Legg inn adresse og token under Tilkoblinger.')}</div><button type="button" class="sbtn" data-go="int">Åpne Integrasjoner</button>` };
@@ -177,7 +176,7 @@ export async function fam42Click(e, render) {
     const devices = Object.entries(F.draft ?? {}).map(([id, d]) => ({ id, personId: d.personId || null, sensors: d.personId ? d.sensors : [] }));
     F.busy = true; render();
     try { F.ha = await api('/family/health/ha', { method: 'PUT', json: { devices } }); F.draft = null; F.saved = true; toast('Lagret. Helsedata hentes fra Home Assistant.'); if (F.view === 'all') await reloadHa('all'); }
-    catch (er) { toast(er.status === 404 ? 'Serveren har ikke Home Assistant-helse ennå' : er.message); }
+    catch (er) { toast(er.message); }
     F.busy = false; render();
     return true;
   }

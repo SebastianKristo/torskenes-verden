@@ -25,14 +25,14 @@ async function j(path, opt = {}, raw = false) {
 export async function startAs(u) {
   const name = u.name || u.username || 'brukeren';
   let snap = null;
-  try { snap = await j(`/api/users/${encodeURIComponent(u.id)}/layout`, {}, true); } catch { /* eldre server */ }
+  try { snap = await j(`/api/users/${encodeURIComponent(u.id)}/layout`, {}, true); } catch { /* uten oppsettet: angre-knappen får ikke bildet */ }
   try {
     const r = await j('/api/admin/impersonate', { method: 'POST', body: JSON.stringify({ userId: u.id, web: true }) }, true);
     ss(KEY, { id: u.id, name: r?.user?.name ?? name, color: r?.user?.color ?? u.color ?? null, token: r?.token ?? r?.accessToken ?? null, cookie: true, exp: r?.expiresAt ?? null, snap, n: 0, at: Date.now(), admin: r?.actor?.name ?? null });
     location.replace('/#/oversikt');
     setTimeout(() => location.reload(), 30);
   } catch (e) {
-    alert(e.status === 404 ? 'Serveren har ikke «Logg inn som» ennå. Oppdater Nordlys først.' : e.status === 403 ? `Du kan ikke logge inn som ${name}.` : e.message);
+    alert(e.status === 403 ? `Du kan ikke logge inn som ${name}.` : e.message);
   }
 }
 
@@ -40,7 +40,7 @@ export async function startAs(u) {
 export async function stopAs(reason) {
   const a = asState(); if (!a) return;
   let r = null;
-  try { r = await j('/api/admin/impersonate/exit', { method: 'POST', body: '{}', ...(a.token ? { headers: { Authorization: `Bearer ${a.token}` } } : {}) }, true); } catch { /* 404 eller utløpt: lokalt er nok */ }
+  try { r = await j('/api/admin/impersonate/exit', { method: 'POST', body: '{}', ...(a.token ? { headers: { Authorization: `Bearer ${a.token}` } } : {}) }, true); } catch { /* utløpt eller uten nett: lokalt er nok */ }
   ss(KEY, null);
   ss(OUT, { id: a.id, name: a.name, n: r?.changes ?? a.n ?? 0, snap: a.snap, undo: r?.undo ?? null, at: Date.now(), reason: reason ?? null });
   location.replace('/#/oversikt');
@@ -99,7 +99,7 @@ export function initAs() {
       if (!e.target.closest('[data-as44-undo]')) return;
       clearTimeout(kill);
       try { if (o.undo?.path) await j(o.undo.path.startsWith('/api') ? o.undo.path : `/api${o.undo.path}`, { method: o.undo.method ?? 'POST', body: JSON.stringify(o.undo.body ?? {}) }); else await j(`/api/users/${encodeURIComponent(o.id)}/layout`, { method: 'PUT', body: JSON.stringify(o.snap) }); t.firstElementChild.textContent = `Endringene for ${o.name} er rullet tilbake.`; }
-      catch (er) { t.firstElementChild.textContent = er.status === 404 ? 'Serveren har ikke angring ennå.' : er.message; }
+      catch (er) { t.firstElementChild.textContent = er.message; }
       e.target.remove(); setTimeout(() => t.remove(), 2500);
     });
   }

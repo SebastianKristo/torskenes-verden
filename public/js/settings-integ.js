@@ -2,7 +2,6 @@
 // (Google Kalender, AI, Bank, IMAP, Mybring, PostNord, ParcelsApp, Finn, Ikoner …) vises under «Flere integrasjoner»,
 // med status, felt som kan redigeres, Test tilkobling og Fjern verdi. Hemmeligheter vises bare som «•••• lagret».
 // ISO2: alle får sine egne personlige integrasjoner (scope 'personal'); servergruppene (scope 'server') kommer bare til admin.
-// Eldre server (404): ingenting legges til, og alt annet er som før.
 import { api, esc } from './util.js';
 
 let list = null, loading = false;

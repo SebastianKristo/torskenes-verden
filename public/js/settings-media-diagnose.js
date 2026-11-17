@@ -12,7 +12,7 @@ const IC = { ok: '✓', warn: '!', fail: '✕', skip: '–' };
 async function j(path, opt = {}) {
   const r = await fetch(path, { credentials: 'same-origin', cache: 'no-store', ...opt, headers: { ...(opt.body ? { 'Content-Type': 'application/json' } : {}) } });
   const d = r.headers.get('content-type')?.includes('json') ? await r.json().catch(() => null) : null;
-  if (!r.ok) throw Object.assign(new Error(d?.error || (r.status === 404 ? 'Serveren har ikke diagnostikk ennå – oppdater Homelab.' : `Serveren svarte ${r.status}`)), { status: r.status });
+  if (!r.ok) throw Object.assign(new Error(d?.error || `Serveren svarte ${r.status}`), { status: r.status });
   return d;
 }
 async function run(render) {

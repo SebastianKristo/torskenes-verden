@@ -22,7 +22,7 @@ function load(force = false) {
   if (O.loading || (!force && O.s && Date.now() - O.at < 30_000)) return;
   O.loading = true;
   j('/summary').then((s) => { O.s = s; O.err = ''; })
-    .catch((e) => { O.err = e.status === 404 ? 'Serveren har ikke backup og staging ennå. Oppdater Nordlys.' : e.message; })
+    .catch((e) => { O.err = e.message; })
     .finally(() => { O.loading = false; O.at = Date.now(); schedulePoll(); R(); });
 }
 /** Mens noe kjører (backup, gjenopprettingstest, staging): hent status hvert 3. s. */

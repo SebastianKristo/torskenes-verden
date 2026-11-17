@@ -3,7 +3,7 @@
 // GJENOPPRETT. API (server/system-backup.js): GET/PUT /api/backup/settings, POST /api/backup/run, GET /api/backup/status,
 // GET /api/backup/list, POST /api/backup/key, POST /api/backup/restore {id, modules, password}, GET /api/backup/:id/download.
 // Prompt 30: HVOR → «SMB / nettverksdisk» åpner veiviseren (smb-wizard.js, /api/smb/*); av/på via PUT target.smb.enabled.
-// 404 (eldre server) → «ikke tilgjengelig». Under en kjøring hentes status hvert 1,5 s.
+// Feil → «Ikke tilgjengelig» med feilen fra serveren. Under en kjøring hentes status hvert 1,5 s.
 // Prompt 90 (BKUP90): «Gjenopprett fra fil …» velger en backupfil fra PC-en (.tar.gz/.tar.zst, + .enc), laster den opp i biter på
 // 64 MB (POST /api/backup/upload, X-Backup-Filename/X-Upload-Size/X-Upload-Id/X-Upload-Offset) med fremdrift, og åpner så samme
 // gjenopprettingsark som for backupene i lista (nøkkelfelt når serveren ikke har nøkkelen: needKey). Opplastede vises som «Lastet opp».
@@ -27,7 +27,7 @@ const KEEP = [['7', '7 siste'], ['30', '30 siste'], ['90d', '90 dager'], ['1y', 
 const SCOPES = [['all', 'Hele systemet'], ['finans', 'Bare Finans'], ['custom', 'Egendefinert']];
 const DEF = { auto: true, schedule: 'nightly', keep: '30', notifyFail: true, scope: 'all', modules: MOD_IDS, target: { local: true, path: '/srv/backup' }, cloud: { enabled: false, provider: 'b2' }, encrypt: true, keySet: false };
 
-/** st: idle | loading | ok | missing | forbidden | error */
+/** st: idle | loading | ok | forbidden | error */
 const B = { st: 'idle', s: null, list: [], status: null, err: '', msg: '', saving: false, key: null, copied: false, restore: null, keySheet: null, poll: 0, wasRunning: false, up: null };
 const CHUNK = 64 * 1024 * 1024; // under grensen for én forespørsel gjennom Cloudflare-tunnelen
 let rerender = () => {};
@@ -64,7 +64,7 @@ export function loadBackup(onChange) {
     if (runningJob()) watch();
     rerender();
   }).catch((e) => {
-    B.st = e.status === 404 || e.status === 405 ? 'missing' : e.status === 401 || e.status === 403 ? 'forbidden' : B.s ? 'ok' : 'error';
+    B.st = e.status === 401 || e.status === 403 ? 'forbidden' : B.s ? 'ok' : 'error';
     B.err = e.message; rerender();
   });
 }
@@ -123,7 +123,6 @@ export function backupView(h) {
   const k = 'backup sikkerhetskopi gjenopprett restore automatisk kryptering sky b2';
   if (!admin()) return { groups: [h.group('Backup', [h.row({ t: 'Bare for administrator', k, s: 'Backup av hele systemet styres av en administrator.' })])] };
   if (B.st === 'idle' || B.st === 'loading') return { groups: [h.group('Status', [h.row({ t: 'Backup', k, v: 'Laster …' })])] };
-  if (B.st === 'missing') return { groups: [h.group('Status', [h.row({ t: 'Backup av hele systemet', k, v: 'Ikke tilgjengelig', s: 'Serveren har ikke systembackup ennå. Oppdater serveren under System.' })])] };
   if (B.st === 'forbidden') return { groups: [h.group('Status', [h.row({ t: 'Backup', k, v: 'Ikke tilgjengelig', s: 'Bare administrator kan se og kjøre backup.' })])] };
   if (B.st === 'error' || !B.s) return { groups: [h.group('Status', [h.row({ t: 'Backup', k, v: 'Ikke tilgjengelig', s: B.err || 'Fikk ikke kontakt med serveren.', btn: 'Prøv igjen', act: 'data-bk="reload"' })])] };
 

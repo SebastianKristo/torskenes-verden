@@ -53,7 +53,7 @@ async function main() {
       const r = await fetch('/api/auth/app-code', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
         body: JSON.stringify({ client: P.client, redirect: P.redirect, state: P.state, code_challenge: P.cc, code_challenge_method: 'S256' }) });
       const d = await r.json().catch(() => ({}));
-      if (!r.ok || !d.code) throw new Error(r.status === 404 ? 'Serveren støtter ikke app-innlogging ennå. Oppdater Homelab.' : `${d.error || 'Fikk ikke godkjent'} (HTTP ${r.status})`);
+      if (!r.ok || !d.code) throw new Error(`${d.error || 'Fikk ikke godkjent'} (HTTP ${r.status})`);
       card(`<span class="aa41-k">HOMELAB</span><b class="aa41-t">✓ Godkjent</b><span class="aa41-s">Sender deg tilbake til ${esc(name)} …</span>`);
       back({ code: d.code });
     } catch (err) {

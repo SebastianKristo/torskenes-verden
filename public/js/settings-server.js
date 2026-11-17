@@ -1,6 +1,6 @@
 // Prompt 41 (claude-code-innlogging-uten-server.md): Innstillinger → Konto → SERVER.
 // Lokal og ekstern adresse lagres per bruker på serveren (GET/PUT /api/me/server {local, external, auto}) og synkes til
-// mobilappene og Kalender. «Bytt automatisk»: lokal når den svarer innen 300 ms, ellers ekstern. Eldre server (404): bare lokalt.
+// mobilappene og Kalender. «Bytt automatisk»: lokal når den svarer innen 300 ms, ellers ekstern.
 // Adressene er ikke hemmelige (GET /api/discovery viser dem uinnlogget), men nettsiden selv bruker alltid adressen den er åpnet fra.
 // Prompt 47 (claude-code-standard-serveradresser.md): forhåndsutfylt med standardadressene (serveradresser.js, env-overstyrt via
 // /api/config), status «Svarer · 34 ms» / «Svarer ikke» og «Test» under hver adresse, og «Tilbakestill til standard».
@@ -8,7 +8,7 @@
 import { api, esc, sheetBtn } from './util.js';
 import { DEF47, EKSEMPEL_LOKAL, defaults47, probe47, tone47 } from './serveradresser.js';
 
-const S = { d: null, loaded: false, missing: false, now: null, sheet: null, test: null, msg: '', busy: false, def: null, st: {} };
+const S = { d: null, loaded: false, loadErr: '', now: null, sheet: null, test: null, msg: '', busy: false, def: null, st: {} };
 let rerender = () => {};
 
 const okUrl = (u) => /^https?:\/\/[^\s/]+/i.test(String(u ?? '').trim());
@@ -23,7 +23,7 @@ export async function loadServer41(r) {
   useDef(me.status === 'fulfilled' ? me.value : null);
   // Prompt 47: tomme felt fylles med standardadressene (ikke lenger den oppdagede/Docker-adressen).
   if (me.status === 'fulfilled') S.d = { local: me.value.local || S.def.local, external: me.value.external || S.def.external, auto: me.value.auto !== false };
-  else { S.missing = me.reason?.status === 404; S.d = { local: S.def.local, external: S.def.external, auto: true }; }
+  else { S.loadErr = me.reason?.message ?? ''; S.d = { local: S.def.local, external: S.def.external, auto: true }; }
   S.now = isLocalHost(location.hostname) ? 'Lokal' : 'Ekstern';
   rerender();
   probeAll();
@@ -55,7 +55,7 @@ export function serverGroup41(row, group) {
     addrRow('local', 'Lokal adresse', 'Brukes når du er hjemme på Wi-Fi', d.local, 'server adresse lokal ip wifi'),
     row({ t: 'Bytt automatisk', s: `Lokal når den svarer innen 1,5 s, ellers ekstern${S.now ? ` · nå: ${S.now}` : ''}`, tog: d.auto !== false, act: 'data-srv41-auto', k: 'server bytt automatisk lokal ekstern' }),
     row({ t: 'Tilbakestill til standard', s: isDef ? (def.local ? 'Begge adressene er standard' : 'Ekstern adresse er standard') : def.local ? `${hostOf(def.external)} og ${hostOf(def.local)}` : `${hostOf(def.external)} · lokal adresse beholdes`, act: 'data-srv47-reset', btn: 'Tilbakestill', disabled: isDef || S.busy, k: 'server tilbakestill standard adresse' }),
-  ], `Appene spør ikke etter serveradresse ved innlogging. Adressene lagres på kontoen din og brukes av mobilappene og Kalender. Nettsiden bruker alltid adressen den er åpnet fra${location.protocol === 'https:' ? ', og prøver aldri en http-adresse fra https' : ''}.${S.missing ? ' Serveren lagrer ikke adressene ennå, så endringer gjelder bare her.' : ''}`);
+  ], `Appene spør ikke etter serveradresse ved innlogging. Adressene lagres på kontoen din og brukes av mobilappene og Kalender. Nettsiden bruker alltid adressen den er åpnet fra${location.protocol === 'https:' ? ', og prøver aldri en http-adresse fra https' : ''}.${S.loadErr ? ` Serveren svarte: ${esc(S.loadErr)}` : ''}`);
 }
 const hostOf = (u) => { try { return new URL(u).host; } catch { return u ?? ''; } };
 /** Adresserad med status og to knapper (Test, Endre). Egen HTML fordi row() har bare én knapp. */
@@ -96,7 +96,7 @@ async function test(url) {
   if (u.origin === location.origin) {
     const r = await fetch('/api/discovery', { cache: 'no-store', credentials: 'same-origin' }).catch(() => null);
     const ms = Math.round(performance.now() - t0);
-    if (r && (r.ok || r.status === 404)) return { ok: true, text: `✓ Homelab svarer på ${u.host} · ${ms} ms` };
+    if (r?.ok) return { ok: true, text: `✓ Homelab svarer på ${u.host} · ${ms} ms` };
     return { ok: false, text: `Fikk ikke svar fra ${u.host}${r ? ` (HTTP ${r.status})` : ''}` };
   }
   if (u.protocol === 'http:' && location.protocol === 'https:') return { ok: false, text: 'Testes ikke: en https-side prøver aldri en http-adresse. Adressen lagres likevel, og appene tester den selv.' };
@@ -110,8 +110,8 @@ async function test(url) {
 
 async function save(patch) {
   S.d = { ...(S.d ?? {}), ...patch };
-  try { const r = await api('/me/server', { method: 'PUT', json: S.d }); if (r && typeof r === 'object') { S.d = { ...S.d, local: r.local ?? S.d.local, external: r.external ?? S.d.external, auto: r.auto ?? S.d.auto }; useDef(r); } S.missing = false; return true; }
-  catch (e) { if (e.status === 404) { S.missing = true; return true; } S.msg = e.message; return false; }
+  try { const r = await api('/me/server', { method: 'PUT', json: S.d }); if (r && typeof r === 'object') { S.d = { ...S.d, local: r.local ?? S.d.local, external: r.external ?? S.d.external, auto: r.auto ?? S.d.auto }; useDef(r); } S.loadErr = ''; return true; }
+  catch (e) { S.msg = e.message; return false; }
 }
 
 document.addEventListener('click', async (e) => {

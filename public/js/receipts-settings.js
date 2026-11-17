@@ -36,7 +36,7 @@ export async function loadReceipts48(force = false) {
   if (!force && X.health && Date.now() - X.t < 15000) return X.health;
   X.loading = (async () => {
     const [h, s] = await Promise.allSettled([fin('/receipts/health'), fin('/settings')]);
-    if (h.status === 'fulfilled') { X.health = h.value; X.err = ''; } else X.err = h.reason?.status === 404 ? 'Serveren har ikke den nye kvitteringskjeden ennå. Oppdater Homelab.' : h.reason?.message ?? 'Kunne ikke hente status';
+    if (h.status === 'fulfilled') { X.health = h.value; X.err = ''; } else X.err = h.reason?.message ?? 'Kunne ikke hente status';
     if (s.status === 'fulfilled') X.set = s.value;
     X.t = Date.now();
   })().finally(() => { X.loading = null; });

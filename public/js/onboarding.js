@@ -5,7 +5,7 @@
 //   3 «Dette kobles til deg» (samtykker) → POST /api/onboarding/link {profileId | newProfileName, consents} (409 = koblet til en annen)
 //   4 «Hei, Ingrid!» → Gå til Hjem.
 // GET /api/profiles → {profiles:[{id, name, color, avatar, initials, userId, username, has:{location, lists, subs}, suggested, linkedToOther, mine}],
-//   me:{profileId, userId, username, name}, locked, adminLinked}. Eldre server (404): ingenting vises.
+//   me:{profileId, userId, username, name}, locked, adminLinked}. Feiler kallet, vises ingenting (Innstillinger → Konto kan prøve igjen).
 // Innstillinger → Konto → «Profil i husstanden» åpner det samme (data-onb37).
 import { api, esc } from './util.js';
 import { store } from './store.js';

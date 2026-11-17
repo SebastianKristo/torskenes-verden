@@ -19,7 +19,7 @@ async function json(path, method = 'GET', body) {
   return d;
 }
 
-/** {supported, permission, subscribed, missing (serveren mangler API-et)} */
+/** {supported, permission, subscribed} */
 export async function pushState() {
   if (!pushSupported()) return { supported: false, permission: 'unsupported', subscribed: false };
   let subscribed = false;
@@ -45,7 +45,7 @@ export async function enablePush() {
     try { localStorage.setItem(KEY, '1'); } catch { /* */ }
     return { ok: true };
   } catch (e) {
-    return { ok: false, error: e.status === 404 ? 'Serveren har ikke push-varsler ennå. Oppdater Nordlys.' : `Kunne ikke slå på varsler: ${e.message}` };
+    return { ok: false, error: `Kunne ikke slå på varsler: ${e.message}` };
   }
 }
 
@@ -60,11 +60,10 @@ export async function disablePush() {
 
 /* ---------------- Presence ---------------- */
 
-let beat = 0, started = false, missing = false;
+let beat = 0, started = false;
 function send(visible) {
-  if (missing) return;
   fetch('/api/push/presence', { method: 'POST', credentials: 'same-origin', keepalive: !visible, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ visible }) })
-    .then((r) => { if (r.status === 404 || r.status === 405) { missing = true; clearInterval(beat); } }).catch(() => {});
+    .catch(() => {});
 }
 function onVis() {
   clearInterval(beat);

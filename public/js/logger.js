@@ -1,10 +1,10 @@
 // Prompt 44 (claude-code-innst-logger-docker.md): Innstillinger → Server → Logger. Fasit: design/Logger.dc.html.
 // Tall øverst · containere (piller med status og feiltall) · valgt container med Start på nytt / Stopp / Inspiser (admin) ·
 // filter (søk, nivå, tid, Live, Last ned) · mørkt loggvindu · detaljer med Glimt-forklaring · feil gruppert (24 t).
-// API (SERVER44, tåler 404): GET /api/system/containers · GET /api/system/logs?ct=&since=&range=&level=&q=&limit= ·
+// API (SERVER44): GET /api/system/containers · GET /api/system/logs?ct=&since=&range=&level=&q=&limit= ·
 // GET /api/system/logs/stream (SSE) · GET /api/system/logs/groups?hours=24 · POST /api/system/logs/explain {line, context} ·
 // POST /api/system/containers/:id/(restart|stop|start) · GET /api/system/logs/download?….
-// Mangler Docker-socketen (404/503 eller available:false): tomtilstand med oppsett. Hemmeligheter maskeres også her.
+// Mangler Docker-tilgangen (503/501 eller available:false): tomtilstand med oppsett. Hemmeligheter maskeres også her.
 import { esc } from './util.js';
 import { store } from './store.js';
 
@@ -54,11 +54,11 @@ export function mountLogger(host) {
       if (d && d.available === false) { S.setup = d; S.cts = []; return; }
       const list = Array.isArray(d) ? d : d?.containers ?? d?.items ?? [];
       S.cts = list.map(ctOut); S.sum = d?.summary ?? null; S.disk = d?.summary?.disk ?? d?.disk ?? null; S.setup = null;
-    } catch (e) { S.cts = []; if (e.status === 404 || e.status === 503 || e.status === 501) S.setup = e.data ?? { missing: true }; else S.err = e.message; }
+    } catch (e) { S.cts = []; if ((e.status === 503 || e.status === 501) && e.data) S.setup = e.data; else S.err = e.message; }
   }
   async function loadLines() {
     try { const d = await j(`/api/system/logs?${params()}`); S.lines = (Array.isArray(d) ? d : d?.lines ?? d?.items ?? []).map(line).slice(-500); S.err = ''; }
-    catch (e) { if (e.status === 404 || e.status === 503) S.lines = []; else S.err = e.message; }
+    catch (e) { if (e.status === 503) S.lines = []; else S.err = e.message; }
   }
   async function loadGroups() {
     try { const d = await j('/api/system/logs/groups?hours=24'); S.groups = (Array.isArray(d) ? d : d?.groups ?? []).map((g) => ({ n: g.count ?? g.n ?? 0, c: g.ct ?? g.c ?? g.container ?? '', m: mask(g.message ?? g.m ?? g.msg ?? g.pattern ?? ''), last: g.lastSeen ?? g.last ?? g.lastAt ?? '', sample: g.sample ?? g.line ?? null, explain: g.explain ?? null })); }
@@ -150,7 +150,7 @@ export function mountLogger(host) {
     const text = st === 'failed' ? 'Oppsettet feilet. Se detaljer under, eller prøv igjen.' : st === 'no-updater' ? 'Oppdateringstjenesten kjører ikke, så Homelab kan ikke legge til Docker-tilgangen selv. Start updateren, eller legg til tjenesten manuelt (detaljer).' : run ? 'Setter opp Docker-tilgangen … Dette tar under et minutt.' : st === 'done' ? 'Docker-tilgangen er satt opp. Henter containere …' : U.text || 'Homelab prøver å sette dette opp automatisk …';
     const det = [U.details || S.setup?.error || U.error || S.setupErr || '', U.host ? `Adresse: ${U.host}` : '', U.proxy ? `Proxy: ${U.proxy.name} (${U.proxy.image})${U.proxy.reused ? ' · gjenbrukt' : ''}` : ''].filter(Boolean).join('\n');
     return `<div class="lg44-empty lg45-setup"><span class="lg45-ic${run ? ' run' : st === 'failed' ? ' bad' : ''}" aria-hidden="true"></span><b>${esc(title)}</b><span>${esc(text)}</span>
-      ${S.setup?.missing ? '<span class="lg44-mut">Serveren har ikke Docker-loggene ennå. Oppdater Homelab under System.</span>' : `<div class="lg45-acts"><button type="button" class="lg44-b pri" data-lg45-setup${run || U.canRun === false && st !== 'failed' && st !== 'idle' ? ' disabled' : ''}>${run ? 'Setter opp …' : U.button || 'Sett opp nå'}</button><button type="button" class="lg44-b" data-lg-retry>Prøv igjen</button>${det || U.compose ? `<button type="button" class="lg44-b ghost" data-lg45-det aria-expanded="${!!S.det45}">${S.det45 ? 'Skjul detaljer' : 'Vis detaljer'}</button>` : ''}</div>`}
+      <div class="lg45-acts"><button type="button" class="lg44-b pri" data-lg45-setup${run || U.canRun === false && st !== 'failed' && st !== 'idle' ? ' disabled' : ''}>${run ? 'Setter opp …' : U.button || 'Sett opp nå'}</button><button type="button" class="lg44-b" data-lg-retry>Prøv igjen</button>${det || U.compose ? `<button type="button" class="lg44-b ghost" data-lg45-det aria-expanded="${!!S.det45}">${S.det45 ? 'Skjul detaljer' : 'Vis detaljer'}</button>` : ''}</div>
       ${S.det45 ? `<pre class="mono lg45-det">${esc(det)}${U.compose ? `\n\n${esc(U.compose)}` : ''}</pre>${U.alt ? `<span class="lg44-mut">${esc(U.alt)}</span>` : ''}` : ''}
       <span class="lg44-mut">Bare admin ser loggene, og hemmeligheter maskeres.</span></div>`;
   }
@@ -202,12 +202,12 @@ export function mountLogger(host) {
   async function act(a) {
     const sc = S.cts?.find((c) => c.n === S.ct);
     if (!sc) return;
-    if (a === 'inspect') { try { S.insp = await j(`/api/system/containers/${encodeURIComponent(sc.id || sc.n)}/inspect`); paint(); } catch (e) { try { await navigator.clipboard.writeText(`docker inspect ${sc.n}`); } catch { /* */ } toast(e.status === 404 ? `docker inspect ${sc.n} kopiert` : e.message); } return; }
+    if (a === 'inspect') { try { S.insp = await j(`/api/system/containers/${encodeURIComponent(sc.id || sc.n)}/inspect`); paint(); } catch (e) { try { await navigator.clipboard.writeText(`docker inspect ${sc.n}`); } catch { /* */ } toast(`${e.message} · «docker inspect ${sc.n}» er kopiert`); } return; }
     const verb = { restart: 'Starte', stop: 'Stoppe', start: 'Starte' }[a];
     if (!confirm(`${verb} ${sc.n}${a === 'restart' ? ' på nytt' : ''}?${a === 'stop' ? '\nTjenesten er nede til du starter den igjen.' : ''}`)) return;
     toast(`${a === 'stop' ? 'Stopper' : a === 'start' ? 'Starter' : 'Starter på nytt'} ${sc.n} …`);
     try { const r = await j(`/api/system/containers/${encodeURIComponent(sc.id || sc.n)}/${a}`, { method: 'POST', body: JSON.stringify({ confirm: true }) }); if (r?.message) toast(r.message); setTimeout(async () => { await loadCts(); paint(); }, 1500); }
-    catch (e) { toast(e.status === 404 ? 'Serveren har ikke denne handlingen ennå' : e.message); }
+    catch (e) { toast(e.message); }
   }
   let qT = 0;
   root.addEventListener('input', (e) => { if (e.target.name !== 'lgq') return; S.q = e.target.value; clearTimeout(qT); paintLog(); qT = setTimeout(async () => { await loadLines(); paintLog(); startLive(); }, 450); });
