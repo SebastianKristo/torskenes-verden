@@ -122,7 +122,7 @@ private fun SubField44(focusNow: Boolean, hint: String = "Ny deloppgave …", on
             BasicTextField(v, { v = it }, singleLine = true, textStyle = TextStyle(color = p.textPrimary, fontSize = HomelabType.callout.fontSize), cursorBrush = SolidColor(p.accent),
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done), keyboardActions = KeyboardActions(onDone = { go() }), modifier = Modifier.fillMaxWidth().focusRequester(fr))
         }
-        Text("Legg til", color = p.accent, fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize, modifier = Modifier.heightIn(min = 44.dp).clip(CircleShape).clickable { go() }.padding(horizontal = 12.dp).wrapContentHeight())
+        Text("Legg til", color = p.accent, fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize, modifier = Modifier.heightIn(min = 44.dp).clip(CircleShape).clickable(role = Role.Button) { go() }.padding(horizontal = 12.dp).wrapContentHeight())
     }
 }
 
@@ -196,7 +196,7 @@ internal fun TaskPage44(vm: AppViewModel) {
                 verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 // Liste-pille.
                 Box {
-                    Row(Modifier.heightIn(min = 36.dp).clip(CircleShape).background(p.surfaceRaised).border(1.dp, p.line, CircleShape).clickable { listMenu = true }.padding(horizontal = 12.dp),
+                    Row(Modifier.heightIn(min = 36.dp).clip(CircleShape).background(p.surfaceRaised).border(1.dp, p.line, CircleShape).clickable(role = Role.Button, onClickLabel = "Velg liste") { listMenu = true }.padding(horizontal = 12.dp),
                         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         Box(Modifier.size(9.dp).clip(CircleShape).background(c))
                         Text(l?.name ?: "Liste", color = p.textPrimary, fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize)
@@ -227,7 +227,7 @@ internal fun TaskPage44(vm: AppViewModel) {
                     DateCard44("Når", t.due?.let { dueLabel37(it) }, null, false, Modifier.weight(1f).fillMaxHeight(),
                         onPick = { pickDate44(ctx, t.due ?: today.toString()) { d -> vm.patchTask37(t.id) { it.copy(due = d) } } }, onClear = { vm.patchTask37(t.id) { it.copy(due = null, time = null) } }) {
                         if (t.due != null) Text(t.time ?: "Legg til tid", color = if (t.time != null) p.textPrimary else p.textTertiary, fontWeight = FontWeight.Bold, fontSize = HomelabType.footnote.fontSize,
-                            modifier = Modifier.padding(top = 6.dp).clip(CircleShape).background(p.surface).clickable {
+                            modifier = Modifier.padding(top = 6.dp).clip(CircleShape).background(p.surface).clickable(role = Role.Button) {
                                 val (h, m) = (t.time ?: "09:00").split(":").let { (it[0].toIntOrNull() ?: 9) to (it.getOrNull(1)?.toIntOrNull() ?: 0) }
                                 android.app.TimePickerDialog(ctx, { _, hh, mm -> vm.patchTask37(t.id) { it.copy(time = "%02d:%02d".format(hh, mm)) } }, h, m, true).show()
                             }.padding(horizontal = 10.dp, vertical = 5.dp))
@@ -323,7 +323,7 @@ private fun Place44(vm: AppViewModel, t: TaskItem) {
     Card44("Sted") {
         if (shown != null && !edit) Row(verticalAlignment = Alignment.CenterVertically) {
             Text("📍", fontSize = HomelabType.body.fontSize)
-            Text(shown, color = p.textPrimary, fontSize = HomelabType.callout.fontSize, modifier = Modifier.weight(1f).padding(start = 8.dp).clickable { edit = true; q = shown })
+            Text(shown, color = p.textPrimary, fontSize = HomelabType.callout.fontSize, modifier = Modifier.weight(1f).padding(start = 8.dp).clickable(role = Role.Button, onClickLabel = "Endre") { edit = true; q = shown })
             Box(Modifier.size(32.dp).clip(CircleShape).clickable(onClickLabel = "Fjern sted") { vm.patchTask37(t.id) { it.copy(place = null, geo = null) } }, contentAlignment = Alignment.Center) {
                 Icon(Icons.Filled.Close, contentDescription = "Fjern sted", tint = p.textTertiary, modifier = Modifier.size(14.dp))
             }
@@ -339,7 +339,7 @@ private fun Place44(vm: AppViewModel, t: TaskItem) {
                 }
             }
             hits.take(5).forEach { g ->
-                Text(g.label, color = p.textPrimary, fontSize = HomelabType.callout.fontSize, maxLines = 2, modifier = Modifier.fillMaxWidth().heightIn(min = 44.dp).clickable {
+                Text(g.label, color = p.textPrimary, fontSize = HomelabType.callout.fontSize, maxLines = 2, modifier = Modifier.fillMaxWidth().heightIn(min = 44.dp).clickable(role = Role.Button) {
                     vm.patchTask37(t.id) { it.copy(place = g.label, geo = g.lat to g.lon) }; edit = false; q = ""; hits = emptyList()
                 }.wrapContentHeight())
             }

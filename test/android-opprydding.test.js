@@ -133,6 +133,7 @@ const P85E_RUNDE4 = {
   familie: ['FamilyPage.kt', 'KartPage.kt'],
   boliger: ['Boliger.kt'],
   innstillinger: ['Innstillinger.kt'],
+  gjoremal: ['TasksComponents.kt', 'TasksPage.kt', 'TasksSubtasks.kt', 'TasksTabs.kt'],
 };
 
 test('P85 E (runde 4): Abonnement, Aksjer og de andre sidene som sto igjen har rolle på trykkflatene', () => {

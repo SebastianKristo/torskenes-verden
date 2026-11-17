@@ -59,6 +59,7 @@ import no.kristo.finanshub.ui.designsystem.HomelabTheme
 import no.kristo.finanshub.ui.designsystem.DsPalette
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.foundation.selection.selectable
 
 /*
  * Prompt 37 (ANDROID37): Gjøremål (tidligere Huskeliste; intern nøkkel «huske»), fasit Huskeliste.dc.html + Mobil Papir App.dc.html.
@@ -151,7 +152,7 @@ internal fun TasksScreen37(vm: AppViewModel) {
     // 1c: lister i egen kolonne (210 på Fold, 250 på bredere skjerm), «+ Ny liste» sist; oppgavene til høyre.
     if (split43) Column(Modifier.width(listW43).fillMaxHeight().background(p.surfaceRaised).statusBarsPadding().verticalScroll(rememberScrollState())
         .padding(start = 12.dp, end = 12.dp, top = 12.dp, bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text("‹ ${Moduler.oversikt}", color = p.textPrimary, fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize, modifier = Modifier.heightIn(min = 44.dp).clip(CircleShape).clickable { vm.closeTasksHome40() }.wrapContentHeight())
+        Text("‹ ${Moduler.oversikt}", color = p.textPrimary, fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize, modifier = Modifier.heightIn(min = 44.dp).clip(CircleShape).clickable(role = Role.Button) { vm.closeTasksHome40() }.wrapContentHeight())
         PSerif("To-do for hele familien", 13.sp, p.textTertiary, italic = true, weight = FontWeight.Normal, maxLines = 2)
         PSerif("Gjøremål", 28.sp, maxLines = 1)
         PLabel("Lister", modifier = Modifier.padding(top = 6.dp))
@@ -563,7 +564,7 @@ private fun DetailSheet37(vm: AppViewModel, t: TaskItem, lists: List<TaskList>, 
                     lists.forEach { l ->
                         val on = d.list == l.id
                         Row(Modifier.height(32.dp).clip(CircleShape).background(if (on) p.textPrimary else Color.Transparent).border(1.dp, if (on) p.textPrimary else p.line, CircleShape)
-                            .clickable { Haptics.select(); d = d.copy(list = l.id) }.padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            .selectable(selected = on, role = Role.RadioButton) { Haptics.select(); d = d.copy(list = l.id) }.padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                             Box(Modifier.size(8.dp).clip(CircleShape).background(Color(l.color)))
                             Text(l.name, color = if (on) p.surface else p.textPrimary, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.footnote.fontSize)
                         }
