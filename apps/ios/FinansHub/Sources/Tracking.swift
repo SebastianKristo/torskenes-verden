@@ -338,118 +338,24 @@ struct TrackingData {
     }
 }
 
-/* ---------------- Sporing: data og varsler ---------------- */
+/* ---------------- Sporing: data og varsler (SporingModell.swift) ---------------- */
 
 extension Store {
-    func loadTracking() async throws {
-        let t = TrackingData.parse(try await api.callAt("/api", "GET", "/tracking"))
-        tracking = t
-        notifyTracking(t)
-    }
-
+    func loadTracking() async throws { try await sporing.load(self) }
     /// Henter status i bakgrunnen (forsiden, åpen app hvert 5. minutt). Feil vises ikke.
-    func pollTracking() async {
-        guard loggedIn, !locked, let d = try? await api.callAt("/api", "GET", "/tracking", timeout: 15) else { return }
-        let t = TrackingData.parse(d)
-        tracking = t
-        homePackages = t.top(2)
-        notifyTracking(t)
-    }
-
+    func pollTracking() async { await sporing.poll(self) }
     func addTracking(no: String, name: String, carrier: String?, out: Bool, carrierOverride: String? = nil) {
-        let n = no.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !n.isEmpty else { flash("Skriv inn et sporingsnummer"); return }
-        run {
-            var body: [String: Any] = ["trackingNo": n, "direction": out ? "out" : "in"]
-            let nm = name.trimmingCharacters(in: .whitespacesAndNewlines)
-            if !nm.isEmpty { body["name"] = nm }
-            if let carrier, carrier != "other" { body["carrier"] = carrier }
-            // Prompt 26: valgt tjeneste overstyrer gjenkjenningen (eldre server leser bare carrier).
-            if let ov = carrierOverride, !ov.isEmpty {
-                body["carrierOverride"] = ov
-                if ov != "parcelsapp" { body["carrier"] = ov }
-            }
-            let d = try await self.api.callAt("/api", "POST", "/tracking", json: body, timeout: 30)
-            let o = JS.obj(d)
-            if let item = JS.dict(o, "item") { self.trkSel = Shipment(item).id }
-            try await self.loadTracking()
-            self.trkFilter = out ? "out" : "active"
-            self.flash(JS.str(o, "message") ?? "Sendingen spores")
-        }
+        sporing.add(no: no, name: name, carrier: carrier, out: out, carrierOverride: carrierOverride, self)
     }
-
-    func archiveTracking(_ s: Shipment, _ on: Bool) {
-        run {
-            try await self.api.callAt("/api", "PATCH", "/tracking/\(s.id)", json: ["archived": on])
-            if on { self.trkSel = nil }
-            try await self.loadTracking()
-            self.flash(on ? "\(s.name) er arkivert" : "\(s.name) er hentet tilbake")
-        }
-    }
-
-    func deleteTracking(_ s: Shipment) {
-        run {
-            try await self.api.callAt("/api", "DELETE", "/tracking/\(s.id)")
-            self.trkSel = nil
-            try await self.loadTracking()
-            self.flash("\(s.name) er slettet")
-        }
-    }
-
+    func archiveTracking(_ s: Shipment, _ on: Bool) { sporing.archive(s, on, self) }
+    func deleteTracking(_ s: Shipment) { sporing.delete(s, self) }
     /// «Sjekk nå»: leser e-post og Finn, og henter status hos transportørene.
-    func checkTracking() {
-        guard !trkChecking else { return }
-        trkChecking = true
-        run {
-            defer { self.trkChecking = false }
-            let d = try await self.api.callAt("/api", "POST", "/tracking/check", timeout: 60)
-            let o = JS.obj(d)
-            if o["items"] != nil { let t = TrackingData(o); self.tracking = t; self.notifyTracking(t) } else { try await self.loadTracking() }
-            self.flash(JS.str(o, "message") ?? "Sporing er oppdatert")
-        }
-    }
-
-    func setTrackingPref(_ k: String, _ on: Bool) {
-        tracking?.prefs[k] = on
-        run { try await self.api.callAt("/api", "PUT", "/tracking/prefs", json: [k: on]) }
-    }
-
+    func checkTracking() { sporing.check(self) }
+    func setTrackingPref(_ k: String, _ on: Bool) { sporing.setPref(k, on, self) }
     /// k: finn | email | autoArchive
-    func setTrackingSource(_ k: String, _ on: Bool) {
-        if k == "finn" { tracking?.finn.on = on } else if k == "autoArchive" { tracking?.autoArchive.on = on } else { tracking?.email.on = on }
-        run { try await self.api.callAt("/api", "PUT", "/tracking/sources", json: [k: on]) }
-    }
-
+    func setTrackingSource(_ k: String, _ on: Bool) { sporing.setSource(k, on, self) }
     /// Lokale varsler for nye hendelser (serverens varselliste, ellers statusendringer til «Klar for henting» og «Levert»).
-    /// Første gang huskes bare det som finnes, så det ikke kommer en bølge av gamle varsler.
-    func notifyTracking(_ t: TrackingData) {
-        let key = "fh_trk_seen_" + (account?.id ?? "")
-        let first = UserDefaults.standard.object(forKey: key) == nil
-        var seen = UserDefaults.standard.stringArray(forKey: key) ?? []
-        var fresh: [(String, String, String)] = []
-        if let notices = t.notices {
-            for n in notices.reversed() where !seen.contains("n:" + n.id) {
-                seen.append("n:" + n.id)
-                let title = ["pickup": "Klar for henting", "delivered": "Levert", "out": "Ute for levering", "delayed": "Forsinket", "found": "Ny sending"][n.kind] ?? "Sporing"
-                fresh.append((title, n.text, "trk-n-" + n.id))
-            }
-        }
-        // Statusendringer (også når serveren ikke sender varsellisten).
-        for s in t.items where !s.archived && (s.ready || s.done) {
-            let k = "s:\(s.id):\(s.status)"
-            guard !seen.contains(k) else { continue }
-            seen.append(k)
-            if t.notices != nil { continue }
-            let want = s.ready ? (t.prefs["pickup"] ?? true) : (t.prefs["delivered"] ?? true)
-            guard want else { continue }
-            fresh.append(s.ready ? ("Klar for henting", "\(s.name)" + (s.pickupPoint.isEmpty ? "" : " hos \(s.pickupPoint)"), "trk-\(s.id)-pickup")
-                                 : ("Levert", "\(s.name) er levert", "trk-\(s.id)-delivered"))
-        }
-        UserDefaults.standard.set(Array(seen.suffix(400)), forKey: key)
-        guard !first, !fresh.isEmpty else { return }
-        for f in fresh.suffix(3) { LocalNotify.post(f.0, f.1, id: f.2, group: "pakker") }
-        Haptics.shared.package()
-    }
+    func notifyTracking(_ t: TrackingData) { sporing.notify(t, self) }
 }
 
 /* ---------------- Sporing: visning ---------------- */

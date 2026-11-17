@@ -7,7 +7,7 @@ import UIKit
  Server (PICKSRV, server/skjold), per bruker, under /api/skjold:
    POST /locate {partIds:[…], colors:true} → {ok, lit:[{partId, cabinetId, row, col, index, color}], skipped:[{partId, reason}], untilMs}
      (maks 20 skuffer; to deler i samme skuff deler LED, første farge vinner)
-   GET|PUT /picklist {items:[{partId, qty}]} (valgfri synk mellom enheter; 404 = bare lokalt)
+   GET|PUT /picklist {items:[{partId, qty}]} (synk mellom enheter; uten nett gjelder den lokale lista, neste endring prøver igjen)
    POST /cabinets/:id/leds/diagnose → {steps:[{name, ok, detail}], hint}
  Lista lagres lokalt per konto (UserDefaults, nøkkel per AcctScope) og overlever omstart. «Ta ut av lager» trekker fra
  antallet for alle delene (POST /parts/:id/qty {delta}) med «Angre» i 10 s. */
@@ -43,8 +43,6 @@ final class Skjold79 {
     var items: [Skj79Item] = []
     var skipped: [String: String] = [:]
     var taking: Bool = false
-    /// Serveren har ikke /picklist (404): bare lokalt.
-    @ObservationIgnored private var localOnly: Bool = false
     @ObservationIgnored private var loadedScope: String? = nil
     @ObservationIgnored private var syncTask: Task<Void, Never>? = nil
 
@@ -259,7 +257,6 @@ final class Skjold79 {
     /// Henter lista fra serveren (når Skjold Lab åpnes). Serverens liste vinner hvis den har noe; ellers lastes vår opp.
     func load(_ store: Store) async {
         ensureLoaded()
-        if localOnly { return }
         do {
             let d: Data = try await store.api.callAt(Skjold76.prefix, "GET", Skjold76.root + "/picklist", timeout: 10)
             let o: [String: Any] = JS.obj(d)
@@ -269,10 +266,8 @@ final class Skjold79 {
             } else {
                 merge(remote)
             }
-        } catch let e as APIError where e.status == 404 {
-            localOnly = true
         } catch {
-            // Uten nett: lokal liste.
+            // Uten nett eller feil fra serveren: lokal liste. Q19: serveren har alltid /picklist, så 404 slår ikke av synken.
         }
         refreshFromParts()
     }
@@ -297,7 +292,6 @@ final class Skjold79 {
 
     private func changed(_ store: Store) {
         writeLocal()
-        if localOnly { return }
         syncTask?.cancel()
         syncTask = Task { @MainActor in
             try? await Task.sleep(nanoseconds: 600_000_000)
@@ -310,8 +304,6 @@ final class Skjold79 {
         let body: [String: Any] = ["items": items.map { Skjold79.remote($0) }]
         do {
             _ = try await store.api.callAt(Skjold76.prefix, "PUT", Skjold76.root + "/picklist", json: body, timeout: 10)
-        } catch let e as APIError where e.status == 404 {
-            localOnly = true
         } catch {
             // Neste endring prøver igjen; lokalt er lista trygg.
         }

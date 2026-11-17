@@ -11,7 +11,7 @@ import UIKit
    (Prompt 79: {partIds, colors:true} → lit med partId og color per del, maks 20; POST /cabinets/:id/leds/diagnose)
    GET /leds/status?cabinet=<id> → {ok, name, ledCount, version}
    POST /cabinets/:id/leds/calibrate {index} (tenner én LED) · PUT /cabinets/:id/leds/override {row,col,index}
-   GET|PUT /leds/settings {autoLocateOpen, autoLocateGlimt} (begge av som standard; lokal lagring hvis serveren mangler endepunktet)
+   GET|PUT /leds/settings {autoLocateOpen, autoLocateGlimt} (begge av som standard; lokal kopi uten nett)
  Indeksen regnes ut på serveren; utregningen her brukes bare til å vise «LED n» i oppsettet og veiviseren. */
 
 /// Én rad av stripa: hvor raden starter på stripa, hvor mange LED-er den har og retningen.
@@ -88,7 +88,6 @@ final class Skjold78 {
     var autoOpen: Bool = false
     var autoGlimt: Bool = false
     var settingsError: String = ""
-    @ObservationIgnored private var localSettings: Bool = false
 
     /* ---------- Det som lyser nå ---------- */
     var lit: [Skj78Lit] = []
@@ -179,12 +178,9 @@ final class Skjold78 {
         do {
             let d: Data = try await store.api.callAt(Skjold76.prefix, "GET", Skjold76.root + "/leds/settings", timeout: 10)
             applySettings(JS.obj(d))
-            localSettings = false
             settingsError = ""
-        } catch let e as APIError where e.status == 404 {
-            localSettings = true
-            readLocal()
         } catch {
+            // Uten nett: den lokale kopien. Q19: serveren har alltid /leds/settings, så 404 gir ikke lokal lagring for godt.
             readLocal()
         }
     }
@@ -198,7 +194,6 @@ final class Skjold78 {
 
     func saveSettings(_ store: Store) async {
         writeLocal()
-        if localSettings { return }
         let body: [String: Any] = ["autoLocateOpen": autoOpen, "autoLocateGlimt": autoGlimt]
         do {
             let d: Data = try await store.api.callAt(Skjold76.prefix, "PUT", Skjold76.root + "/leds/settings", json: body, timeout: 10)
@@ -206,8 +201,6 @@ final class Skjold78 {
             if !o.isEmpty { applySettings(o) }
             settingsError = ""
             Haptics.shared.tick()
-        } catch let e as APIError where e.status == 404 {
-            localSettings = true
         } catch {
             settingsError = Skjold78.message(error)
         }

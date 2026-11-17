@@ -106,6 +106,12 @@ final class Store {
     let finnModell: FinnModell = FinnModell()
     /// Matplan (MatplanModell.swift).
     let matplan: MatplanModell = MatplanModell()
+    /// Boliger (BoligerModell.swift).
+    let boliger: BoligerModell = BoligerModell()
+    /// Sporing (SporingModell.swift).
+    let sporing: SporingModell = SporingModell()
+    /// Aksjer (AksjerModell.swift).
+    let aksjer: AksjerModell = AksjerModell()
     var domains: [DomainRef]? { get { domener.domains } set { domener.domains = newValue } }
     var domain: String? { get { domener.domain } set { domener.domain = newValue } }
     var analytics: Analytics? { get { domener.analytics } set { domener.analytics = newValue } }
@@ -198,8 +204,9 @@ final class Store {
     var detail: DetailInfo?
     var detailTx: [Tx]?
     var recurring: [Recurring]?
-    var stocks: Stocks?
-    var stockPeriod = "1M"
+    /// Aksjer (AksjerModell.swift): porteføljen og perioden.
+    var stocks: Stocks? { get { aksjer.stocks } set { aksjer.stocks = newValue } }
+    var stockPeriod: String { get { aksjer.period } set { aksjer.period = newValue } }
     var report: Report?
     var reportYear = false
     var importFiles: [(name: String, data: Data)] = []
@@ -208,8 +215,9 @@ final class Store {
 
     var week: Week? { get { matplan.week } set { matplan.week = newValue } }
     var subs: SubList?
-    var folders: [Folder]?
-    var folder: Folder?
+    /// Boliger (BoligerModell.swift): boligene og boligen som er åpen.
+    var folders: [Folder]? { get { boliger.folders } set { boliger.folders = newValue } }
+    var folder: Folder? { get { boliger.folder } set { boliger.folder = newValue } }
     /// Finn (FinnModell.swift): handlene, åpen handel (id), detaljen og opplasting/henting som pågår.
     var finn: FinnList? { get { finnModell.finn } set { finnModell.finn = newValue } }
     var finnSel: Int? { get { finnModell.sel } set { finnModell.sel = newValue } }
@@ -217,8 +225,8 @@ final class Store {
     /// receipts | photos | emails | ad mens det lastes opp eller hentes.
     var finnBusy: String? { get { finnModell.busy } set { finnModell.busy = newValue } }
     /// Boliger: kategoriene og «Legg i bolig» (målet for skann mens man står i en bolig; nil = boligen som er åpen).
-    var boligCats: [BoligCategory] = []
-    var uploadFolder: Int?
+    var boligCats: [BoligCategory] { get { boliger.cats } set { boliger.cats = newValue } }
+    var uploadFolder: Int? { get { boliger.uploadFolder } set { boliger.uploadFolder = newValue } }
     var tokens: [TokenInfo]?
     var tokenError: String?
     var newToken: String?
@@ -226,21 +234,18 @@ final class Store {
 
     /* ---------- Sporing, vær, aksjer og abonnement (prompt 11) ---------- */
 
-    var tracking: TrackingData?
-    /// De 2 viktigste pakkene på Homelab-hjem (fra /mobile/home, oppdateres av Sporing).
-    var homePackages: [Shipment]?
+    /// Sporing (SporingModell.swift): sendingene, de 2 viktigste på Homelab-hjem, åpen sending, filteret og «Sjekk nå».
+    var tracking: TrackingData? { get { sporing.tracking } set { sporing.tracking = newValue } }
+    var homePackages: [Shipment]? { get { sporing.homePackages } set { sporing.homePackages = newValue } }
     var homeWeather: WeatherX?
-    /// Åpen sending (kortet er utvidet med tidslinjen).
-    var trkSel: String?
-    /// active | pickup | out | done
-    var trkFilter = "active"
-    var trkChecking = false
-    var stocksX: StocksX?
-    /// ov | det | tx (Portefølje, Aksjedetaljer, Transaksjoner)
-    var stockScreen = "ov"
-    var stockSel: String?
-    /// Detaljen ble åpnet fra Transaksjoner (tilbake går dit).
-    var stockFrom: String?
+    var trkSel: String? { get { sporing.sel } set { sporing.sel = newValue } }
+    var trkFilter: String { get { sporing.filter } set { sporing.filter = newValue } }
+    var trkChecking: Bool { get { sporing.checking } set { sporing.checking = newValue } }
+    /// Aksjer (AksjerModell.swift): porteføljen fra Trading 212, skjermen (ov | det | tx), valgt aksje og om detaljen ble åpnet fra Transaksjoner.
+    var stocksX: StocksX? { get { aksjer.x } set { aksjer.x = newValue } }
+    var stockScreen: String { get { aksjer.screen } set { aksjer.screen = newValue } }
+    var stockSel: String? { get { aksjer.sel } set { aksjer.sel = newValue } }
+    var stockFrom: String? { get { aksjer.from } set { aksjer.from = newValue } }
     var subsX: SubsX?
     /// home | ins | hist
     var subTab = "home"
@@ -261,8 +266,8 @@ final class Store {
     var paperTab = "hjem"
     /// En Finans-fane fra den klassiske appen, åpnet fra Papir (Liste, Budsjett, Søk, Finn, Oversikt).
     var paperFin: Tab?
-    /// «Alt om sporing»: den klassiske Sporing-siden med kilder, varsler og transportører.
-    var paperTrackFull = false
+    /// «Alt om sporing»: den klassiske Sporing-siden med kilder, varsler og transportører (SporingModell.swift).
+    var paperTrackFull: Bool { get { sporing.full } set { sporing.full = newValue } }
     var photoWindow: PhotoWindow?
     var photoImage: UIImage?
     /// Bakgrunnen fra /api/background (prompt 19): kreditering, theme_hint, partikler. nil = eldre server.
@@ -289,14 +294,10 @@ final class Store {
     var onboarding: Int?
     /// Fase 6 (Q35): når siste dyplenke kom (Dyplenker.swift). Velkomststegene vises ikke rett etter en dyplenke.
     @ObservationIgnored var deepLinkAt: Date = .distantPast
-    /// Sporing i Papir: Aktive | Klar for henting | På vei | Registrert | Levert | Alle
-    var trkTab = "Aktive"
-    /// «Varsler og kilder» i Papir-sporing.
-    var trkSettings = false
-    /// Rekkefølgen på Sporing-kortene (lagres per bruker i layout.trkOrder).
-    var trkOrder: [String] = UserDefaults.standard.stringArray(forKey: "fh_trk_order") ?? ["add", "shipments", "notify", "carriers"] {
-        didSet { UserDefaults.standard.set(trkOrder, forKey: "fh_trk_order") }
-    }
+    /// Sporing i Papir (SporingModell.swift): fanen, «Varsler og kilder» og rekkefølgen på kortene.
+    var trkTab: String { get { sporing.tab } set { sporing.tab = newValue } }
+    var trkSettings: Bool { get { sporing.settings } set { sporing.settings = newValue } }
+    var trkOrder: [String] { get { sporing.order } set { sporing.order = newValue } }
     /// Finn i Papir: Alle | På vei | Kjøpt | Solgt | Fullført
     var finnSeg = "Alle"
     /// Abonnementet som redigeres (arket), og om arket er åpent for et nytt abonnement.
@@ -341,8 +342,8 @@ final class Store {
     var reviewCount: Int?
     /// De 15 siste transaksjonene (Finans → Oversikt).
     var recent15: [Tx]?
-    /// «Ny sending»-arket (den flytende knappen på Sporing).
-    var trackAddOpen = false
+    /// «Ny sending»-arket (den flytende knappen på Sporing, SporingModell.swift).
+    var trackAddOpen: Bool { get { sporing.addOpen } set { sporing.addOpen = newValue } }
 
     /* ---------- Papir, prompt 16 ---------- */
 
@@ -789,10 +790,7 @@ final class Store {
             case .upload: try await loadReceipts(); await loadJobs()
             case .fast: let list: [Recurring] = try await decodeList(api.call("GET", "/recurring")); recurring = list
             case .accounts: boot = try await api.get("/bootstrap")
-            case .stocks:
-                let d = try await api.call("GET", "/stocks")
-                stocks = try? JSONDecoder().decode(Stocks.self, from: d)
-                stocksX = StocksX.parse(d)
+            case .stocks: try await aksjer.load(self)
             case .reports: try await loadReport()
             case .imports: break
             case .mat: try await loadWeek(); await loadMatExtras()
@@ -1251,16 +1249,7 @@ final class Store {
         }
     }
 
-    func syncStocks() {
-        run {
-            self.busy = true
-            defer { self.busy = false }
-            let d = try await self.api.call("POST", "/stocks/sync")
-            self.stocks = try? JSONDecoder().decode(Stocks.self, from: d)
-            self.stocksX = StocksX.parse(d)
-            self.flash("Synket med Trading 212")
-        }
-    }
+    func syncStocks() { aksjer.sync(self) }
 
     private func loadReport() async throws { report = try await api.get("/reports?mode=" + (reportYear ? "year" : "month"), as: Report.self) }
     func pickReportYear(_ y: Bool) { reportYear = y; report = nil; run { try await self.loadReport() } }
@@ -1456,36 +1445,13 @@ final class Store {
         }
     }
 
-    /* ---------- Boliger (delte mapper) ---------- */
+    /* ---------- Boliger (BoligerModell.swift) ---------- */
 
-    func openFolder(_ id: Int?) {
-        uploadFolder = nil
-        guard let id else { folder = nil; return }
-        run { self.folder = try await self.api.get("/folders/\(id)") }
-    }
+    func openFolder(_ id: Int?) { boliger.open(id, self) }
     /// Boligkategorier med underkategorier (Innstillinger → Boliger på PC). Tom liste på eldre servere.
-    func loadBoligCategories() async {
-        // {categories: [...], options, aiNew} (eldre form: [..] eller {items: [..]}).
-        guard let d = try? await api.call("GET", "/boliger/categories") else { return }
-        if let w = try? JSONDecoder().decode(BoligCats.self, from: d) { boligCats = w.categories }
-        else if let list: [BoligCategory] = try? decodeList(d) { boligCats = list }
-    }
+    func loadBoligCategories() async { await boliger.loadCategories(self) }
     /// targetId: «Legg i bolig» (nil = boligen som er åpen). categoryId: nil = AI velger kategori og underkategori.
-    func addFolderEntry(_ desc: String, _ amount: String, paidBy: String?, targetId: Int? = nil, categoryId: Int? = nil) {
-        guard let f = folder else { return }
-        let id = targetId ?? f.id
-        run {
-            var body: [String: Any] = ["description": desc, "amount": amount.replacingOccurrences(of: " ", with: "").replacingOccurrences(of: ",", with: ".")]
-            if let paidBy { body["paidBy"] = paidBy }
-            if let categoryId { body["categoryId"] = categoryId }
-            let d = try await self.api.call("POST", "/folders/\(id)/entries", json: body)
-            let res = try JSONDecoder().decode(Folder.self, from: d)
-            // Lagt i en annen bolig: den åpne boligen lastes på nytt.
-            if id == f.id { self.folder = res } else { self.folder = try await self.api.get("/folders/\(f.id)") }
-            let list: [Folder] = try await self.decodeList(self.api.call("GET", "/folders")); self.folders = list
-            self.flash("Lagt til i \(res.name)")
-        }
-    }
+    func addFolderEntry(_ desc: String, _ amount: String, paidBy: String?, targetId: Int? = nil, categoryId: Int? = nil) { boliger.addEntry(desc, amount, paidBy: paidBy, targetId: targetId, categoryId: categoryId, self) }
 
     /* ---------- Finn (FinnModell.swift) ---------- */
 

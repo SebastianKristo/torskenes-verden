@@ -14,7 +14,7 @@ import Intents
    stort og app-ikonet som lite merke. Krever capability «Communication Notifications»
    (com.apple.developer.usernotifications.communication) i signeringen; uten den feiler `updating(from:)`, og ikonet legges
    ved som bilde i varselet i stedet.
- – Lagres per bruker (mottakeren) på serveren: GET/PUT /api/family/zone-alerts (SERVER45). Eldre server (404): lokalt per konto. */
+ – Lagres per bruker (mottakeren) på serveren: GET/PUT /api/family/zone-alerts (SERVER45). Den lokale kopien per konto brukes bare uten nett (varslene filtreres på enheten). */
 
 @MainActor
 @Observable
@@ -25,7 +25,6 @@ final class Zone45 {
     var people: [String: Bool] = [:]
     var zones: [String: Bool] = [:]
     var loaded: Bool = false
-    var server: Bool = true
     var banner: Bool = false
 
     @ObservationIgnored private var bannerTask: Task<Void, Never>? = nil
@@ -48,11 +47,8 @@ final class Zone45 {
         do {
             let d: Data = try await store.api.callAt("/api", "GET", "/family/zone-alerts", timeout: 12)
             apply(JS.obj(d))
-            server = true
-        } catch let e as APIError where e.status == 404 {
-            server = false
-            readLocal()
         } catch {
+            // Uten nett: den lokale kopien. Q19: serveren har alltid /family/zone-alerts, så 404 er ikke lenger «eldre server».
             readLocal()
         }
         loaded = true

@@ -5,7 +5,7 @@ import UIKit
    Ny pakke: «✦ Auto · Bring» (det som gjenkjennes) eller en bestemt tjeneste.
    Eksisterende pakke: hold inne og velg én pakke → SPOR VIA med de samme valgene; «Auto (…)» går tilbake til automatisk.
    POST/PATCH /api/tracking tar carrierOverride (null = auto). Svaret har carrierDetected, carrierOverride og carrierLabel
-   («Bring · valgt»). Eldre server (400/404): appen sender carrier i stedet, eller viser en melding. */
+   («Bring · valgt»). Q19: serveren har carrierOverride; 400 (ugyldig verdi) og 404 (sendingen er borte) vises som feil. */
 
 
 struct TrackCarrier26: Identifiable, Hashable {
@@ -74,8 +74,7 @@ final class TrackOverride26 {
                 store.flash("Spores nå via " + shown)
                 Haptics.shared.success()
             } catch let e as APIError {
-                let old: Bool = e.status == 404 || e.status == 400
-                store.flash(old ? "Serveren støtter ikke valg av tjeneste ennå. Oppdater homelab." : "Kunne ikke endre: " + e.message)
+                store.flash("Kunne ikke endre: " + e.message)
             } catch {
                 store.flash("Kunne ikke endre: \(error.localizedDescription)")
             }
@@ -225,25 +224,8 @@ struct Track26Flow: Layout {
 // kaller POST /api/tracking/refresh.
 
 extension Store {
-    /// Pull-to-refresh og «Sjekk nå»: be serveren hente status hos fraktselskapene nå (POST /api/tracking/refresh).
-    /// Q19: ingen omvei om /tracking/check ved 404 lenger; serveren har ruten, og /api/version sier fra om en for gammel server.
-    func refreshTracking22() async {
-        trkChecking = true
-        defer { trkChecking = false }
-        do {
-            let d: Data = try await api.callAt("/api", "POST", "/tracking/refresh", timeout: 60)
-            let o: [String: Any] = JS.obj(d)
-            if o["items"] != nil {
-                let t: TrackingData = TrackingData(o)
-                tracking = t
-                notifyTracking(t)
-                return
-            }
-        } catch {
-            flash("Kunne ikke oppdatere sporingen: \(error.localizedDescription)")
-        }
-        try? await loadTracking()
-    }
+    /// Pull-to-refresh og «Sjekk nå»: be serveren hente status hos fraktselskapene nå (POST /api/tracking/refresh, SporingModell.swift).
+    func refreshTracking22() async { await sporing.refresh(self) }
 }
 
 /// Logoen til fraktselskapet: manuelt kontrollert fil fra logobiblioteket, ellers fargefyll med navnet.

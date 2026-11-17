@@ -446,3 +446,55 @@ final class Bol24Model {
 
 /// Beløp som i designet: «13 890 kr».
 func bol24kr(_ v: Double) -> String { neg0(v) + " kr" }
+
+/* ---------------- Struktur: iOS – Boliger ut av Store (AUDIT §6, samme mønster som DomenerModell) ----------------
+ Boliglisten (delte mapper, Folder), boligen som er åpen, boligkategoriene og «Legg i bolig» bor her i stedet for i Store.
+ Store eier modellen (store.boliger) og har videresendende egenskaper (store.folders, store.folder, store.boligCats,
+ store.uploadFolder) og metoder (openFolder, loadBoligCategories, addFolderEntry), så skjermene virker som før. Modellen
+ injiseres sammen med Store (homelabMiljo), så nye visninger kan lese den med @Environment(BoligerModell.self).
+ Bol24Model over er Boliger-sidens egen visning av de samme boligene (piller, toppbilde, «Rediger bolig»); den er uendret.
+ Opplastingen av kvitteringer til en bolig (uploadToFolder) står i Store sammen med resten av opplastingskøen.
+ Boligene er delt i husstanden (CLAUDE.md: unntaket fra «alt er per bruker»). */
+
+@MainActor
+@Observable
+final class BoligerModell {
+    var folders: [Folder]? = nil
+    /// Boligen som er åpen.
+    var folder: Folder? = nil
+    /// Boligkategorier med underkategorier (Innstillinger → Boliger på PC).
+    var cats: [BoligCategory] = []
+    /// «Legg i bolig»: målet for skann mens man står i en bolig (nil = boligen som er åpen).
+    var uploadFolder: Int? = nil
+
+    func open(_ id: Int?, _ store: Store) {
+        uploadFolder = nil
+        guard let id else { folder = nil; return }
+        store.run { self.folder = try await store.api.get("/folders/\(id)") }
+    }
+
+    /// Boligkategorier med underkategorier. Tom liste på eldre servere.
+    func loadCategories(_ store: Store) async {
+        // {categories: [...], options, aiNew} (eldre form: [..] eller {items: [..]}).
+        guard let d = try? await store.api.call("GET", "/boliger/categories") else { return }
+        if let w = try? JSONDecoder().decode(BoligCats.self, from: d) { cats = w.categories }
+        else if let list: [BoligCategory] = try? store.decodeList(d) { cats = list }
+    }
+
+    /// targetId: «Legg i bolig» (nil = boligen som er åpen). categoryId: nil = AI velger kategori og underkategori.
+    func addEntry(_ desc: String, _ amount: String, paidBy: String?, targetId: Int?, categoryId: Int?, _ store: Store) {
+        guard let f = folder else { return }
+        let id: Int = targetId ?? f.id
+        store.run {
+            var body: [String: Any] = ["description": desc, "amount": amount.replacingOccurrences(of: " ", with: "").replacingOccurrences(of: ",", with: ".")]
+            if let paidBy { body["paidBy"] = paidBy }
+            if let categoryId { body["categoryId"] = categoryId }
+            let d = try await store.api.call("POST", "/folders/\(id)/entries", json: body)
+            let res = try JSONDecoder().decode(Folder.self, from: d)
+            // Lagt i en annen bolig: den åpne boligen lastes på nytt.
+            if id == f.id { self.folder = res } else { self.folder = try await store.api.get("/folders/\(f.id)") }
+            let list: [Folder] = try await store.decodeList(store.api.call("GET", "/folders")); self.folders = list
+            store.flash("Lagt til i \(res.name)")
+        }
+    }
+}

@@ -12,5 +12,8 @@ extension View {
             .environment(store.domener)
             .environment(store.finnModell)
             .environment(store.matplan)
+            .environment(store.boliger)
+            .environment(store.sporing)
+            .environment(store.aksjer)
     }
 }

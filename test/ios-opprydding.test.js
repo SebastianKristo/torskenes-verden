@@ -121,7 +121,7 @@ test('Struktur: Domener er ute av Store (@Observable-modell med @Environment, St
   assert.match(code(raw('FinansHub/Sources/PaperDomains.swift')), /@Environment\(DomenerModell\.self\) private var dom/);
 });
 
-test('Struktur: Finn og Matplan er ute av Store etter samme mønster (modell, videresending, homelabMiljo)', () => {
+test('Struktur: Finn, Matplan, Boliger og Aksjer er ute av Store etter samme mønster (modell, videresending, homelabMiljo)', () => {
   const s = code(raw('FinansHub/Sources/Store.swift'));
   const miljo = code(raw('FinansHub/Sources/HomelabMiljo.swift'));
   const domener = [
@@ -129,6 +129,11 @@ test('Struktur: Finn og Matplan er ute av Store etter samme mønster (modell, vi
       ['func loadFinn\\(\\) async throws \\{ try await finnModell\\.load\\(self\\) \\}', 'func openFinn\\(_ id: Int\\) \\{ finnModell\\.open\\(id, self\\) \\}']],
     ['MatplanModell', 'matplan', [['week', 'week'], ['matDay', 'day'], ['matFull', 'full']],
       ['func loadWeek\\(\\) async throws \\{ try await matplan\\.load\\(self\\) \\}', 'func addToShop\\(_ items: \\[String\\]\\) \\{ matplan\\.addToShop\\(items, self\\) \\}']],
+    ['BoligerModell', 'boliger', [['folders', 'folders'], ['folder', 'folder'], ['boligCats', 'cats'], ['uploadFolder', 'uploadFolder']],
+      ['func openFolder\\(_ id: Int\\?\\) \\{ boliger\\.open\\(id, self\\) \\}', 'func loadBoligCategories\\(\\) async \\{ await boliger\\.loadCategories\\(self\\) \\}',
+        'func addFolderEntry\\(_ desc: String, _ amount: String, paidBy: String\\?, targetId: Int\\? = nil, categoryId: Int\\? = nil\\) \\{ boliger\\.addEntry\\(desc, amount, paidBy: paidBy, targetId: targetId, categoryId: categoryId, self\\) \\}']],
+    ['AksjerModell', 'aksjer', [['stocks', 'stocks'], ['stockPeriod', 'period'], ['stocksX', 'x'], ['stockScreen', 'screen'], ['stockSel', 'sel'], ['stockFrom', 'from']],
+      ['case \\.stocks: try await aksjer\\.load\\(self\\)', 'func syncStocks\\(\\) \\{ aksjer\\.sync\\(self\\) \\}']],
   ];
   for (const [type, prop, vars, funcs] of domener) {
     const m = code(raw(`FinansHub/Sources/${type}.swift`));
@@ -141,7 +146,32 @@ test('Struktur: Finn og Matplan er ute av Store etter samme mønster (modell, vi
     assert.match(miljo, new RegExp(`\\.environment\\(store\\.${prop}\\)`), prop);
   }
   // Ingen egen lagring igjen i Store for disse feltene.
-  assert.doesNotMatch(s, /^\s+var (finn|finnSel|finnDetail|finnBusy|week|matDay|matFull)(: [^{\n]+)?( = [^{\n]+)?$/m);
+  assert.doesNotMatch(s, /^\s+var (finn|finnSel|finnDetail|finnBusy|week|matDay|matFull|folders|folder|boligCats|uploadFolder|stocks|stockPeriod|stocksX|stockScreen|stockSel|stockFrom)(: [^{\n]+)?( = [^{\n]+)?$/m);
+});
+
+test('Struktur: Sporing er ute av Store (SporingModell eier tilstanden og kallene, Store videresender)', () => {
+  const s = code(raw('FinansHub/Sources/Store.swift'));
+  const m = code(raw('FinansHub/Sources/SporingModell.swift'));
+  assert.match(m, /@MainActor\s+@Observable\s+final class SporingModell \{/);
+  assert.match(s, /let sporing: SporingModell = SporingModell\(\)/);
+  for (const [navn, til] of [['tracking', 'tracking'], ['homePackages', 'homePackages'], ['trkSel', 'sel'], ['trkFilter', 'filter'], ['trkChecking', 'checking'],
+    ['trkTab', 'tab'], ['trkSettings', 'settings'], ['trkOrder', 'order'], ['paperTrackFull', 'full'], ['trackAddOpen', 'addOpen']]) {
+    assert.match(s, new RegExp(`var ${navn}: [^{\\n]+\\{ get \\{ sporing\\.${til} \\} set \\{ sporing\\.${til} = newValue \\} \\}`), navn);
+  }
+  assert.doesNotMatch(s, /^\s+var (tracking|homePackages|trkSel|trkFilter|trkChecking|trkTab|trkSettings|trkOrder|paperTrackFull|trackAddOpen)(: [^{\n]+)?( = [^{\n]+)?( \{)?$/m);
+  // Rekkefølgen lagres som før.
+  assert.match(m, /UserDefaults\.standard\.stringArray\(forKey: "fh_trk_order"\) \?\? \["add", "shipments", "notify", "carriers"\]/);
+  // Kallene bor i modellen; Store-utvidelsene videresender (skjermene kaller store.loadTracking() osv. som før).
+  for (const f of ['func load\\(_ store: Store\\) async throws', 'func poll\\(_ store: Store\\) async', 'func add\\(', 'func archive\\(', 'func delete\\(', 'func check\\(_ store: Store\\)',
+    'func setPref\\(', 'func setSource\\(', 'func notify\\(_ t: TrackingData, _ store: Store\\)', 'func refresh\\(_ store: Store\\) async']) {
+    assert.match(m, new RegExp(f), f);
+  }
+  const tr = code(raw('FinansHub/Sources/Tracking.swift'));
+  assert.match(tr, /func loadTracking\(\) async throws \{ try await sporing\.load\(self\) \}/);
+  assert.match(tr, /func notifyTracking\(_ t: TrackingData\) \{ sporing\.notify\(t, self\) \}/);
+  assert.doesNotMatch(tr, /callAt\("\/api", "(GET|POST|PATCH|PUT|DELETE)", "\/tracking/);
+  assert.match(code(raw('FinansHub/Sources/TrackCarriers.swift')), /func refreshTracking22\(\) async \{ await sporing\.refresh\(self\) \}/);
+  assert.match(code(raw('FinansHub/Sources/HomelabMiljo.swift')), /\.environment\(store\.sporing\)/);
 });
 
 test('Q19: Finn har ikke lenger «404 → Oppdater homelab»-reserver (serveren har endepunktene)', () => {
@@ -177,6 +207,36 @@ test('Q19: flere «404 → gammel vei / lokalt»-reserver er borte der serveren 
   const tc = src('TrackCarriers.swift');
   assert.doesNotMatch(tc, /"\/tracking\/check"/);
   assert.match(srv('server/sporing/shipments.js'), /api\.post\('\/refresh'/);
+});
+
+test('Q19 (runde 4): Skjold Lab, Familie og Sporing har ikke lenger «404 → bare lokalt / støttes ikke ennå»', () => {
+  const src = (f) => code(raw(`FinansHub/Sources/${f}`));
+  const srv = (f) => readFileSync(join(IOS, '..', '..', f), 'utf8');
+  // Skjold Lab: plukklista og LED-innstillingene synkes alltid (serveren har GET|PUT); 404 slår ikke av synken.
+  const pick = src('SkjoldPick.swift');
+  assert.doesNotMatch(pick, /status == 404/);
+  assert.doesNotMatch(pick, /localOnly/);
+  assert.match(srv('server/skjold/picklist.js'), /app\.get\('\/picklist'/);
+  assert.match(srv('server/skjold/picklist.js'), /app\.put\('\/picklist'/);
+  const led = src('SkjoldLED.swift');
+  assert.doesNotMatch(led, /localSettings/);
+  assert.match(led, /settingsError = Skjold78\.message\(error\)/, 'feil ved lagring vises');
+  assert.match(srv('server/skjold/leds.js'), /app\.get\('\/leds\/settings'/);
+  assert.match(srv('server/skjold/leds.js'), /app\.put\('\/leds\/settings'/);
+  // Familie: sonevarslene lagres på serveren; den lokale kopien er bare til bruk uten nett.
+  const zone = src('ZoneAlerts.swift');
+  assert.doesNotMatch(zone, /status == 404/);
+  assert.doesNotMatch(zone, /var server: Bool/);
+  assert.match(srv('server/familie/zone-alerts.js'), /zone45Api\.get\('\/zone-alerts'/);
+  // Familie: valg av kilde viser serverens feil («Ukjent enhet»), ikke «støtter ikke ennå».
+  const dev = src('FamilyDevices.swift');
+  assert.doesNotMatch(dev, /Serveren støtter ikke valg av kilde ennå/);
+  assert.match(srv('server/familie/positions.js'), /api\.put\('\/me\/source'/);
+  // Sporing: 400/404 på valgt tjeneste er ekte feil (ugyldig verdi, sendingen er borte), og serverens melding vises.
+  const tc = src('TrackCarriers.swift');
+  assert.doesNotMatch(tc, /Serveren støtter ikke valg av tjeneste ennå/);
+  assert.match(tc, /catch let e as APIError \{\s*store\.flash\("Kunne ikke endre: " \+ e\.message\)/);
+  assert.match(srv('server/sporing/shipments.js'), /if \('carrierOverride' in b\)/);
 });
 
 test('Serveren: logo 204 = «ingen logo» (spørres ikke igjen), og discovery med local: [] sletter ikke lagret lokal adresse', () => {
