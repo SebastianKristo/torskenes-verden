@@ -267,7 +267,7 @@ private fun TasksCard31(vm: AppViewModel, v: ChatV27, o: JSONObject) {
         Modifier.widthIn(max = 420.dp).fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(v.card).border(1.dp, v.line, RoundedCornerShape(22.dp)).padding(horizontal = 16.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
-        Row(Modifier.fillMaxWidth().clickable { Haptics.select(); vm.openTasks() }.padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.fillMaxWidth().clickable(role = Role.Button, onClickLabel = "Åpne Gjøremål") { Haptics.select(); vm.openTasks() }.padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(o.c31("title", "list") ?: "Gjøremål", color = v.ink, fontFamily = PaperFonts.sans, fontWeight = FontWeight.Bold, fontSize = 15.sp, modifier = Modifier.weight(1f))
             Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = v.mut, modifier = Modifier.size(22.dp))
         }

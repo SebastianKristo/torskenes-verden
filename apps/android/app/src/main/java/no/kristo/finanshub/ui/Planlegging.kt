@@ -38,6 +38,8 @@ import no.kristo.finanshub.ui.designsystem.HomelabTheme
 import no.kristo.finanshub.ui.designsystem.HomelabType
 import no.kristo.finanshub.ui.designsystem.DsPalette
 import no.kristo.felles.tid.OsloDato
+import androidx.compose.ui.semantics.Role
+import androidx.compose.foundation.selection.selectable
 
 /*
  * Prompt 51 (ANDFEAT51): «Planlegging» i FinansHub Android – FIN51 ($S/SERVER51-API.md), fasit public/finans/js/plan51.js.
@@ -225,7 +227,7 @@ private fun GoalForm51(vm: AppViewModel, g: JSONObject?, accounts: List<JSONObje
             GOALCOLORS51.forEach { c ->
                 val on = c.equals(color, true)
                 Box(
-                    Modifier.size(48.dp).clip(CircleShape).clickable { color = c }.semantics { contentDescription = "Farge $c" + if (on) ", valgt" else "" },
+                    Modifier.size(48.dp).clip(CircleShape).selectable(selected = on, role = Role.RadioButton) { color = c }.semantics { contentDescription = "Farge $c" + if (on) ", valgt" else "" },
                     contentAlignment = Alignment.Center,
                 ) { Box(Modifier.size(if (on) 34.dp else 28.dp).clip(CircleShape).background(hex51(c) ?: p.textPrimary)) }
             }
@@ -386,7 +388,7 @@ private fun TaxItem51(t: JSONObject, top: Boolean) {
         }
         if (sources.isNotEmpty()) {
             Text(if (open) "Skjul transaksjonene" else "${sources.size} transaksjoner ›", color = p.accent, style = HomelabType.subheadline, fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.heightIn(min = 40.dp).clickable { open = !open }.padding(vertical = 8.dp))
+                modifier = Modifier.heightIn(min = 40.dp).clickable(role = Role.Button, onClickLabel = "Vis eller skjul") { open = !open }.padding(vertical = 8.dp))
             if (open) sources.forEach { s -> Line51(s.str51("name"), s.s43("date"), kr51(s.num51("amount"), true), top = false) }
         }
     }

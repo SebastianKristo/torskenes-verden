@@ -418,7 +418,7 @@ private fun List39(days: List<CmpD39>) {
                 }
                 Column(Modifier.fillMaxWidth()) {
                     Box(Modifier.fillMaxWidth().height(1.dp).background(Color.White.copy(alpha = .1f)))
-                    Row(Modifier.fillMaxWidth().clickable { Haptics.select(); open = if (open == i) -1 else i }.padding(top = 10.dp, bottom = 8.dp),
+                    Row(Modifier.fillMaxWidth().clickable(role = Role.Button, onClickLabel = "Vis eller skjul detaljene") { Haptics.select(); open = if (open == i) -1 else i }.padding(top = 10.dp, bottom = 8.dp),
                         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text(x.d, color = Color.White, fontSize = HomelabType.callout.fontSize, fontWeight = FontWeight.SemiBold, maxLines = 1, modifier = Modifier.width(44.dp))
                         Text(y, color = Color.White, fontSize = HomelabType.callout.fontSize, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.End, maxLines = 1, modifier = Modifier.width(54.dp))

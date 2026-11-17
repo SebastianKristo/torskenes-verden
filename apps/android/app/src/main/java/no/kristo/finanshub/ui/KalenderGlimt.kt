@@ -52,6 +52,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Icon
 import androidx.compose.material3.minimumInteractiveComponentSize
 import no.kristo.felles.tid.OsloDato
+import androidx.compose.foundation.selection.selectable
 
 /*
  * Prompt 32 (ANDROID32): Kalender med Glimt (Kalender.dc.html).
@@ -156,7 +157,7 @@ private fun KalFilters32b(vm: AppViewModel) {
             val on = s.kFilter == k
             Row(
                 Modifier.height(34.dp).clip(CircleShape).background(if (on) p.textPrimary else p.surfaceRaised).border(1.dp, if (on) p.textPrimary else p.line, CircleShape)
-                    .clickable { Haptics.select(); s.kFilter = k }.padding(horizontal = 12.dp),
+                    .selectable(selected = on, role = Role.RadioButton) { Haptics.select(); s.kFilter = k }.padding(horizontal = 12.dp),
                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp),
             ) {
                 if (c != null) Box(Modifier.size(8.dp).clip(CircleShape).background(Color(c)))

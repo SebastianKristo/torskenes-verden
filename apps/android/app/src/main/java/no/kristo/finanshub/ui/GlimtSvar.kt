@@ -215,7 +215,7 @@ private fun G67PendRow(vm: AppViewModel, p: G67Pend) {
     if (p.conflictId != null) Text("Motsier noe Glimt allerede vet – velg under Motstrid først.", color = pal.lab, fontSize = 12.5.sp, modifier = Modifier.padding(horizontal = 14.dp, vertical = 2.dp))
     if (p.evidence.isNotEmpty()) {
         Text((if (why) "▾ " else "▸ ") + "Hvorfor Glimt tror det", color = pal.ink, fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
-            modifier = Modifier.heightIn(min = 40.dp).clickable { why = !why }.padding(horizontal = 14.dp, vertical = 10.dp))
+            modifier = Modifier.heightIn(min = 40.dp).clickable(role = Role.Button, onClickLabel = "Vis eller skjul forklaringen") { why = !why }.padding(horizontal = 14.dp, vertical = 10.dp))
         if (why) p.evidence.forEach { Text(it, color = pal.mut, fontSize = 12.5.sp, modifier = Modifier.padding(start = 24.dp, end = 14.dp, bottom = 2.dp)) }
     }
     if (s.edit == p.id) { G67PendEdit(vm, p); return }

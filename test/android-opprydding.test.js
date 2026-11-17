@@ -138,6 +138,7 @@ const P85E_RUNDE4 = {
   nyheter: ['NewsIcons.kt'],
   okonomiRest: ['Finance.kt', 'Kvitteringer.kt', 'KvitteringKo.kt', 'LogoVelger.kt', 'FinnAnnonse.kt', 'More.kt', 'Mer.kt', 'FellesSok.kt'],
   innstillingerRest: ['AiKontrollSkjerm.kt', 'ClaudeImport.kt', 'AppIkon.kt', 'Bakgrunn.kt', 'WidgetGalleri.kt', '../widget/WidgetConfigActivity.kt', 'Enhetsgodkjenning.kt', 'Innlogging.kt', 'Invitasjon.kt'],
+  hjemOgModuler: ['GlimtSvar.kt', 'ChatKort.kt', 'KalenderGlimt.kt', 'DeparturesHomeCard.kt', 'HjemlysFlow.kt', 'Planlegging.kt', 'Modules.kt', 'Tracking.kt', 'WeatherEdit.kt', 'WeatherCompare.kt'],
 };
 
 test('P85 E (runde 4): Abonnement, Aksjer og de andre sidene som sto igjen har rolle på trykkflatene', () => {
@@ -162,6 +163,7 @@ test('P85 E (runde 4): Abonnement, Aksjer og de andre sidene som sto igjen har r
   assert.match(imp, /\.toggleable\(value = on, role = Role\.Checkbox\) \{ s\.impPick = if \(on\) s\.impPick - id else s\.impPick \+ id \}[^\n]*\n\s*Checkbox\(on, null,/);
   assert.match(imp, /\.toggleable\(value = on, role = Role\.Switch\) \{ onChange\(!on\) \}[\s\S]{0,300}Switch\(on, null,/);
   assert.match(strip(raw(join(APP, 'widget/WidgetConfigActivity.kt'))), /\.toggleable\(value = papir, role = Role\.Switch\) \{ papir = !papir \}[\s\S]{0,500}Switch\(papir, null\)/);
+  assert.match(strip(raw(join(APP, 'ui/Modules.kt'))), /\.toggleable\(value = sh\.done, role = Role\.Checkbox\) \{ vm\.toggleShop\(sh\.id\) \}[^\n]*\n\s*Checkbox\(checked = sh\.done, onCheckedChange = null,/, 'handlelisten');
   assert.match(strip(raw(join(APP, 'ui/Boliger.kt'))), /\.toggleable\(value = on, role = Role\.Switch\) \{ vm\.b24PatchHome\(h\.id, JSONObject\(\)\.put\(t\.first, !on\)\) \}/);
 });
 

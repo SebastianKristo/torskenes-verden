@@ -118,7 +118,7 @@ private fun VelgStopp27(vm: AppViewModel) {
                     PLabel("Oversikt · Avganger-kortet")
                     PSerif("Velg stopp", 24.sp)
                 }
-                Box(Modifier.height(36.dp).clip(CircleShape).background(p.textPrimary).clickable { s.homeSheet = false }.padding(horizontal = 16.dp), contentAlignment = Alignment.Center) {
+                Box(Modifier.height(36.dp).clip(CircleShape).background(p.textPrimary).clickable(role = Role.Button) { s.homeSheet = false }.padding(horizontal = 16.dp), contentAlignment = Alignment.Center) {
                     Text("Ferdig", color = p.surface, fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize)
                 }
             }
@@ -160,7 +160,7 @@ private fun VelgStopp27(vm: AppViewModel) {
                 }
             }
             Box(
-                Modifier.fillMaxWidth().height(46.dp).clip(RoundedCornerShape(23.dp)).border(1.dp, p.line, RoundedCornerShape(23.dp)).clickable { vm.manageStops27() },
+                Modifier.fillMaxWidth().height(46.dp).clip(RoundedCornerShape(23.dp)).border(1.dp, p.line, RoundedCornerShape(23.dp)).clickable(role = Role.Button) { vm.manageStops27() },
                 contentAlignment = Alignment.Center,
             ) { Text("Legg til eller fjern stopp ›", color = p.textPrimary, fontWeight = FontWeight.Bold, fontSize = HomelabType.callout.fontSize) }
         }

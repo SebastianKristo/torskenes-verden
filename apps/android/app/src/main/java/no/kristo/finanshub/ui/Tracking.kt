@@ -170,7 +170,7 @@ internal fun TrkTimeline(s: Shipment) {
             }
         }
         Text("Åpne hos ${s.carrierName} ↗", color = p.accent, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.subheadline.fontSize,
-            modifier = Modifier.padding(top = 8.dp).clip(CircleShape).clickable { openLink(ctx, s.url.ifBlank { carrierTrackUrl(s.carrier, s.trackingNo) }) }.padding(vertical = 4.dp))
+            modifier = Modifier.padding(top = 8.dp).clip(CircleShape).clickable(role = Role.Button) { openLink(ctx, s.url.ifBlank { carrierTrackUrl(s.carrier, s.trackingNo) }) }.padding(vertical = 4.dp))
     }
 }
 
