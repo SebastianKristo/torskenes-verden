@@ -126,6 +126,27 @@ test('P85 E: Nyheter, Mat, Domener, Vær, Avganger og kalendervisningen har roll
   assert.match(dom, /Modifier\.semantics \{ contentDescription = "Oppdater" \}\.clip\(CircleShape\)\.clickable\(role = Role\.Button\) \{ vm\.reloadDomain\(\) \}/);
 });
 
+// Runde 4: sidene som sto igjen. Hver fil i lista har ingen clickable uten rolle; valg og brytere sier om de er valgt/på.
+const P85E_RUNDE4 = {
+  okonomi: ['Abonnement.kt', 'Aksjer.kt'],
+};
+
+test('P85 E (runde 4): Abonnement, Aksjer og de andre sidene som sto igjen har rolle på trykkflatene', () => {
+  for (const f of Object.values(P85E_RUNDE4).flat()) {
+    const s = strip(raw(join(APP, 'ui', f)));
+    assert.doesNotMatch(s, /\.clickable\s*(\(\s*\))?\s*\{/, `${f}: clickable uten rolle`);
+    assert.match(s, /import androidx\.compose\.ui\.semantics\.Role\n/, f);
+    if (/\.selectable\(/.test(s)) assert.match(s, /import androidx\.compose\.foundation\.selection\.selectable\n/, f);
+    if (/\.toggleable\(/.test(s)) assert.match(s, /import androidx\.compose\.foundation\.selection\.toggleable\n/, f);
+  }
+  const abo = strip(raw(join(APP, 'ui/Abonnement.kt')));
+  assert.match(abo, /\.toggleable\(value = on, role = Role\.Checkbox\) \{\s*Haptics\.select\(\)\s*done = /, 'oppgavene i abonnementssjekken er avkrysningsbokser');
+  assert.match(abo, /\.clickable\(role = Role\.Button, onClickLabel = "Rediger"\)/);
+  const aks = strip(raw(join(APP, 'ui/Aksjer.kt')));
+  assert.match(aks, /\.selectable\(selected = on, role = Role\.Tab\) \{ Haptics\.select\(\); onPick\(k\) \}/, 'periodevalget sier hvilken som er valgt');
+  assert.match(aks, /\.clickable\(role = Role\.Button, onClickLabel = "Åpne aksjen"\) \{ openStock23\(vm, ps\) \}/);
+});
+
 test('P85 G: kvitteringer lastes opp med Idempotency-Key fra bildet, også fra køen; logo 204 betyr «ingen logo»', () => {
   const api = strip(raw(join(APP, 'Api.kt')));
   assert.match(api, /idempotencyKey: String\? = null\): String/);
