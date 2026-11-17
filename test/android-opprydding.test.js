@@ -229,6 +229,15 @@ test('Q19: 404-reservene for Kalender-vær, stedssøket, Gjøremål-kortene og L
   assert.doesNotMatch(led, /settingsLocal|prefs78/);
 });
 
+test('Q19 (runde 4): SMB-veiviseren har ingen reserve mot /browse for eldre servere', () => {
+  // SMB: POST /api/smb/list finnes (server/smb-browse.js); ingen omvei til /browse når serveren svarer 404.
+  const smb = strip(raw(join(APP, 'SmbModel.kt')));
+  assert.match(raw(join(ROOT, 'server/smb-browse.js')), /api\.post\('\/list'/);
+  assert.doesNotMatch(smb, /"\/browse"/);
+  assert.match(smb, /val o = JSONObject\(smbPost30\("\/list", body\)\)/);
+  assert.match(smb, /e is ApiException && e\.status == 404 -> Smb30Err\("Serveren har ikke veiviseren ennå\. Oppdater Homelab\."/, 'for gammel server får en melding');
+});
+
 test('Q19: kvitteringsskanningen, kopi av kalenderhendelser og «Kjøp gave» har ingen lokal reserve for eldre servere', () => {
   // Kvitteringer: /receipts/scan finnes (server/finans/receipts/routes.js); ingen omvei til /receipts med andre felt.
   const scan = strip(raw(join(APP, 'KvitteringSkanning.kt')));
