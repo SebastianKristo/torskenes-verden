@@ -87,7 +87,7 @@ apps/ios/             SwiftUI (XcodeGen, project.yml), HomelabTests
 apps/android/         Compose: app, kalender, wear, felles (ren Kotlin) og felles-android
 deploy/               proxmox/install.sh, proxmox/update.sh, unraid/homelab-os.xml
 scripts/              hash-password.js, reset-password.js, reset-2fa.js, rekey-secrets.js, design-tokens.mjs, android-nokkel.sh
-test/                 node --test, e2e51/ (ende-til-ende), a11y51/ (tilgjengelighet), visuelle tester og ytelse
+test/                 node --test, e2e/ (ende-til-ende), a11y/ (tilgjengelighet), visuelle tester og ytelse
 docs/                 dokumentasjon, bilder (images/) og ikoner (assets/)
 ```
 

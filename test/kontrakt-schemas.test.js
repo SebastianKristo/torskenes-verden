@@ -1,4 +1,4 @@
-// Kontrakttest (Fase 2): henter svarene fra serveren med eksempeldata (MOCK_DATA=1, samme app som test/e2e51/server.mjs) og
+// Kontrakttest (Fase 2): henter svarene fra serveren med eksempeldata (MOCK_DATA=1, samme app som test/e2e/server.mjs) og
 // validerer dem mot skjemaene i shared/schemas. Endepunktene står i shared/schemas/endpoints.json.
 import './lib/day-clock.mjs';
 import { test } from 'node:test';

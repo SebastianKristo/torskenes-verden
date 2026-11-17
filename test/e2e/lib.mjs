@@ -26,7 +26,7 @@ export async function loadPlaywright() {
 
 /** Starter mock-serveren som egen prosess og venter til den svarer. → {proc, dataDir, stop()} */
 export async function startServer({ env = {} } = {}) {
-  const dataDir = lagMidlertidig('hl-e2e51-'); // slettes når testprosessen avslutter, etter at serveren er stoppet
+  const dataDir = lagMidlertidig('hl-e2e-'); // slettes når testprosessen avslutter, etter at serveren er stoppet
   const ready = join(dataDir, 'ready');
   const proc = spawn(process.execPath, [join(HERE, 'server.mjs')], { cwd: ROOT, env: { ...process.env, DATA_DIR: dataDir, E2E_PORT: String(PORT), E2E_READY_FILE: ready, ...env }, stdio: ['ignore', 'pipe', 'pipe'] });
   let log = '';

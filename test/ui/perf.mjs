@@ -101,5 +101,5 @@ try {
     }
   }
 } finally { await env.close(); }
-writeFileSync(OUT, `${JSON.stringify({ at: new Date().toISOString(), method: 'test/ui51/perf.mjs (mock-server, kald last, desktop 1440×900 1× CPU, mobil 390×844 DPR 3 4× CPU)', results: res }, null, 1)}\n`);
+writeFileSync(OUT, `${JSON.stringify({ at: new Date().toISOString(), method: 'test/ui/perf.mjs (mock-server, kald last, desktop 1440×900 1× CPU, mobil 390×844 DPR 3 4× CPU)', results: res }, null, 1)}\n`);
 console.log(`\nLagret ${OUT}`);

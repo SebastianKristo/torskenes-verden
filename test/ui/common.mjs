@@ -1,11 +1,11 @@
 // Felles oppsett for tilgjengelighetssjekken (npm run a11y) og de visuelle regresjonstestene (npm run test:visual).
-// Bruker mock-serveren og Playwright-oppslaget fra test/e2e51/lib.mjs (Playwright er ikke en npm-avhengighet; den hentes fra en global
-// installasjon eller PLAYWRIGHT_MODULE). Egen port 4621 (UI51_PORT), egen tom DATA_DIR, ingen utgående kall – heller ikke fra nettleseren.
-process.env.E2E_PORT ||= process.env.UI51_PORT || '4621';
-const lib = await import('../e2e51/lib.mjs');
+// Bruker mock-serveren og Playwright-oppslaget fra test/e2e/lib.mjs (Playwright er ikke en npm-avhengighet; den hentes fra en global
+// installasjon eller PLAYWRIGHT_MODULE). Egen port 4621 (UI_PORT, eller det gamle navnet UI51_PORT), egen tom DATA_DIR, ingen utgående kall – heller ikke fra nettleseren.
+process.env.E2E_PORT ||= process.env.UI_PORT || process.env.UI51_PORT || '4621';
+const lib = await import('../e2e/lib.mjs');
 export const { BASE, PASSWORD, ROOT, loadPlaywright, startServer, apiLogin } = lib;
 const { readFileSync } = await import('node:fs');
-const BG_FIXTURE = readFileSync(new URL('../visual51/bakgrunn.jpg', import.meta.url));
+const BG_FIXTURE = readFileSync(new URL('../visual/bakgrunn.jpg', import.meta.url));
 
 /** Hovedsidene (grunnlinjen for Fase 3). auth:false = uten innlogging. wait = selektor som må finnes før sjekken.
  *  mask = selektorer som dekkes over i skjermbildet (QR). hide = selektorer som skjules (tilfeldige animasjoner i lerret).

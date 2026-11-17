@@ -2,6 +2,21 @@
 
 Alle merkbare endringer i Homelab OS, FinansHub og mobilappene. Nyeste øverst. Versjonene med APK og IPA ligger under [Releases](https://github.com/SebastianKristo/torskenes-verden/releases).
 
+## [5.1.0] – 17.11.2026 · Velg fanelinje på iPhone og skjulte beløp i varsler og widgeter
+- **Fanelinje (iPhone):** under Innstillinger → Utseende → Fanelinje velger du mellom «Systemets (Liquid Glass)» og «Papir (klassisk)». Papir er den fanelinjen appen har brukt hele tiden, med Hjem-knappen og merkene på fanene. Liquid Glass er fortsatt standard.
+- **Skjul beløp:** med «Skjul beløp i varsler og widgeter» (Innstillinger → Varsler) står det «••• kr» i stedet for beløpet i push-varsler, ntfy og widgetene. Har du «Skjul beløp» på i appen, gjelder det nå også widgetene på Hjem-skjermen og låseskjermen (iPhone og Android).
+- **Kalender:** nedtellingen på prøver og frister kommer fra serveren, så web, iPhone, Mac og Android viser det samme antallet dager.
+- **Kalender for Mac:** lærer, fag og «Kopier til Personlig» i hendelsesarket.
+- **Tilkoblinger (iPhone):** integrasjonene er gruppert på samme måte som på web.
+- **Vær:** været lastes samtidig med stedslista, så «Henter været …» står kortere. Skiføret i Nordmarka kommer fra Homelab-serveren (Android).
+- **Økonomi på mobil:** Innstillinger-sidene åpnes riktig også når du starter rett på dem. Avkortede tekster i Kvitteringer viser hele teksten når du holder over dem. Kategorifargene og butikkfargene følger temaet.
+- **Lesbarhet:** forbokstavene i Nyheter-innstillingene får lesbar tekst uansett hvilken farge du har valgt.
+- **Android:** knappene i Nyheter, Mat, Domener, Vær, Avganger og modulsidene er tydeligere for TalkBack.
+- **Rettet:**
+  - «I morgen» i widgetene og datoen i Glimt-spørsmålene følger norsk tid også rundt midnatt.
+  - Appene viser en feil i stedet for å late som alt er i orden når serveren ikke svarer på en funksjon.
+  - Kalender-innloggingen på Android lager ikke lenger et ekstra app-token med tilgang til Økonomi.
+
 ## [5.0.1] – 16.11.2026 · Kalenderforslag, gamle kvitteringer og ryddigere apper
 - **Kalender:** kalenderne slås ikke lenger sammen av seg selv. Har du gamle kalendere, får du spørsmålet «Slå sammen kalenderne: N → 4?», og ingenting endres før du svarer ja. «Angre» virker fortsatt i 30 dager (web, iPhone, iPad, Mac og Android).
 - **Kalender i Homelab-appen (iPhone):** den gamle kalenderen inne i appen er erstattet av den innebygde Kalenderen. Alt den kunne er med, og Kalender-appen har fått det samme:

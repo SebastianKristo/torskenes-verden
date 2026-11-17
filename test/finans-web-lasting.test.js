@@ -63,7 +63,7 @@ test('mobile-sidefaner-og-sw.js bruker samme regel (ingen reload ved overtakelse
 // Ende-til-ende (hoppes over uten Playwright/Chromium): Homelab først (/sw.js styrer), så /finans/ – siden skal lastes én gang.
 test('Playwright: Økonomi åpnet fra Homelab lastes bare én gang (desktop og mobil)', { timeout: 120_000 }, async (t) => {
   process.env.E2E_PORT ||= String(4830 + Math.floor(Math.random() * 60));
-  const lib = await import('./e2e51/lib.mjs');
+  const lib = await import('./e2e/lib.mjs');
   const pw = await lib.loadPlaywright();
   if (!pw) return t.skip('Playwright er ikke installert');
   let browser;

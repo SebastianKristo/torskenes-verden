@@ -8,7 +8,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { setup, BASE, PASSWORD, ROOT, json, watchErrors, apiLogin } from './lib.mjs';
 
-const CL_DIR = mkdtempSync(join(tmpdir(), 'hl-e2e51-cl-'));
+const CL_DIR = mkdtempSync(join(tmpdir(), 'hl-e2e-cl-'));
 const CL = join(CL_DIR, 'CHANGELOG.md');
 writeFileSync(CL, readFileSync(join(ROOT, 'CHANGELOG.md'), 'utf8'));
 const OLD = readFileSync(CL, 'utf8').match(/^##\s*\[?v?(\d+\.\d+\.\d+)/m)[1];

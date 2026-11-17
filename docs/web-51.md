@@ -30,13 +30,13 @@
 ## Tilgjengelighet og visuelle tester
 ```bash
 npm run a11y                          # kontrast og andre regler, lys og mørk, 1440/390 – feiler bare på NYE brudd
-npm run a11y -- --update-baseline     # godta dagens brudd som grunnlinje (test/a11y51/baseline.json)
-npm run test:visual                   # skjermbilder mot test/visual51/ref/ (terskel 1 %), rapport i test/visual51/out/report.html
+npm run a11y -- --update-baseline     # godta dagens brudd som grunnlinje (test/a11y/baseline.json)
+npm run test:visual                   # skjermbilder mot test/visual/ref/ (terskel 1 %), rapport i test/visual/out/report.html
 npm run test:visual -- --update       # lagre nye referanser etter en villet designendring
-VISUAL51_PAGES=oversikt,finans-oversikt npm run test:visual   # bare noen visninger (navnene står i test/ui51/common.mjs)
+VISUAL_PAGES=oversikt,finans-oversikt npm run test:visual   # bare noen visninger (navnene står i test/ui/common.mjs)
 npm run test:perf                     # ytelse (CSS/JS, API-kall, FCP/LCP, CLS, lange oppgaver, tvungne layouter) → docs/opprydding/ytelse-for.json
 npm run test:perf -- --out docs/opprydding/ytelse-etter.json  # samme måling til en annen fil
 ```
 Visningene dekker hovedsidene i Homelab, innstillingene og Økonomi i tre temaer (Papir lys, Papir mørk og Glass) på 1440 og 390 px.
-Bakgrunnsbildet byttes med et lite, uskarpt testbilde (`test/visual51/bakgrunn.jpg`), og klokka i nettleseren står fast.
+Bakgrunnsbildet byttes med et lite, uskarpt testbilde (`test/visual/bakgrunn.jpg`), og klokka i nettleseren står fast.
 Begge trenger Playwright med Chromium (`npm i -g playwright && npx playwright install chromium`, eller `PLAYWRIGHT_MODULE`). Uten den hoppes de over.

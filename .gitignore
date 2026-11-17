@@ -38,9 +38,9 @@ tests/receipts/real/*
 !tests/receipts/real/README.md
 tests/receipts/results/
 
-# Prompt 51 (WEBX51): rapporter fra npm run a11y og npm run test:visual (referansene i test/visual51/ref/ og grunnlinjen sjekkes inn)
-test/a11y51/out/
-test/visual51/out/
+# Rapporter fra npm run a11y og npm run test:visual (referansene i test/visual/ref/ og grunnlinjen sjekkes inn)
+test/a11y/out/
+test/visual/out/
 __pycache__/
 
 # Midlertidige git-worktrees for agenter

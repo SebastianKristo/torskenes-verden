@@ -2,16 +2,16 @@
 // (ingen nye npm-pakker): kontrast (WCAG 2.1 AA: 4,5:1, stor tekst 3:1), bilder uten alt, knapper/lenker uten navn, skjemafelt uten
 // etikett, lang på <html>, sidetittel, dupliserte id-er som aria-attributter peker på, og berøringsflater under 24 × 24 px (WCAG 2.2).
 //
-//   npm run a11y                       – sjekker alt, skriver test/a11y51/out/report.{json,md} og feiler bare på NYE brudd
-//   npm run a11y -- --update-baseline  – lagrer dagens brudd som grunnlinje (test/a11y51/baseline.json)
+//   npm run a11y                       – sjekker alt, skriver test/a11y/out/report.{json,md} og feiler bare på NYE brudd
+//   npm run a11y -- --update-baseline  – lagrer dagens brudd som grunnlinje (test/a11y/baseline.json)
 //   npm run a11y -- --strict           – feiler på alle brudd (ikke bare nye)
-//   A11Y51_PAGES=oversikt,finans-oversikt – bare noen sider
+//   A11Y_PAGES=oversikt,finans-oversikt – bare noen sider (A11Y51_PAGES virker fortsatt)
 import { mkdirSync, writeFileSync, readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { start51, context51, open51, PAGES51, THEMES51, VIEWPORTS51, ROOT, args51 } from './common.mjs';
 
-const OUT = join(ROOT, 'test', 'a11y51', 'out');
-const BASELINE = join(ROOT, 'test', 'a11y51', 'baseline.json');
+const OUT = join(ROOT, 'test', 'a11y', 'out');
+const BASELINE = join(ROOT, 'test', 'a11y', 'baseline.json');
 const A = args51();
 
 /** Kjøres i siden. → [{rule, impact, selector, text, detail}] */
@@ -107,7 +107,7 @@ function audit() {
 // Fast klokke som de visuelle testene: forslag som avhenger av tiden (Vel fremme etter kl. 22) gir ellers ulike brudd.
 const env = await start51({ clock: true });
 if (!env) process.exit(0);
-const only = (process.env.A11Y51_PAGES || '').split(',').filter(Boolean);
+const only = (process.env.A11Y_PAGES || process.env.A11Y51_PAGES || '').split(',').filter(Boolean);
 const results = [];
 try {
   for (const p of PAGES51.filter((x) => !only.length || only.includes(x.name))) {

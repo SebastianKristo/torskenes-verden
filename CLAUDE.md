@@ -83,7 +83,7 @@ Detaljer i [docs/sikkerhet.md](docs/sikkerhet.md). Disse brytes aldri:
 | Kommando | Hva |
 |---|---|
 | `npm test` | Alle enhetstester (`node --test`, uten nett). Skal ha 0 feil |
-| `npm run test:e2e` | Ende-til-ende mot testserveren (`test/e2e51/`) |
+| `npm run test:e2e` | Ende-til-ende mot testserveren (`test/e2e/`) |
 | `npm run a11y` | Tilgjengelighet (axe) |
 | `npm run test:visual` | Skjermbilder mot fasit (lyst/mørkt, mobil/desktop) |
 | `npm run tokens:check` | Generert designkode stemmer med `shared/design/tokens.json` |

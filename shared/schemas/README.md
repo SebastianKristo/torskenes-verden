@@ -15,7 +15,7 @@ der sier hvilken appversjon serveren fortsatt svarer riktig for (Q19).
 | `receipt*.schema.json` | Kvitteringsformatet og OCR-formatet (prompt 48, brukt av server og apper) |
 
 Testen `test/kontrakt-schemas.test.js` starter serveren med eksempeldata (`MOCK_DATA=1`, samme app som
-`test/e2e51/server.mjs`), henter hvert endepunkt i `endpoints.json` med økt og med app-token, og validerer svaret.
+`test/e2e/server.mjs`), henter hvert endepunkt i `endpoints.json` med økt og med app-token, og validerer svaret.
 Validatoren er `test/lib/json-schema.mjs` (ingen avhengigheter, en delmengde av 2020-12; utvid den hvis et skjema trenger
 mer). Kjør `npm test`.
 

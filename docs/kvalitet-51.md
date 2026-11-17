@@ -66,4 +66,4 @@ npm run test:e2e                 # ikke en del av npm test
 E2E_PORT=4700 npm run test:e2e   # annen port
 ```
 
-Playwright er ikke en avhengighet i prosjektet. Testene bruker en global installasjon (`npm i -g playwright && npx playwright install chromium`) eller `PLAYWRIGHT_MODULE=/sti/til/playwright`. Mangler Playwright, hoppes testene over. Mock-serveren kan også startes alene: `node test/e2e51/server.mjs`.
+Playwright er ikke en avhengighet i prosjektet. Testene bruker en global installasjon (`npm i -g playwright && npx playwright install chromium`) eller `PLAYWRIGHT_MODULE=/sti/til/playwright`. Mangler Playwright, hoppes testene over. Mock-serveren kan også startes alene: `node test/e2e/server.mjs`.

@@ -1,21 +1,21 @@
 // Visuelle regresjonstester (npm run test:visual). Skjermbilder av hovedsidene på 1440 og 390 px i Papir lys, Papir mørk og Glass
-// (test/ui51/common.mjs), sammenlignet med lagrede referanser i test/visual51/ref/. Sammenligningen skjer i nettleseren (canvas), så ingen nye npm-pakker.
+// (test/ui/common.mjs), sammenlignet med lagrede referanser i test/visual/ref/. Sammenligningen skjer i nettleseren (canvas), så ingen nye npm-pakker.
 //
-//   npm run test:visual                 – sammenligner; skriver test/visual51/out/ (bilder, diff, report.html) og feiler over terskelen
+//   npm run test:visual                 – sammenligner; skriver test/visual/out/ (bilder, diff, report.html) og feiler over terskelen
 //   npm run test:visual -- --update     – lagrer dagens skjermbilder som nye referanser
-//   VISUAL51_THRESHOLD=0.01             – største andel ulike piksler før det regnes som endret (standard 1 %)
-//   VISUAL51_PIXEL=40                   – hvor stor fargeforskjell (0–255 per kanal) som teller som en ulik piksel (standard 40)
-//   VISUAL51_PAGES=oversikt,finans-oversikt – bare noen sider
+//   VISUAL_THRESHOLD=0.01               – største andel ulike piksler før det regnes som endret (standard 1 %)
+//   VISUAL_PIXEL=40                     – hvor stor fargeforskjell (0–255 per kanal) som teller som en ulik piksel (standard 40)
+//   VISUAL_PAGES=oversikt,finans-oversikt – bare noen sider (de gamle navnene VISUAL51_* virker fortsatt)
 // Mangler en referanse, regnes visningen som «ny» (ikke feil) og skjermbildet ligger i out/ – kjør med --update for å lagre den.
 import { mkdirSync, writeFileSync, readFileSync, existsSync, copyFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { start51, context51, open51, PAGES51, THEMES51, VIEWPORTS51, ROOT, slug51, args51 } from './common.mjs';
 
-const REF = join(ROOT, 'test', 'visual51', 'ref');
-const OUT = join(ROOT, 'test', 'visual51', 'out');
+const REF = join(ROOT, 'test', 'visual', 'ref');
+const OUT = join(ROOT, 'test', 'visual', 'out');
 const A = args51();
-const THRESHOLD = Number(process.env.VISUAL51_THRESHOLD || 0.01);
-const PIXEL = Number(process.env.VISUAL51_PIXEL || 40);
+const THRESHOLD = Number(process.env.VISUAL_THRESHOLD || process.env.VISUAL51_THRESHOLD || 0.01);
+const PIXEL = Number(process.env.VISUAL_PIXEL || process.env.VISUAL51_PIXEL || 40);
 mkdirSync(OUT, { recursive: true });
 mkdirSync(REF, { recursive: true });
 
@@ -42,7 +42,7 @@ async function compare(page, a, b) {
 
 const env = await start51({ clock: true });
 if (!env) process.exit(0);
-const only = (process.env.VISUAL51_PAGES || '').split(',').filter(Boolean);
+const only = (process.env.VISUAL_PAGES || process.env.VISUAL51_PAGES || '').split(',').filter(Boolean);
 const rows = [];
 try {
   const cmpCtx = await env.browser.newContext();

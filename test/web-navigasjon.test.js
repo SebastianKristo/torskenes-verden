@@ -1,7 +1,7 @@
 // Prompt 87 (NAV87, claude-code-web-navigasjon-uten-reload.md): navigasjon skal ikke oppføre seg som en ny sidelasting.
 // Målt i Playwright før rettingen: fotovinduet øverst ble fjernet og laget på nytt ved hvert fanebytte og tonet inn fra opacity 0
 // sammen med resten av siden (ca. 250–300 ms), og FinansHub byttet hele skallet (sidemeny, topp) med innerHTML og hoppet til toppen.
-// Testene her låser reglene; nettlesersjekken ligger i test/e2e51/nav87.e2e.mjs (npm run test:e2e).
+// Testene her låser reglene; nettlesersjekken ligger i test/e2e/nav87.e2e.mjs (npm run test:e2e).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';

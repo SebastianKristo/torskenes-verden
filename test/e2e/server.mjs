@@ -1,12 +1,12 @@
 // Prompt 51 (QA51): mock-server for ende-til-ende-testene. Starter Hono-appen med MOCK_DATA=1 og NODE_ENV=test
 // (ingen bakgrunnsjobber), egen tom DATA_DIR og fast port (E2E_PORT, standard 4605). Alle utgående kall stoppes,
-// så testene aldri når internett. Brukes av lib.mjs; kan også startes for hånd: node test/e2e51/server.mjs
+// så testene aldri når internett. Brukes av lib.mjs; kan også startes for hånd: node test/e2e/server.mjs
 import { writeFileSync } from 'node:fs';
 
 // lib.mjs gir DATA_DIR og sletter den selv. Startes serveren for hånd, lager den sin egen, som slettes når den stoppes.
 if (!process.env.DATA_DIR) {
   const { lagMidlertidig } = await import('../lib/midlertidig.mjs');
-  process.env.DATA_DIR = lagMidlertidig('hl-e2e51-');
+  process.env.DATA_DIR = lagMidlertidig('hl-e2e-');
   for (const sig of ['SIGINT', 'SIGTERM']) process.once(sig, () => process.exit(0)); // «exit» rydder mappa
 }
 process.env.SESSION_SECRET ||= 'e2e51-secret-e2e51-secret-e2e51-secret';
@@ -53,6 +53,6 @@ const { attachRealtime } = await import('../../server/realtime.js');
 const port = Number(process.env.PORT);
 const server = serve({ fetch: app.fetch, port, hostname: '127.0.0.1' }, () => {
   if (process.env.E2E_READY_FILE) writeFileSync(process.env.E2E_READY_FILE, String(port));
-  console.log(`[e2e51] mock-server på http://127.0.0.1:${port} (data ${process.env.DATA_DIR})`);
+  console.log(`[e2e] mock-server på http://127.0.0.1:${port} (data ${process.env.DATA_DIR})`);
 });
 attachRealtime(server, wsUser); // /api/ws som i produksjon (Familie og Sjekk inn oppdateres live)
