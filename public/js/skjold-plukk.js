@@ -4,7 +4,7 @@
 // - Plukklista åpnes som et ark: bilde, navn, plassering og fargeprikk når delen lyser, ± for antall jeg tar, Fjern, Tøm og
 //   «Ta ut av lager» (POST /parts/:id/qty {delta:-n} for alle, med angre).
 // - «Vis alle med LED»: POST /api/skjold/locate {partIds, colors:true} → lit[].color per del (egen palett hvis serveren ikke gir farge).
-// - Lista lagres lokalt per bruker (localStorage «sk79_pick») og synkes med GET|PUT /api/skjold/picklist når serveren har det (404 → bare lokalt).
+// - Lista lagres lokalt per bruker (localStorage «sk79_pick») og synkes med GET|PUT /api/skjold/picklist (uten nett: bare lokalt til neste lagring).
 // - «Feilsøk LED» i LED-oppsettet: POST /cabinets/:id/leds/diagnose → {steps, hint}; veiviser med «Lyste stripa rødt? Ja/Nei» og
 //   «Lyste én LED blått? Ja/Nei», og hint ut fra svarene.
 import { esc, haptic } from './util.js';
@@ -20,7 +20,7 @@ import { pageCss } from './lib/page-css.js';
 pageCss('skjold');
 
 /** items: plukklista · lit: lyset vi tente (for fargene) · open: arket · diag: feilsøkingen. */
-export const P = { items: [], lit: null, open: false, diag: null, loaded: false, serverOff: false, at: 0 };
+export const P = { items: [], lit: null, open: false, diag: null, loaded: false, at: 0 };
 const LS = 'sk79_pick';
 const enc = encodeURIComponent;
 const uid = () => { try { return localStorage.getItem('hl_uid') || ''; } catch { return ''; } };
@@ -38,10 +38,9 @@ function changed(items) {
   P.items = items; P.at = Date.now(); saveLocal();
   if (!P.lit || !M78.lit) P.lit = null;
   paint79();
-  if (P.serverOff) return;
   clearTimeout(putT);
   putT = setTimeout(async () => {
-    try { await sk('/picklist', { method: 'PUT', json: pickBody79(P.items) }); } catch (e) { if (e?.status === 404) P.serverOff = true; }
+    try { await sk('/picklist', { method: 'PUT', json: pickBody79(P.items) }); } catch { /* lagret lokalt; sendes ved neste endring */ }
   }, 600);
 }
 /** Lastes én gang når Skjold Lab åpnes. Serveren vinner hvis den er nyere enn det lokale. */
@@ -60,7 +59,7 @@ export async function loadPick79() {
     } else if (P.items.length && (!items.length || P.at > sAt)) {
       sk('/picklist', { method: 'PUT', json: pickBody79(P.items) }).catch(() => {});
     }
-  } catch (e) { if (e?.status === 404) P.serverOff = true; }
+  } catch { /* uten nett: den lokale lista */ }
   enrich();
   paint79();
 }
@@ -198,7 +197,7 @@ function sheetHtml() {
       <button type="button" class="sk76-btn" data-sk79="take">Ta ut av lager</button>
       <button type="button" class="sk76-btn danger" data-sk79="clear">Tøm</button>
     </div>
-    <p class="sk76-mut sk79-foot">${P.serverOff ? 'Lista er lagret på denne enheten.' : 'Lista er lagret og følger deg mellom enheter.'}${n > MAX_LIT79 ? ` Maks ${MAX_LIT79} lyser samtidig.` : ''}</p>` : ''}`;
+    <p class="sk76-mut sk79-foot">Lista er lagret og følger deg mellom enheter.${n > MAX_LIT79 ? ` Maks ${MAX_LIT79} lyser samtidig.` : ''}</p>` : ''}`;
 }
 let lastFocus = null;
 function paintSheet() {
@@ -271,7 +270,7 @@ async function takeOut() {
   if (!navigator.onLine) { toast('Endringer krever nett. Prøv igjen når du er tilkoblet.'); return; }
   const to = pickTarget82(); // prompt 82: {} | {projectId} | {projectName} – alt eller ingenting, 409 ved for lite
   if (to.error) { toast(to.error); return; }
-  let undo = [], fail = [], bulk = true, token = null, proj = null;
+  let undo = [], fail = [], token = null, proj = null;
   try {
     const r = await sk('/picklist/take', { method: 'POST', json: { ...pickBody79(list), ...to } });
     if (r?.undoToken) { token = r.undoToken; proj = r.project?.name ?? null; afterPickTake82(r); }
@@ -279,11 +278,8 @@ async function takeOut() {
     undo = (Array.isArray(r?.undo) ? r.undo : []).map((u) => ({ id: String(u.partId), set: u.set }));
     fail = (Array.isArray(r?.skipped) ? r.skipped : []).map((x) => S.parts[x.partId]?.name ?? x.partId);
   } catch (e) {
-    if (e?.status !== 404 || to.projectId || to.projectName) { toast(isNet(e) ? 'Endringer krever nett. Prøv igjen når du er tilkoblet.' : e?.message || 'Fikk ikke trukket fra lageret.'); return; }
-    bulk = false;
-    for (const x of list) {
-      try { const r = await sk(`/parts/${enc(x.id)}/qty`, { method: 'POST', json: { delta: -x.qty } }); undo.push({ id: x.id, set: r?.undo?.set ?? null, qty: x.qty }); if (r?.part) S.parts[x.id] = { ...(S.parts[x.id] ?? {}), ...r.part }; } catch (e2) { fail.push(S.parts[x.id]?.name ?? x.name ?? x.id); if (isNet(e2)) break; }
-    }
+    toast(isNet(e) ? 'Endringer krever nett. Prøv igjen når du er tilkoblet.' : e?.message || 'Fikk ikke trukket fra lageret.'); return;
+
   }
   if (!undo.length) { toast('Fikk ikke trukket fra lageret.'); return; }
   const taken = list.filter((x) => undo.some((u) => u.id === x.id));
@@ -294,9 +290,7 @@ async function takeOut() {
     action: 'Angre', ms: 10_000, onAction: async () => {
       const ok = await write(async () => {
         if (token) return sk('/checkout/undo', { method: 'POST', json: { undoToken: token } }); // prompt 82: legger tilbake og sletter utsjekkingen
-        if (bulk) return sk('/picklist/undo', { method: 'POST', json: { undo: undo.map((u) => ({ partId: /^\d+$/.test(u.id) ? Number(u.id) : u.id, set: u.set })) } });
-        for (const u of undo) await sk(`/parts/${enc(u.id)}/qty`, { method: 'POST', json: u.set != null ? { set: u.set } : { delta: u.qty } });
-        return {};
+        return sk('/picklist/undo', { method: 'POST', json: { undo: undo.map((u) => ({ partId: /^\d+$/.test(u.id) ? Number(u.id) : u.id, set: u.set })) } });
       }, 'Lageret er satt tilbake');
       if (ok) { if (token) afterPickTake82(null); changed(normPick79([...taken, ...P.items])); for (const u of undo) delete S.parts[u.id]; enrich(); paintMain(); }
     },
@@ -352,7 +346,7 @@ export function diagHtml79(c) {
     ${body}
   </div>`;
 }
-const diagErr = (e) => (e?.status === 404 ? 'Serveren har ikke feilsøking ennå – oppdater Torskenes verden.' : e?.status === 429 ? 'Vent litt – for mange lys-kommandoer på kort tid.' : isNet(e) ? 'Feilsøkingen krever nett.' : e?.message || 'Feilsøkingen feilet.');
+const diagErr = (e) => (e?.status === 429 ? 'Vent litt – for mange lys-kommandoer på kort tid.' : isNet(e) ? 'Feilsøkingen krever nett.' : e?.message || 'Feilsøkingen feilet.');
 /** Legger nye steg inn i lista (samme key/navn erstattes). */
 function mergeSteps(D, r) {
   for (const s of steps79(r)) { const i = D.steps.findIndex((x) => x.name === s.name); if (i >= 0) D.steps[i] = s; else D.steps.push(s); }

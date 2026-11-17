@@ -1,6 +1,6 @@
 // Prompt 36: profilbilde i Konto (claude-code-konto-profilbilde.md).
 // Bildevalg med beskjæring i sirkel (zoom + dra), lagres som 512 × 512 WebP: PUT /api/me/avatar → {url:'/api/me/avatar?v=<hash>'}.
-// Eldre server (404/405): POST /api/me/avatar med skjema-fil som før. DELETE /api/me/avatar fjerner.
+// Avviser serveren bildeformatet (400/415): POST /api/me/avatar med skjema-fil. DELETE /api/me/avatar fjerner.
 // Etter lagring oppdateres menyen, hilsenen og alt som viser bildet med en gang (hendelsen hl:avatar).
 import { api, esc } from './util.js';
 import { store } from './store.js';
@@ -71,7 +71,7 @@ export async function changeAvatar() {
     const r = await api('/me/avatar', { method: 'PUT', body: blob, headers: { 'Content-Type': blob.type } });
     setUrl(r?.url ?? r?.avatarUrl ?? `/api/me/avatar?v=${Date.now()}`);
   } catch (e) {
-    if (e.status !== 404 && e.status !== 405 && e.status !== 415 && e.status !== 400) { alert(`Kunne ikke lagre bildet: ${e.message}`); return; }
+    if (e.status !== 415 && e.status !== 400) { alert(`Kunne ikke lagre bildet: ${e.message}`); return; }
     try { const fd = new FormData(); fd.append('file', blob, blob.type === 'image/webp' ? 'avatar.webp' : 'avatar.jpg'); const me = await api('/me/avatar', { method: 'POST', body: fd }); setUrl(me?.avatarUrl ?? me?.url ?? null); }
     catch (e2) { alert(`Kunne ikke lagre bildet: ${e2.message}`); }
   }

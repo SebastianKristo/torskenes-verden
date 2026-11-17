@@ -6,7 +6,7 @@
 //   tekst = hendelse. Følger bryterne (hovedbryter, person, sone).
 import { esc } from './util.js';
 
-const Z = { d: null, err: '', loading: false, missing: false };
+const Z = { d: null, err: '', loading: false };
 let rerender = () => {};
 async function j(path, opt = {}) {
   const r = await fetch(path, { credentials: 'same-origin', cache: 'no-store', ...opt, headers: opt.body ? { 'Content-Type': 'application/json' } : {} });
@@ -15,9 +15,9 @@ async function j(path, opt = {}) {
   return d;
 }
 function load() {
-  if (Z.loading || Z.d || Z.missing) return;
+  if (Z.loading || Z.d || Z.err) return;
   Z.loading = true;
-  j('/api/family/zone-alerts').then((d) => { Z.d = d; Z.err = ''; }).catch((e) => { if (e.status === 404 || e.status === 405) Z.missing = true; else Z.err = e.message; }).finally(() => { Z.loading = false; rerender(); });
+  j('/api/family/zone-alerts').then((d) => { Z.d = d; Z.err = ''; }).catch((e) => { Z.err = e.message; }).finally(() => { Z.loading = false; rerender(); });
 }
 const sw = (on, attr, label) => `<button type="button" class="za45-sw${on ? ' on' : ''}" role="switch" aria-checked="${!!on}" aria-label="${esc(label)}" ${attr}><i></i></button>`;
 const ini = (n) => String(n ?? '?').split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase();
@@ -26,7 +26,6 @@ const ini = (n) => String(n ?? '?').split(/\s+/).map((w) => w[0]).join('').slice
 export function zoneAlertCard45(paint) {
   rerender = paint ?? rerender;
   load();
-  if (Z.missing) return '';
   if (!Z.d) return Z.err ? `<section class="card fam-card za45"><span class="fam-sub">${esc(Z.err)}</span></section>` : '';
   const on = Z.d.on !== false, P = Z.d.people ?? [], nOn = P.filter((p) => p.on !== false).length;
   return `<section class="card fam-card za45" aria-label="Posisjonsvarsler">

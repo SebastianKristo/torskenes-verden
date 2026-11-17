@@ -53,7 +53,7 @@ async function api(path, opts = {}) {
   if (!r.ok) throw Object.assign(new Error(d?.error || `Feil ${r.status}`), { status: r.status, code: d?.code, data: d });
   return d;
 }
-const errMsg = (e) => (e?.status === 404 || e?.status === 405 ? 'Krever en nyere Homelab-server' : e?.message || 'Noe gikk galt');
+const errMsg = (e) => e?.message || 'Noe gikk galt';
 function toast(msg) {
   F.toast = msg; clearTimeout(F.toastT);
   F.toastT = setTimeout(() => { F.toast = ''; F.root?.querySelector('.f50-toast')?.remove(); }, 3800);

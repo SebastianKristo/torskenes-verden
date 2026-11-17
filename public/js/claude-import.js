@@ -2,22 +2,20 @@
 // Fasit: design/Claude Import.dc.html (start → leser → forhåndsvisning → importerer → ferdig, angre).
 // Selvstendig modul (ingen import), så AI-kontroll kan laste den dynamisk både på web og i FinansHub/Papir-appen.
 //
-// Data (SERVER43). ZIP-fila parses på serveren, ikke i nettleseren:
-//   POST /api/chat/import/claude  multipart {file: .zip | conversations.json, memory: tekst}  (maks 200 MB)
-//        → {importId, conversations, messages, projects, memory:[tekst], range, items:[{id, title, updatedAt, messages, imported}], steps?}
-//   POST /api/chat/import/claude/:importId/commit {conversationIds:[], memory:[], skipExisting} → {conversations, memory, skipped}
-//   POST /api/chat/import/claude/:importId/undo → {ok}
+// Data (SERVER43). ZIP-fila parses på serveren, ikke i nettleseren. Forhåndsvisningen
+//   → {importId, conversations, messages, projects, memory:[tekst], range, items:[{id, title, updatedAt, messages, imported}], steps?}
+//   og commit {conversationIds:[], memory:[], skipExisting} → {conversations, memory, skipped} går til /api/ai/import (under).
 // Samtalene havner i mappen «Claude» i Chat, minnet per bruker (Chat → ⚙ → Minne) og brukes av Chat og Glimt.
 //
 // Prompt 45 (claude-code-ai-import-claude-chatgpt-gemini.md): tre kilder – Claude (rettet), ChatGPT og Gemini (Google Takeout).
 //   POST /api/ai/import  multipart {file, source, memory} | JSON {uploadId, source, memory} | JSON {sample}  → forhåndsvisning
 //   POST /api/ai/import/upload  rå bytes i biter (X-Upload-Id, X-Chunk-Index, X-Chunk-Total, X-File-Name) for store filer
 //   POST /api/ai/import/:id/commit · POST /api/ai/import/:id/undo · GET /api/ai/import/:id?q=
-//   Feil gir faktisk årsak {error, reason, detail}. Eldre server (404): Claude via /api/chat/import/claude som før.
+//   Feil gir faktisk årsak {error, reason, detail}.
 
 import { pageCss } from './lib/page-css.js';
-const MAX = 1024 * 1024 * 1024, MAX_OLD = 200 * 1024 * 1024, CHUNK = 8 * 1024 * 1024, CHUNK_FROM = 40 * 1024 * 1024;
-const ST = { src: 'claude', legacy: false, st: 'start', err: '', memTxt: '', q: '', sel: {}, msel: {}, oChats: true, oMem: true, oSkip: true, drag: false, steps: [], file: '', D: null, res: null, pi: 0, pn: 0, busy: false };
+const MAX = 1024 * 1024 * 1024, CHUNK = 8 * 1024 * 1024, CHUNK_FROM = 40 * 1024 * 1024;
+const ST = { src: 'claude', st: 'start', err: '', memTxt: '', q: '', sel: {}, msel: {}, oChats: true, oMem: true, oSkip: true, drag: false, steps: [], file: '', D: null, res: null, pi: 0, pn: 0, busy: false };
 let root = null, opts = {};
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const nb = (n) => (+n || 0).toLocaleString('nb-NO');
@@ -43,32 +41,18 @@ function loadSources() {
   if (srcLoaded) return; srcLoaded = true;
   fetch('/api/ai/import/sources', { credentials: 'same-origin', cache: 'no-store' }).then((r) => (r.ok ? r.json() : null)).then((j) => {
     for (const x of j?.sources ?? []) { const s = SRC[x.id]; if (!s) continue; if (Array.isArray(x.steps) && x.steps.length && !s.how && x.id !== 'claude') s.how = x.steps.map((t, i) => (typeof t === 'string' ? [`Steg ${i + 1}`, t] : [t.t ?? t.title ?? `Steg ${i + 1}`, t.d ?? t.text ?? ''])); if (x.accept) s.accept = x.accept; }
-    if (!j) ST.legacy = true;
     paint();
   }).catch(() => {});
 }
-// Liten eksempel-eksport (samme som fasiten) – lastes opp som conversations.json, så hele løypa på serveren testes.
-const DEMO = [
-  ['d1', 'Docker-compose for Sonarr og Radarr', '2026-09-02T18:10:00Z', [['human', 'Kan du lage en docker-compose med Sonarr, Radarr og qBittorrent med hardlinks?'], ['assistant', 'Ja. Gi alle tre samme volum, f.eks. /srv/data:/data, og bruk /data/downloads og /data/media.']]],
-  ['d2', 'Oppsigelsestid i husleiekontrakten', '2026-08-14T09:00:00Z', [['human', 'Hva er vanlig oppsigelsestid for leilighet i Norge?'], ['assistant', 'Etter husleieloven er den tre måneder hvis ikke annet er avtalt.']]],
-  ['d3', 'Middagsplan for uka', '2026-10-05T16:00:00Z', [['human', 'Lag middagsplan for fire, budsjett 1200 kr'], ['assistant', 'Mandag: kyllinggryte · Tirsdag: taco · …']]],
-  ['d4', 'Statistikk eksamen – hypotesetesting', '2026-10-11T19:00:00Z', [['human', 'Forklar p-verdi enkelt'], ['assistant', 'P-verdien er sannsynligheten for et resultat minst så ekstremt, gitt at nullhypotesen er sann.']]],
-  ['d5', 'Varmepumpe E5-feil', '2026-01-20T07:30:00Z', [['human', 'Varmepumpa viser E5'], ['assistant', 'E5 betyr ofte overspenning eller kommunikasjonsfeil mellom inne- og utedel.']]],
-].map(([uuid, name, at, msgs]) => ({ uuid: `demo-${uuid}`, name, created_at: at, updated_at: at, chat_messages: msgs.map(([sender, text], i) => ({ uuid: `demo-${uuid}-${i}`, sender, text, created_at: at })) }));
 const DEMO_MEM = 'Heter Sebastian og bor i Oslo\nStuderer og har statistikk-eksamen i desember\nHar homelab på Mac mini med Docker, Sonarr, Radarr og qBittorrent\nLiker korte svar på norsk';
 
 function set(o) { Object.assign(ST, o); paint(); }
 const REASON = { not_zip: 'Fila er ikke en gyldig ZIP.', no_conversations: 'Fant ingen samtaler i fila.', too_big: 'Fila er for stor.', zip_bomb: 'ZIP-fila pakker ut til mer enn grensen og ble stoppet.', bad_json: 'JSON-fila kunne ikke leses.', unknown_format: 'Kjente ikke igjen formatet.', expired: 'Forhåndsvisningen er utløpt. Last opp fila på nytt.' };
 async function call(path, init = {}) {
-  const base = ST.legacy ? '/api/chat/import/claude' : '/api/ai/import';
-  const r = await fetch(`${base}${path}`, { credentials: 'same-origin', cache: 'no-store', ...init });
+  const r = await fetch(`/api/ai/import${path}`, { credentials: 'same-origin', cache: 'no-store', ...init });
   const j = await r.json().catch(() => ({}));
   if (r.status === 401) location.href = '/login';
-  if (r.status === 404 && !ST.legacy && !j.error && !j.reason) {
-    if (ST.src !== 'claude') { const e = new Error(`Serveren har ikke ${src().name}-import ennå. Oppdater Homelab.`); e.status = 404; throw e; }
-    ST.legacy = true; return call(path, init); // eldre server: Claude-importen fra prompt 43
-  }
-  if (!r.ok) { const why = j.error || REASON[j.reason] || (r.status === 413 ? `Fila er større enn ${ST.legacy ? '200 MB' : '1 GB'}.` : `Feil ${r.status}`); const e = new Error(j.detail ? `${why} (${j.detail})` : why); e.status = r.status; e.reason = j.reason; throw e; }
+  if (!r.ok) { const why = j.error || REASON[j.reason] || (r.status === 413 ? 'Fila er større enn 1 GB.' : `Feil ${r.status}`); const e = new Error(j.detail ? `${why} (${j.detail})` : why); e.status = r.status; e.reason = j.reason; throw e; }
   return j;
 }
 /** Store filer sendes i biter (POST /api/ai/import/upload). → uploadId */
@@ -112,17 +96,16 @@ function rangeTxt(D) {
 
 async function upload(file, memOnly = false, sample = false) {
   const S0 = src();
-  if (file && file.size > (ST.legacy ? MAX_OLD : MAX)) return set({ err: `Fila er ${mb(file.size)}. Maks er ${ST.legacy ? '200 MB' : '1 GB'}.` });
+  if (file && file.size > MAX) return set({ err: `Fila er ${mb(file.size)}. Maks er 1 GB.` });
   if (file && !S0.re.test(file.name) && !/zip|json|html/.test(file.type)) return set({ err: `Velg eksporten fra ${S0.name} (${S0.drop}).` });
   const t0 = performance.now(), steps = [];
   const step = (n, replace) => { if (replace && steps.length && /^Lastet opp \d/.test(steps.at(-1)[0])) steps.pop(); steps.push([n, `${Math.round(performance.now() - t0).toLocaleString('nb-NO')} ms`]); set({ steps: [...steps] }); };
   set({ st: 'reading', file: file?.name ?? (sample ? 'eksempel-eksporten' : 'minnet'), err: '', steps: [] });
   try {
     let j;
-    if (sample && !ST.legacy) {
-      try { j = await call('', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sample: ST.src, memory: ST.memTxt }) }); }
-      catch (e) { if (ST.legacy && ST.src === 'claude') return upload(new File([JSON.stringify(DEMO)], 'conversations.json', { type: 'application/json' })); throw e; }
-    } else if (file && !ST.legacy && file.size > CHUNK_FROM) {
+    if (sample) {
+      j = await call('', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sample: ST.src, memory: ST.memTxt }) });
+    } else if (file && file.size > CHUNK_FROM) {
       const uploadId = await chunked(file, step);
       j = await call('', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ uploadId, source: ST.src, memory: ST.memTxt }) });
     } else {
@@ -190,7 +173,7 @@ function html() {
     <div class="ci43-card ci43-how"><span class="ci43-lab acc">SLIK EKSPORTERER DU FRA ${esc(X.name.toUpperCase())}</span>${HOWX.map(([t, d], i) => `<div class="ci43-step"><span class="ci43-n">${i + 1}</span><div class="ci43-col"><b>${esc(t)}</b><span class="ci43-mut">${esc(d)}</span></div></div>`).join('')}</div>
     <label class="ci43-drop${S.drag ? ' drag' : ''}" data-ci43-drop><input type="file" accept="${esc(X.accept)}" data-ci43-file hidden>
       <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4M7 9l5-5 5 5M4 20h16"/></svg>
-      <b>Slipp ${esc(X.name)}-eksporten her</b><span class="ci43-mut">${esc(X.drop)} · trykk for å velge · maks ${ST.legacy ? '200 MB' : '1 GB'}</span></label>
+      <b>Slipp ${esc(X.name)}-eksporten her</b><span class="ci43-mut">${esc(X.drop)} · trykk for å velge · maks 1 GB</span></label>
     ${err}
     <div class="ci43-col ci43-g8"><span class="ci43-lab">MINNE (VALGFRITT)</span><textarea class="ci43-ta" rows="4" data-ci43-mem placeholder="Lim inn minnet fra ${esc(X.name)}, ett punkt per linje">${esc(S.memTxt)}</textarea><span class="ci43-mut ci43-sm">Ligger minnet i ZIP-fila, hentes det automatisk.</span></div>
     <div class="ci43-row ci43-wrap"><button type="button" class="ci43-btn line" data-ci43="memonly">Importer bare minnet</button><button type="button" class="ci43-btn ghost" data-ci43="demo">Prøv med en eksempel-eksport</button></div>`;
@@ -251,7 +234,7 @@ function bind(el) {
     if (d.ci43O) { ST[d.ci43O] = !ST[d.ci43O]; return paint(); }
     const a = d.ci43;
     if (d.ci45Src) { if (ST.st === 'start') set({ src: d.ci45Src, err: '' }); return; }
-    if (a === 'demo') { if (!ST.memTxt.trim() && ST.src === 'claude') ST.memTxt = DEMO_MEM; if (ST.legacy) { const f = new File([JSON.stringify(DEMO)], 'conversations.json', { type: 'application/json' }); return upload(f); } return upload(null, false, true); }
+    if (a === 'demo') { if (!ST.memTxt.trim() && ST.src === 'claude') ST.memTxt = DEMO_MEM; return upload(null, false, true); }
     if (a === 'memonly') { if (!memFrom(ST.memTxt).length) return set({ err: 'Lim inn minnet først, ett punkt per linje.' }); return upload(null, true); }
     if (a === 'all') { ST.D.items.forEach((c) => { ST.sel[c.id] = true; }); ST.allSel = true; return paint(); }
     if (a === 'none') { ST.sel = {}; ST.allSel = false; return paint(); }

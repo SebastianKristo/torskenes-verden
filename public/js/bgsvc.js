@@ -1,7 +1,7 @@
 // Felles bakgrunn for Homelab web (begge temaene): Vær, Planeter, Oslo, Eget bilde eller Ingen.
 // Valget og visningen (uskarphet, mørklegging, animasjon) lagres per bruker i /api/me/layout (bgType, bgPlanet, …) og deles
-// med mobilappene. Bildet kommer fra GET /api/background (serveren laster ned, skalerer og cacher). Finnes ikke den
-// tjenesten (eldre server), brukes /api/photo-window som reserve. Feiler alle bildene, vises gradienten.
+// med mobilappene. Bildet kommer fra GET /api/background (serveren laster ned, skalerer og cacher). Feiler kallet eller
+// alle bildene, vises gradienten.
 // Bildene er alltid ekte fotografier (Wikimedia Commons / NASA); ingenting tegnes eller genereres i nettleseren.
 import { api } from './util.js';
 
@@ -30,7 +30,7 @@ let gpAlbum = null; // siste svar fra GET /api/bg/gphoto
 export const gphotoAlbum = () => gpAlbum;
 export async function loadGphoto(force) {
   if (gpAlbum && !force) return gpAlbum;
-  try { gpAlbum = await api('/bg/gphoto'); } catch (e) { gpAlbum = { configured: false, missing: e.status === 404 }; }
+  try { gpAlbum = await api('/bg/gphoto'); } catch (e) { gpAlbum = { configured: false, error: e.message }; }
   return gpAlbum;
 }
 /** Lagrer albumlenken (serveren henter bildene). Kaster med serverens melding ved ugyldig lenke. */
@@ -91,8 +91,7 @@ export async function saveBg(patch) {
     return;
   }
   gpSetLocal(null);
-  // Eldre servere avviser ukjente felt: prøv da bare photo.
-  await api('/me/layout', { method: 'PUT', json }).catch(() => api('/me/layout', { method: 'PUT', json: { photo: json.photo } }).catch(() => {}));
+  await api('/me/layout', { method: 'PUT', json }).catch(() => {});
   document.dispatchEvent(new Event('hl:bg'));
 }
 
@@ -150,12 +149,8 @@ export function osloUrls41(now = new Date()) {
 }
 const osloFileOf41 = (url) => { const m = /\/api\/background\/file\/([^?]+)/.exec(url ?? ''); return m ? decodeURIComponent(m[1]) : null; };
 
-function norm(r, legacy) {
+function norm(r) {
   if (!r) return null;
-  if (legacy) {
-    return { type: r.kind, image_url: r.url ?? null, fallbacks: r.fallbacks ?? [], credit: r.credit ? { text: r.credit } : null,
-      theme_hint: 'dark', gradient: r.gradient || FALLBACK_GRAD, particles: /regn|rain/i.test(r.symbol ?? r.weather?.kind ?? '') ? 'rain' : /snø|snow/i.test(r.symbol ?? '') ? 'snow' : null };
-  }
   const credit = typeof r.credit === 'string' ? { text: r.credit } : r.credit ?? null;
   return { ...r, credit, fallbacks: r.fallbacks ?? [], gradient: r.gradient || FALLBACK_GRAD, theme_hint: r.theme_hint === 'light' ? 'light' : 'dark' };
 }
@@ -173,8 +168,6 @@ function tryLoad(urls) {
   });
 }
 
-const LEGACY_KIND = { weather: 'weather', planets: 'planets', oslo: 'oslo', custom: 'custom' };
-let hasService = null; // null = ukjent, false = eldre server uten /api/background
 
 async function fetchBg(type) {
   if (type === 'gphoto') {
@@ -185,21 +178,11 @@ async function fetchBg(type) {
   }
   const w = Math.round(Math.min(2560, (innerWidth || 1440) * (devicePixelRatio || 1)));
   const h = Math.round(Math.min(2560, (innerHeight || 900) * (devicePixelRatio || 1)));
-  if (hasService !== false) {
-    try {
-      const q = new URLSearchParams({ type, w: String(w), h: String(h), dpr: String(devicePixelRatio || 1) });
-      if (type === 'planets') q.set('planet', bg.planet);
-      const r = await api(`/background?${q}`);
-      hasService = true;
-      return norm(r, false);
-    } catch (e) {
-      if (e?.status && e.status !== 404) return null;
-      if (!e?.status && hasService === true) return null;
-      hasService = false;
-    }
-  }
-  const kind = LEGACY_KIND[type];
-  return kind ? norm(await api(`/photo-window?kind=${kind}`).catch(() => null), true) : null;
+  try {
+    const q = new URLSearchParams({ type, w: String(w), h: String(h), dpr: String(devicePixelRatio || 1) });
+    if (type === 'planets') q.set('planet', bg.planet);
+    return norm(await api(`/background?${q}`));
+  } catch { return null; } // gradienten vises
 }
 
 /** Bildet for en type. force henter på nytt; vær og planeter («hver time») byttes også av seg selv. */

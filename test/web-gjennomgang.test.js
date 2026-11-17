@@ -100,10 +100,12 @@ test('Service worker: oppstart uten nett har /api/state og /api/ui, skrivinger o
   assert.match(read('js/starting.js'), /postMessage\?\.\(\{ type: 'SKIP_WAITING' \}\)/);
 });
 
-test('Ikoner: /api/icons/sets hentes én gang, ikke én gang per ikon', () => {
+test('Ikoner: ingen oppslag i /api/icons/sets per ikon, og aldri direkte mot Iconify fra nettleseren', () => {
+  // Q19 (runde 4): /api/icons finnes alltid, så sjekken av /api/icons/sets (og reserven mot api.iconify.design) er borte.
   const js = read('js/icons.js');
-  assert.match(js, /directP \?\?= api\('\/icons\/sets'\)/);
-  assert.equal(js.split("api('/icons/sets')").length - 1, 1);
+  assert.doesNotMatch(js, /api\('\/icons\/sets'\)/);
+  assert.doesNotMatch(js, /https:\/\/api\.iconify\.design/);
+  assert.match(js, /`\/api\/icons\/\$\{encodeURIComponent\(p\)\}/);
 });
 
 test('Domener og Varsler på mobil: pilleboksen og «Fra og til» brytes pent', () => {

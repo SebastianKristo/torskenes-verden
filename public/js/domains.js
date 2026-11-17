@@ -84,8 +84,6 @@ async function loadAll(force) {
     const names = S.sel === '*' ? S.list.map((x) => x.name) : [S.sel];
     await Promise.all(names.map((n) => fetchOne(n, force)));
     S.err = null;
-    // Uten serverens oppsummering lages den lokalt når statistikken er hentet.
-    const st = SUM.get(S.sel); if (st && !st.busy && !st.data && (sumMissing || st.err)) setTimeout(() => sumLoad(S.sel));
   } catch (e) { S.err = e.message; }
   paint();
 }
@@ -106,11 +104,10 @@ function startLive() {
 // Serveren (SERVER32, server/domener/glimt.js) lager oppsummeringen daglig kl. 07:00 og på forespørsel, lagret per domene/bruker:
 //   GET  /api/domains/:domain/summary  (:domain = navn eller «*») → lages nå hvis det ikke finnes en for i dag
 //   POST /api/domains/:domain/summary  «↻ Lag ny» → {domain, label, date, createdAt, manual, head, pts:[{t, tone, color}], meta, model}
-// Mangler endepunktet (404), lages samme format her ut fra statistikken (regelbasert, som sumLocal i designet).
+// Feiler det, vises feilen fra serveren (klienten lager ingen egen oppsummering).
 const sumUrl = (sel) => `/api/domains/${encodeURIComponent(sel)}/summary`;
 const SUM = new Map(); // domene|* → {busy, data, err, at}
 const TONE_C = { pos: 'var(--dm-pos)', neg: 'var(--dm-neg)', warn: 'var(--dm-warn)', info: 'var(--dm-info)', neutral: 'var(--dm-neu)' };
-let sumMissing = false;
 const todayKey = () => new Date().toLocaleDateString('sv-SE');
 function normSum(j) {
   const x = j?.summary ?? j?.item ?? (j?.head ? j : null);
@@ -118,49 +115,22 @@ function normSum(j) {
   const pts = (x.points ?? x.pts ?? []).map((p) => (typeof p === 'string' ? { t: p, tone: 'info' } : { t: p.t ?? p.text ?? '', tone: p.tone ?? 'info' })).filter((p) => p.t).slice(0, 4);
   return { head: String(x.head), pts, at: x.createdAt ?? x.created_at ?? x.at ?? null, date: x.date ?? null, manual: !!x.manual, model: x.model ?? '', local: !!x.local, meta: x.meta ?? '' };
 }
-function localSum(sel) {
-  const names = sel === '*' ? (S.list ?? []).map((x) => x.name) : [sel];
-  const F = names.map((n) => S.data.get(`${n}|24h`) ?? S.data.get(key(n))).filter((d) => d && d.requests != null).map((d) => ({
-    name: d.name, req: d.requests ?? 0, vis: d.visitors ?? 0, thr: d.threats?.total ?? 0, cache: d.cachedPct ?? 0, ms: d.ttfb?.p50 ?? null,
-    ch: d.prev?.requests ? Math.round(((d.requests - d.prev.requests) / d.prev.requests) * 1000) / 10 : 0, certD: days(d.sslExpires), expD: days(d.renews) }));
-  if (!F.length) return null;
-  const sg = (v) => `${v > 0 ? '+' : ''}${String(v).replace('.', ',')} %`, tn = (v) => (v >= 0 ? 'pos' : 'neg'), pts = [];
-  const tot = F.reduce((a, f) => a + f.req, 0), vis = F.reduce((a, f) => a + f.vis, 0), thr = F.reduce((a, f) => a + f.thr, 0);
-  const warn = F.filter((f) => (f.certD != null && f.certD < 30) || (f.expD != null && f.expD < 45)).sort((a, b) => Math.min(a.certD ?? 999, a.expD ?? 999) - Math.min(b.certD ?? 999, b.expD ?? 999));
-  const top = [...F].sort((a, b) => b.ch - a.ch)[0], all = sel === '*';
-  let head;
-  if (warn.length) { const w = warn[0]; head = w.certD != null && w.certD < 30 ? `Sertifikatet for ${w.name} går ut om ${w.certD} dager.` : `${w.name} må fornyes om ${w.expD} dager.`; }
-  else if (all) head = `Rolig døgn. Alle ${F.length} domener er oppe, med ${big(tot)} forespørsler totalt.`;
-  else head = `${F[0].ch >= 10 ? 'Mer trafikk enn vanlig på ' : F[0].ch < 0 ? 'Litt roligere døgn på ' : 'Rolig døgn på '}${F[0].name}.`;
-  if (all) { pts.push({ t: `${big(tot)} forespørsler og ${nb(vis)} unike besøkende siste døgn.`, tone: 'info' }); if (top && F.length > 1) pts.push({ t: `${top.name} økte mest, ${sg(top.ch)} fra døgnet før.`, tone: tn(top.ch) }); }
-  else { const f = F[0]; pts.push({ t: `${big(f.req)} forespørsler og ${nb(f.vis)} unike besøkende, ${sg(f.ch)} fra døgnet før.`, tone: tn(f.ch) }); pts.push({ t: `${pc(f.cache)} ble levert fra cache.${f.ms ? ` Median svartid ${f.ms} ms.` : ''}`, tone: 'info' }); }
-  pts.push({ t: `Cloudflare blokkerte ${nb(thr)} trusler, mest bot-trafikk.`, tone: 'warn' });
-  const nx = F.filter((f) => f.certD != null).sort((a, b) => a.certD - b.certD)[0];
-  if (nx) pts.push({ t: warn.length ? 'Forny i Cloudflare eller hos registraren før fristen.' : `Ingen frister snart. Neste sertifikat (${nx.name}) fornyes om ${nx.certD} dager.`, tone: warn.length ? 'warn' : 'neutral' });
-  return { head, pts: pts.slice(0, 4), at: new Date().toISOString(), manual: true, local: true };
-}
 async function sumLoad(sel, manual = false) {
   const st = SUM.get(sel) ?? {};
   if (st.busy) return;
   SUM.set(sel, { ...st, busy: true, err: '' }); paintSum();
   let data = null, err = '';
   const t0 = Date.now();
-  if (!sumMissing) {
-    try {
-      let r = manual ? null : await fetch(sumUrl(sel), { credentials: 'same-origin', cache: 'no-store' });
-      if (r && r.status === 404 && !(await r.clone().json().catch(() => ({})))?.error) sumMissing = true;
-      else {
-        data = r?.ok ? normSum(await r.json()) : null;
-        if (r && !r.ok) err = (await r.json().catch(() => ({})))?.error ?? `Feil ${r.status}`;
-        // «Lag ny», eller ingen oppsummering for i dag: lag en nå.
-        if (manual || (!data && !err) || (data?.date && data.date !== todayKey())) {
-          r = await fetch(sumUrl(sel), { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ manual: true }) });
-          if (r.status === 404 && !manual) sumMissing = true; else if (r.ok) { data = normSum(await r.json()) ?? data; err = ''; } else err = (await r.json().catch(() => ({})))?.error ?? `Feil ${r.status}`;
-        }
-      }
-    } catch (e) { err = e.message; }
-  }
-  if (!data) { data = localSum(sel); if (data) err = ''; }
+  try {
+    let r = manual ? null : await fetch(sumUrl(sel), { credentials: 'same-origin', cache: 'no-store' });
+    data = r?.ok ? normSum(await r.json()) : null;
+    if (r && !r.ok) err = (await r.json().catch(() => ({})))?.error ?? `Feil ${r.status}`;
+    // «Lag ny», eller ingen oppsummering for i dag: lag en nå.
+    if (manual || (!data && !err) || (data?.date && data.date !== todayKey())) {
+      r = await fetch(sumUrl(sel), { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ manual: true }) });
+      if (r.ok) { data = normSum(await r.json()) ?? data; err = ''; } else err = (await r.json().catch(() => ({})))?.error ?? `Feil ${r.status}`;
+    }
+  } catch (e) { err = e.message; }
   if (manual) await new Promise((r) => setTimeout(r, Math.max(0, 900 - (Date.now() - t0))));
   SUM.set(sel, { busy: false, data, err, at: Date.now() });
   paintSum();
@@ -201,7 +171,7 @@ async function gscLoad(name, force = false) {
   try {
     const r = await fetch(`/api/domains/${encodeURIComponent(name)}/gsc?period=${GSC.per}`, { credentials: 'same-origin', cache: 'no-store' });
     const j = await r.json().catch(() => ({}));
-    d = r.status === 404 && !j.connected ? { missing: !j.error || /not found/i.test(j.error), connected: false, error: j.error && !/not found/i.test(j.error) ? j.error : '' } : r.ok ? j : { connected: false, error: j.error || `Feil ${r.status}`, reconnect: r.status === 401 || r.status === 403 };
+    d = r.ok ? j : { connected: false, error: j.error || `Feil ${r.status}`, reconnect: r.status === 401 || r.status === 403 };
   } catch (e) { d = { connected: false, error: e.message }; }
   GSC.data.set(gKey(name), d);
   if (S.sel === name) paintGsc();
@@ -254,13 +224,12 @@ function gscEmptyHtml43(name, d, head) {
     ${st ? `<span class="dm43-gsc-st${st.err ? ' err' : ''}">${esc(st.t)}</span>` : ''}
     <div class="dm-gsc-cta">${re ? `<button type="button" class="dm-gsc-cbtn" data-dom-gconnect>${G_LOGO}Koble til på nytt</button>` : `<button type="button" class="dm-gsc-cbtn" data-dom43-gfetch${st?.busy ? ' disabled' : ''}>${st?.busy ? 'Henter …' : 'Hent nå'}</button>`}${act}<a class="dm-gsc-cbtn" href="${esc(gUrl)}" target="_blank" rel="noopener">${G_LOGO}Åpne i Search Console</a>${k === 'nosource' ? '<button type="button" class="dm-gsc-cbtn" data-dom-manage>Velg eiendom</button>' : ''}</div></section></div>`;
 }
-/** «Hent nå»: POST /api/domains/:domain/gsc/refresh (SERVER43). Eldre server: GET med ?refresh=1. */
+/** «Hent nå»: POST /api/domains/:domain/gsc/refresh (SERVER43). */
 async function gscFetch43(name) {
   GSC.fetch43 = { busy: true, t: 'Henter fra Google …' }; paintGsc();
   const t0 = performance.now();
   try {
-    let r = await fetch(`/api/domains/${encodeURIComponent(name)}/gsc/refresh`, { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ period: GSC.per }) });
-    if (r.status === 404 || r.status === 405) r = await fetch(`/api/domains/${encodeURIComponent(name)}/gsc?period=${GSC.per}&refresh=1`, { credentials: 'same-origin', cache: 'no-store' });
+    const r = await fetch(`/api/domains/${encodeURIComponent(name)}/gsc/refresh`, { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ period: GSC.per }) });
     const j = await r.json().catch(() => ({}));
     const ms = Math.round(performance.now() - t0);
     GSC.fetch43 = r.ok ? { t: `✓ Hentet ${j.rows != null ? `${j.rows} rader ` : ''}på ${ms.toLocaleString('nb-NO')} ms` } : { err: true, t: `${r.status} · ${j.error || 'Henting feilet'}` };
@@ -284,7 +253,7 @@ function gscHtml(name) {
     return `<div data-dm-gsc>${head(false)}<section class="dm-card dm-gsc-off">
       <div class="dm-gsc-intro"><b class="dm-gsc-bt">${re ? 'Koble til på nytt' : 'Koble til Google Search Console'}</b><span class="dm-gsc-tx">${re && d.error ? `${esc(d.error)} ` : ''}Se klikk, visninger, plassering og hvilke søk som gir trafikk til ${esc(name)}. Dataene hentes én gang i døgnet og er 2–3 dager forsinket fra Google.</span></div>
       <div class="dm-gsc-steps">${['Logg inn med Google-kontoen som eier eiendommen', `Velg eiendom, f.eks. sc-domain:${name}`, 'Data for de siste 16 månedene hentes inn'].map((t, i) => `<div><span>${i + 1}</span><span>${esc(t)}</span></div>`).join('')}</div>
-      <div class="dm-gsc-cta"><button type="button" class="dm-gsc-cbtn" data-dom-gconnect${d.missing ? ' disabled title="Serveren har ikke Google Search Console ennå"' : ''}>${G_LOGO}${re ? 'Koble til på nytt' : 'Koble til med Google'}</button><span class="dm-gsc-ro">${d.missing ? 'Serveren har ikke Google Search Console ennå' : d.configured === false ? 'Kun lesetilgang · webmasters.readonly · Google-klienten settes opp under Innstillinger → Tilkoblinger → Kalender og gjøremål' : 'Kun lesetilgang · webmasters.readonly'}</span></div></section></div>`;
+      <div class="dm-gsc-cta"><button type="button" class="dm-gsc-cbtn" data-dom-gconnect>${G_LOGO}${re ? 'Koble til på nytt' : 'Koble til med Google'}</button><span class="dm-gsc-ro">${d.configured === false ? 'Kun lesetilgang · webmasters.readonly · Google-klienten settes opp under Innstillinger → Tilkoblinger → Kalender og gjøremål' : 'Kun lesetilgang · webmasters.readonly'}</span></div></section></div>`;
   }
   if (d.needsSite) {
     const L = d.candidates ?? d.sites ?? [];

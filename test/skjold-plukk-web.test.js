@@ -65,7 +65,7 @@ test('Feilsøk LED: hint ut fra svarene og rapporten', () => {
 
 test('modulen: API-kontrakten, tekster og sikkerhet', () => {
   const js = read('public/js/skjold-plukk.js');
-  for (const s of ["'/picklist'", "'/picklist/take'", "'/picklist/undo'", '/leds/diagnose`', "step: 'check'", "step: 'red'", "step: 'blue'", "step: 'restore'", 'locateBody79(P.items)', "localStorage.getItem(LS)", "'sk79_pick'", 'e?.status === 404']) assert.ok(js.includes(s), `mangler ${s}`);
+  for (const s of ["'/picklist'", "'/picklist/take'", "'/picklist/undo'", '/leds/diagnose`', "step: 'check'", "step: 'red'", "step: 'blue'", "step: 'restore'", 'locateBody79(P.items)', "localStorage.getItem(LS)", "'sk79_pick'"]) assert.ok(js.includes(s), `mangler ${s}`);
   for (const s of ['Plukkliste (', 'Vis alle med LED', 'Slå av', 'Ta ut av lager', 'Tøm', 'Fjern', 'Angre', 'Feilsøk LED', 'Lyste stripa rødt?', 'Lyste én LED blått?', 'Kopier rapport', '+ Plukkliste', '✓ I plukklista']) assert.ok(js.includes(s), `mangler «${s}»`);
   assert.match(js, /haptic\(/, 'haptikk på + der det finnes');
   assert.match(js, /aria-modal="true"/); assert.match(js, /e\.key === 'Escape'/);

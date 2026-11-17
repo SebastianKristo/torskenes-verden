@@ -23,13 +23,12 @@ async function fetchHere() {
   const q = new URLSearchParams({ lat: W.pos.lat.toFixed(3), lon: W.pos.lon.toFixed(3), ...(sel ? { selLat: sel.dataset.wxLat, selLon: sel.dataset.wxLon } : {}) });
   try {
     const r = await fetch(`/api/weather/here?${q}`, { credentials: 'same-origin', cache: 'no-store' });
-    if (r.status === 404) { W.st = 'missing'; paint(); return; }
     W.d = await r.json(); W.st = r.ok ? 'ok' : 'err'; W.at = Date.now(); W.err = r.ok ? '' : W.d?.error ?? '';
   } catch (e) { W.st = 'err'; W.err = e.message; }
   paint();
 }
 function html() {
-  if (W.st === 'missing' || W.st === 'none' || W.st === 'idle') return '';
+  if (W.st === 'none' || W.st === 'idle') return '';
   if (W.st === 'denied' || W.st === 'prompt') return `<div class="wx45-here off" data-wx45><span class="wx45-k">${ARROW} MIN POSISJON</span><span class="wx45-t">Slå på posisjon for å se været der du er</span><button type="button" class="wx45-b" data-wx45-allow>${W.st === 'denied' ? 'Slik tillater du' : 'Tillat'}</button></div>`;
   if (W.st === 'busy' && !W.d) return `<div class="wx45-here" data-wx45><span class="wx45-k">${ARROW} MIN POSISJON</span><span class="wx45-t">Finner posisjonen din …</span></div>`;
   if (W.st === 'err' && !W.d) return '';

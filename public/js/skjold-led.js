@@ -4,7 +4,7 @@
 //   hvor lenge (untilMs), med «Slå av» (POST /locate/off).
 // - Innstillingen «Lys opp automatisk når jeg åpner et treff» (autoLocateOpen) og «Glimt lyser opp skuffen når den svarer»
 //   (autoLocateGlimt), begge av som standard: GET|PUT /api/skjold/leds/settings, speilet i localStorage «sk78_set»
-//   (brukes alene hvis serveren svarer 404).
+//   (brukes uten nett).
 // - LED-oppsett per skap under #/skjold/oppsett/<id>: WLED-vert, på/av, farge, varighet, blink, lysstyrke, skuffavstand,
 //   rader (start, antall, retning, pitch, forskyvning) med «Fyll ut» (serpentine/samme retning), test (alle / rad / én LED)
 //   og en veiviser for kalibrering: én LED lyser (POST /cabinets/:id/leds/calibrate {index}), man trykker på skuffen den
@@ -38,21 +38,19 @@ function localSet() {
 }
 const pickSet = (o) => { const l = localSet() ?? {}; const r = {}; for (const k of Object.keys(SET_DEF)) r[k] = typeof o?.[k] === 'boolean' ? o[k] : typeof l[k] === 'boolean' ? l[k] : SET_DEF[k]; return r; };
 const saveLocal = (s) => { try { localStorage.setItem(LS_SET, JSON.stringify({ uid: uid(), ...s })); } catch { /* privat modus */ } };
-let setLoading = null, setLocalOnly = false;
+let setLoading = null;
 export const set78 = () => M.set ?? pickSet(null);
 export function loadSet78() {
   if (M.set || setLoading) return setLoading ?? Promise.resolve(M.set);
   setLoading = sk('/leds/settings').then((d) => { M.set = pickSet(d?.settings ?? d); saveLocal(M.set); })
-    .catch((e) => { setLocalOnly = e?.status === 404; M.set = pickSet(null); })
+    .catch(() => { M.set = pickSet(null); })
     .finally(() => { setLoading = null; });
   return setLoading;
 }
 async function saveSet78(patch) {
   const prev = set78(), next = { ...prev, ...patch };
   M.set = next; saveLocal(next);
-  if (setLocalOnly) return;
   try { const r = await sk('/leds/settings', { method: 'PUT', json: patch }); M.set = pickSet(r?.settings ?? r ?? next); saveLocal(M.set); } catch (e) {
-    if (e?.status === 404) { setLocalOnly = true; return; }
     M.set = prev; saveLocal(prev); toast(`Fikk ikke lagret: ${errText(e)}`);
   }
 }

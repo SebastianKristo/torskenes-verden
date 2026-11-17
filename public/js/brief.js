@@ -395,11 +395,11 @@ async function nextVerse() {
   try { const r = await api(`/bible/next?offset=${BV.off}&period=${bPeriod() ?? 'morning'}`); if (r?.text) { BV.alt = r; paintPanel(); } } catch { BV.off -= 1; }
 }
 
-// Gjøremål-kortet: de tre første (forfalt + i dag) med avkrysning rett i briefen. Data: brief.todos, /api/tasks/brief eller /api/tasks/next.
+// Gjøremål-kortet: de tre første (forfalt + i dag) med avkrysning rett i briefen. Data: brief.todos eller /api/tasks/brief.
 const TD = { d: undefined, loading: false, done: new Set() };
 function todosHtml() {
   const src = B.data?.todos ?? TD.d;
-  if (src === undefined && !TD.loading) { TD.loading = true; api('/tasks/brief').catch((e) => (e.status === 404 ? api('/tasks/next?n=3').then((r) => ({ items: (r?.items ?? []).filter((x) => x.overdue || x.today), count: (r?.items ?? []).filter((x) => x.overdue || x.today).length })) : Promise.reject(e))).then((r) => { TD.d = r ?? null; }).catch(() => { TD.d = null; }).finally(() => { TD.loading = false; if (P.open) paintPanel(); }); }
+  if (src === undefined && !TD.loading) { TD.loading = true; api('/tasks/brief').then((r) => { TD.d = r ?? null; }).catch(() => { TD.d = null; }).finally(() => { TD.loading = false; if (P.open) paintPanel(); }); }
   const items = (src?.items ?? []).filter((x) => !TD.done.has(String(x.id))).slice(0, 3);
   if (!items.length) return '';
   const n = src.count ?? items.length, today = new Date().toLocaleDateString('sv-SE');

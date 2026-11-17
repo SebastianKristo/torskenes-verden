@@ -19,7 +19,7 @@ export function loadBrief52(redraw, force = false) {
   if (B.loading) return B.loading;
   if (!force && B.data && Date.now() - B.at < 60_000) return Promise.resolve();
   B.loading = fetch('/api/brief52', { credentials: 'same-origin' })
-    .then(async (r) => { if (r.status === 404) { B.data = { cards: [] }; return; } if (!r.ok) throw new Error(`Feil ${r.status}`); B.data = await r.json(); B.err = ''; })
+    .then(async (r) => { if (!r.ok) throw new Error((await r.json().catch(() => null))?.error || `Feil ${r.status}`); B.data = await r.json(); B.err = ''; })
     .catch((e) => { B.err = e.message; })
     .finally(() => { B.at = Date.now(); B.loading = null; redraw?.(); });
   return B.loading;

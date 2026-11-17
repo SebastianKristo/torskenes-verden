@@ -96,6 +96,27 @@ const GRUPPER = {
       'kal-quick.js': [/localAdd|status === 404|T\.local/, OPPDATER], 'birthdays.js': [/S\.local|readLocal|hl_bd_local|404/, OPPDATER], 'birthdays-fest.js': [/404/, OPPDATER],
     },
   },
+  'Øvrige moduler': {
+    endepunkter: [
+      ['/api/bg/gphoto'], ['/api/background?type=weather&w=400&h=300&dpr=1'], ['/api/ai/import/sources'], ['/api/ai/import', 'POST', { sample: 'claude' }],
+      ['/api/hjemlys'], ['/api/hjemlys/route'], ['/api/hjemlys/suggest'], ['/api/family/zone-alerts'], ['/api/geo/address?q=Karl%20Johans%20gate'],
+      ['/api/tasks/glimt/cards'], ['/api/tasks/lists/x/leave', 'POST', {}], ['/api/tasks/ha'], ['/api/tasks/brief'], ['/api/brief-cards'], ['/api/brief52'],
+      ['/api/skjold/picklist'], ['/api/skjold/picklist/take', 'POST', { items: [] }], ['/api/skjold/picklist/undo', 'POST', { undo: [] }], ['/api/skjold/leds/settings'],
+      ['/api/domains/*/summary'], ['/api/domains/x/gsc/refresh', 'POST', {}], ['/api/domains/x/gsc?period=28'],
+      ['/api/icons/sets'], ['/api/icons/search?q=home'], ['/api/icons/suggest', 'POST', { label: 'Nyheter' }],
+      ['/api/weather/here?lat=59.9&lon=10.7'], ['/api/study/documents'], ['/api/me/avatar', 'PUT', {}],
+    ],
+    filer: {
+      'bgsvc.js': [/photo-window|hasService|LEGACY_KIND|missing:/, OPPDATER], 'claude-import.js': [/legacy|\/api\/chat\/import\/claude|MAX_OLD/, OPPDATER],
+      'hjemlys.js': [/missing|404/, OPPDATER], 'hjemlys-fane.js': [/missing|404/, OPPDATER], 'family.js': [/nyere Homelab/], 'family-soner.js': [/missing|404/],
+      'husstand.js': [/tåler 404/i], 'tasks.js': [/nextDue|members\/me|S\.cards = false|Serveren støtter ikke/], 'tasks-ha.js': [/missing|404/, OPPDATER],
+      'brief.js': [/\/tasks\/next/], 'brief-innhold.js': [/status !== 404/], 'brief-kort-bruker.js': [/404/],
+      'skjold-plukk.js': [/serverOff|status !== 404|bulk/, OPPDATER], 'skjold-led.js': [/setLocalOnly/],
+      'domains.js': [/localSum|sumMissing|missing|refresh=1/, OPPDATER], 'icons.js': [/useDirect|api\.iconify\.design\/(search|\$)/, /404/],
+      'weather-posisjon.js': [/'missing'|404/], 'weather-rediger.js': [/eldre server/], 'study-page.js': [/'missing'|404/, OPPDATER],
+      'geo-adresse.js': [/missing|404/], 'avatar.js': [/404|405/, OPPDATER], 'dash-edit.js': [/404|eldre server/], 'widgets.js': [/404/], 'news.js': [/denne serveren/],
+    },
+  },
   'Innstillinger og system': {
     endepunkter: [
       ['/api/me/server'], ['/api/me/server', 'PUT', { auto: true }], ['/api/backup/settings'], ['/api/backup/list'], ['/api/backup/status'],

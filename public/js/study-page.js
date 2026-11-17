@@ -31,7 +31,7 @@ function loadOv(force) {
 function loadDocs(force) {
   if (S.docs && !force) return;
   api('/study/documents').then((d) => { S.kpi = d?.kpi ?? null; S.docs = (Array.isArray(d) ? d : d?.items ?? d?.documents ?? d?.docs ?? []).map(docOut); if (!S.sel && S.docs[0]) S.sel = S.docs[0].id; repaint(); })
-    .catch((e) => { S.docs = []; S.docsErr = e.status === 404 ? 'missing' : ''; repaint(); });
+    .catch((e) => { S.docs = []; S.docsErr = e.message; repaint(); });
 }
 const KIND = { vitnemal: 'Vitnemål', vitnemål: 'Vitnemål', diploma: 'Vitnemål', karakterutskrift: 'Karakterutskrift', transcript: 'Karakterutskrift', attest: 'Attest', kursbevis: 'Kursbevis' };
 function docOut(x) {
@@ -201,7 +201,7 @@ async function retry45() {
     for (let i = 0; x.status !== 'done' && x.status !== 'failed' && i < 60; i++) { await new Promise((ok) => setTimeout(ok, 1500)); const k = await api(`/study/documents/${encodeURIComponent(d.id)}`).catch(() => null); if (k) x = docOut(k); }
     S.docs = S.docs.map((y) => (y.id === x.id ? x : y));
     toast(x.status === 'failed' ? `Glimt fikk ikke lest «${x.title}»` : x.statusText || `Fant ${x.emner.length} fag`);
-  } catch (er) { toast(er.status === 404 ? 'Serveren kan ikke analysere på nytt ennå. Oppdater Homelab.' : er.message); }
+  } catch (er) { toast(er.message); }
   S.retry45 = false; repaint();
 }
 function dokHtml() {
@@ -213,7 +213,7 @@ function dokHtml() {
   const stats = [[h.sp ? nbn(h.sp, h.sp % 1 ? 1 : 0) : '0', 'studiepoeng registrert'], [h.sn != null ? `${h.letter} (${nbn(h.sn)})` : '–', 'snitt høyere utdanning'], [a ? nbn(a) : '–', 'snitt videregående'], [String(D.length), 'dokumenter']];
   const busy = S.busy ? `<div class="st44-busy" role="status"><b>Glimt leser «${esc(S.busy)}» …</b>${S.steps.map((x) => `<span><i>✓</i>${esc(x.n)}<em class="mono">${esc(x.ms)}</em></span>`).join('')}<span class="st44-spin"><i></i>${S.steps.length ? 'Leser videre …' : 'Laster opp …'}</span></div>` : '';
   const left = `<div class="st44-dl"><label class="st44-drop${S.drag ? ' on' : ''}" data-st44-drop><b>Slipp vitnemål, karakterutskrift eller attest</b><span>PDF eller bilde (JPG, PNG, HEIC). Glimt leser fagene, karakterene og studiepoengene. Lagres kryptert på hjemmeserveren.</span><span class="st44-pick">Velg fil</span><input type="file" accept="application/pdf,image/*,.heic" multiple hidden data-st44-file></label>${busy}
-    ${S.docsErr === 'missing' ? '<span class="st44-mut">Serveren har ikke dokumentlesing ennå. Oppdater Nordlys først.</span>' : ''}${D.map((d) => docRow(d, true)).join('')}</div>`;
+    ${S.docsErr ? `<span class="st44-mut">Fikk ikke hentet dokumentene: ${esc(S.docsErr)}</span>` : ''}${D.map((d) => docRow(d, true)).join('')}</div>`;
   const right = cur ? `<div class="st44-card st44-dr"><div class="st45-dh"><div class="st45-dht"><span class="st44-k acc">✦ GLIMT HAR LEST</span><b class="st44-dt">${esc(cur.title)}</b><span class="st44-mut">${esc([cur.inst, cur.date, KIND[cur.kind] ?? ''].filter(Boolean).join(' · '))}</span></div>${origThumb45(cur)}</div>
       ${statusHtml45(cur)}${fieldsHtml45(cur)}
       ${cur.summary ? `<p class="st44-sum">${esc(cur.summary)}</p>` : ''}
@@ -280,7 +280,7 @@ async function upload(files) {
       const fd = new FormData(); fd.append('file', f, f.name);
       const r = await fetch('/api/study/documents', { method: 'POST', body: fd, credentials: 'same-origin' });
       const j = r.headers.get('content-type')?.includes('json') ? await r.json().catch(() => null) : null;
-      if (!r.ok) throw new Error(r.status === 404 ? 'Serveren har ikke dokumentlesing ennå.' : j?.error || `Serveren svarte ${r.status}`);
+      if (!r.ok) throw new Error(j?.error || `Serveren svarte ${r.status}`);
       S.steps.push({ n: 'Lastet opp og kryptert', ms: `${Math.round(performance.now() - t0)} ms` });
       let d = docOut(j);
       // Glimt leser i bakgrunnen: vis stegene serveren melder, med ekte tid.

@@ -300,7 +300,7 @@ function reader(opts = {}) {
       const d = await api(`/rss/article?url=${encodeURIComponent(x.url)}`);
       artCache.set(x.url, d);
       if (st.art === a) { a.d = d; a.busy = false; render(); }
-    } catch (e) { if (st.art === a) { a.busy = false; a.err = e.status === 404 ? 'Sammendrag er ikke tilgjengelig på denne serveren.' : 'Fikk ikke laget sammendrag nå. Åpne saken for å lese hele.'; render(); } }
+    } catch (e) { if (st.art === a) { a.busy = false; a.err = e.message ? `Fikk ikke laget sammendrag: ${e.message}` : 'Fikk ikke laget sammendrag nå. Åpne saken for å lese hele.'; render(); } }
   }
   const dayWord = (iso) => { if (!iso) return ''; const d = new Date(iso), t = new Date(); const y = new Date(t); y.setDate(t.getDate() - 1); return d.toDateString() === t.toDateString() ? `I dag ${hm(iso)}` : d.toDateString() === y.toDateString() ? `I går ${hm(iso)}` : when(iso); };
   function artView() {

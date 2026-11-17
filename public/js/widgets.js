@@ -2,7 +2,7 @@
 // Fasit: design/Widget Galleri.dc.html. Alle widgets i alle størrelser, filter per app, iPhone / Android / Samsung.
 // Fra nettleseren kan man ikke legge til widgets på telefonen, så hvert kort har «Slik legger du til» med stegene.
 // Data: GET /api/widgets/catalog (SERVER43) → {widgets:[{id, name, kicker, sizes:[{size:'s'|'m'|'l'|'lk', kicker?, big, lines[], platforms?[]}]}]}
-// eller en ren liste. Mangler endepunktet (404), brukes eksempelinnholdet under (samme som fasiten).
+// eller en ren liste. Feiler kallet, brukes eksempelinnholdet under (samme som fasiten).
 import { esc } from './util.js';
 
 const SZ = { s: ['Liten', '2 × 2', 110, 110, '20px'], m: ['Medium', '4 × 2', 230, 110, '20px'], l: ['Stor', '4 × 4', 230, 140, '20px'], lk: ['Låseskjerm', 'rektangel', 160, 70, '14px'], lkc: ['Låseskjerm · rund', 'rund', 70, 70, '50%'], lki: ['Låseskjerm · linje', 'linje', 200, 28, '8px'] };

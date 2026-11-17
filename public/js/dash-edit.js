@@ -7,7 +7,7 @@
 // - Dra for å flytte (stiplet rød ramme der den lander, de andre flytter seg live), håndtak nede til høyre for størrelse,
 //   − fjerner, «Rediger widget» gir S/M/L/XL. Tastatur: Tab, piler flytter, shift+piler endrer størrelse, Delete fjerner.
 // - Lagres per bruker og enhetsklasse: PUT /api/dashboard/layout {device:'web', cols, gap, snap, items, v} (+ lokal cache
-//   hl_web_dash_layout_v1). Tåler 404 (da bare lokalt). Under 900 px: automatisk 4 kolonner (bare visning).
+//   hl_web_dash_layout_v1). Uten svar: bare lokalt. Under 900 px: automatisk 4 kolonner (bare visning).
 import { api, esc, haptic, isMobile } from './util.js';
 import { store } from './store.js';
 import { hiddenWidgets, saveLayout } from './profile.js';
@@ -107,7 +107,7 @@ function save() {
   saveT = setTimeout(() => {
     const other = all[t === '2c' ? 'cur' : '2c'];
     const body = t === '2c' ? { device: 'web', ...rec, alt: other ? { cur: other } : undefined } : { device: 'web', ...(all['2c'] ?? { cols: 12, gap: GAP, snap: true, items: [], v: V }), alt: { cur: rec } };
-    api('/dashboard/layout', { method: 'PUT', json: body }).catch(() => { /* eldre server: bare lokalt */ });
+    api('/dashboard/layout', { method: 'PUT', json: body }).catch(() => { /* uten nett: bare lokalt */ });
   }, 400);
 }
 async function loadServer() {

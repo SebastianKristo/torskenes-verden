@@ -150,7 +150,7 @@ async function loadCards() {
   const k = S.cur;
   cardsFor = k;
   try { const r = await api(`/tasks/glimt/cards${k !== 'alle' && k !== 'arkiv' && k !== 'glimt41' ? `?list=${encodeURIComponent(k)}` : ''}`); if (cardsFor === k && Array.isArray(r?.cards)) { S.cards = r.cards; paint(); } }
-  catch (er) { if (er.status === 404 && k === 'alle') S.cards = false; }
+  catch { /* kortene vises ikke denne gangen */ }
 }
 function srvTips() {
   // Prompt 39 (claude-code-gjoremal-glimt-forslag.md): pakkeliste bare for reise/hytte – ikke bursdager, prøver o.l.
@@ -388,15 +388,6 @@ async function patchItem(t, ch) {
   } catch (er) { flash(er.message); }
 }
 function patchSoon(t, ch) { Object.assign(t, ch); if ('notes' in ch) t.note = ch.notes; clearTimeout(saveT); saveT = setTimeout(() => patchItem(t, ch), 450); }
-const NEXT = { daily: 1, weekly: 7, biweekly: 14 };
-function nextDue(t) {
-  const d = new Date(`${t.due ?? today()}T12:00`);
-  if (NEXT[t.rep]) d.setDate(d.getDate() + NEXT[t.rep]);
-  else if (t.rep === 'weekdays') { do d.setDate(d.getDate() + 1); while (d.getDay() === 0 || d.getDay() === 6); }
-  else if (t.rep === 'monthly') d.setMonth(d.getMonth() + 1);
-  else if (t.rep === 'yearly') d.setFullYear(d.getFullYear() + 1);
-  return d.toLocaleDateString('sv-SE');
-}
 async function createItem(o) {
   const json = wire({ title: o.n, list: o.list, due: o.due ?? null, assignee: o.who ?? null, ...(o.notes ? { notes: o.notes } : {}), ...Object.fromEntries(EXTRA.filter((k) => o[k] !== undefined && o[k] !== null && !(Array.isArray(o[k]) && !o[k].length)).map((k) => [k, o[k]])) });
   const r = await api('/tasks', { method: 'POST', json });
@@ -611,10 +602,6 @@ async function tick(id) {
     const r = await api(`/tasks/${encodeURIComponent(id)}`, { method: 'PATCH', json: { done: it.done } });
     Object.assign(it, r?.item ?? {});
     if (r?.next?.id) { if (!S.d.items.some((x) => x.id === r.next.id)) S.d.items.unshift(r.next); }
-    else if (it.done && it.rep && it.rep !== 'none' && !r?.item?.rep) {
-      // Eldre server: neste forekomst lages her.
-      await createItem({ n: tTitle(it), list: tList(it), due: nextDue(it), who: tWho(it), time: it.time, urgent: it.urgent, rep: it.rep, early: it.early, prio: it.prio, flag: it.flag, tags: it.tags, place: it.place, notes: tNotes(it) || undefined });
-    }
   } catch (er) { it.done = !it.done; flash(er.message); }
   paint();
 }
@@ -774,7 +761,7 @@ function bindSheet(el) {
       if (b.dataset.tkLact === 'leave') {
         const l = listOf(v.id);
         if (!confirm(`Forlate «${l.name}»? Du ser den ikke lenger før eieren deler den med deg igjen.`)) return;
-        try { await api(`/tasks/lists/${encodeURIComponent(v.id)}/leave`, { method: 'POST' }).catch((er) => (er.status === 404 ? api(`/tasks/lists/${encodeURIComponent(v.id)}/members/me`, { method: 'DELETE' }) : Promise.reject(er))); S.lsv = null; S.cur = 'alle'; await load(); }
+        try { await api(`/tasks/lists/${encodeURIComponent(v.id)}/leave`, { method: 'POST' }); S.lsv = null; S.cur = 'alle'; await load(); }
         catch (er) { v.err = er.message; paintSheets(); }
       }
     }
@@ -825,7 +812,7 @@ async function saveList() {
     const l0 = listOf(id), before = l0 ? listPeople(l0).map((p) => p.id).filter((x) => x !== myId()).sort().join(',') : '';
     if (id && (v.mem.length || before) && [...v.mem].sort().join(',') !== before) await api(`/tasks/lists/${encodeURIComponent(id)}/members`, { method: 'PUT', json: { userIds: v.mem } });
     S.lsv = null; S.cur = id ?? S.cur; await load();
-  } catch (er) { v.busy = false; v.err = er.status === 404 ? 'Serveren støtter ikke dette ennå.' : er.message; paintSheets(); }
+  } catch (er) { v.busy = false; v.err = er.message; paintSheets(); }
 }
 document.addEventListener('keydown', (e) => {
   if (e.key !== 'Escape' || !layer) return;

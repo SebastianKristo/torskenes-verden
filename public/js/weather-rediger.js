@@ -12,7 +12,7 @@ const N = { hero: ['Nå', 'Temperatur og sted'], ski: ['Skiføre', 'Glimt anbefa
 const V = { ed: false, vo: null, ski: undefined, srv: null, srvLoaded: false };
 const TO_SRV = { hero: 'na', ski: 'ski', hour: 'timer', days: 'dager10', cmp: 'yrstorm', wind: 'vind', moon: 'mane', tiles: 'detaljer', glimt: 'glimtuka' };
 const FROM_SRV = Object.fromEntries(Object.entries(TO_SRV).map(([a, b]) => [b, a]));
-/** Henter lagret oppsett fra serveren én gang (404 = eldre server: bare lokalt). */
+/** Henter lagret oppsett fra serveren én gang (uten svar: det lokale oppsettet). */
 export function loadLayout41(repaint) {
   if (V.srvLoaded) return;
   V.srvLoaded = true;

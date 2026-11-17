@@ -1,5 +1,5 @@
 // Prompt 37 (WEB37): husstandens personer (brukere koblet til profiler) for delte lister, delte abonnementer og avatarer.
-// Kilde i rekkefølge: GET /api/profiles (profiler med userId), /api/users, /api/tasks/lists → members. Alle tåler 404.
+// Kilde i rekkefølge: GET /api/profiles (profiler med userId), /api/users, /api/tasks/lists → members. Neste kilde brukes når den forrige er tom eller feiler (/api/users er bare for admin).
 const PAL = ['#2b5d8a', '#b23a2a', '#2f6b45', '#a8661a', '#7a5ad6', '#c2477a', '#3d7f8a', '#5b4fc4'];
 const ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
 const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ESC[c]);

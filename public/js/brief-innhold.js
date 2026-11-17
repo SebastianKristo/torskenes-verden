@@ -51,7 +51,7 @@ export function loadCards73(force = false) {
   if (S.loading) return S.loading;
   if (!force && S.list && Date.now() - S.at < 60_000) return Promise.resolve(S.list);
   S.loading = api('/brief-cards').then((r) => { if (Array.isArray(r?.cards)) { setList(r.cards); fetchCards73({ force: true, missing: true }); } S.err = ''; })
-    .catch((e) => { if (e.status !== 404) S.err = e.message; }).finally(() => { S.at = Date.now(); S.loading = null; });
+    .catch((e) => { S.err = e.message; }).finally(() => { S.at = Date.now(); S.loading = null; });
   return S.loading;
 }
 /** Lagrer (straks lokalt, så på serveren). Gjelder briefen med en gang, uten omstart. */

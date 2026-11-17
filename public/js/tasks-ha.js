@@ -2,7 +2,6 @@
 // Brukes på Huskeliste-siden og i Innstillinger → Integrasjoner → Home Assistant. Bare admin ser seksjonen.
 // API: GET /api/tasks/ha → {enabled, status, syncedAt, error, entities:[{entity_id,name}], maps:[{listId,entityId}]},
 // PUT /api/tasks/ha {enabled}, PUT /api/tasks/ha/map {listId, entityId|null}, POST /api/tasks/ha/sync, POST /api/tasks/ha/create {name}.
-// Eldre server (404): seksjonen sier at synken ikke er tilgjengelig ennå.
 import { api, esc } from './util.js';
 
 const hhmm = (t) => { const d = new Date(typeof t === 'number' && t < 1e12 ? t * 1000 : t); return Number.isNaN(+d) ? '' : d.toLocaleTimeString('nb-NO', { hour: '2-digit', minute: '2-digit' }); };
@@ -21,7 +20,7 @@ export function haStatus(h) {
  * Returnerer {refresh()}.
  */
 export function mountHa(el, { lists, note = true } = {}) {
-  const S = { h: null, err: null, missing: false, open: null, busy: false, lists: [] };
+  const S = { h: null, err: null, open: null, busy: false, lists: [] };
   const getLists = async () => {
     if (Array.isArray(lists)) return lists;
     if (typeof lists === 'function') return lists();
@@ -31,16 +30,15 @@ export function mountHa(el, { lists, note = true } = {}) {
   async function load() {
     try {
       const [h, ls] = await Promise.all([api('/tasks/ha'), getLists()]);
-      S.h = h; S.lists = ls; S.err = null; S.missing = false;
+      S.h = h; S.lists = ls; S.err = null;
     } catch (e) {
-      if (e.status === 404) S.missing = true; else S.err = e.message;
+      S.err = e.message;
     }
     paint();
   }
   const mapOf = (id) => S.h?.maps?.find((m) => m.listId === id)?.entityId ?? null;
   function html() {
     const head = (st, cls) => `<span class="tkha-head"><span class="tk-gt late">SYNK MED HOME ASSISTANT</span><span class="tkha-st ${cls}">${esc(st)}</span></span>`;
-    if (S.missing) return `${head('Ikke tilgjengelig', '')}<div class="card tk-card"><div class="tk-empty">Serveren støtter ikke synk med Home Assistant ennå.</div></div>`;
     if (!S.h) return `${head(S.err ? 'Feil' : '', S.err ? 'err' : '')}<div class="card tk-card"><div class="tk-empty">${S.err ? `Kunne ikke hente HA-synk: ${esc(S.err)} <button type="button" class="tk-btn" data-ha="retry">Prøv igjen</button>` : 'Laster …'}</div></div>`;
     const h = S.h, on = !!h.enabled, [st, cls] = haStatus(h);
     const ents = h.entities ?? [];
@@ -66,7 +64,7 @@ export function mountHa(el, { lists, note = true } = {}) {
   function paint() { el.innerHTML = html(); }
   const run = async (fn) => {
     S.busy = true; paint();
-    try { await fn(); } catch (e) { alert(e.status === 404 ? 'Serveren støtter ikke dette ennå.' : e.message); }
+    try { await fn(); } catch (e) { alert(e.message); }
     S.busy = false;
     await load();
   };

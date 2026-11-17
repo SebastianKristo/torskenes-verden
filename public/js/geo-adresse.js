@@ -25,7 +25,7 @@ const PIN = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke=
 export function attachGeo(input, onPick) {
   if (!input || input.dataset.geo44) return () => {};
   input.dataset.geo44 = '1'; input.setAttribute('autocomplete', 'off'); input.dataset.glimt = 'off';
-  let box = null, list = [], hi = 0, t = 0, my = 0, missing = false;
+  let box = null, list = [], hi = 0, t = 0, my = 0;
   const close = () => { box?.remove(); box = null; list = []; input.setAttribute('aria-expanded', 'false'); };
   const place = () => { if (!box) return; const r = input.getBoundingClientRect(); Object.assign(box.style, { left: `${r.left}px`, top: `${r.bottom + 4}px`, width: `${Math.max(260, r.width)}px` }); };
   const paint = () => {
@@ -38,8 +38,8 @@ export function attachGeo(input, onPick) {
   const pick = (x) => { if (!x) return; const label = x.label || x.street; const proto = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value'); proto.set.call(input, label); input.dispatchEvent(new Event('input', { bubbles: true })); close(); onPick?.({ label, lat: x.lat, lon: x.lon, street: x.street, postcode: x.postcode, city: x.city }); };
   const onInput = () => {
     clearTimeout(t); const q = input.value.trim();
-    if (q.length < 3 || missing) return close();
-    t = setTimeout(async () => { const me = ++seq; my = me; try { const L = await geoSearch(q); if (my !== seq || input.value.trim() !== q) return; list = L; hi = 0; paint(); } catch (e) { if (e.status === 404) missing = true; close(); } }, 280);
+    if (q.length < 3) return close();
+    t = setTimeout(async () => { const me = ++seq; my = me; try { const L = await geoSearch(q); if (my !== seq || input.value.trim() !== q) return; list = L; hi = 0; paint(); } catch { close(); } }, 280);
   };
   const onKey = (e) => {
     if (!box) return;

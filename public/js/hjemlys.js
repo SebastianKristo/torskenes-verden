@@ -3,7 +3,7 @@
 // (fasit Hjemme trygt Varianter.dc.html → «Felles · Web · Familie-widgeten på Hjem») og Familie-siden.
 // Flyten er valgt (tillegg i CONTRACT40): alle tre – 1a startark/aktiv økt på dagtid, 1b Glimt-forslaget, 1c nattmodus.
 // GET /api/hjemlys/route → {from:{name, km}, options:[{mode, label, legs, eta, minutes}]}, GET /api/hjemlys/:id/log → [{at, text, who}].
-// API (SERVER40, tåler 404 – da vises ingenting): GET /api/hjemlys → {mine|null, household:[{userId, name, avatar, state, eta, since}]},
+// API (SERVER40; feiler lastingen, vises ingenting til neste lasting): GET /api/hjemlys → {mine|null, household:[{userId, name, avatar, state, eta, since}]},
 // POST /api/hjemlys/start {eta, mode, waitMin, recipients?}, PATCH /api/hjemlys/:id {plus:10}, POST /api/hjemlys/:id/ok|home|end,
 // GET /api/hjemlys/suggest → {suggest, reason, eta}. Sanntid «hjemlys».
 // Personvern: ingenting deles før økta er «late». Andre i husstanden ser bare at Hjemlys er aktivt (og forventet tid);
@@ -12,17 +12,17 @@ import { api, esc } from './util.js';
 import { onLive } from './realtime.js';
 import { stableColor, twoLetters } from './poscard.js';
 
-const H = { log: null, d: null, missing: false, loading: null, sug: null, sugAt: 0, busy: '', err: '', live: false, t: null };
+const H = { log: null, d: null, loading: null, sug: null, sugAt: 0, busy: '', err: '', live: false, t: null };
 const hm = (iso) => { const d = new Date(iso); return Number.isNaN(+d) ? '' : d.toLocaleTimeString('nb-NO', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Oslo' }); };
 const minsTo = (iso) => Math.round((Date.parse(iso) - Date.now()) / 60000);
 
 export async function loadHjemlys(force = false) {
   if (H.loading) return H.loading;
-  if (H.missing && !force) return null;
+  if (H.err && !H.d && !force) return null; // ingen ny runde ved hver tegning etter en feil
   H.loading = (async () => {
-    try { H.d = await api('/hjemlys'); H.missing = false; if (H.d?.mine?.id) H.log = await api(`/hjemlys/${encodeURIComponent(H.d.mine.id)}/log`).then((x) => (Array.isArray(x) ? x : x?.items ?? [])).catch(() => null); }
-    catch (e) { if (e.status === 404 || e.status === 405) { H.missing = true; H.d = null; } else H.err = e.message; }
-    if (!H.missing && !H.d?.mine && Date.now() - H.sugAt > 10 * 60_000) {
+    try { H.d = await api('/hjemlys'); H.err = ''; if (H.d?.mine?.id) H.log = await api(`/hjemlys/${encodeURIComponent(H.d.mine.id)}/log`).then((x) => (Array.isArray(x) ? x : x?.items ?? [])).catch(() => null); }
+    catch (e) { H.err = e.message; }
+    if (H.d && !H.d.mine && Date.now() - H.sugAt > 10 * 60_000) {
       H.sugAt = Date.now();
       H.sug = await api('/hjemlys/suggest').catch(() => null);
     }
@@ -98,9 +98,8 @@ function otherRow(p) {
   return `<div class="hl40-o ${home ? 'home' : ''}">${avatar(p)}<span class="hl40-tx"><b>${esc(p.name)} · ${esc(bits[0])}</b><span>${esc(bits.slice(1).filter(Boolean).join(' · ') || (home ? 'Delingen er stoppet' : ''))}</span></span>${!home && p.eta ? `<b class="hl40-eta sm">${esc(hm(p.eta))}</b>` : ''}</div>`;
 }
 const sugOff = () => { try { return sessionStorage.getItem('hl40_sug_off') === '1'; } catch { return false; } };
-/** Hjemlys-delen av Familie-kortet (og Familie-siden). Tom streng når serveren ikke har Hjemlys. */
+/** Hjemlys-delen av Familie-kortet (og Familie-siden). Tom streng til dataene er hentet. */
 export function hjemlysHtml({ page = false } = {}) {
-  if (H.missing) return '';
   if (!H.d && !H.loading) loadHjemlys();
   if (!H.d) return '';
   const m = H.d.mine, others = (H.d.household ?? []).filter((p) => !p.self && p.userId !== m?.userId && (active(p.state) || (p.state === 'home' && p.since && Date.now() - Date.parse(p.since) < 3 * 3600_000)));
@@ -149,7 +148,7 @@ async function sheet(prefEta) {
   const close = () => { ov.remove(); document.removeEventListener('keydown', key, true); };
   const key = (e) => { if (e.key === 'Escape') { e.stopPropagation(); close(); } };
   document.addEventListener('keydown', key, true);
-  // Ruten hjem (GET /api/hjemlys/route). 404 → bare tidsfeltet.
+  // Ruten hjem (GET /api/hjemlys/route). Uten rute → bare tidsfeltet.
   api('/hjemlys/route').then((r) => { st.route = r && typeof r === 'object' ? r : {}; }).catch(() => { st.route = {}; }).finally(() => { if (ov.isConnected) draw(); });
   ov.addEventListener('input', (e) => { if (e.target.name === 'eta') { const [h, mi] = e.target.value.split(':').map(Number); if (Number.isFinite(h)) { const t = new Date(); t.setHours(h, mi, 0, 0); if (t < Date.now() - 60_000) t.setDate(t.getDate() + 1); st.eta = t; const sb = ov.querySelector('[type=submit]'); if (sb && !N) sb.textContent = `Start · hjemme ca. ${val(t)}`; ov.querySelectorAll('[data-hl40-m]').forEach((b) => b.setAttribute('aria-checked', 'false')); } } });
   ov.addEventListener('click', (e) => {
@@ -163,7 +162,7 @@ async function sheet(prefEta) {
     e.preventDefault();
     const o = !st.eta ? st.route?.options?.[st.pick] : null, err = ov.querySelector('.hl40-err');
     try { await startSession({ eta: etaNow().toISOString(), mode: o?.mode ?? 'manual', waitMin: st.wait }); close(); }
-    catch (er) { err.hidden = false; err.textContent = er.status === 404 ? 'Serveren har ikke Vel fremme ennå.' : er.message; }
+    catch (er) { err.hidden = false; err.textContent = er.message; }
   });
   setTimeout(() => ov.querySelector('[type=submit]')?.focus(), 30);
 }

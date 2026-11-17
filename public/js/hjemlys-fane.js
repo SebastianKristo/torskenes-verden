@@ -108,7 +108,7 @@ function personPanel(r) {
 function activeHtml() {
   const L = activeRows(), st = hjemlysState();
   const body = L.length ? L.map((r, i) => `<div class="hl42-row${V.open === r.userId ? ' open' : ''}"><button type="button" class="hl42-rb" data-hl41="open" data-id="${esc(r.userId)}" aria-expanded="${V.open === r.userId}">${av(r, 34)}<span class="hl41-tx"><b>${esc(r.t)}</b><span>${esc(r.s || '')}</span></span><i class="hl42-dot" style="background:${r.dot}" aria-hidden="true"></i></button>${V.open === r.userId ? personPanel(r) : ''}</div>${i < L.length - 1 ? '' : ''}`).join('')
-    : `<div class="hl42-none">${st?.missing ? 'Serveren har ikke Vel fremme ennå.' : st?.d ? 'Ingen i familien er på vei eller har sjekket inn nå.' : 'Henter …'}</div>`;
+    : `<div class="hl42-none">${!st?.d && st?.err ? esc(`Serveren svarte: ${st.err}`) : st?.d ? 'Ingen i familien er på vei eller har sjekket inn nå.' : 'Henter …'}</div>`;
   return `<span class="hl41-k">AKTIVE I FAMILIEN</span><div class="hl42-act">${body}</div>`;
 }
 /** Glimt-forslaget (GET /api/hjemlys/suggest): spørsmål fra kalender og posisjon. Knappene håndteres av hjemlys.js (data-hl40). */
@@ -213,7 +213,7 @@ async function go() {
       lsSet({ sent: V.sent });
       reset(true);
     }
-  } catch (e) { V.err = e.status === 404 ? 'Serveren har ikke «Si fra» ennå. Oppdater Homelab.' : e.message; }
+  } catch (e) { V.err = e.message; }
   V.busy = false; repaint();
 }
 function reset(keepSent) { V.step = 'start'; V.kind = null; V.q = ''; V.place = ''; V.note = ''; V.route = undefined; V.pick = 0; V.err = ''; V.dest = 'home'; V.destName = ''; if (!keepSent) { /* behold forrige sendt-kort */ } }
@@ -252,7 +252,7 @@ export function bindHl41() {
     else if (a === 'endfor') {
       if (!confirm('Avslutte Vel fremme for dem? De og mottakerne får beskjed.')) return;
       try { await api(`/hjemlys/${encodeURIComponent(b.dataset.id)}/end`, { method: 'POST', json: { by: 'admin' } }); V.open = null; V.endErr = ''; loadHjemlys(true); }
-      catch (er) { V.endErr = er.status === 403 || er.status === 404 ? 'Serveren lar ikke admin avslutte andres økt ennå.' : er.message; }
+      catch (er) { V.endErr = er.message; }
     }
     else if (a === 'dismiss') { V.sent = null; lsSet({ sent: null }); }
     else if (a === 'plus15' && V.sent) {
