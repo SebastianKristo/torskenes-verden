@@ -131,6 +131,7 @@ const P85E_RUNDE4 = {
   okonomi: ['Abonnement.kt', 'Aksjer.kt'],
   papir: ['PapirSider.kt', 'PapirInnstillinger.kt', 'PapirByggeklosser.kt'],
   familie: ['FamilyPage.kt', 'KartPage.kt'],
+  boliger: ['Boliger.kt'],
 };
 
 test('P85 E (runde 4): Abonnement, Aksjer og de andre sidene som sto igjen har rolle på trykkflatene', () => {
@@ -150,6 +151,7 @@ test('P85 E (runde 4): Abonnement, Aksjer og de andre sidene som sto igjen har r
   const ps = strip(raw(join(APP, 'ui/PapirSider.kt')));
   assert.match(ps, /\.toggleable\(value = on, role = Role\.Switch\) \{ Haptics\.select\(\); onChange\(!on\) \}/, 'bryterradene i Papir er brytere');
   assert.match(ps, /\.selectable\(selected = on, role = Role\.Tab\) \{ Haptics\.select\(\); vm\.trkTab = tk/);
+  assert.match(strip(raw(join(APP, 'ui/Boliger.kt'))), /\.toggleable\(value = on, role = Role\.Switch\) \{ vm\.b24PatchHome\(h\.id, JSONObject\(\)\.put\(t\.first, !on\)\) \}/);
 });
 
 test('P85 G: kvitteringer lastes opp med Idempotency-Key fra bildet, også fra køen; logo 204 betyr «ingen logo»', () => {

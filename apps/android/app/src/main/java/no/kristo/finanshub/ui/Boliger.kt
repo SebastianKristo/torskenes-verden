@@ -103,6 +103,8 @@ import androidx.compose.material3.minimumInteractiveComponentSize
 import no.kristo.felles.tid.OsloDato
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.toggleable
 
 /*
  * Prompt 24: Boliger nøyaktig etter Boliger.dc.html (variant mobile, tema papir, hide-title) og claude-code-boliger-lik.md.
@@ -440,7 +442,7 @@ private fun Categories24(vm: AppViewModel, d: HomeDetail24, ym: YearMonth) {
             by.forEach { (n, l, v) ->
                 val c = catColor24(n, l.firstOrNull()?.color)
                 Row(
-                    Modifier.fillMaxWidth().clickable { vm.b24.fc = n; vm.b24.tab = "ex" }.padding(vertical = 2.dp),
+                    Modifier.fillMaxWidth().clickable(role = Role.Button, onClickLabel = "Vis utgiftene i kategorien") { vm.b24.fc = n; vm.b24.tab = "ex" }.padding(vertical = 2.dp),
                     verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
                     Box(Modifier.size(30.dp).clip(RoundedCornerShape(10.dp)).background(c.copy(alpha = .16f)), contentAlignment = Alignment.Center) {
@@ -493,7 +495,7 @@ private fun ExpenseRow24(vm: AppViewModel, e: HomeEntry24, top: Boolean, full: B
     Column {
         if (top) Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
         Row(
-            Modifier.fillMaxWidth().clickable { vm.b24.sel = e.id }.padding(vertical = if (full) 12.dp else 11.dp),
+            Modifier.fillMaxWidth().clickable(role = Role.Button, onClickLabel = "Åpne utgiften") { vm.b24.sel = e.id }.padding(vertical = if (full) 12.dp else 11.dp),
             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Box(Modifier.size(36.dp).clip(RoundedCornerShape(12.dp)).background(c.copy(alpha = .16f)), contentAlignment = Alignment.Center) {
@@ -521,7 +523,7 @@ private fun Recent24(vm: AppViewModel, d: HomeDetail24) {
     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(p.surfaceRaised).padding(16.dp, 6.dp)) {
         Row(Modifier.fillMaxWidth().padding(top = 10.dp, bottom = 4.dp), verticalAlignment = Alignment.Bottom) {
             PSerif("Siste utgifter", HomelabType.headline.fontSize, modifier = Modifier.weight(1f), maxLines = 1)
-            Text("Alle ›", color = p.textPrimary, fontWeight = FontWeight.Bold, style = HomelabType.footnote, modifier = Modifier.clickable { vm.b24.fc = "Alle"; vm.b24.tab = "ex" })
+            Text("Alle ›", color = p.textPrimary, fontWeight = FontWeight.Bold, style = HomelabType.footnote, modifier = Modifier.clickable(role = Role.Button) { vm.b24.fc = "Alle"; vm.b24.tab = "ex" })
         }
         if (l.isEmpty()) Text("Ingen utgifter ennå. Skann en kvittering, så havner den her.", color = p.textTertiary, style = HomelabType.subheadline, modifier = Modifier.padding(vertical = 12.dp))
         l.forEachIndexed { i, e -> ExpenseRow24(vm, e, i > 0, false) }
@@ -578,7 +580,7 @@ private fun Expenses24(vm: AppViewModel, d: HomeDetail24) {
                 val on = s.fc == n
                 Box(
                     Modifier.height(34.dp).clip(RoundedCornerShape(17.dp)).background(if (on) p.textPrimary else p.surfaceRaised).border(1.dp, if (on) p.textPrimary else p.line, RoundedCornerShape(17.dp))
-                        .clickable { s.fc = n }.padding(horizontal = 14.dp),
+                        .selectable(selected = on, role = Role.RadioButton) { s.fc = n }.padding(horizontal = 14.dp),
                     contentAlignment = Alignment.Center,
                 ) { Text(n, color = if (on) p.surface else p.textPrimary, fontWeight = FontWeight.SemiBold, style = HomelabType.footnote, maxLines = 1, softWrap = false) }
             }
@@ -666,7 +668,7 @@ private fun AboutHome24(vm: AppViewModel, d: HomeDetail24, homeCount: Int) {
             HOME24_COLORS.take(6).forEach { c ->
                 val on = h.color.equals(c, true)
                 Box(Modifier.size(34.dp).clip(CircleShape).border(3.dp, if (on) p.textPrimary else Color.Transparent, CircleShape).background(Color(color(c)), CircleShape)
-                    .clickable { vm.b24PatchHome(h.id, JSONObject().put("color", c)) })
+                    .selectable(selected = on, role = Role.RadioButton) { vm.b24PatchHome(h.id, JSONObject().put("color", c)) })
             }
         }
         listOf(
@@ -675,7 +677,7 @@ private fun AboutHome24(vm: AppViewModel, d: HomeDetail24, homeCount: Int) {
         ).forEach { (t, on) ->
             Column {
                 Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
-                Row(Modifier.fillMaxWidth().clickable { vm.b24PatchHome(h.id, JSONObject().put(t.first, !on)) }.padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Row(Modifier.fillMaxWidth().toggleable(value = on, role = Role.Switch) { vm.b24PatchHome(h.id, JSONObject().put(t.first, !on)) }.padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     Column(Modifier.weight(1f)) {
                         Text(t.second, color = p.textPrimary, fontWeight = FontWeight.Bold, style = HomelabType.callout)
                         Text(t.third, color = p.textTertiary, style = HomelabType.footnote)
@@ -823,7 +825,7 @@ private fun EditHomeSheet24(vm: AppViewModel, h: Home24, index: Int, count: Int)
                 HOME24_COLORS.forEach { k ->
                     Box(
                         Modifier.size(32.dp).clip(CircleShape).border(3.dp, if (col.equals(k, true)) p.textPrimary else Color.Transparent, CircleShape).padding(3.dp)
-                            .border(2.dp, p.surface, CircleShape).clip(CircleShape).background(Color(color(k))).clickable { col = k },
+                            .border(2.dp, p.surface, CircleShape).clip(CircleShape).background(Color(color(k))).selectable(selected = col.equals(k, true), role = Role.RadioButton) { col = k },
                     )
                 }
                 Box(
@@ -852,7 +854,7 @@ private fun EditHomeSheet24(vm: AppViewModel, h: Home24, index: Int, count: Int)
                                 Modifier.fillMaxWidth().aspectRatio(1.6f).then(if (sel) Modifier.border(2.dp, p.textPrimary, RoundedCornerShape(14.dp)).padding(4.dp) else Modifier)
                                     .clip(RoundedCornerShape(12.dp))
                                     .then(if (o == null) Modifier.dashed24(p.line, 12.dp) else if (o.first == "color") Modifier.background(c) else Modifier.background(p.surfaceRaised))
-                                    .clickable { if (o == null) runCatching { pick.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) } else bg = o.first },
+                                    .selectable(selected = sel, role = Role.RadioButton) { if (o == null) runCatching { pick.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) } else bg = o.first },
                                 contentAlignment = Alignment.Center,
                             ) {
                                 when {
@@ -1056,7 +1058,7 @@ internal fun ShareHome30(vm: AppViewModel, d: HomeDetail24, invite: (String, Str
                 val on = s.shareRole == k
                 Box(
                     Modifier.weight(1f).height(36.dp).clip(RoundedCornerShape(18.dp)).background(if (on) p.textPrimary else Color.Transparent).border(1.dp, if (on) p.textPrimary else p.line, RoundedCornerShape(18.dp))
-                        .clickable { s.shareRole = k; Haptics.select() },
+                        .selectable(selected = on, role = Role.RadioButton) { s.shareRole = k; Haptics.select() },
                     contentAlignment = Alignment.Center,
                 ) { Text(n, color = if (on) p.surface else p.textPrimary, fontWeight = FontWeight.Bold, style = HomelabType.footnote, maxLines = 1, softWrap = false) }
             }
