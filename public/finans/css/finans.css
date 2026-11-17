@@ -36,7 +36,7 @@ html[data-ui=desktop][data-theme=mork]{
   --link:#6fbf8e; --link-h:#9ad6b0; --hover:#1f1e1b; --warm:#2a1c15; --warm2:#2a1c15; --warm-line:#3d2a20; --warm-line2:#5a3a2a;
   --deep:#121210; --pop:#1f1e1b; --skel:#2a2925; --tag-t:#a8a294; --nav-act:#1f1e1b; --badge-ink:#121210; --av:#ffcfa8;
   --card2:#ece8df; --card2-ink:#121210; --card2-mute:#5c5850;
-  --rev-bg:#6fbf8e; --rev-line:#6fbf8e; --rev-ink:#121210; --rev-mute:#24402f;
+  --rev-bg:#6fbf8e; --rev-line:#6fbf8e; --rev-ink:#121210; --rev-mute:color-mix(in oklab,var(--rev-ink) 70%,var(--rev-bg));
   --font-ui:Geist,system-ui,sans-serif; --font-d:'Instrument Serif',serif; --dw:400; --mono:'Geist Mono',ui-monospace,monospace; --r:18px; --r2:12px;
 }
 /* Glass (Homelab-stilen «cur», Q13 og Q15): bygget på Homelabs glass-tokens (tokens.css, :root[data-theme="glod"]) i stedet for den
@@ -239,7 +239,7 @@ textarea.inp{height:auto;padding:10px 12px;resize:vertical}
 .cal7 span{aspect-ratio:1;border-radius:9px;display:grid;place-items:center;font-size:12.5px;background:var(--inner);color:var(--text2)}
 .cal7 .wd{background:none;aspect-ratio:auto;font-size:11px;color:var(--muted)}
 .cal7 .blank{background:none}
-.cal7 .has{background:color-mix(in srgb,var(--acc) 20%,transparent);color:var(--acc-l);font-weight:700}
+.cal7 .has{background:color-mix(in srgb,var(--acc) 20%,transparent);color:color-mix(in srgb,var(--acc-l) 65%,var(--text));font-weight:700}
 .cal7 .today{background:var(--text);color:var(--bg);font-weight:700}
 /* Kontoer */
 .acc-face{height:170px;border-radius:20px;padding:20px;display:flex;flex-direction:column;justify-content:space-between;border:1px solid var(--line2);position:relative}
@@ -253,7 +253,7 @@ textarea.inp{height:auto;padding:10px 12px;resize:vertical}
 .set-nav .set-tx{display:flex;flex-direction:column;min-width:0}
 .set-nav .set-ic{flex:none;width:28px;height:28px;border-radius:8px;display:grid;place-items:center;color:var(--ic);background:color-mix(in srgb,var(--ic) 15%,transparent);margin-top:1px}
 .set-nav button[aria-current=true]{background:var(--sep)}
-.set-nav span{font-weight:500}.set-nav small{font-size:12px;color:var(--muted)}
+.set-nav span{font-weight:500}.set-nav small{font-size:12px;color:var(--text2)}
 .form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
 .prov{display:flex;flex-direction:column;align-items:flex-start;gap:6px;padding:16px;border-radius:16px;border:1.5px solid var(--line2);background:var(--inner);text-align:left}
 .prov[aria-pressed=true]{border-color:var(--acc)}
@@ -287,7 +287,7 @@ input[type=date]{color-scheme:dark}
   .main{padding:0}
 }
 /* ---------- FinansHub v2: logoer, ✦ og moduler ---------- */
-.d-ai{display:block;font-size:12px;color:var(--acc-l);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.d-ai{display:block;font-size:12px;color:color-mix(in srgb,var(--acc-l) 70%,var(--text));white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
 .acc-l{color:var(--acc-l)}
 .x-btn.sm{width:26px;height:26px;font-size:14px;flex:none}
 .ell-wrap{min-width:0}
@@ -482,7 +482,7 @@ a.btn{color:var(--text)}a.btn.pri{color:var(--acc-ink)}
 .so-mi{width:32px;height:32px;flex:none;border-radius:9px;background:var(--inner);display:grid;place-items:center;color:var(--acc-l)}
 .so-chip{display:inline-flex;align-items:center;height:22px;padding:0 8px;border-radius:7px;font-size:12px;font-weight:600;white-space:nowrap;align-self:flex-start;overflow:hidden;text-overflow:ellipsis;max-width:100%}
 .so-chip.acc{background:color-mix(in srgb,var(--acc) 16%,transparent);color:var(--acc-l)}.so-chip.blue{background:color-mix(in srgb,var(--blue) 14%,transparent);color:var(--blue-t)}
-.so-chip.red{background:color-mix(in srgb,var(--neg) 14%,transparent);color:var(--neg)}.so-chip.green{background:color-mix(in srgb,var(--ok) 14%,transparent);color:var(--pos)}
+.so-chip.red{background:color-mix(in srgb,var(--neg) 14%,transparent);color:var(--neg)}.so-chip.green{background:color-mix(in srgb,var(--ok) 14%,transparent);color:color-mix(in srgb,var(--pos) 70%,var(--text))}
 .so-r1{display:grid;grid-template-columns:minmax(260px,1fr) minmax(0,2.2fr);gap:16px}
 .so-sav{background:radial-gradient(120% 120% at 100% 0,color-mix(in srgb,var(--acc) 28%,transparent),transparent 60%),linear-gradient(160deg,var(--warm2),var(--card) 70%);border-color:var(--warm-line);justify-content:space-between}
 .so-sav-h{font-size:30px!important;line-height:1.1;letter-spacing:-.02em;font-weight:600}
@@ -526,8 +526,8 @@ a.btn{color:var(--text)}a.btn.pri{color:var(--acc-ink)}
 .so-name{display:flex;align-items:center;gap:10px;min-width:0}.so-name b{font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ell{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .so-st{display:inline-flex;align-items:center;height:22px;padding:0 8px;border-radius:6px;font-size:12px;font-weight:600;white-space:nowrap}
-.so-st.ok{background:color-mix(in srgb,var(--ok) 14%,transparent);color:var(--pos)}.so-st.low{background:color-mix(in srgb,var(--acc) 16%,transparent);color:var(--acc-l)}
-.so-st.up{background:color-mix(in srgb,var(--neg) 14%,transparent);color:var(--neg)}.so-st.off{background:var(--inner);color:var(--muted)}
+.so-st.ok{background:color-mix(in srgb,var(--ok) 14%,transparent);color:color-mix(in srgb,var(--pos) 70%,var(--text))}.so-st.low{background:color-mix(in srgb,var(--acc) 16%,transparent);color:color-mix(in srgb,var(--acc-l) 70%,var(--text))}
+.so-st.up{background:color-mix(in srgb,var(--neg) 14%,transparent);color:color-mix(in srgb,var(--neg) 70%,var(--text))}.so-st.off{background:var(--inner);color:var(--muted)}
 .so-hand{position:relative;display:flex;justify-content:flex-end}
 .so-act{height:30px;min-width:40px;padding:0 12px;border-radius:15px;border:0;background:transparent;color:var(--dim);font-size:13px;font-weight:600;cursor:pointer}
 .so-act:hover{background:var(--inner);color:var(--text)}.so-act.on{background:var(--line);color:var(--text)}
@@ -657,7 +657,7 @@ html[data-v3] .review .rq{background:color-mix(in srgb,var(--rev-ink) 9%,transpa
 html[data-v3] .review .rq:hover{background:color-mix(in srgb,var(--rev-ink) 14%,transparent)}
 html[data-v3] .review .rq .note,html[data-v3] .review .rq .muted{color:var(--rev-mute)!important}
 html[data-v3] .search{width:280px;flex:0 1 280px}
-html[data-theme=lys]{--rev-warn:#f7cbbd}html[data-theme=mork]{--rev-warn:#7a2814}html[data-theme=glod]{--rev-warn:color-mix(in oklab,var(--ds-danger) 40%,var(--ds-surface))}
+html[data-theme=lys]{--rev-warn:#f7cbbd}html[data-theme=mork]{--rev-warn:color-mix(in oklab,var(--acc-l) 40%,var(--rev-ink))}html[data-theme=glod]{--rev-warn:color-mix(in oklab,var(--ds-danger) 40%,var(--ds-surface))}
 html[data-v3] .review .rq [style*="--pos"],html[data-v3] .review .rq [style*="--blue-l"]{color:var(--rev-mute)!important}
 html[data-v3] .review .rq [style*="--acc-l"]{color:var(--rev-warn)!important}
 html[data-v3] .so-prog i{background:var(--acc)}
