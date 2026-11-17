@@ -6,8 +6,8 @@
 // Ny/rediger skrives til Google Kalender (POST/PATCH/DELETE /api/kalender/events); skolens hendelser er skrivebeskyttet
 // og kan kopieres til Privat. Hurtigtaster: ← → · T · D · 3 · W · M · L · N · / · Esc.
 // Widget-forhåndsvisningene nederst er fjernet (prompt 27). Hjem-widgeten KALENDER (d_kal/p_kal) er uendret.
-// Data: GET /api/kalender (skolens iCal med RRULE ekspandert, Canvas, Bursdager, Google). Svarer serveren 404 (eldre
-// versjon), bygges kalenderen fra /api/school og Bursdager her i nettleseren.
+// Data: GET /api/kalender (skolens iCal med RRULE ekspandert, Canvas, Bursdager, Google). Typene (time, prøve, innlevering …)
+// og bursdagene kommer ferdig fra serveren.
 // Valg per bruker i /api/me/layout: kalView, kalFilters, kalReminders, subjectColors (og i nettleseren som reserve).
 // Prompt 29: kalenderen fyller hele vinduet under toppmenyen (claude-code-kalender-web-full.md), eller fullskjerm uten
 // toppmeny (⤢/⤡, ✕ og Esc; calendar_web_layout = menu | full). Under 820 px er sidepanelet en skuff. Nytt Nå/Neste-kort,
@@ -15,7 +15,6 @@
 import { api, esc, isMobile, haptic } from './util.js';
 import { store, widget, refresh, emit, on } from './store.js';
 import { openSettings } from './settings.js';
-import { loadBirthdays } from './birthdays.js';
 import { searchField } from './searchfield.js';
 import { fmtDate } from './i18n.js';
 import { addQuick, preview, previewAsync, quickLabel, setQuickHooks } from './kal-quick.js';
@@ -57,7 +56,7 @@ const VIEW_SRV = Object.fromEntries(VIEWS.map((v) => [v[0], v[3]]));
 const LKEY = 'hl_kal_v1';
 const FONTS = 'https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=Manrope:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap';
 
-const K = { data: null, err: '', loading: null, at: 0, fallback: false, prefs: false, range: null,
+const K = { data: null, err: '', loading: null, at: 0, prefs: false, range: null,
   view: 'uke', cur: null, filt: {}, rem: {}, subjC: {}, sel: null, form: null, srch: null, miniOff: 0, mini: false, delArm: false, toast: '', busy: false,
   full: true, drawer: false, qa: null }; // prompt 38: fullskjerm er standard (som Mac-vinduet); «Med toppmeny» er et valg
 const QA_CHIPS = ['Frisør', 'Lege', 'Tannlege', 'Fysio'];
@@ -109,9 +108,9 @@ async function loadPrefs() {
     const l = await api('/me/layout');
     applyPrefs({ view: l.kalView, filt: l.kalFilters, rem: l.kalReminders, subjC: l.subjectColors, full: l.calendar_web_layout ?? l.calendar?.web_layout });
     writeLocal();
-  } catch { /* eldre server: bare nettleseren */ }
+  } catch { /* uten nett: valgene fra nettleseren */ }
 }
-/** Lagrer ett felt i /api/me/layout. En eldre server (ukjent nøkkel) avviser det; da gjelder bare nettleseren. */
+/** Lagrer ett felt i /api/me/layout (og i nettleseren). Feiler lagringen, gjelder valget bare her til neste gang. */
 function savePref(field, value) {
   writeLocal();
   if (value == null && field === 'kalView') return; // År finnes ikke på serveren ennå
@@ -137,13 +136,6 @@ export async function setSubjectColor(name, c) {
 /* ---------------- Data ---------------- */
 
 const hash = (s) => [...String(s)].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7);
-function classify(tt, x) {
-  if (/prøve|heldag|muntlig|eksamen|tentamen/i.test(tt)) return 'prove';
-  if (/innlever|frist|deadline/i.test(tt) || x.deadline) return 'innl';
-  if (x.allDay && /\bfri\b|fridag|planleggingsdag|ferie/i.test(tt)) return 'fri';
-  if (x.allDay) return 'skole';
-  return 'time';
-}
 function calOf(x, kind) {
   if (x.calendar) return String(x.calendar);
   if (x.source === 'google' || x.googleId) return /famil/i.test(x.googleCalendarId ?? x.calendarName ?? '') ? 'familie' : 'privat';
@@ -220,35 +212,18 @@ function normalize(r) {
   return { byDay, byId, subjects, sources: src, cals, configured: r.configured ?? (school.length ? school.some((x) => x.configured) : true), srvNow: r.now ?? null };
 }
 
-async function fallbackData() {
-  let school = store.data.school;
-  if (!school) { try { school = await api('/school'); store.data.school = school; } catch { school = null; } }
-  const evs = (school?.events ?? []).map((x, i) => { const type = classify(x.title ?? '', x); return { id: `s${i}|${x.start}`, title: x.title, subject: type === 'time' ? x.title : '', room: x.location, start: x.start, end: x.end, allDay: x.allDay, type, color: x.color, source: 'ical' }; });
-  let bd = store.data.birthdays;
-  if (!bd) { try { bd = await loadBirthdays(); } catch { bd = null; } }
-  const y = new Date().getFullYear();
-  for (const p of bd?.items ?? []) {
-    for (const yy of [y - 1, y, y + 1]) {
-      const d = new Date(yy, p.month - 1, p.day);
-      evs.push({ id: `bd|${p.id}|${yy}`, title: `${p.name} har bursdag`, start: key(d), end: key(add(d, 1)), allDay: true, type: 'bursdag', source: 'birthdays' });
-    }
-  }
-  return normalize({ events: evs, configured: school ? school.configured !== false : false, sources: ['ical', 'birthdays'] });
-}
-
 /** Henter [from, to]. Ved bla utenfor det som er hentet, hentes et nytt vindu rundt visningen. */
 async function fetchKal(from, to) {
   const tt = d0(new Date());
   from ??= key(add(tt, -42)); to ??= key(add(tt, 120));
   try {
-    const [r] = await Promise.all([api(`/kalender?from=${from}&to=${to}`).then((x) => k42.addSubs(x, from, to)), k39.loadCals()]);
+    const [r] = await Promise.all([api(`/kalender?from=${from}&to=${to}`), k39.loadCals()]);
     k39.localColors();
     K.data = normalize(r);
     K.range = { from, to };
-    K.fallback = false; K.err = '';
+    K.err = '';
   } catch (e) {
-    if (e.status === 404) { if (!k39.st39.cals) await k39.loadCals(); K.data = await fallbackData(); K.fallback = true; K.err = ''; K.range = { from: key(add(tt, -400)), to: key(add(tt, 400)) }; }
-    else K.err = e.message;
+    K.err = e.message;
   }
   K.at = Date.now();
   store.data.kalender = K.data;
@@ -265,7 +240,7 @@ export function ensureKal(force = false) {
 }
 /** Sørger for at perioden [a, b] (nøkler) er hentet. */
 function ensureRange(a, b) {
-  if (!K.range || K.fallback || K.loading) return;
+  if (!K.range || K.loading) return;
   if (a >= K.range.from && b <= K.range.to) return;
   // Prompt 39: vinduet tar alltid med i dag (NESTE-banneret, Glimt · dagen din og minikalenderens prikker trenger det).
   // Serveren gir maks 400 dager; da hentes bare perioden (og i dag) uten ekstra marg.
@@ -495,7 +470,7 @@ async function runFmAi() {
       const f = { t: x.t ?? x.title ?? '', k: k && /^\d{4}-\d{2}-\d{2}/.test(String(k)) ? String(k).slice(0, 10) : '', s: hhmm(s0), e: hhmm(e0), all: !!(x.all ?? x.allDay) || !s0, r: x.r ?? x.location ?? x.place ?? '', rep: x.rep ?? x.repeat, rem: remKey(x.rem ?? x.reminder), cal: x.cal ?? x.calendar, n: x.n ?? x.note ?? '' };
       if (f.k && j.ok !== false) o = f; else { part = f; srvErr = j.error || ''; }
     }
-  } catch { /* uten nett eller eldre server */ }
+  } catch { /* uten nett: skjemaet fylles ikke ut */ }
   if (K.form !== F) return;
   if (o) { const got = apply(o); if (o.n && !F.n) F.n = o.n; F.aiS = { done: true, note: `Fylte ut ${listJoin(got)}` }; }
   else { apply(part ? { ...part, k: '' } : { t: p.title, s: p.start, e: p.end, r: p.place || addrOf(txt) }); F.aiS = { err: srvErr || 'Fant ikke dato. Velg dato under.' }; }
@@ -536,7 +511,7 @@ function submitQa() {
   if (!v) { if (K.qa) { K.qa.err = 'Skriv hva timen gjelder.'; paint(); } return; }
   // Arket lukkes med en gang; jobben går i bakgrunnen.
   K.qa = null; paint();
-  // Prompt 45: «Skriv time» går også til den felles Glimt-agenten (svaret vises i Glimt-panelet). Eldre server: køen som før.
+  // Prompt 45: «Skriv time» går også til den felles Glimt-agenten (svaret vises i Glimt-panelet). Uten agenten: køen som før.
   if (agentOn()) { k38.openGlimt(v); return; }
   addQuick(v);
 }
@@ -953,7 +928,7 @@ async function saveForm(f) {
   try {
     const r = await call(F.id ? `/kalender/events/${encodeURIComponent(F.id)}` : '/kalender/events', F.id ? 'PATCH' : 'POST', body2);
     if (!r.ok) {
-      F.err = r.status === 404 && !r.d?.error ? 'Serveren støtter ikke egne hendelser ennå.' : r.d?.error || `Kunne ikke lagre (feil ${r.status}).`;
+      F.err = r.d?.error || `Kunne ikke lagre (feil ${r.status}).`;
       F.reconnect = !!r.d?.reconnect || r.status === 409;
       return;
     }
@@ -982,7 +957,8 @@ async function copyEvent(e) {
   const r = await call(`/kalender/events/${encodeURIComponent(e.oid || e.id)}/copy`, 'POST', { calendar: 'privat' }).catch(() => ({ ok: false, status: 0, d: {} }));
   if (r.ok) { K.sel = null; k38.noteChanged('created'); flash('Kopiert til Personlig'); ensureKal(true); return; }
   if (r.status === 409 || r.d?.reconnect) { K.err2 = r.d?.error || 'Google Kalender må kobles til på nytt for å kunne skrive.'; return paint(); }
-  // Eldre server: åpne skjemaet ferdig utfylt.
+  if (r.status) { K.err2 = r.d?.error || `Kunne ikke kopiere (feil ${r.status}).`; return paint(); }
+  // Uten svar (nett): åpne skjemaet ferdig utfylt, så hendelsen kan lagres når nettet er tilbake.
   openForm({ t: e.t, k: e.k, s: e.s || '09:00', e: e.e && e.e !== '23:59' ? e.e : '10:00', all: !e.s, cal: 'privat', r: e.rRaw ?? e.r, n: e.n });
 }
 

@@ -3,10 +3,10 @@
 // Helligdager (land). Høyre: SLIK BLIR DET I APPEN – de fire kalenderne og hva de består av, oppdateres live.
 // Data (SERVER39): GET /api/kalender/google/mapping → {connected, email, calendars:[{googleId, name, color, access, role, suggested}],
 //   school:{url, status}, holidays:{country}, preview}; PUT {map:{googleId:'p'|'b'|null}, holidays?:{country}} → {job:{id}}.
-// 404 (eldre server) → forklaring i stedet for velgeren.
+// Feil → feilen fra serveren under velgeren.
 import { esc } from './util.js';
 
-const M = { d: null, map: {}, country: 'NO', err: '', busy: false, missing: false, el: null, onSaved: null };
+const M = { d: null, map: {}, country: 'NO', err: '', busy: false, el: null, onSaved: null };
 const ROLES = [['p', 'Personlig'], ['b', 'Bursdager'], ['', 'Ikke bruk']];
 const COUNTRIES = [['NO', 'Norge'], ['SE', 'Sverige'], ['DK', 'Danmark'], ['FI', 'Finland'], ['DE', 'Tyskland'], ['GB', 'Storbritannia'], ['US', 'USA']];
 const CAL = { p: ['Personlig', '#b23a2a'], b: ['Bursdager', '#8a3fa0'], s: ['Skole', '#2f7a4f'], h: ['Helligdager', '#a39d90'] };
@@ -21,10 +21,9 @@ export async function openGooglePicker({ onSaved } = {}) {
   M.d = null; paint();
   try {
     const r = await fetch('/api/kalender/google/mapping', { credentials: 'same-origin', cache: 'no-store' });
-    if (r.status === 404) { M.missing = true; paint(); return; }
     const d = await r.json().catch(() => ({}));
     if (!r.ok) throw new Error(d.error || `Feil ${r.status}`);
-    M.missing = false; M.d = d;
+    M.d = d;
     M.map = Object.fromEntries((d.calendars ?? []).map((c) => [c.googleId, c.role !== undefined && c.role !== null ? c.role : suggest(c)]));
     M.country = d.holidays?.country || 'NO';
   } catch (e) { M.err = e.message; M.d = { calendars: [] }; }
@@ -46,8 +45,7 @@ function paint() {
   if (!M.el) return;
   const head = `<div class="kg39-h"><span><span class="kg39-k">KALENDERE · GOOGLE</span><b>Hvilken kalender er hva?</b><span class="kg39-s">${esc(M.d?.email ? `Google-kontoen ${M.d.email}` : 'Hver Google-kalender får en rolle. Flere kan slås sammen til Personlig.')}</span></span><button type="button" class="kg39-x" data-kg-close aria-label="Lukk">✕</button></div>`;
   let body;
-  if (M.missing) body = '<div class="kg39-empty"><b>Serveren har ikke Google-velgeren ennå</b><span>Oppdater serveren (Innstillinger → Server → System). Til da brukes Google-kalenderne som før, og Kalender viser dem i Personlig og Bursdager.</span></div>';
-  else if (!M.d) body = '<div class="kg39-empty"><span>Henter kalenderne i Google-kontoen …</span></div>';
+  if (!M.d) body = '<div class="kg39-empty"><span>Henter kalenderne i Google-kontoen …</span></div>';
   else if (M.d.connected === false) body = '<div class="kg39-empty"><b>Google er ikke koblet til</b><span>Koble til Google under Google Kalender lenger ned på siden, så kan du velge hvilke kalendere som er hva.</span></div>';
   else {
     const cals = M.d.calendars ?? [];
@@ -57,7 +55,7 @@ function paint() {
         <label class="kg39-card"><span class="kg39-k">HELLIGDAGER · INNEBYGD</span><select data-kg-country aria-label="Land">${COUNTRIES.map(([v, n]) => `<option value="${v}"${M.country === v ? ' selected' : ''}>${n}</option>`).join('')}</select><span>Bevegelige helligdager beregnes – ingen nett.</span></label></div>`;
     body = `<div class="kg39-grid"><div class="kg39-l">${left}</div><aside class="kg39-r"><span class="kg39-k">SLIK BLIR DET I APPEN</span>${preview()}<p class="kg39-info">Ikke brukt hentes ikke. Nye hendelser fra appen lagres i primær Google-kalender (Personlig).</p></aside></div>`;
   }
-  const foot = M.missing || !M.d || M.d.connected === false ? '<div class="kg39-f"><button type="button" class="kg39-b" data-kg-close>Lukk</button></div>'
+  const foot = !M.d || M.d.connected === false ? '<div class="kg39-f"><button type="button" class="kg39-b" data-kg-close>Lukk</button></div>'
     : `<div class="kg39-f">${M.err ? `<span class="kg39-err">${esc(M.err)}</span>` : ''}<button type="button" class="kg39-b" data-kg-close>Avbryt</button><button type="button" class="kg39-b ink" data-kg-save${M.busy ? ' disabled' : ''}>${M.busy ? 'Lagrer …' : 'Lagre'}</button></div>`;
   M.el.innerHTML = `<div class="kg39-box">${head}${body}${foot}</div>`;
   document.addEventListener('keydown', onKey);

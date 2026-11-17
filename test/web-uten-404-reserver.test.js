@@ -83,6 +83,19 @@ const GRUPPER = {
       'media-plakater.js': [/eldre server \*/],
     },
   },
+  Kalender: {
+    endepunkter: [
+      ['/api/kalender?from=2026-11-01&to=2026-12-01'], ['/api/kalender/calendars'], ['/api/kalender/ha/calendars'], ['/api/kalender/calendars/ical', 'POST', {}],
+      ['/api/kalender/google/mapping'], ['/api/kalender/events', 'POST', {}], ['/api/kalender/events/x/copy', 'POST', { calendar: 'privat' }], ['/api/kalender/events/x/invite', 'POST', {}],
+      ['/api/kalender/quick', 'POST', { text: '' }], ['/api/kalender/quick/jobs'], ['/api/kalender/describe', 'POST', { text: 'tannlege fredag' }],
+      ['/api/birthdays'], ['/api/birthdays/ha/calendars'], ['/api/kalender/calendars/google'], ['/api/birthdays/1/photos'],
+    ],
+    filer: {
+      'kalender.js': [/fallbackData|K\.fallback|addSubs|function classify/, /status === 404/, OPPDATER], 'kalender-abonnementer.js': [/genFromSubs|addSubs|\/finans\/api\/subscriptions/, /404/],
+      'kalender-kalendere.js': [/404/, OPPDATER], 'kalender-google.js': [/missing|404/, OPPDATER], 'kalender-oppsett.js': [/404/], 'kalender-deltakere.js': [/404/, OPPDATER],
+      'kal-quick.js': [/localAdd|status === 404|T\.local/, OPPDATER], 'birthdays.js': [/S\.local|readLocal|hl_bd_local|404/, OPPDATER], 'birthdays-fest.js': [/404/, OPPDATER],
+    },
+  },
   'Innstillinger og system': {
     endepunkter: [
       ['/api/me/server'], ['/api/me/server', 'PUT', { auto: true }], ['/api/backup/settings'], ['/api/backup/list'], ['/api/backup/status'],

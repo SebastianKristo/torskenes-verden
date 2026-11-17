@@ -3,7 +3,7 @@
 // Data: GET /api/kalender/calendars → {calendars:[{id, name, color, visible, hidMenu, source, badge, builtin, writable}]},
 //   PATCH /api/kalender/calendars/:id {color?, visible?, hidMenu?}, POST /api/kalender/calendars/ical {url, name?, color?} → 201 {calendar},
 //   GET /api/kalender/ha/calendars → {connected, entities:[{entity_id, name, added}]}, POST /api/kalender/calendars/ha {entities} → {calendars},
-//   DELETE /api/kalender/calendars/:id (ical/ha). Mangler et endepunkt (eldre server), vises det som ikke tilgjengelig.
+//   DELETE /api/kalender/calendars/:id (ical/ha). Feil vises som serveren sender dem.
 import { api, esc } from './util.js';
 
 const M = { open: false, el: null, list: null, err: '', msg: '', add: null, ha: null, haErr: '', busy: false, onChange: null };
@@ -26,7 +26,7 @@ function close() { if (!M.open) return; M.open = false; M.el?.remove(); M.el = n
 
 async function load() {
   try { const r = await api('/kalender/calendars'); M.list = r.calendars ?? []; M.err = ''; }
-  catch (e) { M.list = []; M.err = e.status === 404 ? 'Serveren støtter ikke kalenderstyring ennå.' : e.message; }
+  catch (e) { M.list = []; M.err = e.message; }
   paint();
 }
 
@@ -63,7 +63,7 @@ async function patch(id, body) {
   if (c) Object.assign(c, body);
   paint();
   try { const r = await api(`/kalender/calendars/${encodeURIComponent(id)}`, { method: 'PATCH', json: body }); if (r?.calendar && c) Object.assign(c, r.calendar); M.changed = true; M.msg = ''; }
-  catch (e) { M.msg = e.status === 404 ? 'Serveren støtter ikke dette ennå.' : e.message; load(); }
+  catch (e) { M.msg = e.message; load(); }
   paint();
 }
 
@@ -85,7 +85,7 @@ function bind(el) {
     const ad = t.closest('[data-km-add]');
     if (ad) {
       M.add = ad.dataset.kmAdd || null; M.msg = '';
-      if (M.add === 'ha') { M.ha = null; M.haErr = ''; paint(); try { M.ha = await api('/kalender/ha/calendars'); } catch (err) { M.haErr = err.status === 404 ? 'Serveren støtter ikke Home Assistant-kalendere ennå.' : err.message; } }
+      if (M.add === 'ha') { M.ha = null; M.haErr = ''; paint(); try { M.ha = await api('/kalender/ha/calendars'); } catch (err) { M.haErr = err.message; } }
       paint(); if (M.add === 'ical') el.querySelector('[data-km-ical] input')?.focus(); return;
     }
     if (t.closest('[data-km-haadd]')) {
@@ -105,7 +105,7 @@ function bind(el) {
     if (!url) return;
     M.busy = true; paint();
     try { await api('/kalender/calendars/ical', { method: 'POST', json: { url, ...(name ? { name } : {}) } }); M.changed = true; M.add = null; M.msg = 'Abonnementet er lagt til. Hendelsene hentes nå.'; }
-    catch (err) { M.msg = err.status === 404 ? 'Serveren støtter ikke iCal-abonnement ennå.' : err.message; }
+    catch (err) { M.msg = err.message; }
     M.busy = false; load();
   });
   document.addEventListener('keydown', function onKey(e) { if (!M.open) { document.removeEventListener('keydown', onKey, true); return; } if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); close(); } }, true);

@@ -4,8 +4,6 @@
 //   (flere: «Legger til 2 timer …»). Status fra GET /api/kalender/quick/jobs hvert 2. s og sanntid «calendar-quick».
 // - Ferdig: banner «✓ Nina frisør · fre 25. sep · 14:30» med Angre (POST …/:id/undo) og Vis (hopper til dagen).
 // - Feilet: Kalender åpner skjemaet ferdig utfylt (hook fra kalender.js); andre steder banner med «Fyll ut ›».
-// - Eldre server uten køen (404): tolkes med serverens /api/kalender/quick/parse (eller quick-time.js når heller ikke den finnes)
-//   og lagres med POST /api/kalender/events (Privat, varsel 1 t).
 // Fase 3: forhåndsvisningen er serverens tolkning (lib/dates.js, POST /api/kalender/quick/parse), ikke en egen tolkning her.
 // Laget (#kq-layer) ligger fast øverst over alt annet, også fullskjerm-kalenderen.
 import { esc } from './util.js';
@@ -28,7 +26,7 @@ const todayISO = () => { const d = new Date(); return `${d.getFullYear()}-${Stri
  *  Serveren bruker brukerens «Glimt husker»-alias selv (prompt 33). */
 const PENDING = Object.freeze({ ok: false, pending: true });
 export const preview = (text, onReady) => quickCached(text, onReady) ?? PENDING;
-/** Samme som preview, men venter på svaret. Eldre server uten /quick/parse: quick-time.js med aliasene. */
+/** Samme som preview, men venter på svaret. Uten svar fra /quick/parse (nett): quick-time.js med aliasene. */
 export const previewAsync = (text) => quickParse(text).catch(async () => { if (!memoryNow().length) await loadMemory().catch(() => {}); return parseQuick(text, todayISO(), memoryNow()); });
 
 async function call(path, method = 'GET', json) {
@@ -42,7 +40,7 @@ const busyN = () => [...Q.mine.values()].filter((j) => j.state === 'queued' || j
 
 /* Prompt 31: Glimt-toasten og glassboblen (ai-jobs.js) viser jobben mens den går. Steg og felt kommer fra serveren
    (calendar-quick-hendelsen: steps, fields, progress, model, input); ellers anslås de her. Avbryt:
-   POST /api/kalender/quick/:id/cancel (eldre server: angre hvis den rakk å lagre). */
+   POST /api/kalender/quick/:id/cancel (feiler den, f.eks. fordi jobben er ferdig: angre hvis den rakk å lagre). */
 const QSTEPS = ['Leser teksten', 'Finner dato og klokkeslett', 'Sjekker kalenderen for kollisjoner', 'Lagrer avtalen'];
 function qFields(text) {
   const p = preview(text);
@@ -57,7 +55,7 @@ function startAi(key, text) {
 async function cancelQuick(key) {
   const id = String(key);
   cancelled.add(id); Q.mine.delete(id); paint();
-  if (id.startsWith('t') || id.startsWith('l')) return;
+  if (id.startsWith('t')) return;
   const r = await call(`/kalender/quick/${encodeURIComponent(id)}/cancel`, 'POST').catch(() => null);
   if (!r?.ok) await call(`/kalender/quick/${encodeURIComponent(id)}/undo`, 'POST').catch(() => null);
   hooks.changed?.();
@@ -86,24 +84,7 @@ export async function addQuick(text) {
     paint(); watch();
     return;
   }
-  if (r.status === 404 || r.status === 405) return localAdd(text, ai);
   finish({ id: tmp, state: 'failed', text, ai, error: r.d?.error || `Kunne ikke legge til timen (feil ${r.status || 'nett'}).`, found: null });
-}
-
-/** Reserve uten køen på serveren: tolk her og lagre som vanlig hendelse. */
-async function localAdd(text, ai) {
-  const tmp = `l${Date.now()}`;
-  Q.mine.set(tmp, { id: tmp, state: 'running', text, ai });
-  if (ai) aiUpdate(ai, { cancel: () => cancelQuick(tmp) });
-  paint();
-  const p = await previewAsync(text);
-  if (!p.ok || !p.date) { Q.mine.delete(tmp); return finish({ id: tmp, state: 'failed', text, ai, error: p.why || 'Fant ikke dato.', found: p }); }
-  const body = { title: p.title, allDay: !p.start, date: p.date, start: p.start || '', end: p.start ? p.end || '' : '', location: p.place || '', calendar: 'privat', repeat: 'none', reminder: p.start ? '1h' : 'day', note: text.length > 60 ? text : '' };
-  const r = await call('/kalender/events', 'POST', body).catch((e) => ({ ok: false, status: 0, d: { error: e.message } }));
-  Q.mine.delete(tmp);
-  if (cancelled.has(tmp)) { const eid = r.d?.id ?? r.d?.event?.id; if (r.ok && eid) await call(`/kalender/events/${encodeURIComponent(eid)}`, 'DELETE').catch(() => null); hooks.changed?.(); return; }
-  if (!r.ok) return finish({ id: tmp, state: 'failed', text, ai, error: r.d?.error || `Kunne ikke lagre (feil ${r.status}).`, found: p });
-  finish({ id: tmp, state: 'done', text, ai, local: true, result: { eventId: r.d?.id ?? r.d?.event?.id, title: p.title, date: p.date, start: p.start, label: quickLabel(p) } });
 }
 
 function finish(j) {
@@ -115,7 +96,7 @@ function finish(j) {
     const res = j.result ?? {};
     clearTimeout(toastT);
     Q.err = null;
-    Q.toast = { id: j.id, local: !!j.local, eventId: res.eventId, t: res.title || 'Time', l: res.label || quickLabel(res), k: res.date, w: res.warning || (res.date && !res.start ? 'Fant ikke klokkeslett, lagt inn som hele dagen.' : '') };
+    Q.toast = { id: j.id, eventId: res.eventId, t: res.title || 'Time', l: res.label || quickLabel(res), k: res.date, w: res.warning || (res.date && !res.start ? 'Fant ikke klokkeslett, lagt inn som hele dagen.' : '') };
     toastT = setTimeout(() => { Q.toast = null; paint(); }, 6000);
     hooks.changed?.();
   } else if (j.state === 'failed') {
@@ -130,7 +111,7 @@ function finish(j) {
 
 async function refreshJobs() {
   const r = await call('/kalender/quick/jobs').catch(() => null);
-  if (!r?.ok) { if (r && (r.status === 404 || r.status === 405)) { for (const [id, j] of Q.mine) if (!id.startsWith('t') && !id.startsWith('l')) { Q.mine.delete(id); finish({ ...j, state: 'failed', error: 'Serveren mistet jobben.' }); } } return; }
+  if (!r?.ok) return;
   const list = Array.isArray(r.d) ? r.d : r.d?.jobs ?? [];
   for (const x of list) handleJob(x);
 }
@@ -146,7 +127,7 @@ function watch() {
   if (!Q.live) { Q.live = true; onLive('calendar-quick', (m) => { const x = m?.job ? { ...m, ...m.job } : (m?.jobId ? { ...m, id: m.jobId } : null); if (x?.id && x.state) handleJob(x); else refreshJobs(); }); }
   if (Q.poll) return;
   Q.poll = setInterval(() => {
-    if (![...Q.mine.keys()].some((k) => !k.startsWith('t') && !k.startsWith('l'))) { clearInterval(Q.poll); Q.poll = 0; return; }
+    if (![...Q.mine.keys()].some((k) => !k.startsWith('t'))) { clearInterval(Q.poll); Q.poll = 0; return; }
     refreshJobs();
   }, 2000);
 }
@@ -155,9 +136,8 @@ async function undo() {
   const T = Q.toast;
   if (!T) return;
   Q.toast = null; paint();
-  const r = T.local ? await call(`/kalender/events/${encodeURIComponent(T.eventId)}`, 'DELETE').catch(() => null)
-    : await call(`/kalender/quick/${encodeURIComponent(T.id)}/undo`, 'POST').catch(() => null);
-  if (!r?.ok && !T.local && T.eventId) await call(`/kalender/events/${encodeURIComponent(T.eventId)}`, 'DELETE').catch(() => null);
+  const r = await call(`/kalender/quick/${encodeURIComponent(T.id)}/undo`, 'POST').catch(() => null);
+  if (!r?.ok && T.eventId) await call(`/kalender/events/${encodeURIComponent(T.eventId)}`, 'DELETE').catch(() => null);
   hooks.changed?.();
 }
 

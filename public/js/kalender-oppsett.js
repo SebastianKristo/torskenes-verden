@@ -57,7 +57,7 @@ const ALIAS = { p: 'personlig', personlig: 'personlig', privat: 'personlig', job
 const S = { cals: null, srv: false, prefs: {}, migration: null, editing: false, pick: '', showHidden: false };
 export const st39 = S;
 
-/** Leser GET /api/kalender/calendars (SERVER39: fire kalendere med key p/b/s/h). 404 eller gammel liste → de fire innebygde. */
+/** Leser GET /api/kalender/calendars (SERVER39: fire kalendere med key p/b/s/h). Uten svar (nett) → de fire innebygde. */
 export async function loadCals() {
   try {
     const r = await fetch('/api/kalender/calendars', { credentials: 'same-origin', cache: 'no-store' });
@@ -101,14 +101,14 @@ export const calById = (id) => cals().find((c) => c.id === id) ?? CAL4[0];
 export const shown = (id) => C.K.filt[id] !== false && calById(id).visible !== false;
 const inMenu = (c) => !c.hidMenu;
 
-/** PATCH /api/kalender/calendars/:id – tåler 404 (lagres da bare i nettleseren). */
+/** PATCH /api/kalender/calendars/:id. Fargen lagres også i nettleseren, så den gjelder her uten nett. */
 export function patchCal(id, body) {
   const c = calById(id);
   Object.assign(c, body);
   fetch(`/api/kalender/calendars/${encodeURIComponent(c.srvId ?? id)}`, { method: 'PATCH', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }).catch(() => {});
   if (body.color) { const m = JSON.parse(ls.get('kal39_col') || '{}'); m[id] = body.color; ls.set('kal39_col', JSON.stringify(m)); }
 }
-/** Lokale fargevalg (når serveren ikke har kalender-API-et). */
+/** Lokale fargevalg (når kalenderlista ikke kom fra serveren). */
 export function localColors() {
   try { const m = JSON.parse(ls.get('kal39_col') || '{}'); for (const c of cals()) if (m[c.id] && !S.srv) c.color = m[c.id]; } catch { /* */ }
 }

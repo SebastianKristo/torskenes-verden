@@ -1,7 +1,7 @@
 // Bursdager (prompt 24, Bursdager.dc.html variant «web», claude-code-bursdager.md).
 // «Neste bursdag», søk, «+ Legg til», liste («NESTE 30 DAGER» og per måned), lenkeraden Kalendere og forhåndsvisning
 // av telefon-widgetene. Prompt 26: Google Kalender og Home Assistant ligger i Innstillinger → Kalendere (mountBdCalendars). Data fra /api/birthdays (per bruker). Google-innloggingen går gjennom serveren
-// (/api/birthdays/google/auth). Svarer serveren 404 (eldre versjon), lagres bursdagene bare i denne nettleseren.
+// (/api/birthdays/google/auth). Feil fra serveren vises på siden.
 import { api, esc } from './util.js';
 import { clearBtn } from './searchfield.js';
 import { store, emit } from './store.js';
@@ -15,9 +15,8 @@ const REL = [['familie', 'Familie'], ['venn', 'Venn'], ['jobb', 'Jobb'], ['annet
 const RELN = Object.fromEntries(REL);
 const SRC = { google: 'GOOGLE', ha: 'HOME ASSISTANT', local: 'LOKAL' };
 const REMS = [[0, 'Samme dag'], [1, '1 dag før'], [7, '1 uke før'], [null, 'Ingen']];
-const LKEY = 'hl_bd_local';
 
-const S = { d: null, err: null, local: false, q: '', sel: null, add: false, editId: null, f: null, busy: '', toast: '', delArm: null, gcals: null, hacals: null, haErr: null };
+const S = { d: null, err: null, q: '', sel: null, add: false, editId: null, f: null, busy: '', toast: '', delArm: null, gcals: null, hacals: null, haErr: null };
 let toastT = null, armT = null, pollT = null, calHost = null, from = 'page';
 const host = () => document.getElementById('bd');
 const isAdmin = () => store.me?.me?.role === 'admin';
@@ -44,18 +43,15 @@ export const avatar = (x, cls = 'bd-av', plus = false) => `<span class="${cls}${
 
 /* ---------------- Data ---------------- */
 
-const readLocal = () => { try { return JSON.parse(localStorage.getItem(LKEY) || 'null')?.items ?? []; } catch { return []; } };
-const writeLocal = (items) => { try { localStorage.setItem(LKEY, JSON.stringify({ items })); } catch { /* privat modus */ } };
 const norm = (it) => ({ ...it, month: +it.month, day: +it.day, year: it.year ? +it.year : null, relation: relOf(it.relation), reminderDays: it.reminderDays ?? it.reminder_days ?? null, source: it.source || 'local' });
 
 export async function loadBirthdays() {
   try {
     const r = await api('/birthdays');
     S.d = { ...r, items: (Array.isArray(r) ? r : r.items ?? []).map(norm) };
-    S.local = false; S.err = null;
+    S.err = null;
   } catch (e) {
-    if (e.status === 404) { S.local = true; S.d = { items: readLocal().map(norm), google: null, ha: null }; S.err = null; }
-    else S.err = e.message;
+    S.err = e.message;
   }
   store.data.birthdays = S.d;
   emit('birthdays');
@@ -68,9 +64,9 @@ async function loadCals() {
     try { const r = await api('/birthdays/google/calendars'); S.gcals = (Array.isArray(r) ? r : r.items ?? r.calendars ?? []).map((c) => (typeof c === 'string' ? { id: c, name: c } : { id: c.id, name: c.summary ?? c.name ?? c.id })); } catch { S.gcals = []; }
     paint();
   }
-  if (S.d?.ha && S.d.ha.allowed !== false && !S.hacals && !S.local) {
+  if (S.d?.ha && S.d.ha.allowed !== false && !S.hacals) {
     try { const r = await api('/birthdays/ha/calendars'); S.hacals = (Array.isArray(r) ? r : r.items ?? r.calendars ?? []).map((c) => (typeof c === 'string' ? { id: c, name: c } : { id: c.entity_id ?? c.entityId ?? c.id, name: c.entity_id ?? c.entityId ?? c.id })); S.haErr = null; }
-    catch (e) { S.hacals = []; S.haErr = e.status === 403 ? 'Home Assistant settes opp av administrator.' : e.status === 404 ? null : e.message; }
+    catch (e) { S.hacals = []; S.haErr = e.status === 403 ? 'Home Assistant settes opp av administrator.' : e.message; }
     paint();
   }
 }
@@ -109,7 +105,7 @@ function form() {
   const f = S.f, g = S.d?.google, ha = S.d?.ha;
   const dests = [['google', 'Google Kalender', g?.connected], ['ha', 'Home Assistant', !!ha?.entityId], ['local', 'Bare her', true]].filter((d) => d[2]);
   const calName = (S.gcals ?? []).find((c) => c.id === g?.calendarId)?.name ?? g?.calendarId ?? 'Bursdager';
-  const note = f.saveTo === 'google' ? `Lagres som årlig heldagshendelse i «${calName}»${g?.email ? ` på ${g.email}` : ''}.` : f.saveTo === 'ha' ? `Lagres i ${ha?.entityId} via Home Assistant.` : S.local ? 'Lagres bare i denne nettleseren til serveren er oppdatert.' : 'Lagres bare i Homelab. Koble til en kalender for å synke.';
+  const note = f.saveTo === 'google' ? `Lagres som årlig heldagshendelse i «${calName}»${g?.email ? ` på ${g.email}` : ''}.` : f.saveTo === 'ha' ? `Lagres i ${ha?.entityId} via Home Assistant.` : 'Lagres bare i Homelab. Koble til en kalender for å synke.';
   return `<form class="bd-form" data-bd-form>
     <b class="bd-ft">${S.editId ? 'Rediger bursdag' : 'Ny bursdag'}</b>
     <input class="bd-in" name="name" value="${esc(f.name)}" placeholder="Navn" autocomplete="off" maxlength="80" aria-label="Navn">
@@ -152,7 +148,6 @@ function list(L) {
 }
 
 function calendars() {
-  if (S.local) return `<div class="bd-card bd-cals"><span class="bd-note">Serveren støtter ikke bursdager ennå. Bursdagene lagres bare i denne nettleseren, og Google Kalender og Home Assistant kan kobles til når serveren er oppdatert.</span></div>`;
   const g = S.d?.google ?? {}, ha = S.d?.ha ?? {};
   const gst = g.connected ? `${g.email || 'Google'} · ${g.syncedAt ? `synket ${hmTxt(g.syncedAt)}` : 'ikke synket ennå'}` : 'Ikke koblet til';
   const gOn = g.connected ? `<span class="bd-lbl">Kalender</span><div class="bd-chips">${(S.gcals ?? []).length ? S.gcals.map((c) => chip(g.calendarId === c.id, `data-bd-gcal="${esc(c.id)}"`, c.name)).join('') : `<span class="bd-note">${S.gcals ? 'Fant ingen kalendere.' : 'Henter kalendere …'}</span>`}</div>
@@ -183,7 +178,7 @@ export function bdCalSummary() {
 }
 export function calLink() {
   const s = bdCalSummary();
-  return `<button type="button" class="bd-card bd-callink" data-bd-act="calset"><span class="bd-grow"><b>Kalendere</b><span>${esc(S.local ? 'Google Kalender og Home Assistant' : `${s.g} · ${s.ha}`)}</span></span><span class="bd-cl-r">Innstillinger ›</span></button>`;
+  return `<button type="button" class="bd-card bd-callink" data-bd-act="calset"><span class="bd-grow"><b>Kalendere</b><span>${esc(`${s.g} · ${s.ha}`)}</span></span><span class="bd-cl-r">Innstillinger ›</span></button>`;
 }
 
 // Prompt 32: «WIDGETS PÅ TELEFONEN» vises bare i mobilappen (Bursdager.dc.html: showWg = variant !== 'web'). På web står
@@ -227,7 +222,7 @@ function calBody() {
 // GET/PUT /api/kalender/calendars/google → {connected, configured, email, main:{id,name}|null, calendars:[{id, googleId, name, primary, color, writable, access, main, shown, appId}]}
 function kgHtml() {
   const K = S.kg;
-  if (K === undefined) { if (!S.local) loadKg(); return ''; }
+  if (K === undefined) { loadKg(); return ''; }
   if (!K || !K.connected) return '';
   const L = [...(K.calendars ?? [])].sort((a, b) => (b.primary ? 1 : 0) - (a.primary ? 1 : 0));
   const dot = (c) => `<span class="bd-kgdot" style="background:${esc(c.color || '#4285f4')}" aria-hidden="true"></span>`;
@@ -242,7 +237,7 @@ function kgHtml() {
 async function loadKg() {
   if (S.kgBusy) return;
   S.kgBusy = true;
-  try { S.kg = await api('/kalender/calendars/google'); } catch (e) { S.kg = null; if (e.status !== 404) S.kgErr = e.message; }
+  try { S.kg = await api('/kalender/calendars/google'); } catch (e) { S.kg = null; S.kgErr = e.message; }
   S.kgBusy = false; paintCal();
 }
 async function putKg(json) {
@@ -290,12 +285,7 @@ async function save() {
   S.busy = 'save'; paint();
   let warn = '';
   try {
-    if (S.local) {
-      const items = readLocal();
-      if (S.editId) { const i = items.findIndex((x) => String(x.id) === String(S.editId)); if (i >= 0) items[i] = { ...items[i], ...body }; }
-      else items.push({ id: 'l' + Date.now(), ...body, source: 'local' });
-      writeLocal(items);
-    } else if (S.editId) { const r = await api(`/birthdays/${encodeURIComponent(S.editId)}`, { method: 'PATCH', json: body }); if (r?.warning) warn = r.warning; }
+    if (S.editId) { const r = await api(`/birthdays/${encodeURIComponent(S.editId)}`, { method: 'PATCH', json: body }); if (r?.warning) warn = r.warning; }
  else { const r = await api('/birthdays', { method: 'POST', json: { ...body, saveTo: f.saveTo } }); if (r?.warning) warn = r.warning; }
     const msg = warn || S.editId ? `${name} er lagret` : f.saveTo === 'google' ? `${name} er lagt i Google Kalender` : f.saveTo === 'ha' ? `${name} er lagt i Home Assistant` : `${name} er lagret`;
     S.add = false; S.editId = null; S.q = ''; S.busy = '';
@@ -310,8 +300,7 @@ async function del(id) {
   S.delArm = null; S.sel = null;
   S.d.items = S.d.items.filter((y) => y.id !== x.id); paint();
   try {
-    if (S.local) writeLocal(readLocal().filter((y) => String(y.id) !== String(x.id)));
-    else await api(`/birthdays/${encodeURIComponent(x.id)}`, { method: 'DELETE' });
+    await api(`/birthdays/${encodeURIComponent(x.id)}`, { method: 'DELETE' });
     flash(`${x.name} er slettet`);
   } catch (e) { flash(e.message); }
   reload();
@@ -322,8 +311,7 @@ async function patch(id, json) {
   if (!x) return;
   Object.assign(x, json); paint();
   try {
-    if (S.local) writeLocal(readLocal().map((y) => (String(y.id) === String(id) ? { ...y, ...json } : y)));
-    else await api(`/birthdays/${encodeURIComponent(id)}`, { method: 'PATCH', json });
+    await api(`/birthdays/${encodeURIComponent(id)}`, { method: 'PATCH', json });
   } catch (e) { flash(e.message); reload(); }
 }
 

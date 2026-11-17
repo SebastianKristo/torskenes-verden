@@ -84,7 +84,7 @@ export async function click44(ev, e) {
       if (!(await save(e))) throw new Error(A.err || 'Kunne ikke lagre deltakerne.');
       const r = await fetch(`/api/kalender/events/${encodeURIComponent(A.id)}/invite`, { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ attendees: A.list }) });
       const j = await r.json().catch(() => ({}));
-      if (!r.ok) throw new Error(r.status === 404 ? 'Serveren kan ikke sende invitasjoner ennå.' : j.error || `Feil ${r.status}`);
+      if (!r.ok) throw new Error(j.error || `Feil ${r.status}`);
       const back = Array.isArray(j.attendees) ? j.attendees : null;
       if (back) A.list = back.map((y) => ({ userId: y.userId ?? null, email: y.email ?? '', name: y.name ?? '', status: y.status ?? 'invited' }));
       else A.list.forEach((y) => { if (!y.status || y.status === 'pending' || y.status === 'none') y.status = 'invited'; });

@@ -59,7 +59,7 @@ export async function loadPhotos41(id, repaint) {
   if (P.photos.has(String(id))) return;
   P.photos.set(String(id), []);
   try { const r = await api(`/birthdays/${encodeURIComponent(id)}/photos`); P.photos.set(String(id), (Array.isArray(r) ? r : r?.photos ?? r?.items ?? []).map((x) => ({ id: x.id ?? x.pid, url: x.url ?? x.thumb ?? x.src, primary: !!x.primary }))); }
-  catch { /* 404: ingen bilder ennå */ }
+  catch { /* ingen bilder å vise (eller uten nett) */ }
   repaint?.();
 }
 export async function loadFamily41(repaint) {
@@ -103,7 +103,7 @@ export async function photoAct41(e, ctx) {
     if (!f) return true;
     P.busy = String(id); ctx.paint();
     try { const b = await square(f); const r = await uploadBlob(id, b); P.photos.delete(String(id)); await ctx.reload(); ctx.flash(r?.toast ?? `Bilde lagt til for ${ctx.byId(id)?.name ?? 'personen'}`); }
-    catch (er) { ctx.flash(er.status === 404 ? 'Serveren tar ikke imot bilder ennå. Oppdater Homelab.' : `Fikk ikke lastet opp: ${er.message}`); }
+    catch (er) { ctx.flash(`Fikk ikke lastet opp: ${er.message}`); }
     P.busy = null; ctx.paint();
     return true;
   }

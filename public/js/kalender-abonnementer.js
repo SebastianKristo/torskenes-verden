@@ -1,8 +1,8 @@
 // Prompt 42 (WEB42, claude-code-abonnement-kalender.md, fasit Kalender App.dc.html → kalenderen {k:'ab', n:'Abonnementer', c:'#3d7f8a', src:'Finans'}):
 // trekkdatoene fra Finans → Abonnementer som egen innebygd kalender i Kalender på web.
 // - Kalenderen kommer fra GET /api/kalender/calendars (SERVER42: source:'builtin', badge:'INNEBYGD', kan skjules). Finnes den ikke ennå, vises den likevel.
-// - Hendelsene: heldags, kind:'trekk' | 'trial' | 'renewal', subId, amount, currency, account, logo. Kommer de ikke med /api/kalender,
-//   hentes GET /api/calendars/events?cal=ab&start&end, og til slutt lages de her fra /finans/api/subscriptions (12 måneder fram).
+// - Hendelsene: heldags, kind:'trekk' | 'trial' | 'renewal', subId, amount, currency, account, logo. De kommer ferdig med
+//   /api/kalender (serveren regner ut trekkdatoene; klienten regner ikke selv).
 // - Måned: chip med logo (12 px) + navn; mange trekk samme dag → «3 trekk · 627 kr». Liste: logo, navn, beløp (Plex Mono), merke TREKK/PRØVE/ÅRLIG.
 // - Detaljarket: logo, beløp, konto, intervall, neste trekk, «Åpne i Økonomi ›», «Si opp …». Ikke redigerbart («Endres i Finans → Abonnementer»).
 import { esc } from './util.js';
@@ -10,8 +10,6 @@ import { esc } from './util.js';
 export const AB_CAL = { id: 'abonnementer', key: 'ab', name: 'Abonnementer', color: '#3d7f8a', source: 'builtin', badge: 'INNEBYGD', sourceLabel: 'Finans', readOnly: true };
 const KINDS = ['trekk', 'trial', 'renewal'];
 const MON = ['jan.', 'feb.', 'mars', 'apr.', 'mai', 'juni', 'juli', 'aug.', 'sep.', 'okt.', 'nov.', 'des.'];
-const pad = (n) => String(n).padStart(2, '0');
-const key = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 export const krTxt = (v) => (v == null || Number.isNaN(+v) ? '' : `${(Math.round(+v * 100) / 100).toLocaleString('nb-NO', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} kr`);
 
 /** Er dette en abonnementshendelse (fra serveren)? */
@@ -24,51 +22,6 @@ export function subFields(x) {
     amount: x.amount ?? null, currency: x.currency ?? 'NOK', account: x.account ?? '', logo: x.logo ?? x.logoUrl ?? '', domain: x.domain ?? '', interval: x.interval ?? x.intervalLabel ?? '',
     next: x.next ?? x.nextDate ?? '', cancelUrl: x.cancelUrl ?? '', cancelled: x.cancelled ?? x.cancelledAt ?? '', varies: !!x.varies };
 }
-
-/* ---------------- Reserve: lag trekkene selv fra Finans ---------------- */
-
-let cache = null, noVirt = false;
-const addMonths = (iso, n, day) => { const [y, m] = iso.split('-').map(Number), d = new Date(y, m - 1 + n, 1, 12); d.setDate(Math.min(day, new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate())); return key(d); };
-function genFromSubs(j, from, to) {
-  const out = [], today = key(new Date()), limit = addMonths(today, 12, new Date().getDate());
-  for (const s of j?.items ?? []) {
-    if (!s || !s.active || !s.nextDate || !/^\d{4}-\d{2}-\d{2}/.test(s.nextDate)) continue;
-    const step = s.cycle === 'yearly' ? 12 : s.cycle === 'biennial' ? 24 : 1, day = +s.nextDate.slice(8, 10), next = s.nextDate.slice(0, 10);
-    const yearly = step > 1, amount = s.myShare ?? s.price;
-    const dates = [];
-    for (let i = 0, d = next; d >= from && i < 400; i++, d = addMonths(next, -step * i, day)) if (d <= to) dates.push(d);
-    for (let i = 1, d = addMonths(next, step, day); d <= to && d <= limit && i < 60; i++, d = addMonths(next, step * i, day)) dates.push(d);
-    const per = s.cycleName ? `${s.cycleName}${s.chargeDay ? ` · den ${s.chargeDay}.` : ''}` : '';
-    for (const d of [...new Set(dates)]) {
-      out.push({ id: `ab|${s.id}|${d}`, title: yearly ? `${s.name} fornyes · ${krTxt(amount)}` : `${s.name} · ${krTxt(amount)}`, start: d, end: d, allDay: true, calendar: 'abonnementer', kind: yearly ? 'renewal' : 'trekk',
-        subId: s.id, name: s.name, amount, currency: 'NOK', account: s.account ?? '', logo: s.logoUrl ?? '', domain: s.domain ?? '', interval: step === 1 ? `Hver måned den ${day}.` : per, next, editable: false, source: 'finans' });
-    }
-  }
-  return out;
-}
-
-/** Legger abonnementstrekkene inn i svaret fra /api/kalender hvis serveren ikke sendte dem. Tåler 404 på alle kall. */
-export async function addSubs(r, from, to) {
-  if (!r || !Array.isArray(r.events) || r.events.some(isSubEvent)) return r;
-  const ck = `${from}|${to}`;
-  if (cache?.k === ck && Date.now() - cache.at < 5 * 60_000) { r.events.push(...cache.ev); return r; }
-  let ev = null;
-  if (!noVirt) {
-    try {
-      const x = await fetch(`/api/calendars/events?cal=ab&start=${from}&end=${to}`, { credentials: 'same-origin', cache: 'no-store' });
-      if (x.ok && /json/.test(x.headers.get('content-type') ?? '')) { const j = await x.json(); ev = (Array.isArray(j) ? j : j.events ?? []).map((e) => ({ calendar: 'abonnementer', allDay: true, ...e })); }
-      else if (x.status === 404) noVirt = true; // serveren har ikke den virtuelle kalenderen: spør ikke igjen i denne økta
-    } catch { /* neste reserve */ }
-  }
-  if (!ev) {
-    try { const x = await fetch('/finans/api/subscriptions', { credentials: 'same-origin', cache: 'no-store' }); ev = x.ok ? genFromSubs(await x.json(), from, to) : []; } catch { ev = []; }
-  }
-  cache = { k: ck, at: Date.now(), ev };
-  r.events.push(...ev);
-  return r;
-}
-
-/* ---------------- Visning ---------------- */
 
 const LOGO_ERR = 'data-k42-logo';
 /** Logo 12–28 px: logo-URL → /finans/api/logo/<domene> → forbokstaven. */
