@@ -121,7 +121,7 @@ test('Struktur: Domener er ute av Store (@Observable-modell med @Environment, St
   assert.match(code(raw('FinansHub/Sources/PaperDomains.swift')), /@Environment\(DomenerModell\.self\) private var dom/);
 });
 
-test('Struktur: Finn, Matplan og Boliger er ute av Store etter samme mønster (modell, videresending, homelabMiljo)', () => {
+test('Struktur: Finn, Matplan, Boliger og Aksjer er ute av Store etter samme mønster (modell, videresending, homelabMiljo)', () => {
   const s = code(raw('FinansHub/Sources/Store.swift'));
   const miljo = code(raw('FinansHub/Sources/HomelabMiljo.swift'));
   const domener = [
@@ -132,6 +132,8 @@ test('Struktur: Finn, Matplan og Boliger er ute av Store etter samme mønster (m
     ['BoligerModell', 'boliger', [['folders', 'folders'], ['folder', 'folder'], ['boligCats', 'cats'], ['uploadFolder', 'uploadFolder']],
       ['func openFolder\\(_ id: Int\\?\\) \\{ boliger\\.open\\(id, self\\) \\}', 'func loadBoligCategories\\(\\) async \\{ await boliger\\.loadCategories\\(self\\) \\}',
         'func addFolderEntry\\(_ desc: String, _ amount: String, paidBy: String\\?, targetId: Int\\? = nil, categoryId: Int\\? = nil\\) \\{ boliger\\.addEntry\\(desc, amount, paidBy: paidBy, targetId: targetId, categoryId: categoryId, self\\) \\}']],
+    ['AksjerModell', 'aksjer', [['stocks', 'stocks'], ['stockPeriod', 'period'], ['stocksX', 'x'], ['stockScreen', 'screen'], ['stockSel', 'sel'], ['stockFrom', 'from']],
+      ['case \\.stocks: try await aksjer\\.load\\(self\\)', 'func syncStocks\\(\\) \\{ aksjer\\.sync\\(self\\) \\}']],
   ];
   for (const [type, prop, vars, funcs] of domener) {
     const m = code(raw(`FinansHub/Sources/${type}.swift`));
@@ -144,7 +146,7 @@ test('Struktur: Finn, Matplan og Boliger er ute av Store etter samme mønster (m
     assert.match(miljo, new RegExp(`\\.environment\\(store\\.${prop}\\)`), prop);
   }
   // Ingen egen lagring igjen i Store for disse feltene.
-  assert.doesNotMatch(s, /^\s+var (finn|finnSel|finnDetail|finnBusy|week|matDay|matFull|folders|folder|boligCats|uploadFolder)(: [^{\n]+)?( = [^{\n]+)?$/m);
+  assert.doesNotMatch(s, /^\s+var (finn|finnSel|finnDetail|finnBusy|week|matDay|matFull|folders|folder|boligCats|uploadFolder|stocks|stockPeriod|stocksX|stockScreen|stockSel|stockFrom)(: [^{\n]+)?( = [^{\n]+)?$/m);
 });
 
 test('Struktur: Sporing er ute av Store (SporingModell eier tilstanden og kallene, Store videresender)', () => {

@@ -110,6 +110,8 @@ final class Store {
     let boliger: BoligerModell = BoligerModell()
     /// Sporing (SporingModell.swift).
     let sporing: SporingModell = SporingModell()
+    /// Aksjer (AksjerModell.swift).
+    let aksjer: AksjerModell = AksjerModell()
     var domains: [DomainRef]? { get { domener.domains } set { domener.domains = newValue } }
     var domain: String? { get { domener.domain } set { domener.domain = newValue } }
     var analytics: Analytics? { get { domener.analytics } set { domener.analytics = newValue } }
@@ -202,8 +204,9 @@ final class Store {
     var detail: DetailInfo?
     var detailTx: [Tx]?
     var recurring: [Recurring]?
-    var stocks: Stocks?
-    var stockPeriod = "1M"
+    /// Aksjer (AksjerModell.swift): porteføljen og perioden.
+    var stocks: Stocks? { get { aksjer.stocks } set { aksjer.stocks = newValue } }
+    var stockPeriod: String { get { aksjer.period } set { aksjer.period = newValue } }
     var report: Report?
     var reportYear = false
     var importFiles: [(name: String, data: Data)] = []
@@ -238,12 +241,11 @@ final class Store {
     var trkSel: String? { get { sporing.sel } set { sporing.sel = newValue } }
     var trkFilter: String { get { sporing.filter } set { sporing.filter = newValue } }
     var trkChecking: Bool { get { sporing.checking } set { sporing.checking = newValue } }
-    var stocksX: StocksX?
-    /// ov | det | tx (Portefølje, Aksjedetaljer, Transaksjoner)
-    var stockScreen = "ov"
-    var stockSel: String?
-    /// Detaljen ble åpnet fra Transaksjoner (tilbake går dit).
-    var stockFrom: String?
+    /// Aksjer (AksjerModell.swift): porteføljen fra Trading 212, skjermen (ov | det | tx), valgt aksje og om detaljen ble åpnet fra Transaksjoner.
+    var stocksX: StocksX? { get { aksjer.x } set { aksjer.x = newValue } }
+    var stockScreen: String { get { aksjer.screen } set { aksjer.screen = newValue } }
+    var stockSel: String? { get { aksjer.sel } set { aksjer.sel = newValue } }
+    var stockFrom: String? { get { aksjer.from } set { aksjer.from = newValue } }
     var subsX: SubsX?
     /// home | ins | hist
     var subTab = "home"
@@ -788,10 +790,7 @@ final class Store {
             case .upload: try await loadReceipts(); await loadJobs()
             case .fast: let list: [Recurring] = try await decodeList(api.call("GET", "/recurring")); recurring = list
             case .accounts: boot = try await api.get("/bootstrap")
-            case .stocks:
-                let d = try await api.call("GET", "/stocks")
-                stocks = try? JSONDecoder().decode(Stocks.self, from: d)
-                stocksX = StocksX.parse(d)
+            case .stocks: try await aksjer.load(self)
             case .reports: try await loadReport()
             case .imports: break
             case .mat: try await loadWeek(); await loadMatExtras()
@@ -1250,16 +1249,7 @@ final class Store {
         }
     }
 
-    func syncStocks() {
-        run {
-            self.busy = true
-            defer { self.busy = false }
-            let d = try await self.api.call("POST", "/stocks/sync")
-            self.stocks = try? JSONDecoder().decode(Stocks.self, from: d)
-            self.stocksX = StocksX.parse(d)
-            self.flash("Synket med Trading 212")
-        }
-    }
+    func syncStocks() { aksjer.sync(self) }
 
     private func loadReport() async throws { report = try await api.get("/reports?mode=" + (reportYear ? "year" : "month"), as: Report.self) }
     func pickReportYear(_ y: Bool) { reportYear = y; report = nil; run { try await self.loadReport() } }

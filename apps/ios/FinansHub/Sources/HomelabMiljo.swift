@@ -14,5 +14,6 @@ extension View {
             .environment(store.matplan)
             .environment(store.boliger)
             .environment(store.sporing)
+            .environment(store.aksjer)
     }
 }
