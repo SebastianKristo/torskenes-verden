@@ -106,6 +106,8 @@ final class Store {
     let finnModell: FinnModell = FinnModell()
     /// Matplan (MatplanModell.swift).
     let matplan: MatplanModell = MatplanModell()
+    /// Boliger (BoligerModell.swift).
+    let boliger: BoligerModell = BoligerModell()
     var domains: [DomainRef]? { get { domener.domains } set { domener.domains = newValue } }
     var domain: String? { get { domener.domain } set { domener.domain = newValue } }
     var analytics: Analytics? { get { domener.analytics } set { domener.analytics = newValue } }
@@ -208,8 +210,9 @@ final class Store {
 
     var week: Week? { get { matplan.week } set { matplan.week = newValue } }
     var subs: SubList?
-    var folders: [Folder]?
-    var folder: Folder?
+    /// Boliger (BoligerModell.swift): boligene og boligen som er åpen.
+    var folders: [Folder]? { get { boliger.folders } set { boliger.folders = newValue } }
+    var folder: Folder? { get { boliger.folder } set { boliger.folder = newValue } }
     /// Finn (FinnModell.swift): handlene, åpen handel (id), detaljen og opplasting/henting som pågår.
     var finn: FinnList? { get { finnModell.finn } set { finnModell.finn = newValue } }
     var finnSel: Int? { get { finnModell.sel } set { finnModell.sel = newValue } }
@@ -217,8 +220,8 @@ final class Store {
     /// receipts | photos | emails | ad mens det lastes opp eller hentes.
     var finnBusy: String? { get { finnModell.busy } set { finnModell.busy = newValue } }
     /// Boliger: kategoriene og «Legg i bolig» (målet for skann mens man står i en bolig; nil = boligen som er åpen).
-    var boligCats: [BoligCategory] = []
-    var uploadFolder: Int?
+    var boligCats: [BoligCategory] { get { boliger.cats } set { boliger.cats = newValue } }
+    var uploadFolder: Int? { get { boliger.uploadFolder } set { boliger.uploadFolder = newValue } }
     var tokens: [TokenInfo]?
     var tokenError: String?
     var newToken: String?
@@ -1456,36 +1459,13 @@ final class Store {
         }
     }
 
-    /* ---------- Boliger (delte mapper) ---------- */
+    /* ---------- Boliger (BoligerModell.swift) ---------- */
 
-    func openFolder(_ id: Int?) {
-        uploadFolder = nil
-        guard let id else { folder = nil; return }
-        run { self.folder = try await self.api.get("/folders/\(id)") }
-    }
+    func openFolder(_ id: Int?) { boliger.open(id, self) }
     /// Boligkategorier med underkategorier (Innstillinger → Boliger på PC). Tom liste på eldre servere.
-    func loadBoligCategories() async {
-        // {categories: [...], options, aiNew} (eldre form: [..] eller {items: [..]}).
-        guard let d = try? await api.call("GET", "/boliger/categories") else { return }
-        if let w = try? JSONDecoder().decode(BoligCats.self, from: d) { boligCats = w.categories }
-        else if let list: [BoligCategory] = try? decodeList(d) { boligCats = list }
-    }
+    func loadBoligCategories() async { await boliger.loadCategories(self) }
     /// targetId: «Legg i bolig» (nil = boligen som er åpen). categoryId: nil = AI velger kategori og underkategori.
-    func addFolderEntry(_ desc: String, _ amount: String, paidBy: String?, targetId: Int? = nil, categoryId: Int? = nil) {
-        guard let f = folder else { return }
-        let id = targetId ?? f.id
-        run {
-            var body: [String: Any] = ["description": desc, "amount": amount.replacingOccurrences(of: " ", with: "").replacingOccurrences(of: ",", with: ".")]
-            if let paidBy { body["paidBy"] = paidBy }
-            if let categoryId { body["categoryId"] = categoryId }
-            let d = try await self.api.call("POST", "/folders/\(id)/entries", json: body)
-            let res = try JSONDecoder().decode(Folder.self, from: d)
-            // Lagt i en annen bolig: den åpne boligen lastes på nytt.
-            if id == f.id { self.folder = res } else { self.folder = try await self.api.get("/folders/\(f.id)") }
-            let list: [Folder] = try await self.decodeList(self.api.call("GET", "/folders")); self.folders = list
-            self.flash("Lagt til i \(res.name)")
-        }
-    }
+    func addFolderEntry(_ desc: String, _ amount: String, paidBy: String?, targetId: Int? = nil, categoryId: Int? = nil) { boliger.addEntry(desc, amount, paidBy: paidBy, targetId: targetId, categoryId: categoryId, self) }
 
     /* ---------- Finn (FinnModell.swift) ---------- */
 

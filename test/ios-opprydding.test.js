@@ -121,7 +121,7 @@ test('Struktur: Domener er ute av Store (@Observable-modell med @Environment, St
   assert.match(code(raw('FinansHub/Sources/PaperDomains.swift')), /@Environment\(DomenerModell\.self\) private var dom/);
 });
 
-test('Struktur: Finn og Matplan er ute av Store etter samme mønster (modell, videresending, homelabMiljo)', () => {
+test('Struktur: Finn, Matplan og Boliger er ute av Store etter samme mønster (modell, videresending, homelabMiljo)', () => {
   const s = code(raw('FinansHub/Sources/Store.swift'));
   const miljo = code(raw('FinansHub/Sources/HomelabMiljo.swift'));
   const domener = [
@@ -129,6 +129,9 @@ test('Struktur: Finn og Matplan er ute av Store etter samme mønster (modell, vi
       ['func loadFinn\\(\\) async throws \\{ try await finnModell\\.load\\(self\\) \\}', 'func openFinn\\(_ id: Int\\) \\{ finnModell\\.open\\(id, self\\) \\}']],
     ['MatplanModell', 'matplan', [['week', 'week'], ['matDay', 'day'], ['matFull', 'full']],
       ['func loadWeek\\(\\) async throws \\{ try await matplan\\.load\\(self\\) \\}', 'func addToShop\\(_ items: \\[String\\]\\) \\{ matplan\\.addToShop\\(items, self\\) \\}']],
+    ['BoligerModell', 'boliger', [['folders', 'folders'], ['folder', 'folder'], ['boligCats', 'cats'], ['uploadFolder', 'uploadFolder']],
+      ['func openFolder\\(_ id: Int\\?\\) \\{ boliger\\.open\\(id, self\\) \\}', 'func loadBoligCategories\\(\\) async \\{ await boliger\\.loadCategories\\(self\\) \\}',
+        'func addFolderEntry\\(_ desc: String, _ amount: String, paidBy: String\\?, targetId: Int\\? = nil, categoryId: Int\\? = nil\\) \\{ boliger\\.addEntry\\(desc, amount, paidBy: paidBy, targetId: targetId, categoryId: categoryId, self\\) \\}']],
   ];
   for (const [type, prop, vars, funcs] of domener) {
     const m = code(raw(`FinansHub/Sources/${type}.swift`));
@@ -141,7 +144,7 @@ test('Struktur: Finn og Matplan er ute av Store etter samme mønster (modell, vi
     assert.match(miljo, new RegExp(`\\.environment\\(store\\.${prop}\\)`), prop);
   }
   // Ingen egen lagring igjen i Store for disse feltene.
-  assert.doesNotMatch(s, /^\s+var (finn|finnSel|finnDetail|finnBusy|week|matDay|matFull)(: [^{\n]+)?( = [^{\n]+)?$/m);
+  assert.doesNotMatch(s, /^\s+var (finn|finnSel|finnDetail|finnBusy|week|matDay|matFull|folders|folder|boligCats|uploadFolder)(: [^{\n]+)?( = [^{\n]+)?$/m);
 });
 
 test('Q19: Finn har ikke lenger «404 → Oppdater homelab»-reserver (serveren har endepunktene)', () => {
