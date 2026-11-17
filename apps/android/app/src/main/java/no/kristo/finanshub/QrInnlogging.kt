@@ -207,14 +207,10 @@ private fun AppViewModel.startQrLogin46(srv: String) {
         while (s.qrShowOpen) {
             val api = Api(srv, null)
             val body = JSONObject().put("app", "finans").put("platform", "android").put("device", qrDevice46()).put("deviceName", qrDevice46())
-            // SERVER46: POST /api/auth/qr/session (token kommer i pollingen ved state done). Eldre server: POST /api/auth/qr + /finish.
-            var v46 = true
+            // SERVER46: POST /api/auth/qr/session (token kommer i pollingen ved state done). Q19: ingen reserve mot
+            // /auth/qr + /finish for eldre servere (server/auth/qr-login.js har /qr/session); for gammel server sier qrErr46 fra.
             val o = try {
-                val raw = try { api.request("POST", "/auth/qr/session", body, prefix = Api.HOMELAB, timeout = 15_000, read = 15_000) } catch (e: ApiException) {
-                    if (e.status != 404 && e.status != 405) throw e
-                    v46 = false
-                    api.request("POST", "/auth/qr", body, prefix = Api.HOMELAB, timeout = 15_000, read = 15_000)
-                }
+                val raw = api.request("POST", "/auth/qr/session", body, prefix = Api.HOMELAB, timeout = 15_000, read = 15_000)
                 JSONObject(raw)
             } catch (e: CancellationException) { throw e } catch (e: Exception) {
                 s.qrShowErr = qrErr46(e); s.qrShow = null; return@launchJob46
@@ -235,7 +231,7 @@ private fun AppViewModel.startQrLogin46(srv: String) {
             while (s.qrShowOpen && !done) {
                 delay(1_500)
                 val st = try {
-                    val raw = qrGet46(srv, (if (v46) "/auth/qr/session/" else "/auth/qr/") + URLEncoder.encode(sid, "UTF-8"), key)
+                    val raw = qrGet46(srv, "/auth/qr/session/" + URLEncoder.encode(sid, "UTF-8"), key)
                     JSONObject(raw)
                 } catch (e: CancellationException) { throw e } catch (e: ApiException) {
                     if (e.status == 404 || e.status == 410) JSONObject().put("state", "expired") else null
@@ -246,7 +242,7 @@ private fun AppViewModel.startQrLogin46(srv: String) {
                 st?.s43("token", "accessToken")?.let { tok -> if (useToken46(srv, tok, st.optJSONObject("user"))) return@launchJob46 }
                 when (state) {
                     "scanned" -> s.qrShow = cur.copy(state = "scanned", match = st?.s43("match"), who = st?.optJSONObject("user")?.s43("name", "displayName"))
-                    "approved" -> { s.qrShow = cur.copy(state = "approved"); if (!v46) { if (finishQr46(srv, sid, key)) return@launchJob46; done = true } }
+                    "approved" -> s.qrShow = cur.copy(state = "approved")
                     "denied" -> { s.qrShow = cur.copy(state = "denied"); delay(2_500); done = true }
                     "expired", "done" -> done = true
                 }
@@ -268,23 +264,6 @@ private suspend fun qrGet46(srv: String, path: String, key: String?): String = k
         if (code >= 400) throw ApiException(runCatching { JSONObject(body).optString("error") }.getOrNull()?.ifBlank { null } ?: "Feil $code", code)
         body
     } finally { c.disconnect() }
-}
-
-/** Fullfører: serveren utsteder et eget app-token for denne enheten. true = innlogget. */
-private suspend fun AppViewModel.finishQr46(srv: String, sid: String, key: String?): Boolean {
-    val s = p46
-    val body = JSONObject().put("sid", sid).put("app", "finans").put("platform", "android").put("device", qrDevice46()).put("deviceName", qrDevice46())
-    key?.let { body.put("key", it) }
-    val o = try { JSONObject(Api(srv, null).request("POST", "/auth/qr/finish", body, prefix = Api.HOMELAB, timeout = 15_000, read = 15_000)) } catch (e: CancellationException) { throw e } catch (e: Exception) {
-        s.qrShowErr = qrErr46(e); return false
-    }
-    val token = o.s43("token", "accessToken")
-    if (token == null) {
-        s.qrShowErr = if (o.optBoolean("needs2fa")) "Kontoen har totrinnsbekreftelse. Logg inn med passord og kode denne gangen."
-            else "Serveren ga ikke noe app-token for QR-innloggingen. Oppdater Homelab, eller logg inn med passord."
-        return false
-    }
-    return useToken46(srv, token, o.optJSONObject("user"))
 }
 
 private fun AppViewModel.useToken46(srv: String, token: String, u: JSONObject?): Boolean {

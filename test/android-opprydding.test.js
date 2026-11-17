@@ -238,6 +238,20 @@ test('Q19 (runde 4): SMB-veiviseren har ingen reserve mot /browse for eldre serv
   assert.match(smb, /e is ApiException && e\.status == 404 -> Smb30Err\("Serveren har ikke veiviseren ennå\. Oppdater Homelab\."/, 'for gammel server får en melding');
 });
 
+test('Q19 (runde 4): QR-innloggingen har ingen reserve mot /auth/qr og /finish for eldre servere', () => {
+  // QR: POST /api/auth/qr/session og GET /qr/session/:id finnes (server/auth/qr-login.js); ingen /auth/qr + /finish.
+  const qr = strip(raw(join(APP, 'QrInnlogging.kt')));
+  const srv = raw(join(ROOT, 'server/auth/qr-login.js'));
+  assert.match(srv, /qrAuthApi\.post\('\/qr\/session'/);
+  assert.match(srv, /qrAuthApi\.get\('\/qr\/session\/:id'/);
+  assert.doesNotMatch(qr, /"\/auth\/qr"|"\/auth\/qr\/"|\/auth\/qr\/finish|finishQr46|v46/);
+  assert.match(qr, /val raw = api\.request\("POST", "\/auth\/qr\/session", body, prefix = Api\.HOMELAB, timeout = 15_000, read = 15_000\)/);
+  assert.match(qr, /qrGet46\(srv, "\/auth\/qr\/session\/" \+ URLEncoder\.encode\(sid, "UTF-8"\), key\)/);
+  assert.match(qr, /e is ApiException && \(e\.status == 404 \|\| e\.status == 405\) -> "Serveren har ikke QR-innlogging for appen ennå/);
+  // Tokenet kommer fortsatt bare i pollingen etter godkjenning, aldri i QR-koden.
+  assert.match(qr, /st\?\.s43\("token", "accessToken"\)\?\.let \{ tok -> if \(useToken46\(srv, tok, st\.optJSONObject\("user"\)\)\) return@launchJob46 \}/);
+});
+
 test('Q19: kvitteringsskanningen, kopi av kalenderhendelser og «Kjøp gave» har ingen lokal reserve for eldre servere', () => {
   // Kvitteringer: /receipts/scan finnes (server/finans/receipts/routes.js); ingen omvei til /receipts med andre felt.
   const scan = strip(raw(join(APP, 'KvitteringSkanning.kt')));
