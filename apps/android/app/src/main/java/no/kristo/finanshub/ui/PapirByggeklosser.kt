@@ -32,6 +32,8 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import no.kristo.finanshub.*
+import androidx.compose.ui.semantics.Role
+import androidx.compose.foundation.selection.selectable
 
 /* ---------------- Små byggeklosser ---------------- */
 
@@ -133,7 +135,7 @@ internal fun PaperSettings16(vm: AppViewModel, navBottom: Dp, head: (androidx.co
                         val on = vm.iconTheme == k
                         Row(
                             Modifier.clip(RoundedCornerShape(14.dp)).border(if (on) 2.dp else 1.dp, if (on) p.ink else p.line, RoundedCornerShape(14.dp))
-                                .clickable { Haptics.select(); vm.updateIconTheme(k) }.padding(10.dp, 8.dp),
+                                .selectable(selected = on, role = Role.RadioButton) { Haptics.select(); vm.updateIconTheme(k) }.padding(10.dp, 8.dp),
                             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp),
                         ) {
                             iconPalette(k).take(4).forEach { c -> Box(Modifier.size(12.dp).clip(CircleShape).background(Color(c))) }

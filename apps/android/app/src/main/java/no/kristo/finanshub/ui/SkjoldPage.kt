@@ -219,11 +219,11 @@ private fun Search76(vm: AppViewModel) {
             }
             if (s.busy) CircularProgressIndicator(color = p.textTertiary, strokeWidth = 2.dp, modifier = Modifier.size(16.dp))
             if (s.q.isNotEmpty()) Icon(Icons.Filled.Close, contentDescription = "Tøm søket", tint = p.textTertiary, modifier = Modifier.size(40.dp).clip(CircleShape)
-                .clickable { s.q = ""; s.suggest = emptyList(); vm.searchSkjold76(now = true) }.wrapContentSize().size(16.dp))
+                .clickable(role = Role.Button, onClickLabel = "Tøm søket") { s.q = ""; s.suggest = emptyList(); vm.searchSkjold76(now = true) }.wrapContentSize().size(16.dp))
         }
         if (s.suggest.isNotEmpty()) Column(Modifier.fillMaxWidth().padding(top = 4.dp).shadow(8.dp, RoundedCornerShape(16.dp)).clip(RoundedCornerShape(16.dp)).background(p.surfaceOverlay)) {
             s.suggest.forEach { (t, id, sub) ->
-                Column(Modifier.fillMaxWidth().clickable {
+                Column(Modifier.fillMaxWidth().clickable(role = Role.Button, onClickLabel = "Åpne") {
                     s.suggest = emptyList()
                     if (id != null) vm.openPart76(id) else { s.q = t; vm.searchSkjold76(now = true) }
                 }.padding(16.dp, 10.dp)) {
@@ -619,7 +619,7 @@ private fun DrawerCard76(vm: AppViewModel, cab: SkjCab76, d: SkjDrawer76?, r: In
             val parts = d?.parts.orEmpty()
             if (parts.isEmpty()) Text("Tom skuff.", color = p.textTertiary, fontSize = HomelabType.subheadline.fontSize)
             parts.forEach { mp ->
-                Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable { vm.openPart76(mp.id) }.padding(4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable(role = Role.Button, onClickLabel = "Åpne delen") { vm.openPart76(mp.id) }.padding(4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     Img76(vm, mp.thumbUrl, 160, Modifier.size(40.dp).clip(RoundedCornerShape(10.dp)))
                     Text(mp.name, color = p.textPrimary, fontSize = HomelabType.callout.fontSize, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
                     Text(qtyText76(mp.qty), color = p.textTertiary, fontFamily = PaperFonts.mono, fontSize = HomelabType.subheadline.fontSize)
@@ -749,7 +749,7 @@ private fun CornerEditor76(vm: AppViewModel, cab: SkjCab76, corners: List<Pair<F
 private fun CabDeleteAsk76(vm: AppViewModel, c: SkjCab76) {
     val s = Skjold76
     val p = HomelabTheme.colors
-    Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = .4f)).clickable { s.cabDeleteAsk = null }, contentAlignment = Alignment.Center) {
+    Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = .4f)).clickable(role = Role.Button, onClickLabel = "Lukk") { s.cabDeleteAsk = null }, contentAlignment = Alignment.Center) {
         PCard(Modifier.padding(24.dp).widthIn(max = 420.dp), shadow = true) {
             Column(Modifier.padding(16.dp).clickable(enabled = false) {}, verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 PSerif("«${c.name}» har deler", 20.sp)
@@ -794,7 +794,7 @@ private fun EditScreen76(vm: AppViewModel) {
             Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 PField("Felt", k, { t -> d.specs = d.specs.mapIndexed { j, o -> if (j == i) t to o.second else o } }, Modifier.weight(.42f))
                 PField("Verdi", v, { t -> d.specs = d.specs.mapIndexed { j, o -> if (j == i) o.first to t else o } }, Modifier.weight(.58f), placeholder = if (k == "verdi") "10k" else "")
-                Icon(Icons.Filled.Close, contentDescription = "Fjern feltet", tint = p.textTertiary, modifier = Modifier.size(40.dp).clip(CircleShape).clickable { d.specs = d.specs.filterIndexed { j, _ -> j != i } }.wrapContentSize()
+                Icon(Icons.Filled.Close, contentDescription = "Fjern feltet", tint = p.textTertiary, modifier = Modifier.size(40.dp).clip(CircleShape).clickable(role = Role.Button) { d.specs = d.specs.filterIndexed { j, _ -> j != i } }.wrapContentSize()
                     .size(16.dp))
             }
         }
@@ -831,7 +831,7 @@ private fun EditScreen76(vm: AppViewModel) {
                 Box {
                     Img76(vm, u, 400, Modifier.size(96.dp).clip(RoundedCornerShape(14.dp)))
                     Icon(Icons.Filled.Close, contentDescription = "Slett bildet", tint = Color.White, modifier = Modifier.align(Alignment.TopEnd).padding(4.dp).size(28.dp).clip(CircleShape).background(Color.Black.copy(alpha = .55f))
-                        .clickable { val pp = s.part; d.id?.let { vm.deletePartPhoto76(it, pp?.photoNs?.getOrNull(i) ?: i) } }.wrapContentSize().size(14.dp))
+                        .clickable(role = Role.Button, onClickLabel = "Slett bildet") { val pp = s.part; d.id?.let { vm.deletePartPhoto76(it, pp?.photoNs?.getOrNull(i) ?: i) } }.wrapContentSize().size(14.dp))
                 }
             }
             d.newPhotos.forEach { _ -> Box(Modifier.size(96.dp).clip(RoundedCornerShape(14.dp)).background(p.surfaceSunken), contentAlignment = Alignment.Center) { Text("Nytt bilde", color = p.textTertiary, fontSize = HomelabType.footnote.fontSize) } }

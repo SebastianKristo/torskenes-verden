@@ -66,6 +66,7 @@ import no.kristo.finanshub.ui.designsystem.DsPalette
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Icon
+import androidx.compose.foundation.selection.selectable
 
 /*
  * Prompt 46: Kart (claude-code-kart-side.md, fasit Kart.dc.html). Kartverket gråtone (WMTS webmercator) i osmdroid (finnes fra før),
@@ -364,12 +365,12 @@ private fun KPanel46(vm: AppViewModel, modifier: Modifier) {
                 if (k.q.isEmpty()) Text("Søk etter holdeplass", color = p.textTertiary, fontSize = HomelabType.callout.fontSize)
                 BasicTextField(k.q, { vm.kartSearch46(it) }, singleLine = true, textStyle = TextStyle(color = p.textPrimary, fontSize = HomelabType.callout.fontSize), cursorBrush = SolidColor(p.accent), modifier = Modifier.fillMaxWidth())
             }
-            if (k.q.isNotEmpty()) Icon(Icons.Filled.Close, contentDescription = "Tøm søket", tint = p.textTertiary, modifier = Modifier.clickable { vm.kartSearch46("") }.padding(6.dp).size(16.dp))
+            if (k.q.isNotEmpty()) Icon(Icons.Filled.Close, contentDescription = "Tøm søket", tint = p.textTertiary, modifier = Modifier.clickable(role = Role.Button) { vm.kartSearch46("") }.padding(6.dp).size(16.dp))
         }
         if (k.hits.isNotEmpty()) Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(p.surfaceRaised)) {
             k.hits.forEachIndexed { i, hit ->
                 if (i > 0) Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
-                Row(Modifier.fillMaxWidth().clickable {
+                Row(Modifier.fillMaxWidth().clickable(role = Role.Button, onClickLabel = "Vis på kartet") {
                     vm.kartSearch46(""); vm.kartFly46(hit.lat, hit.lon, 16.0)
                     if (hit.id?.startsWith("NSR:StopPlace:") == true) vm.kartPick46(KStop46(hit.id, hit.name, hit.lat, hit.lon, hit.modes))
                 }.padding(12.dp, 10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -385,7 +386,7 @@ private fun KPanel46(vm: AppViewModel, modifier: Modifier) {
         if (sel != null) { StopPanel46(vm, sel); return@Column }
         Row(Modifier.fillMaxWidth().clip(CircleShape).background(p.surfaceRaised).padding(4.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             listOf("lag" to "Lag", "soner" to "Soner", "personer" to "Personer").forEach { (key, n) ->
-                Box(Modifier.weight(1f).height(34.dp).clip(CircleShape).background(if (k.tab == key) p.textPrimary else Color.Transparent).clickable { Haptics.select(); k.tab = key },
+                Box(Modifier.weight(1f).height(34.dp).clip(CircleShape).background(if (k.tab == key) p.textPrimary else Color.Transparent).selectable(selected = k.tab == key, role = Role.Tab) { Haptics.select(); k.tab = key },
                     contentAlignment = Alignment.Center) { Text(n, color = if (k.tab == key) p.surface else p.textPrimary, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.subheadline.fontSize) }
             }
         }
@@ -393,7 +394,7 @@ private fun KPanel46(vm: AppViewModel, modifier: Modifier) {
             "soner" -> {
                 if (k.zones.isEmpty()) Text("Ingen soner ennå. Lag soner i Familie → Soner.", color = p.textTertiary, fontSize = HomelabType.subheadline.fontSize)
                 k.zones.forEach { z ->
-                    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(p.surfaceRaised).clickable { vm.kartFly46(z.lat, z.lon, zoneZoom46(z.radius)) }.padding(12.dp, 10.dp),
+                    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(p.surfaceRaised).clickable(role = Role.Button, onClickLabel = "Vis på kartet") { vm.kartFly46(z.lat, z.lon, zoneZoom46(z.radius)) }.padding(12.dp, 10.dp),
                         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         Box(Modifier.size(12.dp).clip(CircleShape).background(Color(z.color ?: 0xFF2E6F75L)))
                         Column(Modifier.weight(1f)) {
@@ -410,7 +411,7 @@ private fun KPanel46(vm: AppViewModel, modifier: Modifier) {
             "personer" -> {
                 if (k.people.isEmpty()) Text("Ingen deler posisjon med deg akkurat nå.", color = p.textTertiary, fontSize = HomelabType.subheadline.fontSize)
                 k.people.forEach { m ->
-                    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(p.surfaceRaised).clickable { vm.kartFly46(m.lat, m.lon, 16.0) }.padding(12.dp, 10.dp),
+                    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(p.surfaceRaised).clickable(role = Role.Button, onClickLabel = "Vis på kartet") { vm.kartFly46(m.lat, m.lon, 16.0) }.padding(12.dp, 10.dp),
                         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         Box(Modifier.size(30.dp).clip(CircleShape).background(Color(m.color ?: 0xFF2B5D8AL)), contentAlignment = Alignment.Center) {
                             Text(if (m.self) "Du" else m.name.take(1).uppercase(), color = Color.White, fontWeight = FontWeight.Bold, fontSize = HomelabType.caption.fontSize)

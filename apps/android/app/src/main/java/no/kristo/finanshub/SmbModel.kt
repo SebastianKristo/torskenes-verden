@@ -220,21 +220,15 @@ fun AppViewModel.smbOpenDir30(path: List<String>) {
     s.showNewDir = false
     launch29 {
         try {
-            // Prompt 36: POST /list (undermapper, 🔒 uten tilgang, skjulte, hint); eldre server: /browse.
+            // Prompt 36: POST /list (undermapper, 🔒 uten tilgang, skjulte, hint). Q19: /list finnes på serveren
+            // (server/smb-browse.js), så det er ingen reserve mot /browse for eldre servere; for gammel server sier /api/version fra.
             val body = smbTarget30(path).put("showHidden", s.showHidden)
-            val raw = try { smbPost30("/list", body) } catch (e: ApiException) { if (e.status == 404 || e.status == 405) null else throw e }
-            if (raw != null && raw.trim().startsWith("{")) {
-                val o = JSONObject(raw)
-                val f = o.optJSONArray("folders") ?: JSONArray()
-                val all = (0 until f.length()).mapNotNull { f.optJSONObject(it) }.filter { it.optString("name").isNotBlank() }
-                s.dirs = all.map { it.optString("name") }
-                s.locked = all.filter { it.optBoolean("locked") }.associate { it.optString("name") to (it.optString("reason").takeIf { r -> r.isNotBlank() && r != "null" } ?: "Ingen tilgang for ${if (s.guest) "gjest" else s.user}") }
-                s.listHint = o.optString("hint").takeIf { it != "null" } ?: ""
-            } else {
-                val a = arr30(raw ?: smbPost30("/browse", body))
-                s.dirs = (0 until a.length()).mapNotNull { a.optJSONObject(it)?.optString("name")?.takeIf { n -> n.isNotBlank() } }
-                s.locked = emptyMap(); s.listHint = ""
-            }
+            val o = JSONObject(smbPost30("/list", body))
+            val f = o.optJSONArray("folders") ?: JSONArray()
+            val all = (0 until f.length()).mapNotNull { f.optJSONObject(it) }.filter { it.optString("name").isNotBlank() }
+            s.dirs = all.map { it.optString("name") }
+            s.locked = all.filter { it.optBoolean("locked") }.associate { it.optString("name") to (it.optString("reason").takeIf { r -> r.isNotBlank() && r != "null" } ?: "Ingen tilgang for ${if (s.guest) "gjest" else s.user}") }
+            s.listHint = o.optString("hint").takeIf { it != "null" } ?: ""
             s.path = path
         } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) { s.error = smbErr30(e) } finally { s.busy = false }
     }

@@ -70,6 +70,8 @@ import no.kristo.finanshub.ui.designsystem.HomelabTheme
 import no.kristo.finanshub.ui.designsystem.HomelabType
 import no.kristo.finanshub.ui.designsystem.DsPalette
 import no.kristo.felles.tid.OsloDato
+import androidx.compose.ui.semantics.Role
+import androidx.compose.foundation.selection.selectable
 
 /*
  * Prompt 23: Aksjer i Papir, nøyaktig etter «Aksjer Mobil» (theme=papir, hide-head) slik «Mobil Papir App» viser siden:
@@ -148,7 +150,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.stocksBody(
         val p = HomelabTheme.colors
         Row(
             Modifier.padding(horizontal = 16.dp).fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(p.surfaceRaised).border(1.dp, p.line, RoundedCornerShape(18.dp))
-                .clickable(onClickLabel = "Synk nå") { Haptics.tap(); vm.syncStocks() }.padding(horizontal = 14.dp, vertical = 12.dp),
+                .clickable(role = Role.Button, onClickLabel = "Synk nå") { Haptics.tap(); vm.syncStocks() }.padding(horizontal = 14.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             Box(Modifier.size(9.dp).clip(CircleShape).background(if (x.error.isBlank() && (x.configured || x.mock)) p.success else p.accent))
@@ -190,7 +192,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.stocksBody(
                 val on = seg == n
                 Box(
                     Modifier.height(40.dp).clip(RoundedCornerShape(20.dp)).background(if (on) p.textPrimary else p.surfaceRaised).border(1.dp, if (on) p.textPrimary else p.line, RoundedCornerShape(20.dp))
-                        .clickable { Haptics.select(); onSeg(n) }.padding(horizontal = 18.dp),
+                        .selectable(selected = on, role = Role.Tab) { Haptics.select(); onSeg(n) }.padding(horizontal = 18.dp),
                     contentAlignment = Alignment.Center,
                 ) { Text(n, color = if (on) p.surface else p.textPrimary, style = HomelabType.callout, fontWeight = FontWeight.Medium, fontFamily = PaperFonts.sans) }
             }
@@ -209,7 +211,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.stocksBody(
             Row(Modifier.padding(horizontal = 16.dp).fillMaxWidth(), verticalAlignment = Alignment.Bottom) {
                 Text("Alle posisjoner", color = p.textPrimary, fontWeight = FontWeight.SemiBold, style = HomelabType.headline, fontFamily = PaperFonts.sans, modifier = Modifier.weight(1f))
                 Text("Transaksjoner ›", color = p.textPrimary, fontWeight = FontWeight.SemiBold, style = HomelabType.subheadline, fontFamily = PaperFonts.sans,
-                    modifier = Modifier.clickable { Haptics.select(); vm.stockScreen = "tx" })
+                    modifier = Modifier.clickable(role = Role.Button) { Haptics.select(); vm.stockScreen = "tx" })
             }
         }
         item {
@@ -284,7 +286,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.stocksBody(
             val p = HomelabTheme.colors
             Row(Modifier.padding(horizontal = 16.dp).fillMaxWidth(), verticalAlignment = Alignment.Bottom) {
                 Text("Siste ordre", color = p.textPrimary, fontWeight = FontWeight.SemiBold, style = HomelabType.headline, fontFamily = PaperFonts.sans, modifier = Modifier.weight(1f))
-                Text("Alle ›", color = p.textPrimary, fontWeight = FontWeight.SemiBold, style = HomelabType.subheadline, fontFamily = PaperFonts.sans, modifier = Modifier.clickable { Haptics.select(); vm.stockScreen = "tx" })
+                Text("Alle ›", color = p.textPrimary, fontWeight = FontWeight.SemiBold, style = HomelabType.subheadline, fontFamily = PaperFonts.sans, modifier = Modifier.clickable(role = Role.Button) { Haptics.select(); vm.stockScreen = "tx" })
             }
         }
         item {
@@ -357,7 +359,7 @@ private fun Seg23(list: List<String>, sel: String, onPick: (String) -> Unit) {
             val on = sel == n
             Box(
                 Modifier.weight(1f).height(32.dp).then(if (on) Modifier.shadow(1.5.dp, RoundedCornerShape(10.dp)) else Modifier).clip(RoundedCornerShape(10.dp))
-                    .background(if (on) p.surfaceRaised else Color.Transparent).clickable { Haptics.select(); onPick(n) },
+                    .background(if (on) p.surfaceRaised else Color.Transparent).selectable(selected = on, role = Role.Tab) { Haptics.select(); onPick(n) },
                 contentAlignment = Alignment.Center,
             ) { Text(n, color = if (on) p.textPrimary else p.textTertiary, fontWeight = FontWeight.SemiBold, style = HomelabType.footnote, fontFamily = PaperFonts.sans, maxLines = 1) }
         }
@@ -411,14 +413,14 @@ private fun TopCard(vm: AppViewModel, ps: StockPos, i: Int, trade: (StockPos, Bo
     Box(Modifier.width(200.dp).clip(RoundedCornerShape(24.dp)).background(tint23(i))) {
         Box(Modifier.align(Alignment.TopEnd).offset(x = 26.dp, y = (-26).dp).size(90.dp).clip(CircleShape).background(HomelabTheme.colors.textTertiary.copy(alpha = .1f)))
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Row(Modifier.clickable { openStock23(vm, ps) }, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(Modifier.clickable(role = Role.Button, onClickLabel = "Åpne aksjen") { openStock23(vm, ps) }, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 Ini(ps.ini, p.surfaceRaised, 36.dp, 13f)
                 Column {
                     Text(ps.symbol, color = p.textPrimary, fontWeight = FontWeight.SemiBold, style = HomelabType.callout, fontFamily = PaperFonts.sans, maxLines = 1)
                     Text(ps.name, color = p.textTertiary, style = HomelabType.footnote, fontFamily = PaperFonts.sans, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
             }
-            Column(Modifier.clickable { openStock23(vm, ps) }) {
+            Column(Modifier.clickable(role = Role.Button, onClickLabel = "Åpne aksjen") { openStock23(vm, ps) }) {
                 Text("${nf(ps.value)} kr", color = p.textPrimary, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, style = HomelabType.headline, maxLines = 1)
                 Row(Modifier.padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text("${qty(ps.qty)} stk", color = p.textTertiary, style = HomelabType.footnote, fontFamily = PaperFonts.sans)
@@ -426,10 +428,10 @@ private fun TopCard(vm: AppViewModel, ps: StockPos, i: Int, trade: (StockPos, Bo
                 }
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Box(Modifier.weight(1f).minimumInteractiveComponentSize().height(36.dp).clip(RoundedCornerShape(18.dp)).border(1.5.dp, p.textPrimary, RoundedCornerShape(18.dp)).clickable { trade(ps, true) }, contentAlignment = Alignment.Center) {
+                Box(Modifier.weight(1f).minimumInteractiveComponentSize().height(36.dp).clip(RoundedCornerShape(18.dp)).border(1.5.dp, p.textPrimary, RoundedCornerShape(18.dp)).clickable(role = Role.Button) { trade(ps, true) }, contentAlignment = Alignment.Center) {
                     Text("Kjøp", color = p.textPrimary, fontWeight = FontWeight.SemiBold, style = HomelabType.subheadline, fontFamily = PaperFonts.sans)
                 }
-                Box(Modifier.weight(1f).minimumInteractiveComponentSize().height(36.dp).clip(RoundedCornerShape(18.dp)).background(p.textPrimary).clickable { trade(ps, false) }, contentAlignment = Alignment.Center) {
+                Box(Modifier.weight(1f).minimumInteractiveComponentSize().height(36.dp).clip(RoundedCornerShape(18.dp)).background(p.textPrimary).clickable(role = Role.Button) { trade(ps, false) }, contentAlignment = Alignment.Center) {
                     Text("Selg", color = p.surface, fontWeight = FontWeight.SemiBold, style = HomelabType.subheadline, fontFamily = PaperFonts.sans)
                 }
             }
@@ -443,7 +445,7 @@ private fun PosRow(vm: AppViewModel, ps: StockPos, i: Int) {
     val ch = ps.dayPct ?: ps.plPct
     val up = ch >= 0
     Row(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(p.surfaceRaised).clickable { openStock23(vm, ps) }.padding(horizontal = 14.dp, vertical = 12.dp),
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(p.surfaceRaised).clickable(role = Role.Button, onClickLabel = "Åpne aksjen") { openStock23(vm, ps) }.padding(horizontal = 14.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Ini(ps.ini, tint23(i), 40.dp, 13f)
@@ -524,7 +526,7 @@ private fun RangePicker(range: String, onPick: (String) -> Unit) {
     Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(HomelabTheme.colors.surfaceSunken).padding(3.dp)) {
         RANGES.forEach { (k, _, _) ->
             val on = range == k
-            Box(Modifier.weight(1f).minimumInteractiveComponentSize().height(32.dp).clip(RoundedCornerShape(11.dp)).background(if (on) HomelabTheme.colors.line else Color.Transparent).clickable { Haptics.select(); onPick(k) }, contentAlignment = Alignment.Center) {
+            Box(Modifier.weight(1f).minimumInteractiveComponentSize().height(32.dp).clip(RoundedCornerShape(11.dp)).background(if (on) HomelabTheme.colors.line else Color.Transparent).selectable(selected = on, role = Role.Tab) { Haptics.select(); onPick(k) }, contentAlignment = Alignment.Center) {
                 Text(k, color = if (on) HomelabTheme.colors.textPrimary else HomelabTheme.colors.textSecondary, fontWeight = FontWeight.SemiBold, style = HomelabType.subheadline)
             }
         }
@@ -537,7 +539,7 @@ private fun Segments(list: List<String>, sel: String, onPick: (String) -> Unit) 
         list.forEach { n ->
             val on = sel == n
             Box(Modifier.height(36.dp).clip(CircleShape).background(if (on) HomelabTheme.colors.textPrimary else HomelabTheme.colors.surfaceRaised).border(1.dp, if (on) Color.Transparent else HomelabTheme.colors.line, CircleShape)
-                .clickable { Haptics.select(); onPick(n) }.padding(horizontal = 16.dp), contentAlignment = Alignment.Center) {
+                .selectable(selected = on, role = Role.Tab) { Haptics.select(); onPick(n) }.padding(horizontal = 16.dp), contentAlignment = Alignment.Center) {
                 Text(n, color = if (on) HomelabTheme.colors.surface else HomelabTheme.colors.textPrimary, fontWeight = FontWeight.SemiBold, style = HomelabType.callout)
             }
         }
@@ -630,7 +632,7 @@ private fun StockOverview(vm: AppViewModel, x: StocksX?, range: String, onRange:
                 Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     vis.sortedByDescending { it.value }.take(3).forEach { p ->
                         Column(Modifier.width(200.dp).clip(RoundedCornerShape(24.dp)).background(tint(idx[p.ticker] ?: 0)).padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                            Column(Modifier.clickable { openStock(vm, p) }, verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                            Column(Modifier.clickable(role = Role.Button, onClickLabel = "Åpne aksjen") { openStock(vm, p) }, verticalArrangement = Arrangement.spacedBy(10.dp)) {
                                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                                     TickerBadge(p.ini, Color.Black.copy(alpha = .22f), 36)
                                     Column { Text(p.symbol, fontWeight = FontWeight.Bold, maxLines = 1); Text(p.name, color = HomelabTheme.colors.textSecondary, style = HomelabType.footnote, maxLines = 1, overflow = TextOverflow.Ellipsis) }
@@ -655,7 +657,7 @@ private fun StockOverview(vm: AppViewModel, x: StocksX?, range: String, onRange:
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
                     vis.forEachIndexed { i, p ->
-                        Row(Modifier.fillMaxWidth().clip(itemShape(i, vis.size)).background(HomelabTheme.colors.surfaceRaised).clickable { openStock(vm, p) }.padding(14.dp, 11.dp),
+                        Row(Modifier.fillMaxWidth().clip(itemShape(i, vis.size)).background(HomelabTheme.colors.surfaceRaised).clickable(role = Role.Button, onClickLabel = "Åpne aksjen") { openStock(vm, p) }.padding(14.dp, 11.dp),
                             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             TickerBadge(p.ini, tint(idx[p.ticker] ?: 0))
                             Column(Modifier.weight(1f)) { Text(p.symbol, fontWeight = FontWeight.SemiBold, maxLines = 1); Text(p.name, color = HomelabTheme.colors.textSecondary, style = HomelabType.footnote, maxLines = 1, overflow = TextOverflow.Ellipsis) }

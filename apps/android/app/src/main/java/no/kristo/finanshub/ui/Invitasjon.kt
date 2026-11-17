@@ -132,5 +132,5 @@ private fun Share51(vm: AppViewModel) {
         PToggle("Kalender", "Familiekalenderen og «opptatt» i Kalender", Join51.shareCalendar, top = true) { Join51.shareCalendar = it }
     }
     PButton(if (Join51.busy) "Lager kontoen …" else "Ferdig – logg inn", Modifier.fillMaxWidth(), height = 54.dp) { vm.acceptJoin51() }
-    Text("‹ Tilbake", color = p.lab, fontWeight = FontWeight.SemiBold, modifier = Modifier.heightIn(min = 48.dp).clickable { Join51.step = "about" }.padding(vertical = 12.dp))
+    Text("‹ Tilbake", color = p.lab, fontWeight = FontWeight.SemiBold, modifier = Modifier.heightIn(min = 48.dp).clickable(role = Role.Button) { Join51.step = "about" }.padding(vertical = 12.dp))
 }

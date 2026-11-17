@@ -165,7 +165,7 @@ internal fun SkiCard41(vm: AppViewModel) {
                 Text(c, color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.footnote.fontSize, modifier = Modifier.clip(CircleShape).background(Color.White.copy(alpha = .14f)).padding(12.dp, 6.dp))
             }
             Text("Løyper ↗", color = Color.White, fontWeight = FontWeight.Bold, fontSize = HomelabType.footnote.fontSize,
-                modifier = Modifier.clip(CircleShape).border(1.dp, Color.White.copy(alpha = .3f), CircleShape).clickable { openLink(ctx, "https://skisporet.no/") }.padding(12.dp, 6.dp))
+                modifier = Modifier.clip(CircleShape).border(1.dp, Color.White.copy(alpha = .3f), CircleShape).clickable(role = Role.Button) { openLink(ctx, "https://skisporet.no/") }.padding(12.dp, 6.dp))
         }
     }
 }

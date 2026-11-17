@@ -126,6 +126,47 @@ test('P85 E: Nyheter, Mat, Domener, Vær, Avganger og kalendervisningen har roll
   assert.match(dom, /Modifier\.semantics \{ contentDescription = "Oppdater" \}\.clip\(CircleShape\)\.clickable\(role = Role\.Button\) \{ vm\.reloadDomain\(\) \}/);
 });
 
+// Runde 4: sidene som sto igjen. Hver fil i lista har ingen clickable uten rolle; valg og brytere sier om de er valgt/på.
+const P85E_RUNDE4 = {
+  okonomi: ['Abonnement.kt', 'Aksjer.kt'],
+  papir: ['PapirSider.kt', 'PapirInnstillinger.kt', 'PapirByggeklosser.kt'],
+  familie: ['FamilyPage.kt', 'KartPage.kt'],
+  boliger: ['Boliger.kt'],
+  innstillinger: ['Innstillinger.kt'],
+  gjoremal: ['TasksComponents.kt', 'TasksPage.kt', 'TasksSubtasks.kt', 'TasksTabs.kt'],
+  skjold: ['SkjoldPage.kt', 'SkjoldAIViews.kt', 'SkjoldProjectsViews.kt', 'SkjoldSpanViews.kt'],
+  nyheter: ['NewsIcons.kt'],
+  okonomiRest: ['Finance.kt', 'Kvitteringer.kt', 'KvitteringKo.kt', 'LogoVelger.kt', 'FinnAnnonse.kt', 'More.kt', 'Mer.kt', 'FellesSok.kt'],
+  innstillingerRest: ['AiKontrollSkjerm.kt', 'ClaudeImport.kt', 'AppIkon.kt', 'Bakgrunn.kt', 'WidgetGalleri.kt', '../widget/WidgetConfigActivity.kt', 'Enhetsgodkjenning.kt', 'Innlogging.kt', 'Invitasjon.kt'],
+  hjemOgModuler: ['GlimtSvar.kt', 'ChatKort.kt', 'KalenderGlimt.kt', 'DeparturesHomeCard.kt', 'HjemlysFlow.kt', 'Planlegging.kt', 'Modules.kt', 'Tracking.kt', 'WeatherEdit.kt', 'WeatherCompare.kt'],
+};
+
+test('P85 E (runde 4): Abonnement, Aksjer og de andre sidene som sto igjen har rolle på trykkflatene', () => {
+  for (const f of Object.values(P85E_RUNDE4).flat()) {
+    const s = strip(raw(join(APP, 'ui', f)));
+    assert.doesNotMatch(s, /\.clickable\s*(\(\s*\))?\s*\{/, `${f}: clickable uten rolle`);
+    assert.match(s, /import androidx\.compose\.ui\.semantics\.Role\n/, f);
+    if (/\.selectable\(/.test(s)) assert.match(s, /import androidx\.compose\.foundation\.selection\.selectable\n/, f);
+    if (/\.toggleable\(/.test(s)) assert.match(s, /import androidx\.compose\.foundation\.selection\.toggleable\n/, f);
+  }
+  const abo = strip(raw(join(APP, 'ui/Abonnement.kt')));
+  assert.match(abo, /\.toggleable\(value = on, role = Role\.Checkbox\) \{\s*Haptics\.select\(\)\s*done = /, 'oppgavene i abonnementssjekken er avkrysningsbokser');
+  assert.match(abo, /\.clickable\(role = Role\.Button, onClickLabel = "Rediger"\)/);
+  const aks = strip(raw(join(APP, 'ui/Aksjer.kt')));
+  assert.match(aks, /\.selectable\(selected = on, role = Role\.Tab\) \{ Haptics\.select\(\); onPick\(k\) \}/, 'periodevalget sier hvilken som er valgt');
+  assert.match(aks, /\.clickable\(role = Role\.Button, onClickLabel = "Åpne aksjen"\) \{ openStock23\(vm, ps\) \}/);
+  const ps = strip(raw(join(APP, 'ui/PapirSider.kt')));
+  assert.match(ps, /\.toggleable\(value = on, role = Role\.Switch\) \{ Haptics\.select\(\); onChange\(!on\) \}/, 'bryterradene i Papir er brytere');
+  assert.match(ps, /\.selectable\(selected = on, role = Role\.Tab\) \{ Haptics\.select\(\); vm\.trkTab = tk/);
+  // Rader med egen avkrysningsboks eller bryter: raden er trykkflaten, og kontrollen inni er bare visning (én ting for TalkBack).
+  const imp = strip(raw(join(APP, 'ui/ClaudeImport.kt')));
+  assert.match(imp, /\.toggleable\(value = on, role = Role\.Checkbox\) \{ s\.impPick = if \(on\) s\.impPick - id else s\.impPick \+ id \}[^\n]*\n\s*Checkbox\(on, null,/);
+  assert.match(imp, /\.toggleable\(value = on, role = Role\.Switch\) \{ onChange\(!on\) \}[\s\S]{0,300}Switch\(on, null,/);
+  assert.match(strip(raw(join(APP, 'widget/WidgetConfigActivity.kt'))), /\.toggleable\(value = papir, role = Role\.Switch\) \{ papir = !papir \}[\s\S]{0,500}Switch\(papir, null\)/);
+  assert.match(strip(raw(join(APP, 'ui/Modules.kt'))), /\.toggleable\(value = sh\.done, role = Role\.Checkbox\) \{ vm\.toggleShop\(sh\.id\) \}[^\n]*\n\s*Checkbox\(checked = sh\.done, onCheckedChange = null,/, 'handlelisten');
+  assert.match(strip(raw(join(APP, 'ui/Boliger.kt'))), /\.toggleable\(value = on, role = Role\.Switch\) \{ vm\.b24PatchHome\(h\.id, JSONObject\(\)\.put\(t\.first, !on\)\) \}/);
+});
+
 test('P85 G: kvitteringer lastes opp med Idempotency-Key fra bildet, også fra køen; logo 204 betyr «ingen logo»', () => {
   const api = strip(raw(join(APP, 'Api.kt')));
   assert.match(api, /idempotencyKey: String\? = null\): String/);
@@ -179,10 +220,36 @@ test('Q19: 404-reservene for Kalender-vær, stedssøket, Gjøremål-kortene og L
   assert.match(kal, /if \(e\.status != 404 && e\.status != 405\) throw e\s*\n\s*emptyMap\(\)/);
   const vm = strip(raw(join(APP, 'AppViewModel.kt')));
   assert.doesNotMatch(vm, /\/weather\/search/);
-  assert.match(vm, /wxSearch = parseWxSearch28\(api\.hlGet\("\/weather\/places\?q=\$enc", timeout = 15_000\)\) \?: emptyList\(\)/);
+  // Stedssøket ligger i VaerRepository (Struktur: Android), uten reserve.
+  const vaer = strip(raw(join(APP, 'repository/VaerRepository.kt')));
+  assert.doesNotMatch(vaer, /\/weather\/search/);
+  assert.match(vaer, /api\(\)\.hlGet\("\/weather\/places\?q=" \+ enc\(q\), timeout = 15_000\)[\s\S]{0,120}parseWxSearch28\(raw\)/);
   assert.match(strip(raw(join(APP, 'Glimt.kt'))), /if \(e\.status == 404 \|\| e\.status == 405\) s\.cards = emptyList\(\)/);
   const led = strip(raw(join(APP, 'SkjoldLED.kt')));
   assert.doesNotMatch(led, /settingsLocal|prefs78/);
+});
+
+test('Q19 (runde 4): SMB-veiviseren har ingen reserve mot /browse for eldre servere', () => {
+  // SMB: POST /api/smb/list finnes (server/smb-browse.js); ingen omvei til /browse når serveren svarer 404.
+  const smb = strip(raw(join(APP, 'SmbModel.kt')));
+  assert.match(raw(join(ROOT, 'server/smb-browse.js')), /api\.post\('\/list'/);
+  assert.doesNotMatch(smb, /"\/browse"/);
+  assert.match(smb, /val o = JSONObject\(smbPost30\("\/list", body\)\)/);
+  assert.match(smb, /e is ApiException && e\.status == 404 -> Smb30Err\("Serveren har ikke veiviseren ennå\. Oppdater Homelab\."/, 'for gammel server får en melding');
+});
+
+test('Q19 (runde 4): QR-innloggingen har ingen reserve mot /auth/qr og /finish for eldre servere', () => {
+  // QR: POST /api/auth/qr/session og GET /qr/session/:id finnes (server/auth/qr-login.js); ingen /auth/qr + /finish.
+  const qr = strip(raw(join(APP, 'QrInnlogging.kt')));
+  const srv = raw(join(ROOT, 'server/auth/qr-login.js'));
+  assert.match(srv, /qrAuthApi\.post\('\/qr\/session'/);
+  assert.match(srv, /qrAuthApi\.get\('\/qr\/session\/:id'/);
+  assert.doesNotMatch(qr, /"\/auth\/qr"|"\/auth\/qr\/"|\/auth\/qr\/finish|finishQr46|v46/);
+  assert.match(qr, /val raw = api\.request\("POST", "\/auth\/qr\/session", body, prefix = Api\.HOMELAB, timeout = 15_000, read = 15_000\)/);
+  assert.match(qr, /qrGet46\(srv, "\/auth\/qr\/session\/" \+ URLEncoder\.encode\(sid, "UTF-8"\), key\)/);
+  assert.match(qr, /e is ApiException && \(e\.status == 404 \|\| e\.status == 405\) -> "Serveren har ikke QR-innlogging for appen ennå/);
+  // Tokenet kommer fortsatt bare i pollingen etter godkjenning, aldri i QR-koden.
+  assert.match(qr, /st\?\.s43\("token", "accessToken"\)\?\.let \{ tok -> if \(useToken46\(srv, tok, st\.optJSONObject\("user"\)\)\) return@launchJob46 \}/);
 });
 
 test('Q19: kvitteringsskanningen, kopi av kalenderhendelser og «Kjøp gave» har ingen lokal reserve for eldre servere', () => {

@@ -22,6 +22,8 @@ import androidx.glance.appwidget.GlanceAppWidgetManager
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
+import androidx.compose.ui.semantics.Role
+import androidx.compose.foundation.selection.toggleable
 
 /**
  * «Rediger widget» for Samsung/One UI-widgetene: «Vis navn under widget» (standard på), lagret per widget.
@@ -45,24 +47,24 @@ class WidgetConfigActivity : ComponentActivity() {
                     Column(Modifier.fillMaxSize().systemBarsPadding().padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                         Text("Rediger widget", color = Color.White, fontSize = 26.sp, fontWeight = FontWeight.SemiBold)
                         if (s24) Row(
-                            Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(Color(0xFF1E1E22)).clickable { papir = !papir }.padding(18.dp, 14.dp),
+                            Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(Color(0xFF1E1E22)).toggleable(value = papir, role = Role.Switch) { papir = !papir }.padding(18.dp, 14.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Column(Modifier.weight(1f)) {
                                 Text("Papir-farger", color = Color.White, fontSize = 16.sp)
                                 Text("Rød og hvit som i appen. Av: farger fra One UI-temaet", color = Color(0xFFB4B4BC), fontSize = 13.sp)
                             }
-                            Switch(papir, { papir = it })
+                            Switch(papir, null)
                         }
                         if (!s24) Row(
-                            Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(Color(0xFF1E1E22)).clickable { on = !on }.padding(18.dp, 14.dp),
+                            Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(Color(0xFF1E1E22)).toggleable(value = on, role = Role.Switch) { on = !on }.padding(18.dp, 14.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Column(Modifier.weight(1f)) {
                                 Text("Vis navn under widget", color = Color.White, fontSize = 16.sp)
                                 Text("Som Samsungs egne widgets", color = Color(0xFFB4B4BC), fontSize = 13.sp)
                             }
-                            Switch(on, { on = it })
+                            Switch(on, null)
                         }
                         Spacer(Modifier.weight(1f))
                         Button(onClick = { if (s24) S24.setPapir(this@WidgetConfigActivity, id, papir); save(id, on) }, modifier = Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(26.dp)) { Text("Ferdig", fontSize = 16.sp) }

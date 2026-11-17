@@ -36,6 +36,7 @@ import no.kristo.finanshub.*
 import org.json.JSONObject
 import no.kristo.finanshub.ui.designsystem.HomelabTheme
 import no.kristo.finanshub.ui.designsystem.HomelabType
+import androidx.compose.foundation.selection.toggleable
 
 /*
  * Prompt 43 (claude-code-chat-claude-import.md, fasit Claude Import.dc.html): fanen «Importer» i AI-kontroll.
@@ -115,8 +116,8 @@ internal fun ClaudeImport43(vm: AppViewModel) {
                 if (withConvs) Card43 {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         PLabel("Samtaler · ${s.impPick.size} valgt", modifier = Modifier.weight(1f))
-                        Text("Alle", color = p.textPrimary, fontWeight = FontWeight.Bold, style = HomelabType.footnote, modifier = Modifier.clip(CircleShape).clickable { s.impPick = items.filter { !skipOld || !it.b43(false, "imported") }.mapNotNull { it.s43("id", "uuid") }.toSet() }.padding(10.dp, 6.dp))
-                        Text("Ingen", color = p.textPrimary, fontWeight = FontWeight.Bold, style = HomelabType.footnote, modifier = Modifier.clip(CircleShape).clickable { s.impPick = emptySet() }.padding(10.dp, 6.dp))
+                        Text("Alle", color = p.textPrimary, fontWeight = FontWeight.Bold, style = HomelabType.footnote, modifier = Modifier.clip(CircleShape).clickable(role = Role.Button) { s.impPick = items.filter { !skipOld || !it.b43(false, "imported") }.mapNotNull { it.s43("id", "uuid") }.toSet() }.padding(10.dp, 6.dp))
+                        Text("Ingen", color = p.textPrimary, fontWeight = FontWeight.Bold, style = HomelabType.footnote, modifier = Modifier.clip(CircleShape).clickable(role = Role.Button) { s.impPick = emptySet() }.padding(10.dp, 6.dp))
                     }
                     Box(Modifier.fillMaxWidth().heightIn(min = 44.dp).clip(RoundedCornerShape(12.dp)).background(p.surface).border(1.dp, p.line, RoundedCornerShape(12.dp)).padding(horizontal = 12.dp), contentAlignment = Alignment.CenterStart) {
                         if (q.isEmpty()) Text("Søk i titler …", color = p.textTertiary, style = HomelabType.callout)
@@ -127,8 +128,8 @@ internal fun ClaudeImport43(vm: AppViewModel) {
                         val id = c.s43("id", "uuid") ?: return@forEach
                         val before = c.b43(false, "imported", "importedBefore")
                         val on = id in s.impPick
-                        Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).clickable { s.impPick = if (on) s.impPick - id else s.impPick + id }, verticalAlignment = Alignment.CenterVertically) {
-                            Checkbox(on, { s.impPick = if (it) s.impPick + id else s.impPick - id }, colors = CheckboxDefaults.colors(checkedColor = p.textPrimary, uncheckedColor = p.textTertiary, checkmarkColor = p.surface))
+                        Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).toggleable(value = on, role = Role.Checkbox) { s.impPick = if (on) s.impPick - id else s.impPick + id }, verticalAlignment = Alignment.CenterVertically) {
+                            Checkbox(on, null, colors = CheckboxDefaults.colors(checkedColor = p.textPrimary, uncheckedColor = p.textTertiary, checkmarkColor = p.surface))
                             Column(Modifier.weight(1f)) {
                                 Text(c.s43("title", "name") ?: "Uten tittel", color = p.textPrimary, fontWeight = FontWeight.SemiBold, style = HomelabType.subheadline, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                 Text(listOfNotNull((c.s43("date", "updated_at", "updatedAt"))?.take(10), c.i43("messages", "messageCount")?.let { "$it meldinger" }, if (before) "Importert før" else null).joinToString(" · "),
@@ -144,8 +145,8 @@ internal fun ClaudeImport43(vm: AppViewModel) {
                     for (i in 0 until mem.length()) {
                         val t = mem.opt(i).let { if (it is JSONObject) it.s43("text", "t") ?: "" else it.toString() }
                         val on = i in s.impMemPick
-                        Row(Modifier.fillMaxWidth().heightIn(min = 44.dp).clickable { s.impMemPick = if (on) s.impMemPick - i else s.impMemPick + i }, verticalAlignment = Alignment.CenterVertically) {
-                            Checkbox(on, { s.impMemPick = if (it) s.impMemPick + i else s.impMemPick - i }, colors = CheckboxDefaults.colors(checkedColor = p.textPrimary, uncheckedColor = p.textTertiary, checkmarkColor = p.surface))
+                        Row(Modifier.fillMaxWidth().heightIn(min = 44.dp).toggleable(value = on, role = Role.Checkbox) { s.impMemPick = if (on) s.impMemPick - i else s.impMemPick + i }, verticalAlignment = Alignment.CenterVertically) {
+                            Checkbox(on, null, colors = CheckboxDefaults.colors(checkedColor = p.textPrimary, uncheckedColor = p.textTertiary, checkmarkColor = p.surface))
                             Text(t, color = p.textPrimary, style = HomelabType.subheadline, modifier = Modifier.weight(1f))
                         }
                     }
@@ -208,9 +209,9 @@ private fun RowScope.Stat43(n: String, label: String) {
 @Composable
 private fun Toggle43i(title: String, on: Boolean, onChange: (Boolean) -> Unit) {
     val p = HomelabTheme.colors
-    Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).clip(RoundedCornerShape(14.dp)).background(p.surfaceRaised).clickable { onChange(!on) }.padding(horizontal = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).clip(RoundedCornerShape(14.dp)).background(p.surfaceRaised).toggleable(value = on, role = Role.Switch) { onChange(!on) }.padding(horizontal = 14.dp), verticalAlignment = Alignment.CenterVertically) {
         Text(title, color = p.textPrimary, fontWeight = FontWeight.SemiBold, style = HomelabType.callout, modifier = Modifier.weight(1f))
-        androidx.compose.material3.Switch(on, onChange, colors = androidx.compose.material3.SwitchDefaults.colors(checkedThumbColor = p.surface, checkedTrackColor = p.textPrimary, uncheckedThumbColor = p.textTertiary, uncheckedTrackColor = p.line, uncheckedBorderColor = p.line))
+        androidx.compose.material3.Switch(on, null, colors = androidx.compose.material3.SwitchDefaults.colors(checkedThumbColor = p.surface, checkedTrackColor = p.textPrimary, uncheckedThumbColor = p.textTertiary, uncheckedTrackColor = p.line, uncheckedBorderColor = p.line))
     }
 }
 

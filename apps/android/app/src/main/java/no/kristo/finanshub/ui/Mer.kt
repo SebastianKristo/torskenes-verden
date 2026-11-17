@@ -268,7 +268,7 @@ private fun MerSearch44() {
             if (Mer44.q.isEmpty()) Text("Søk i moduler", color = p.mut, fontSize = 15.sp)
             BasicTextField(Mer44.q, { Mer44.q = it }, singleLine = true, textStyle = TextStyle(color = p.ink, fontSize = 15.sp), cursorBrush = SolidColor(p.lab), modifier = Modifier.fillMaxWidth())
         }
-        if (Mer44.q.isNotEmpty()) Text("✕", color = p.mut, modifier = Modifier.semantics { contentDescription = "Tøm søket" }.size(40.dp).clip(CircleShape).clickable { Mer44.q = "" }.wrapContentSize())
+        if (Mer44.q.isNotEmpty()) Text("✕", color = p.mut, modifier = Modifier.semantics { contentDescription = "Tøm søket" }.size(40.dp).clip(CircleShape).clickable(role = Role.Button) { Mer44.q = "" }.wrapContentSize())
     }
 }
 
@@ -527,7 +527,7 @@ internal fun FinMer45(vm: AppViewModel, tiles: List<FinTile>, navBottom: android
                     if (finQ45.isEmpty()) Text("Søk i moduler", color = p.mut, fontSize = 15.sp)
                     BasicTextField(finQ45, { finQ45 = it }, singleLine = true, textStyle = TextStyle(color = p.ink, fontSize = 15.sp), cursorBrush = SolidColor(p.lab), modifier = Modifier.fillMaxWidth())
                 }
-                if (finQ45.isNotEmpty()) Text("✕", color = p.mut, modifier = Modifier.semantics { contentDescription = "Tøm søket" }.size(40.dp).clip(CircleShape).clickable { finQ45 = "" }.wrapContentSize())
+                if (finQ45.isNotEmpty()) Text("✕", color = p.mut, modifier = Modifier.semantics { contentDescription = "Tøm søket" }.size(40.dp).clip(CircleShape).clickable(role = Role.Button) { finQ45 = "" }.wrapContentSize())
             }
         }
         if (big.isNotEmpty()) {

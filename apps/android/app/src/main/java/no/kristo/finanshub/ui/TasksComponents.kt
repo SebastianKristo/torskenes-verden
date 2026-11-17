@@ -35,6 +35,9 @@ import java.time.ZoneId
 import no.kristo.finanshub.ui.designsystem.HomelabType
 import no.kristo.finanshub.ui.designsystem.HomelabTheme
 import no.kristo.finanshub.ui.designsystem.DsPalette
+import androidx.compose.ui.semantics.Role
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.toggleable
 
 /*
  * Huskeliste (prompt 22, fasit Huskeliste.dc.html + Mobil Papir App.dc.html): fylte chips når valgt, «Alle» uten prikk,
@@ -47,7 +50,7 @@ internal fun TaskChip(text: String, on: Boolean, onClick: () -> Unit) {
     val p = HomelabTheme.colors
     Box(
         Modifier.height(32.dp).clip(RoundedCornerShape(16.dp)).background(if (on) p.textPrimary else p.surfaceRaised).border(1.dp, if (on) p.textPrimary else p.line, RoundedCornerShape(16.dp))
-            .clickable { Haptics.select(); onClick() }.padding(horizontal = 12.dp),
+            .selectable(selected = on, role = Role.RadioButton) { Haptics.select(); onClick() }.padding(horizontal = 12.dp),
         contentAlignment = Alignment.Center,
     ) { Text(text, color = if (on) p.surface else p.textPrimary, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.footnote.fontSize, maxLines = 1) }
 }
@@ -59,7 +62,7 @@ internal fun TaskListChip(text: String, color: Long?, on: Boolean, count: Int, o
     Row(
         Modifier.height(38.dp).clip(CircleShape).background(if (on) p.textPrimary else p.surfaceRaised).border(1.dp, if (on) p.textPrimary else Color.Transparent, CircleShape)
             // Prompt 43: hold inne → «Rekkefølge på lister» (ui/TasksTabs.kt).
-            .then(if (onHold != null) Modifier.pressOrHold43(text, { Haptics.select(); onClick() }, onHold) else Modifier.clickable { Haptics.select(); onClick() }).padding(horizontal = 14.dp),
+            .then(if (onHold != null) Modifier.pressOrHold43(text, { Haptics.select(); onClick() }, onHold) else Modifier.clickable(role = Role.Button) { Haptics.select(); onClick() }).padding(horizontal = 14.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         if (color != null) Box(Modifier.size(9.dp).clip(CircleShape).background(Color(color)))
@@ -92,7 +95,7 @@ internal fun TaskDock(title: String, setTitle: (String) -> Unit, focus: FocusReq
             )
         }
         Box(
-            Modifier.size(60.dp).shadow(14.dp, RoundedCornerShape(22.dp)).clip(RoundedCornerShape(22.dp)).background(p.accent).clickable { Haptics.tap(); plus() },
+            Modifier.size(60.dp).shadow(14.dp, RoundedCornerShape(22.dp)).clip(RoundedCornerShape(22.dp)).background(p.accent).clickable(role = Role.Button, onClickLabel = "Ny oppgave") { Haptics.tap(); plus() },
             contentAlignment = Alignment.Center,
         ) { Text("+", color = p.onAccent, fontSize = HomelabType.title2.fontSize, fontWeight = FontWeight.Light) }
     }
@@ -119,7 +122,7 @@ internal fun TasksHaSection(vm: AppViewModel, lists: List<TaskList>, pad: androi
             Text(st, color = if (ha.status == "error" && ha.enabled) p.accent else p.textTertiary, fontSize = HomelabType.footnote.fontSize)
         }
         Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(p.surfaceRaised).padding(horizontal = 14.dp, vertical = 2.dp)) {
-            Row(Modifier.fillMaxWidth().heightIn(min = 56.dp).clickable { vm.setTasksHaOn(!ha.enabled) }, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(Modifier.fillMaxWidth().heightIn(min = 56.dp).toggleable(value = ha.enabled, role = Role.Switch) { vm.setTasksHaOn(!ha.enabled) }, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Column(Modifier.weight(1f)) {
                     Text("Synkroniser lister", color = p.textPrimary, fontWeight = FontWeight.Bold, fontSize = HomelabType.callout.fontSize)
                     Text("To veier · Home Assistant To-do (todo.*)", color = p.textTertiary, fontSize = HomelabType.footnote.fontSize)
@@ -132,7 +135,7 @@ internal fun TasksHaSection(vm: AppViewModel, lists: List<TaskList>, pad: androi
                 lists.forEach { l ->
                     val e = ha.maps[l.id]
                     Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
-                    Row(Modifier.fillMaxWidth().heightIn(min = 52.dp).clickable { pick = l }, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Row(Modifier.fillMaxWidth().heightIn(min = 52.dp).clickable(role = Role.Button, onClickLabel = "Velg liste i Home Assistant") { pick = l }, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         Box(Modifier.size(9.dp).clip(CircleShape).background(Color(l.color)))
                         Text(l.name, color = p.textPrimary, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.callout.fontSize, modifier = Modifier.weight(1f), maxLines = 1)
                         Text(e ?: "Ikke koblet", color = if (e != null) p.textPrimary else p.textTertiary, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.footnote.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -140,7 +143,7 @@ internal fun TasksHaSection(vm: AppViewModel, lists: List<TaskList>, pad: androi
                     }
                 }
                 Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
-                Box(Modifier.fillMaxWidth().heightIn(min = 48.dp).clickable { if (!vm.tasksHaBusy) vm.syncTasksHa() }, contentAlignment = Alignment.Center) {
+                Box(Modifier.fillMaxWidth().heightIn(min = 48.dp).clickable(role = Role.Button) { if (!vm.tasksHaBusy) vm.syncTasksHa() }, contentAlignment = Alignment.Center) {
                     Text(if (vm.tasksHaBusy) "Synker …" else "↻ Synk nå", color = p.accent, fontWeight = FontWeight.Bold, fontSize = HomelabType.callout.fontSize)
                 }
             }

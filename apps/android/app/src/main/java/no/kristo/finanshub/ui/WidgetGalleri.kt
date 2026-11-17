@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 import no.kristo.finanshub.*
+import androidx.compose.foundation.selection.selectable
 
 /*
  * Prompt 43 (claude-code-widget-galleri.md, Widget Galleri.dc.html platform="android"/samsung): Innstillinger → App → Widgets.
@@ -82,7 +83,7 @@ internal fun WidgetGallery43(vm: AppViewModel) {
             item {
                 Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     groups.forEach { g ->
-                        Box(Modifier.heightIn(min = 44.dp).clickable { filter = g }, contentAlignment = Alignment.Center) {
+                        Box(Modifier.heightIn(min = 44.dp).selectable(selected = filter == g, role = Role.RadioButton) { filter = g }, contentAlignment = Alignment.Center) {
                             Text(g, color = if (filter == g) p.bg else p.ink, fontWeight = FontWeight.Bold, fontSize = 13.sp,
                                 modifier = Modifier.clip(CircleShape).background(if (filter == g) p.ink else p.card).border(1.dp, if (filter == g) p.ink else p.line, CircleShape).padding(14.dp, 8.dp))
                         }

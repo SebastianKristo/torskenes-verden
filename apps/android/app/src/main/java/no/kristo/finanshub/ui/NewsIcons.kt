@@ -33,6 +33,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import no.kristo.finanshub.*
 import no.kristo.finanshub.ui.designsystem.HomelabType
+import androidx.compose.ui.semantics.Role
+import androidx.compose.foundation.selection.selectable
 
 /*
  * Prompt 23: ikoner på fanene i Nyhetsleser (Nyhetsleser.dc.html). SVG hentes via /api/icons/:prefix/:name.svg,
@@ -96,7 +98,7 @@ internal fun NewsIconsSection23(vm: AppViewModel, p: PaperPal, cats: List<NewsCa
                 else -> "Valgt"
             }
             Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
-            Row(Modifier.fillMaxWidth().heightIn(min = 52.dp).clickable { openIconPicker23(vm, c) }.padding(14.dp, 8.dp),
+            Row(Modifier.fillMaxWidth().heightIn(min = 52.dp).clickable(role = Role.Button, onClickLabel = "Velg ikon") { openIconPicker23(vm, c) }.padding(14.dp, 8.dp),
                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Box(Modifier.size(34.dp).clip(RoundedCornerShape(10.dp)).background(p.bg), contentAlignment = Alignment.Center) { IconifyIcon(vm, id, p.ink, 20.dp) }
                 Column(Modifier.weight(1f)) {
@@ -127,7 +129,7 @@ internal fun IconPicker23(vm: AppViewModel, p: PaperPal, cats: List<NewsCategory
     val cur = vm.news?.iconFor(catId)
     val close = { s.icPickFor = null; s.icResults = null }
     BackHandler { close() }
-    Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = .35f)).clickable { close() }, contentAlignment = Alignment.BottomCenter) {
+    Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = .35f)).clickable(role = Role.Button, onClickLabel = "Lukk") { close() }, contentAlignment = Alignment.BottomCenter) {
         Column(Modifier.fillMaxWidth().fillMaxHeight(.86f).clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)).background(p.bg)
             .clickable(remember { MutableInteractionSource() }, null) {}.navigationBarsPadding().imePadding()) {
             Column(Modifier.padding(16.dp, 16.dp, 16.dp, 10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -136,7 +138,7 @@ internal fun IconPicker23(vm: AppViewModel, p: PaperPal, cats: List<NewsCategory
                         PLabel("Ikon for", p.lab)
                         PSerif(cat.name, 22.sp, p.ink, maxLines = 1)
                     }
-                    Box(Modifier.align(Alignment.CenterEnd).size(38.dp).clip(CircleShape).background(p.card).border(1.dp, p.line, CircleShape).clickable { close() },
+                    Box(Modifier.align(Alignment.CenterEnd).size(38.dp).clip(CircleShape).background(p.card).border(1.dp, p.line, CircleShape).clickable(role = Role.Button, onClickLabel = "Lukk") { close() },
                         contentAlignment = Alignment.Center) { Text("×", modifier = Modifier.semantics { contentDescription = "Fjern" }, color = p.ink, fontSize = HomelabType.body.fontSize) }
                 }
                 Row(Modifier.fillMaxWidth().height(46.dp).clip(CircleShape).background(p.card).border(1.dp, p.line, CircleShape).padding(start = 14.dp, end = 6.dp),
@@ -152,7 +154,7 @@ internal fun IconPicker23(vm: AppViewModel, p: PaperPal, cats: List<NewsCategory
                         modifier = Modifier.weight(1f),
                         decorationBox = { inner -> Box(contentAlignment = Alignment.CenterStart) { if (s.icQuery.isEmpty()) Text("Søk etter ikon (engelsk), f.eks. football", color = p.mut, fontSize = HomelabType.callout.fontSize, maxLines = 1); inner() } },
                     )
-                    Box(Modifier.height(36.dp).clip(CircleShape).background(p.ink).clickable { vm.searchIcons23() }.padding(horizontal = 14.dp), contentAlignment = Alignment.Center) {
+                    Box(Modifier.height(36.dp).clip(CircleShape).background(p.ink).clickable(role = Role.Button) { vm.searchIcons23() }.padding(horizontal = 14.dp), contentAlignment = Alignment.Center) {
                         Text("Søk", color = p.bg, fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize)
                     }
                 }
@@ -160,7 +162,7 @@ internal fun IconPicker23(vm: AppViewModel, p: PaperPal, cats: List<NewsCategory
                     ICON_LIBS.forEach { (k, n) ->
                         val sel = s.icLib == k
                         Box(Modifier.height(32.dp).clip(CircleShape).background(if (sel) p.ink else p.card).border(1.dp, if (sel) p.ink else p.line, CircleShape)
-                            .clickable { s.icLib = k; vm.searchIcons23(lib = k) }.padding(horizontal = 12.dp), contentAlignment = Alignment.Center) {
+                            .selectable(selected = sel, role = Role.RadioButton) { s.icLib = k; vm.searchIcons23(lib = k) }.padding(horizontal = 12.dp), contentAlignment = Alignment.Center) {
                             Text(n, color = if (sel) p.bg else p.ink, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.footnote.fontSize, maxLines = 1)
                         }
                     }
@@ -169,7 +171,7 @@ internal fun IconPicker23(vm: AppViewModel, p: PaperPal, cats: List<NewsCategory
                     Box(Modifier.weight(1f).height(40.dp).clip(CircleShape).background(p.lab).clickable(enabled = !s.icAiBusy) { vm.aiPickIcon23(catId, cat.name) }, contentAlignment = Alignment.Center) {
                         Text(if (s.icAiBusy) "✦ Velger …" else "✦ La AI velge", color = p.onLab, fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize)
                     }
-                    Box(Modifier.height(40.dp).clip(CircleShape).background(p.card).border(1.dp, p.line, CircleShape).clickable { vm.pickNewsIcon23(catId, "", "pick") }.padding(horizontal = 16.dp),
+                    Box(Modifier.height(40.dp).clip(CircleShape).background(p.card).border(1.dp, p.line, CircleShape).clickable(role = Role.Button) { vm.pickNewsIcon23(catId, "", "pick") }.padding(horizontal = 16.dp),
                         contentAlignment = Alignment.Center) { Text("Ingen ikon", color = p.ink, fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize) }
                 }
                 val res = s.icResults
@@ -188,7 +190,7 @@ internal fun IconPicker23(vm: AppViewModel, p: PaperPal, cats: List<NewsCategory
                 items(res.size) { i ->
                     val id = res[i]
                     Box(Modifier.aspectRatio(1f).clip(RoundedCornerShape(14.dp)).background(p.card).border(2.dp, if (id == cur) p.lab else Color.Transparent, RoundedCornerShape(14.dp))
-                        .clickable { vm.pickNewsIcon23(catId, id, "pick") }, contentAlignment = Alignment.Center) { IconifyIcon(vm, id, p.ink, 26.dp) }
+                        .selectable(selected = id == cur, role = Role.RadioButton) { vm.pickNewsIcon23(catId, id, "pick") }, contentAlignment = Alignment.Center) { IconifyIcon(vm, id, p.ink, 26.dp) }
                 }
             }
         }

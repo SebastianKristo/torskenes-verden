@@ -150,7 +150,7 @@ internal fun TabOrderSheet43(vm: AppViewModel, items: List<Triple<String, String
             Row(verticalAlignment = Alignment.CenterVertically) {
                 PSerif("Rekkefølge på lister", 24.sp, modifier = Modifier.weight(1f), maxLines = 1)
                 Text("Tilbakestill", color = p.accent, fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize,
-                    modifier = Modifier.clip(CircleShape).clickable { Haptics.select(); TaskOrder43.save(vm, null) }.padding(10.dp, 8.dp))
+                    modifier = Modifier.clip(CircleShape).clickable(role = Role.Button) { Haptics.select(); TaskOrder43.save(vm, null) }.padding(10.dp, 8.dp))
             }
             Text("Dra i ≡ eller bruk pilene. «+ Ny liste» ligger alltid sist.", color = p.textTertiary, fontSize = HomelabType.subheadline.fontSize)
             Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(p.surfaceRaised)) {
@@ -187,7 +187,7 @@ internal fun TabOrderSheet43(vm: AppViewModel, items: List<Triple<String, String
                 }
             }
             Box(
-                Modifier.fillMaxWidth().height(50.dp).clip(CircleShape).background(p.textPrimary).clickable { TaskOrder43.sheet = false },
+                Modifier.fillMaxWidth().height(50.dp).clip(CircleShape).background(p.textPrimary).clickable(role = Role.Button) { TaskOrder43.sheet = false },
                 contentAlignment = Alignment.Center,
             ) { Text("Ferdig", color = p.surface, fontWeight = FontWeight.Bold, fontSize = HomelabType.callout.fontSize) }
         }

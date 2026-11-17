@@ -63,6 +63,7 @@ import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.ui.semantics.Role
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import androidx.compose.foundation.selection.selectable
 
 /*
  * Prompt 23: Kvitteringer i Papir, nøyaktig etter «Mobil Papir App» → kvitt:
@@ -363,7 +364,7 @@ private fun RcEditor(vm: AppViewModel, r: Receipt, cats: List<no.kristo.finanshu
                 val on = d.categoryId == c.id
                 Box(
                     Modifier.height(32.dp).clip(RoundedCornerShape(16.dp)).background(if (on) p.textPrimary else Color.Transparent)
-                        .border(1.dp, if (on) p.textPrimary else p.line, RoundedCornerShape(16.dp)).clickable { set(d.copy(categoryId = c.id)); Haptics.select() }.padding(horizontal = 12.dp),
+                        .border(1.dp, if (on) p.textPrimary else p.line, RoundedCornerShape(16.dp)).selectable(selected = on, role = Role.RadioButton) { set(d.copy(categoryId = c.id)); Haptics.select() }.padding(horizontal = 12.dp),
                     contentAlignment = Alignment.Center,
                 ) { Text(c.name, color = if (on) p.surface else p.textPrimary, fontFamily = PaperFonts.sans, fontWeight = FontWeight.SemiBold, style = HomelabType.footnote, maxLines = 1) }
             }

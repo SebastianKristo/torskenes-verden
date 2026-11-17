@@ -22,6 +22,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import no.kristo.finanshub.*
+import androidx.compose.ui.semantics.Role
+import androidx.compose.foundation.selection.toggleable
 
 /* ---------------- Felles for modulene ---------------- */
 
@@ -138,8 +140,8 @@ internal fun MatScreen(vm: AppViewModel) {
 internal fun ShoppingList(vm: AppViewModel, w: Week) {
     Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
         w.shopping.forEachIndexed { i, sh ->
-            Row(Modifier.fillMaxWidth().clip(itemShape(i, w.shopping.size)).background(C.surface1).clickable { vm.toggleShop(sh.id) }.padding(8.dp, 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                Checkbox(checked = sh.done, onCheckedChange = { _ -> vm.toggleShop(sh.id) }, colors = CheckboxDefaults.colors(checkedColor = C.primary, checkmarkColor = C.onPrimary))
+            Row(Modifier.fillMaxWidth().clip(itemShape(i, w.shopping.size)).background(C.surface1).toggleable(value = sh.done, role = Role.Checkbox) { vm.toggleShop(sh.id) }.padding(8.dp, 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                Checkbox(checked = sh.done, onCheckedChange = null, colors = CheckboxDefaults.colors(checkedColor = C.primary, checkmarkColor = C.onPrimary))
                 Text(sh.text, color = if (sh.done) C.text2 else C.text)
             }
         }

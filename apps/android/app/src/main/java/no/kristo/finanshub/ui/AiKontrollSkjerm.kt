@@ -52,6 +52,7 @@ import no.kristo.finanshub.*
 import androidx.compose.material3.Icon
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.foundation.selection.selectable
 
 /*
  * Prompt 34 (ANDROID34): AI-kontroll i fullskjerm (AI Kontroll.dc.html, variant mobile, theme papir/mørk).
@@ -244,7 +245,7 @@ private fun AcOverview34(vm: AppViewModel, T: AcT34) {
     kpi.chunked(2).forEach { row ->
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             row.forEach { (k, tab) ->
-                Column(Modifier.weight(1f).clip(RoundedCornerShape(18.dp)).background(T.card).clickable { vm.setAiTab34(tab) }.padding(14.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                Column(Modifier.weight(1f).clip(RoundedCornerShape(18.dp)).background(T.card).clickable(role = Role.Button, onClickLabel = "Åpne") { vm.setAiTab34(tab) }.padding(14.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                     Text(k.first, color = T.mut, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = 10.sp, letterSpacing = 1.sp)
                     Text(k.second, color = T.ink, fontFamily = PaperFonts.serif, fontWeight = FontWeight.Medium, fontSize = 26.sp, maxLines = 1)
                     Text(k.third, color = if (k.first == "KJØRER NÅ" && fail > 0) T.bad else T.mut, fontSize = 12.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
@@ -280,7 +281,7 @@ private fun AcOverview34(vm: AppViewModel, T: AcT34) {
         if (provs.isEmpty()) Text(if (st == null) "Henter status …" else "Ingen leverandører satt opp.", color = T.mut, fontSize = 13.sp)
         provs.forEachIndexed { i, pv ->
             if (i > 0) Box(Modifier.fillMaxWidth().height(1.dp).background(T.line))
-            Row(Modifier.fillMaxWidth().clickable { vm.setAiTab34("api") }, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(Modifier.fillMaxWidth().clickable(role = Role.Button, onClickLabel = "Åpne API-nøklene") { vm.setAiTab34("api") }, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 Box(Modifier.size(10.dp).clip(CircleShape).background(stateColor34(T, pv.state)))
                 Column(Modifier.weight(1f)) {
                     Text(pv.name, color = T.ink, fontWeight = FontWeight.Bold, fontSize = 14.sp)
@@ -368,7 +369,7 @@ private fun AcModels34(vm: AppViewModel, T: AcT34) {
             listOf("alle" to "Alle", "tekst" to "Tekst", "bilde" to "Bilde", "resonnering" to "Resonnering", "embedding" to "Embeddings").forEach { (k, n) ->
                 val on = s.aiCat == k
                 Box(Modifier.height(30.dp).clip(CircleShape).background(if (on) T.ink else Color.Transparent).border(1.dp, if (on) T.ink else T.line, CircleShape)
-                    .clickable { s.aiCat = k; Haptics.select() }.padding(horizontal = 12.dp), contentAlignment = Alignment.Center) {
+                    .selectable(selected = on, role = Role.RadioButton) { s.aiCat = k; Haptics.select() }.padding(horizontal = 12.dp), contentAlignment = Alignment.Center) {
                     Text(n, color = if (on) T.bg else T.ink, fontWeight = FontWeight.Bold, fontSize = 12.sp)
                 }
             }
@@ -648,14 +649,14 @@ private fun AcApi34(vm: AppViewModel, T: AcT34) {
                         BasicTextField(v, { s.aiKeyEdit = s.aiKeyEdit + (key to it) }, singleLine = true, textStyle = TextStyle(color = T.ink, fontFamily = PaperFonts.mono, fontSize = 13.sp),
                             cursorBrush = SolidColor(T.ink), visualTransformation = if (field == "key" && !eye) PasswordVisualTransformation() else VisualTransformation.None, modifier = Modifier.fillMaxWidth())
                     }
-                    if (field == "key") Text(if (eye) "Skjul" else "Vis", color = T.ink, fontWeight = FontWeight.Bold, fontSize = 12.sp, modifier = Modifier.clickable { eye = !eye }.padding(10.dp))
+                    if (field == "key") Text(if (eye) "Skjul" else "Vis", color = T.ink, fontWeight = FontWeight.Bold, fontSize = 12.sp, modifier = Modifier.clickable(role = Role.Button) { eye = !eye }.padding(10.dp))
                 }
                 if (!editing.isNullOrBlank()) AcPill34(T, "Lagre", solid = true) { vm.saveKey34(id, field, editing) }
             } else if (shown.isNotBlank()) Text(shown, color = T.mut, fontFamily = PaperFonts.mono, fontSize = 12.5.sp)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                 AcPill34(T, if (s.aiTest[id] == "busy") "Tester …" else "Test") { vm.testKey34(id) }
                 if (d[5].isNotBlank()) Text(d[5].removePrefix("https://").substringBefore('/') + " ↗", color = T.acc, fontSize = 12.5.sp, fontWeight = FontWeight.Bold,
-                    modifier = Modifier.clickable { openLink(ctx, d[5]) }.padding(6.dp))
+                    modifier = Modifier.clickable(role = Role.Button, onClickLabel = "Åpne lenken") { openLink(ctx, d[5]) }.padding(6.dp))
             }
         }
     }

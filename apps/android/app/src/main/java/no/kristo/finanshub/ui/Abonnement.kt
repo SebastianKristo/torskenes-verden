@@ -90,6 +90,8 @@ import no.kristo.finanshub.ui.designsystem.DsPalette
 import no.kristo.finanshub.ui.designsystem.HomelabTheme
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.toggleable
 
 /* ---------------- Subscription OS ---------------- */
 
@@ -279,10 +281,10 @@ private fun HomeCards23(vm: AppViewModel, x: SubsX, t: SubTok) {
                     if (hid.isNotEmpty()) Text("${hid.size}", color = t.neg, fontFamily = sans, fontWeight = FontWeight.Bold, style = HomelabType.subheadline)
                 }
                 Text("Dra for å flytte · − for å skjule", color = t.fg, fontFamily = sans, fontWeight = FontWeight.SemiBold, style = HomelabType.footnote, modifier = Modifier.weight(1f), maxLines = 2)
-                Box(Modifier.minimumInteractiveComponentSize().height(34.dp).clip(RoundedCornerShape(17.dp)).background(t.chip).clickable { Haptics.select(); vm.saveSubOrder23(SUB_HOME_DEFAULT); vm.setSubHid37(emptyList()) }.padding(horizontal = 12.dp), contentAlignment = Alignment.Center) {
+                Box(Modifier.minimumInteractiveComponentSize().height(34.dp).clip(RoundedCornerShape(17.dp)).background(t.chip).clickable(role = Role.Button) { Haptics.select(); vm.saveSubOrder23(SUB_HOME_DEFAULT); vm.setSubHid37(emptyList()) }.padding(horizontal = 12.dp), contentAlignment = Alignment.Center) {
                     Text("Tilbakestill", color = t.fg, fontFamily = sans, fontWeight = FontWeight.SemiBold, style = HomelabType.footnote)
                 }
-                Box(Modifier.minimumInteractiveComponentSize().height(34.dp).clip(RoundedCornerShape(17.dp)).background(t.fg).clickable { s.subArrange = false; s.subDrag = null; vm.p37.subAdd = false; Haptics.success() }.padding(horizontal = 14.dp), contentAlignment = Alignment.Center) {
+                Box(Modifier.minimumInteractiveComponentSize().height(34.dp).clip(RoundedCornerShape(17.dp)).background(t.fg).clickable(role = Role.Button) { s.subArrange = false; s.subDrag = null; vm.p37.subAdd = false; Haptics.success() }.padding(horizontal = 14.dp), contentAlignment = Alignment.Center) {
                     Text("Ferdig", color = t.card, fontFamily = sans, fontWeight = FontWeight.Bold, style = HomelabType.subheadline)
                 }
             }
@@ -397,7 +399,7 @@ private fun SubAddCards37(vm: AppViewModel, t: SubTok) {
             else Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(t.card)) {
                 hid.forEachIndexed { i, k ->
                     if (i > 0) Box(Modifier.fillMaxWidth().height(1.dp).background(t.bd))
-                    Row(Modifier.fillMaxWidth().heightIn(min = 54.dp).clickable { Haptics.select(); vm.setSubHid37(hid - k); if (hid.size <= 1) close() }.padding(horizontal = 16.dp),
+                    Row(Modifier.fillMaxWidth().heightIn(min = 54.dp).clickable(role = Role.Button, onClickLabel = "Vis på siden") { Haptics.select(); vm.setSubHid37(hid - k); if (hid.size <= 1) close() }.padding(horizontal = 16.dp),
                         verticalAlignment = Alignment.CenterVertically) {
                         Text(SUB_NAMES37[k] ?: k, color = t.fg, fontFamily = sans, fontWeight = FontWeight.SemiBold, style = HomelabType.callout, modifier = Modifier.weight(1f))
                         Box(Modifier.size(28.dp).clip(CircleShape).background(t.ok), contentAlignment = Alignment.Center) { Icon(Icons.Filled.Add, contentDescription = null, tint = HomelabTheme.colors.onSuccess, modifier = Modifier.size(18.dp)) }
@@ -426,7 +428,7 @@ private fun TrialsOS37(vm: AppViewModel, t: SubTok) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text("GRATIS PRØVEPERIODER" + if (l.isNotEmpty()) " · ${l.size}" else "", color = t.acc, fontFamily = mono, fontWeight = FontWeight.SemiBold, style = HomelabType.caption, letterSpacing = 1.2.sp, modifier = Modifier.weight(1f))
             Text("+ Legg til", color = t.fg, fontFamily = sans, fontWeight = FontWeight.Bold, style = HomelabType.subheadline,
-                modifier = Modifier.clip(CircleShape).clickable { if (!vm.m23.subArrange) { Haptics.select(); vm.resetTrialForm31(); vm.b28.addStep = "trial"; vm.subAdding = true } }.padding(8.dp, 4.dp))
+                modifier = Modifier.clip(CircleShape).clickable(role = Role.Button) { if (!vm.m23.subArrange) { Haptics.select(); vm.resetTrialForm31(); vm.b28.addStep = "trial"; vm.subAdding = true } }.padding(8.dp, 4.dp))
         }
         if (l.isEmpty()) Text("Ingen aktive prøveperioder. Legg til en, så minner Glimt deg på å avslutte i tide.", color = t.mut, fontFamily = sans, style = HomelabType.subheadline)
         l.forEach { tr ->
@@ -448,10 +450,10 @@ private fun TrialsOS37(vm: AppViewModel, t: SubTok) {
                     Box(Modifier.fillMaxWidth((1f - left / maxOf(30f, left.toFloat())).coerceIn(.04f, 1f)).fillMaxHeight().clip(RoundedCornerShape(3.dp)).background(col))
                 }
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Box(Modifier.minimumInteractiveComponentSize().height(32.dp).clip(CircleShape).background(t.fg).clickable {
+                    Box(Modifier.minimumInteractiveComponentSize().height(32.dp).clip(CircleShape).background(t.fg).clickable(role = Role.Button) {
                         Haptics.select(); tr.cancelUrl?.let { openLink(ctx, it) }; vm.patchTrial31(tr.id, "cancelled")
                     }.padding(horizontal = 12.dp), contentAlignment = Alignment.Center) { Text("Avslutt nå ↗", color = t.card, fontFamily = sans, fontWeight = FontWeight.Bold, style = HomelabType.footnote) }
-                    Box(Modifier.minimumInteractiveComponentSize().height(32.dp).clip(CircleShape).border(1.dp, t.bd, CircleShape).clickable {
+                    Box(Modifier.minimumInteractiveComponentSize().height(32.dp).clip(CircleShape).border(1.dp, t.bd, CircleShape).clickable(role = Role.Button) {
                         Haptics.select()
                         vm.patchTrial31(tr.id, "kept")
                         val price = Regex("(\\d+[\\d ]*[,.]?\\d*)").find(tr.priceAfter)?.value?.replace(" ", "")?.replace(',', '.')?.toDoubleOrNull() ?: 0.0
@@ -523,7 +525,7 @@ private fun WeekCard23(x: SubsX, t: SubTok) {
 private fun CheckCard23(vm: AppViewModel, x: SubsX, t: SubTok) {
     val flagged = x.items.filter { it.flagged }
     val save = x.saveMonthly.takeIf { it > 0 } ?: flagged.sumOf { it.monthly }
-    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(t.card).clickable { Haptics.select(); vm.subTab = "hist" }.padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(t.card).clickable(role = Role.Button, onClickLabel = "Åpne historikken") { Haptics.select(); vm.subTab = "hist" }.padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Box(Modifier.size(42.dp).clip(CircleShape).background(t.acc.copy(alpha = .14f)), contentAlignment = Alignment.Center) { Text("♛", color = t.acc, style = HomelabType.headline, fontWeight = FontWeight.Normal) }
             Column {
@@ -553,7 +555,7 @@ private fun ListCard23(vm: AppViewModel, x: SubsX, t: SubTok) {
         if (list.isEmpty()) Text("Ingen abonnementer ennå. Trykk + for å legge til.", color = t.mut, fontFamily = sans, style = HomelabType.subheadline, modifier = Modifier.padding(vertical = 12.dp))
         list.forEachIndexed { i, s ->
             if (i > 0) Box(Modifier.fillMaxWidth().height(1.dp).background(t.bd))
-            Row(Modifier.fillMaxWidth().clickable { if (!vm.m23.subArrange) { Haptics.select(); vm.m23.subEditId = s.id } }.padding(vertical = 10.dp),
+            Row(Modifier.fillMaxWidth().clickable(role = Role.Button, onClickLabel = "Rediger") { if (!vm.m23.subArrange) { Haptics.select(); vm.m23.subEditId = s.id } }.padding(vertical = 10.dp),
                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 RoundLogo23(vm, s, s.name, 34)
                 Column(Modifier.weight(1f)) {
@@ -605,7 +607,7 @@ private fun MonthCard23(x: SubsX, t: SubTok) {
         if (months.isNotEmpty()) Row(Modifier.fillMaxWidth().height(130.dp).padding(top = 6.dp), verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             months.forEachIndexed { i, m ->
                 val on = i == sel
-                Column(Modifier.weight(1f).fillMaxHeight().clickable { Haptics.select(); sel = i }, verticalArrangement = Arrangement.spacedBy(6.dp, Alignment.Bottom)) {
+                Column(Modifier.weight(1f).fillMaxHeight().selectable(selected = on, role = Role.RadioButton) { Haptics.select(); sel = i }, verticalArrangement = Arrangement.spacedBy(6.dp, Alignment.Bottom)) {
                     Box(Modifier.fillMaxWidth().fillMaxHeight((m.total / mx * 0.78).toFloat().coerceIn(0.03f, 0.78f) / 0.86f).clip(RoundedCornerShape(10.dp)).drawBehind {
                         if (on) stripes(t.acc, t.accDeep, 10.dp.toPx()) else drawRoundRect(t.off, cornerRadius = CornerRadius(10.dp.toPx()))
                     })
@@ -709,7 +711,7 @@ private fun AgentCard23(vm: AppViewModel, x: SubsX, t: SubTok) {
             tasks.forEachIndexed { i, s ->
                 val on = s.id in done
                 if (i > 0) Box(Modifier.fillMaxWidth().height(1.dp).background(t.off))
-                Row(Modifier.fillMaxWidth().clickable {
+                Row(Modifier.fillMaxWidth().toggleable(value = on, role = Role.Checkbox) {
                     Haptics.select()
                     done = if (on) done - s.id else (done + s.id).also { Haptics.success() }
                     vm.prefs.set(doneKey, done.joinToString("\n"))
@@ -772,7 +774,7 @@ private fun SheetChips(label: String, opts: List<Pair<String, String>>, cur: Str
             opts.forEach { (k, n) ->
                 val on = cur == k
                 Box(Modifier.weight(1f).height(38.dp).clip(RoundedCornerShape(19.dp)).background(if (on) t.on else Color.Transparent).border(1.dp, if (on) t.on else t.bd, RoundedCornerShape(19.dp))
-                    .clickable { Haptics.select(); onPick(k) }.padding(horizontal = 10.dp), contentAlignment = Alignment.Center) {
+                    .selectable(selected = on, role = Role.RadioButton) { Haptics.select(); onPick(k) }.padding(horizontal = 10.dp), contentAlignment = Alignment.Center) {
                     Text(n, color = if (on) t.onFg else t.fg, fontFamily = sans, fontWeight = FontWeight.SemiBold, style = HomelabType.subheadline, maxLines = 1)
                 }
             }
@@ -823,11 +825,11 @@ private fun SubForm23(vm: AppViewModel, s: SubItem?, t: SubTok, close: () -> Uni
                 Text("Logo", color = t.mut, fontFamily = sans, style = HomelabType.subheadline)
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     Box(Modifier.height(34.dp).clip(RoundedCornerShape(17.dp)).background(t.card).border(1.dp, t.bd, RoundedCornerShape(17.dp))
-                        .clickable { pick.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }.padding(horizontal = 12.dp), contentAlignment = Alignment.Center) {
+                        .clickable(role = Role.Button) { pick.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }.padding(horizontal = 12.dp), contentAlignment = Alignment.Center) {
                         Text(if (pending != null) "Logo valgt ✓" else "↑ Last opp", color = t.fg, fontFamily = sans, style = HomelabType.subheadline, maxLines = 1)
                     }
                     Box(Modifier.height(34.dp).clip(RoundedCornerShape(17.dp)).background(t.card).border(1.dp, t.bd, RoundedCornerShape(17.dp))
-                        .clickable { if (s != null) vm.subLogoAi(s.id) else vm.flash("Lagre abonnementet først, så finner AI logoen") }.padding(horizontal = 12.dp), contentAlignment = Alignment.Center) {
+                        .clickable(role = Role.Button) { if (s != null) vm.subLogoAi(s.id) else vm.flash("Lagre abonnementet først, så finner AI logoen") }.padding(horizontal = 12.dp), contentAlignment = Alignment.Center) {
                         Text("✦ Finn logo med AI", color = t.neg, fontFamily = sans, fontWeight = FontWeight.SemiBold, style = HomelabType.subheadline, maxLines = 1)
                     }
                 }
@@ -866,7 +868,7 @@ private fun SubForm23(vm: AppViewModel, s: SubItem?, t: SubTok, close: () -> Uni
                 vm.saveSub(s?.id, name, plan, p ?: 0.0, cycle, day.coerceIn(1, 31), if (cycle == "monthly") null else month, category, status, pending)
                 close()
             }, contentAlignment = Alignment.Center) { Text("Lagre", color = t.onFg, fontFamily = sans, fontWeight = FontWeight.SemiBold, style = HomelabType.body) }
-            if (s != null) Box(Modifier.height(48.dp).clip(RoundedCornerShape(24.dp)).border(1.dp, t.bd, RoundedCornerShape(24.dp)).clickable { Haptics.tap(); vm.deleteSub(s.id); close() }
+            if (s != null) Box(Modifier.height(48.dp).clip(RoundedCornerShape(24.dp)).border(1.dp, t.bd, RoundedCornerShape(24.dp)).clickable(role = Role.Button) { Haptics.tap(); vm.deleteSub(s.id); close() }
                 .padding(horizontal = 18.dp), contentAlignment = Alignment.Center) { Text("Slett", color = t.neg, fontFamily = sans, fontWeight = FontWeight.SemiBold, style = HomelabType.callout) }
         }
         if (!valid) Text(if (name.isBlank()) "Skriv inn navnet på tjenesten." else "Skriv inn prisen i kroner, f.eks. 149.", color = t.mut, fontFamily = sans, style = HomelabType.footnote)
@@ -915,7 +917,7 @@ private fun SubShare37(vm: AppViewModel, s: SubItem, t: SubTok) {
             if (canEdit && changed) Box(Modifier.minimumInteractiveComponentSize().height(40.dp).clip(RoundedCornerShape(20.dp)).background(t.on).clickable(enabled = !vm.p37.subShareBusy) {
                 Haptics.tap(); vm.shareSub37(s.id, all, split, if (split == "payer") me else s.payerId)
             }.padding(horizontal = 16.dp), contentAlignment = Alignment.Center) { Text(if (vm.p37.subShareBusy) "Lagrer …" else "Lagre deling", color = t.onFg, fontFamily = sans, fontWeight = FontWeight.SemiBold, style = HomelabType.callout) }
-            if (s.shared && !canEdit) Box(Modifier.minimumInteractiveComponentSize().height(40.dp).clip(RoundedCornerShape(20.dp)).border(1.dp, t.bd, RoundedCornerShape(20.dp)).clickable { Haptics.tap(); vm.leaveSub37(s.id) }
+            if (s.shared && !canEdit) Box(Modifier.minimumInteractiveComponentSize().height(40.dp).clip(RoundedCornerShape(20.dp)).border(1.dp, t.bd, RoundedCornerShape(20.dp)).clickable(role = Role.Button) { Haptics.tap(); vm.leaveSub37(s.id) }
                 .padding(horizontal = 16.dp), contentAlignment = Alignment.Center) { Text("Forlat abonnementet", color = t.neg, fontFamily = sans, fontWeight = FontWeight.SemiBold, style = HomelabType.callout) }
         }
     }
@@ -978,10 +980,10 @@ internal fun SubShotCard27(vm: AppViewModel, card: Color, fg: Color, mut: Color,
         if (r != null && !s.shotBusy) {
             if (r.existingId != null) Text("${r.service} finnes allerede. Du kan oppdatere plan og pris.", color = check, style = HomelabType.footnote)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Box(Modifier.weight(1f).minimumInteractiveComponentSize().height(44.dp).clip(RoundedCornerShape(22.dp)).background(HomelabTheme.colors.accent).clickable { Haptics.tap(); vm.addShot27(r) }, contentAlignment = Alignment.Center) {
+                Box(Modifier.weight(1f).minimumInteractiveComponentSize().height(44.dp).clip(RoundedCornerShape(22.dp)).background(HomelabTheme.colors.accent).clickable(role = Role.Button) { Haptics.tap(); vm.addShot27(r) }, contentAlignment = Alignment.Center) {
                     Text(if (r.existingId != null) "Oppdater ${r.service}" else "+ Legg til ${r.service}", color = HomelabTheme.colors.onAccent, fontWeight = FontWeight.SemiBold, style = HomelabType.callout, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
-                Box(Modifier.weight(1f).minimumInteractiveComponentSize().height(44.dp).clip(RoundedCornerShape(22.dp)).border(1.dp, line, RoundedCornerShape(22.dp)).clickable { vm.editShot27(r) }, contentAlignment = Alignment.Center) {
+                Box(Modifier.weight(1f).minimumInteractiveComponentSize().height(44.dp).clip(RoundedCornerShape(22.dp)).border(1.dp, line, RoundedCornerShape(22.dp)).clickable(role = Role.Button) { vm.editShot27(r) }, contentAlignment = Alignment.Center) {
                     Text("Rediger først", color = fg, fontWeight = FontWeight.SemiBold, style = HomelabType.callout)
                 }
             }

@@ -88,6 +88,7 @@ import java.util.Locale
 import kotlinx.coroutines.delay
 import no.kristo.finanshub.*
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.foundation.selection.selectable
 
 /* ---------------- Markering i Innstillinger ---------------- */
 
@@ -390,7 +391,7 @@ internal fun AccountsPage(vm: AppViewModel) = Pages {
     Note("Hver konto har egne data, tokens og varsler. Bytt raskt ved å holde inne profilbildet.")
     Group {
         vm.accounts.forEach { a ->
-            Row(Modifier.fillMaxWidth().clickable { if (a.id != vm.activeId) vm.switchTo(a.id) }.padding(16.dp, 10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(Modifier.fillMaxWidth().clickable(role = Role.Button, onClickLabel = "Bytt til kontoen") { if (a.id != vm.activeId) vm.switchTo(a.id) }.padding(16.dp, 10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Box(Modifier.size(40.dp).clip(CircleShape).background(if (a.id == vm.activeId) C.primary else C.surface3), contentAlignment = Alignment.Center) {
                     Text(initial(a.name.ifBlank { a.username.ifBlank { "K" } }), color = if (a.id == vm.activeId) C.onPrimary else C.text, fontWeight = FontWeight.Bold)
                 }
@@ -439,7 +440,7 @@ internal fun SecurityPage(vm: AppViewModel, onPrivacyChanged: () -> Unit) = Page
     Section("Pålitelige enheter") {
         Group {
             Info("Denne enheten", "${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL}")
-            Row(Modifier.fillMaxWidth().clickable { uri.openUri(homelab(vm)) }.padding(16.dp, 12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(Modifier.fillMaxWidth().clickable(role = Role.Button, onClickLabel = "Åpne i nettleseren") { uri.openUri(homelab(vm)) }.padding(16.dp, 12.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text("Administrer i Homelab", Modifier.weight(1f), color = C.primary)
                 Icon(Icons.Filled.OpenInBrowser, null, tint = C.text2)
             }
@@ -570,9 +571,9 @@ internal fun HapticsPage(vm: AppViewModel) = Pages {
 @Composable
 internal fun DataPage(vm: AppViewModel) = Pages {
     Group {
-        Row(Modifier.fillMaxWidth().clickable { vm.clearCache() }.padding(16.dp, 14.dp)) { Text("Tøm hurtigbuffer", Modifier.weight(1f)); Text("Logoer og bilder", color = C.text2, fontSize = 13.sp) }
-        Row(Modifier.fillMaxWidth().clickable { vm.refresh() }.padding(16.dp, 14.dp)) { Text("Synk nå", Modifier.weight(1f)); Text(time(vm.lastSync), color = C.text2, fontSize = 13.sp) }
-        Row(Modifier.fillMaxWidth().clickable { vm.exportCsv() }.padding(16.dp, 14.dp)) { Text("Eksporter som CSV", Modifier.weight(1f)); Icon(Icons.Filled.IosShare, null, tint = C.text2) }
+        Row(Modifier.fillMaxWidth().clickable(role = Role.Button) { vm.clearCache() }.padding(16.dp, 14.dp)) { Text("Tøm hurtigbuffer", Modifier.weight(1f)); Text("Logoer og bilder", color = C.text2, fontSize = 13.sp) }
+        Row(Modifier.fillMaxWidth().clickable(role = Role.Button) { vm.refresh() }.padding(16.dp, 14.dp)) { Text("Synk nå", Modifier.weight(1f)); Text(time(vm.lastSync), color = C.text2, fontSize = 13.sp) }
+        Row(Modifier.fillMaxWidth().clickable(role = Role.Button) { vm.exportCsv() }.padding(16.dp, 14.dp)) { Text("Eksporter som CSV", Modifier.weight(1f)); Icon(Icons.Filled.IosShare, null, tint = C.text2) }
     }
     Note("Full backup og Excel-database lages i Økonomi på PC under Innstillinger → Backup og data.")
 }
@@ -674,8 +675,8 @@ internal fun BackupPage(vm: AppViewModel) = Pages {
     // ISO2: backup av hele databasen og SMB er bare for hovedadministrator (canSmb). Eldre server uten flagget: admin-rollen.
     val canSmb = vm.me?.isMainAdmin == true || (vm.boot?.canEditServer == null && vm.userIsAdmin)
     Group {
-        Row(Modifier.fillMaxWidth().clickable { vm.exportCsv() }.padding(16.dp, 14.dp)) { Text("Eksporter transaksjoner som CSV", Modifier.weight(1f)); Icon(Icons.Filled.IosShare, null, tint = C.text2) }
-        Row(Modifier.fillMaxWidth().clickable { runCatching { uri.openUri(vm.base.trimEnd('/') + "/finans/?desktop=1#/inn") } }.padding(16.dp, 14.dp)) {
+        Row(Modifier.fillMaxWidth().clickable(role = Role.Button) { vm.exportCsv() }.padding(16.dp, 14.dp)) { Text("Eksporter transaksjoner som CSV", Modifier.weight(1f)); Icon(Icons.Filled.IosShare, null, tint = C.text2) }
+        Row(Modifier.fillMaxWidth().clickable(role = Role.Button) { runCatching { uri.openUri(vm.base.trimEnd('/') + "/finans/?desktop=1#/inn") } }.padding(16.dp, 14.dp)) {
             Text(if (canSmb) "Full backup, Excel og SMB-share" else "Eksporter og gjenopprett dine data", Modifier.weight(1f)); Icon(Icons.Filled.OpenInBrowser, null, tint = C.text2)
         }
     }
@@ -1010,7 +1011,7 @@ internal fun LazyListScope.profileGroup24(vm: AppViewModel) {
                 Column {
                     if (i > 0) Box(Modifier.fillMaxWidth().padding(start = 60.dp).height(1.dp).background(p.line))
                     Row(
-                        Modifier.fillMaxWidth().hl25(vm, "profile:${pr.key}").clickable { if (!on) vm.b24PickProfile(pr.key) }.padding(14.dp, 11.dp),
+                        Modifier.fillMaxWidth().hl25(vm, "profile:${pr.key}").selectable(selected = on, role = Role.RadioButton) { if (!on) vm.b24PickProfile(pr.key) }.padding(14.dp, 11.dp),
                         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp),
                     ) {
                         IconTile(vm, i, Icons.Filled.People)

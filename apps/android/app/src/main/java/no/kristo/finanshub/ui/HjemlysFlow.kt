@@ -207,7 +207,7 @@ private fun StartDay40(vm: AppViewModel) {
     }
     Row(verticalAlignment = Alignment.CenterVertically) {
         Text(if (custom != null) "Egen tid · ${clock40(eta)}" else "Annen tid?", color = p.accent, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.subheadline.fontSize,
-            modifier = Modifier.clip(CircleShape).clickable {
+            modifier = Modifier.clip(CircleShape).clickable(role = Role.Button) {
                 val z = Instant.ofEpochMilli(eta).atZone(OSLO_UI40)
                 android.app.TimePickerDialog(ctx, { _, hh, mm ->
                     var d = java.time.ZonedDateTime.now(OSLO_UI40).withHour(hh).withMinute(mm).withSecond(0)
@@ -364,7 +364,7 @@ private fun ActiveView40(vm: AppViewModel, m: HlSession40, night: Boolean) {
             PButton("Jeg er hjemme", Modifier.weight(1f), kind = "lab", height = 48.dp) { vm.hjemlysAct40("home"); vm.p40.hlSheet = false }
         }
     }
-    Text("Avslutt", color = mut, fontSize = HomelabType.subheadline.fontSize, modifier = Modifier.clickable { vm.hjemlysAct40("end"); vm.p40.hlSheet = false }.padding(4.dp))
+    Text("Avslutt", color = mut, fontSize = HomelabType.subheadline.fontSize, modifier = Modifier.clickable(role = Role.Button) { vm.hjemlysAct40("end"); vm.p40.hlSheet = false }.padding(4.dp))
     Text("Avsluttes av seg selv når du er innenfor 60 m av hjemmet.", color = mut, fontSize = HomelabType.footnote.fontSize)
     // 1b: familiens logg.
     val log = vm.p40.hlLog

@@ -163,11 +163,11 @@ internal fun FinnAdScreen23(vm: AppViewModel) {
                     when {
                         desc != null -> Text(desc, color = p.textPrimary, style = HomelabType.callout, lineHeight = 23.sp, modifier = Modifier.padding(start = 2.dp, end = 2.dp, top = 4.dp))
                         s.finnAdBusy -> Text("Henter annonsen …", color = p.textTertiary, style = HomelabType.subheadline)
-                        else -> Text("Annonsen er ikke lagret ennå.", color = p.textTertiary, style = HomelabType.subheadline, modifier = Modifier.clickable { vm.refreshFinnAd23(id) })
+                        else -> Text("Annonsen er ikke lagret ennå.", color = p.textTertiary, style = HomelabType.subheadline, modifier = Modifier.clickable(role = Role.Button, onClickLabel = "Hent på nytt") { vm.refreshFinnAd23(id) })
                     }
                     if (ad?.removed == true) Text("Annonsen er fjernet fra Finn · viser lagret kopi", color = p.textTertiary, style = HomelabType.footnote)
                     if (url != null) Text("Åpne annonsen i Finn ›", color = p.accent, fontWeight = FontWeight.Bold, style = HomelabType.subheadline, textDecoration = TextDecoration.Underline,
-                        modifier = Modifier.clickable { openLink(ctx, url) })
+                        modifier = Modifier.clickable(role = Role.Button) { openLink(ctx, url) })
                 }
                 // E-poster (Proton Mail)
                 val mails = s.finnMails ?: detail?.emails ?: emptyList()
@@ -184,7 +184,7 @@ internal fun FinnAdScreen23(vm: AppViewModel) {
                             val fl = from.lowercase()
                             val (lbl, lc) = when { "finn" in fl -> "F" to DsPalette.Category.blue; "posten" in fl || "bring" in fl -> "P" to DsPalette.Category.red; else -> from.trim().take(1).uppercase().ifEmpty { "@" } to p.textPrimary }
                             val open = s.finnMailOpen == m.id
-                            Row(Modifier.fillMaxWidth().clickable { vm.toggleFinnMail23(id, m) }.padding(vertical = 12.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Row(Modifier.fillMaxWidth().clickable(role = Role.Button, onClickLabel = "Vis eller skjul e-posten") { vm.toggleFinnMail23(id, m) }.padding(vertical = 12.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                                 Box(Modifier.size(34.dp).clip(RoundedCornerShape(10.dp)).background(lc), contentAlignment = Alignment.Center) {
                                     Text(lbl, color = if (lc == p.textPrimary) p.surface else Color.White, fontWeight = FontWeight.ExtraBold, style = HomelabType.subheadline)
                                 }
@@ -206,7 +206,7 @@ internal fun FinnAdScreen23(vm: AppViewModel) {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Row(verticalAlignment = Alignment.Bottom) {
                         PLabel("Meldinger · $other", p.accent, modifier = Modifier.weight(1f))
-                        if (chatUrl != null) Text("Åpne i Finn ›", color = p.textTertiary, style = HomelabType.footnote, modifier = Modifier.clickable { openLink(ctx, chatUrl) })
+                        if (chatUrl != null) Text("Åpne i Finn ›", color = p.textTertiary, style = HomelabType.footnote, modifier = Modifier.clickable(role = Role.Button) { openLink(ctx, chatUrl) })
                     }
                     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(p.surface).border(1.dp, p.line, RoundedCornerShape(18.dp)).padding(14.dp),
                         verticalArrangement = Arrangement.spacedBy(6.dp)) {

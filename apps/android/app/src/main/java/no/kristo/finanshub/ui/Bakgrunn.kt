@@ -27,6 +27,7 @@ import no.kristo.finanshub.*
 import androidx.compose.material3.Icon
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.ui.semantics.Role
 
 /* ======================= Bakgrunn: kreditering i Tilpass ======================= */
 
@@ -39,7 +40,7 @@ internal fun BgCredit41(vm: AppViewModel) {
     val file = if (vm.photoKind == "oslo") vm.p41.osloFile else null
     Text(
         line + if (file != null) " ↗" else "", color = p.mut, fontSize = 11.5.sp, maxLines = 2, overflow = TextOverflow.Ellipsis,
-        modifier = Modifier.padding(horizontal = 6.dp).then(if (file != null) Modifier.clickable { openLink(ctx, commonsPage41(file)) } else Modifier),
+        modifier = Modifier.padding(horizontal = 6.dp).then(if (file != null) Modifier.clickable(role = Role.Button, onClickLabel = "Åpne bildet på Wikimedia Commons") { openLink(ctx, commonsPage41(file)) } else Modifier),
     )
     if (vm.photoKind == "oslo") Text("Oslo fra lufta · skifter gjennom dagen", color = p.mut, fontSize = 11.5.sp, modifier = Modifier.padding(horizontal = 6.dp))
 }
@@ -55,7 +56,7 @@ internal fun GphotoRow46(vm: AppViewModel) {
     val on = vm.photoKind == "gphoto"
     Row(
         Modifier.fillMaxWidth().heightIn(min = 50.dp).clip(RoundedCornerShape(12.dp)).background(if (on) p.popSel else Color.Transparent)
-            .clickable { if (on && g?.error != null) vm.retryGphoto46() else { vm.photoMenu = false; vm.p46.gpErr = null; vm.p46.gpSheet = true } }.padding(horizontal = 10.dp, vertical = 6.dp),
+            .clickable(role = Role.Button) { if (on && g?.error != null) vm.retryGphoto46() else { vm.photoMenu = false; vm.p46.gpErr = null; vm.p46.gpSheet = true } }.padding(horizontal = 10.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         Box(Modifier.size(30.dp).clip(RoundedCornerShape(8.dp)).background(Color.White).border(1.dp, p.line, RoundedCornerShape(8.dp)), contentAlignment = Alignment.Center) {
