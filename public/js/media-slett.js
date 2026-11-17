@@ -13,7 +13,7 @@ let host = null, onDone = null;
 async function j(path, opt = {}) {
   const r = await fetch(path, { credentials: 'same-origin', cache: 'no-store', ...opt, headers: opt.body ? { 'Content-Type': 'application/json' } : {} });
   const d = r.headers.get('content-type')?.includes('json') ? await r.json().catch(() => ({})) : {};
-  if (!r.ok) throw Object.assign(new Error(d.error || (r.status === 404 ? 'Serveren kan ikke slette uovervåkede filer ennå. Oppdater Homelab.' : r.status === 403 ? 'Bare administrator kan slette filer.' : `Feil ${r.status}`)), { status: r.status });
+  if (!r.ok) throw Object.assign(new Error(d.error || (r.status === 403 ? 'Bare administrator kan slette filer.' : `Feil ${r.status}`)), { status: r.status });
   return d;
 }
 const qs = (o) => Object.entries(o).filter(([, v]) => v != null && v !== '').map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&');

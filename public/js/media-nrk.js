@@ -54,7 +54,7 @@ const gb = (b) => (b >= 1e12 ? `${nb(b / 1e12, 2)} TB` : `${nb(b / 1e9, 1)} GB`)
 async function api(path, opt = {}) {
   const r = await fetch(`/api/media/nrk${path}`, { credentials: 'same-origin', cache: 'no-store', ...opt, headers: { ...(opt.body ? { 'Content-Type': 'application/json' } : {}) } });
   const d = r.headers.get('content-type')?.includes('json') ? await r.json().catch(() => null) : null;
-  if (!r.ok) throw Object.assign(new Error(d?.error || (r.status === 404 ? 'Serveren har ikke NRK-nedlasteren ennå – oppdater Homelab.' : `Serveren svarte ${r.status}`)), { status: r.status, configured: d?.configured });
+  if (!r.ok) throw Object.assign(new Error(d?.error || `Serveren svarte ${r.status}`), { status: r.status, configured: d?.configured });
   return d ?? {};
 }
 const post = (path, body = {}) => api(path, { method: 'POST', body: JSON.stringify(body) });

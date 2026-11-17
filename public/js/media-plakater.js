@@ -90,7 +90,7 @@ export function startTrack50(resp, seed) {
 /** Manuelt valg i interaktivt søk: følg nedlastingen videre (POST /api/media/track). */
 export async function trackGrab50(body) {
   if (!api) return;
-  try { const t = await api('/track', { method: 'POST', json: { ...body, grabbed: true } }); startTrack50(t, { episodeIds: body.episodeId ? [body.episodeId] : [], movieIds: body.movieId ? [body.movieId] : [] }); } catch { /* eldre server */ }
+  try { const t = await api('/track', { method: 'POST', json: { ...body, grabbed: true } }); startTrack50(t, { episodeIds: body.episodeId ? [body.episodeId] : [], movieIds: body.movieId ? [body.movieId] : [] }); } catch { /* sporingen er en ekstra: nedlastingen er startet uansett */ }
 }
 export const track50 = (k) => TR.get(k)?.t ?? null;
 const TONE = { ok: 't-ok', dl: 't-dl', warn: 't-warn', bad: 't-bad', wait: 't-wait', mut: 't-mut' };

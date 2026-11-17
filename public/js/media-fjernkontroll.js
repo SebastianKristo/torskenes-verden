@@ -1,19 +1,18 @@
 // Prompt 51 (MEDCTL51): fjernkontroll for «Spilles nå» – felles for web (media-avspilling.js) og PWA (finans/js/mobile-avspilling.js).
 // Data: GET /api/medctl51/now → {items:[Ctl], audio:[Lyd], admin}. Kommando: POST /api/medctl51/sessions/:id/:action
 // (play|pause|toggle|stop|next|previous|seek {offset|position}|volume {volume}). Serveren avgjør hvem som kan styre hva
-// (egne avspillinger, admin alle) og har rate limit; her vises bare knappene serveren sier er lov. Tåler 404 (eldre server).
-const C = { items: new Map(), audio: [], admin: false, missing: false, at: 0, busy: new Set(), note: new Map(), links: null, linksOpen: false, linkMsg: new Map() };
+// (egne avspillinger, admin alle) og har rate limit; her vises bare knappene serveren sier er lov.
+const C = { items: new Map(), audio: [], admin: false, at: 0, busy: new Set(), note: new Map(), links: null, linksOpen: false, linkMsg: new Map() };
 const REPAINT = new Set();
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const repaint = () => { for (const fn of REPAINT) { try { fn(); } catch { /* */ } } };
 
 /** Henter kontrolltilstanden (maks hvert 4. sekund uten force). */
 export async function loadCtl51(force = false) {
-  if (C.missing || (!force && Date.now() - C.at < 4000)) return C;
+  if (!force && Date.now() - C.at < 4000) return C;
   C.at = Date.now();
   try {
     const r = await fetch('/api/medctl51/now', { credentials: 'same-origin', cache: 'no-store' });
-    if (r.status === 404) { C.missing = true; return C; }
     if (!r.ok) return C;
     const d = await r.json();
     C.items = new Map((d.items ?? []).map((x) => [x.id, x]));
@@ -63,7 +62,7 @@ async function loadLinks() {
 }
 /** Admin-panelet «Hvem kan styre» (sammenleggbart). Tom streng for andre enn admin. */
 export function linksHtml51() {
-  if (!C.admin || C.missing) return '';
+  if (!C.admin) return '';
   const rows = !C.linksOpen ? '' : C.links == null ? '<span class="mc51-msg">Henter …</span>' : C.links.map((u) => {
     const m = C.linkMsg.get(u.userId);
     return `<form class="mc51-lr" data-mc51-link="${esc(u.userId)}"><b>${esc(u.name)}</b>${SV.map(([k, n]) => `<label><span>${n}</span><input name="mc51-${k}-${esc(u.userId)}" data-k="${k}" value="${esc(u[k] ?? '')}" autocomplete="off" data-glimt="off" aria-label="${n}-navn for ${esc(u.name)}"></label>`).join('')}<button type="submit" class="mc51-sb">Lagre</button>${m ? `<span class="mc51-msg${m.err ? ' err' : ''}" role="status">${esc(m.text)}</span>` : ''}</form>`;

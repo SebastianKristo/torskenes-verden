@@ -2,7 +2,7 @@
 // Fasit: design/Avspilling.dc.html. Plex · Jellyfin (prikk = tilkoblet), faner Spilles nå · Historikk · Statistikk · Biblioteker,
 // serverlinje i mono. Logg inn med Plex (PIN-flyt): POST /api/playback/plex/pin → {id, code, authUrl}, GET …/pin/:id til
 // tokenet er lagret på serveren (det kommer aldri hit). Data: GET /api/playback/sessions · history?q=&user=&page= · stats?range= ·
-// libraries (alle med ?server=plex|jellyfin). 404 (eldre server): tomtilstand.
+// libraries (alle med ?server=plex|jellyfin). Feil vises med «Prøv igjen».
 import { esc } from './util.js';
 import { loadCtl51, ctlBar51, audioNow51, linksHtml51, mountCtl51 } from './media-fjernkontroll.js'; // prompt 51 (MEDCTL51): fjernkontroll i «Spilles nå»
 
@@ -18,7 +18,7 @@ async function j(path, opt = {}) {
 }
 const q = (o) => { const u = new URLSearchParams({ server: P.srv, ...o }); return `?${u}`; };
 async function load(k, path) {
-  try { P.d[k] = await j(path); P.err[k] = ''; } catch (e) { P.err[k] = e.status === 404 ? 'missing' : e.message; if (e.data?.needLogin || e.data?.configured === false) P.d[k] = { configured: false, ...(e.data ?? {}) }; }
+  try { P.d[k] = await j(path); P.err[k] = ''; } catch (e) { P.err[k] = e.message; if (e.data?.needLogin || e.data?.configured === false) P.d[k] = { configured: false, ...(e.data ?? {}) }; }
   paint();
 }
 function enter() {
@@ -84,8 +84,7 @@ export function pbHtml() {
   const head = `<div class="pb44-top"><div class="pb44-srv">${[['plex', 'Plex'], ['jellyfin', 'Jellyfin']].map(([s, n]) => `<button type="button" class="${P.srv === s ? 'on' : ''}" data-pb44-srv="${s}"><span style="background:${P.d.status?.[s]?.connected === false ? '#a39d90' : COL[s]}"></span>${n}</button>`).join('')}</div>
     <div class="pb44-secs" role="tablist">${SEC.map(([s, n]) => `<button type="button" role="tab" aria-selected="${k === s}" data-pb44-sec="${s}">${n}</button>`).join('')}</div><span class="pb44-sp"></span><span class="mono pb44-mut">${esc(srvLine)}</span></div>`;
   let body;
-  if (e === 'missing') body = '<div class="pb44-login"><div><b>Avspilling er ikke klart på serveren ennå</b><span>Serveren mangler /api/playback. Oppdater Nordlys, og logg inn med Plex eller legg inn Jellyfin under Integrasjoner.</span></div></div>';
-  else if (e) body = `<div class="pb44-login"><div><b>Fikk ikke hentet data</b><span>${esc(e)}</span></div><button type="button" class="pb44-b" data-pb44="retry">Prøv igjen</button></div>`;
+  if (e) body = `<div class="pb44-login"><div><b>Fikk ikke hentet data</b><span>${esc(e)}</span></div><button type="button" class="pb44-b" data-pb44="retry">Prøv igjen</button></div>`;
   else body = k === 'hist' ? histHtml() : k === 'stat' ? statHtml() : k === 'lib' ? libHtml() : nowHtml();
   return `<div class="pb44">${head}${body}</div>`;
 }
@@ -111,7 +110,7 @@ async function plexLogin() {
       if (s?.status === 'expired' || s?.expired) { P.login = { err: 'Koden gikk ut. Prøv igjen.' }; paint(); return; }
     }
     if (P.login?.id === r.id) { P.login = { err: 'Fikk ikke svar fra Plex innen 5 minutter. Prøv igjen.' }; paint(); }
-  } catch (e) { try { w?.close(); } catch { /* */ } P.login = { err: e.status === 404 ? 'Serveren har ikke Plex-innlogging ennå.' : e.message }; paint(); }
+  } catch (e) { try { w?.close(); } catch { /* */ } P.login = { err: e.message }; paint(); }
 }
 let qT = 0;
 /** Monteres i Media-fanen (host er et element som beholdes mellom tegningene). */

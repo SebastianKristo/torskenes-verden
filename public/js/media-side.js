@@ -2,7 +2,7 @@
 // (2a, variant web): pille-faner i topplinja (Kommer snart · Sonarr · Radarr · qBittorrent · Prowlarr), Glimt-felt, ⚙ og ×,
 // alt i full bredde med 32 px marg. Egen fullskjerm-side (#/media) som Vær og Chat; × går tilbake til Dashboard.
 // Alt går via serveren (SERVER43, server/media-side.js): /api/media/* er en proxy, tjenestenøklene sendes aldri hit.
-// Svarformene står ved hver rute i server/media-side.js. 404 (eldre server) og «ikke satt opp» gir tomtilstander, ingen feil.
+// Svarformene står ved hver rute i server/media-side.js. «Ikke satt opp» gir tomtilstander; andre feil vises som serveren sender dem.
 import { esc } from './util.js';
 import { orb43 } from './glimt-orb.js';
 import { mountPlayback } from './media-avspilling.js'; // prompt 44: fanen Avspilling (Plex/Jellyfin)
@@ -35,7 +35,7 @@ if (!document.querySelector('link[data-hl-fonts],link[data-m43-fonts]')) {
 const lsg = (k, d) => { try { return localStorage.getItem(k) ?? d; } catch { return d; } }, lss = (k, v) => { try { localStorage.setItem(k, v); } catch { /* */ } };
 const M = {
   tab: 'ov', bibK: 's', det: null, srch: null, libF: 'all', seg: 'all', fq: 'all', open: {}, grab: {}, busy: {}, toast: '', sh: null,
-  add: null, act: null, edit: null, mag: null, ix: null, gq: '', gl: null, missing: false, restricted: '',
+  add: null, act: null, edit: null, mag: null, ix: null, gq: '', gl: null, restricted: '',
   up: null, ser: null, mov: null, tor: null, idx: null, disk: null, prof: null, status: null, prefs: null, access: null, detail: null, rel: null, files: null, idxT: {},
   err: {},
   libQ: '', komv: lsg('media_komv', 'uke') === 'liste' ? 'liste' : 'uke', site: lsg('media_site', '') || null, servers: null, srvOpen: false, job: null, undo: null,
@@ -53,9 +53,8 @@ async function mapi(path, { method = 'GET', json, quiet } = {}) {
   const r = await fetch(`/api/media${path}`, { method, credentials: 'same-origin', cache: 'no-store', headers: json !== undefined ? { 'Content-Type': 'application/json' } : {}, body: json !== undefined ? JSON.stringify(json) : undefined });
   if (r.status === 401) { location.href = '/login'; throw new Error('Logg inn på nytt'); }
   const j = r.headers.get('content-type')?.includes('json') ? await r.json().catch(() => ({})) : {};
-  if (r.status === 404 && /^(\/status|\/upcoming)/.test(path) && !j.error) M.missing = true;
   if (r.status === 403 && j.restricted && method === 'GET') M.restricted = j.error || 'Du har ikke tilgang til Media.';
-  if (!r.ok) { const e = new Error(j.error || (r.status === 404 ? 'Serveren har ikke Media ennå.' : `Feil ${r.status}`)); e.status = r.status; e.body = j; if (!quiet) throw e; throw e; }
+  if (!r.ok) { const e = new Error(j.error || `Feil ${r.status}`); e.status = r.status; e.body = j; if (!quiet) throw e; throw e; }
   return j;
 }
 // Prompt 71 (ANIWEB71): flere svar som kommer i samme bilde (f.eks. Oversikt henter 5–6 ting), gir én tegning i neste bilde i stedet
@@ -87,7 +86,7 @@ function loadServers() {
   }).catch(() => {});
 }
 function enterTab() {
-  if (M.missing || M.restricted) return;
+  if (M.restricted) return;
   loadServers();
   // Prompt 70: Oversikt trenger litt av alt; Nedlastinger viser også lagring (serier/filmer) og kilder (Prowlarr).
   if (M.tab === 'ov') { loadUp(); loadTor(); loadIdx(); if (!M.ser) loadSer(); if (!M.mov) loadMov(); }
@@ -102,7 +101,7 @@ async function loadDetail() {
   paint();
 }
 // Prompt 44 (claude-code-media-interaktivt-sok-504.md): søket kjøres som jobb på serveren. POST /release/search → {jobId},
-// så status per indekser (SSE …/events, ellers GET …/:jobId hvert 1,5 s) med delvise treff. Eldre server: GET /release med
+// så status per indekser (SSE …/events, ellers GET …/:jobId hvert 1,5 s) med delvise treff. Mister serveren jobben (404 under polling): GET /release med
 // ett nytt forsøk ved 502/503/504 etter 2 s. Resultatet caches i 10 min per episode/film («Hentet for 2 min siden · Søk igjen»).
 const relKey = (s) => (s.k === 'm' ? `m:${s.id}` : s.episodeId ? `e:${s.episodeId}` : `s:${s.id}:${s.season}`);
 async function loadRel(force = false) {
@@ -115,7 +114,7 @@ async function loadRel(force = false) {
   if (force) body.force = true;
   let jobId = null;
   try { const r = await mapi('/release/search', { method: 'POST', json: body }); jobId = r.jobId ?? r.id ?? null; if (!jobId && r.items) { done(r); return; } if (jobId && r.cached) { try { const j0 = await mapi(`/release/search/${encodeURIComponent(jobId)}`); if (j0?.state === 'done' && j0.result) { done({ ...j0.result, indexers: j0.indexers, cachedAt: Date.parse(j0.cachedAt) || Date.now() }); return; } } catch { /* vanlig flyt */ } } }
-  catch (e) { if (e.status !== 404 && e.status !== 405) { M.job = null; M.rel = { error: e.message }; return paint(); } }
+  catch (e) { M.job = null; M.rel = { error: e.message }; return paint(); }
   if (!jobId) return legacy();
   const job = M.job; job.id = jobId;
   const apply = (j) => {
@@ -185,7 +184,7 @@ function poll() {
   const fast = M.tab === 'ned' && !M.det && !M.srch && !document.hidden;
   pollT = setTimeout(async () => {
     if (!root?.isConnected) return;
-    if (!document.hidden && !M.missing && !M.restricted && !M.det && !M.srch) {
+    if (!document.hidden && !M.restricted && !M.det && !M.srch) {
       if (M.tab === 'ned' || M.tab === 'ov') { try { M.tor = await mapi('/torrents?filter=all'); } catch { /* beholder forrige */ } if (M.tab === 'ov') { try { M.up = await mapi('/upcoming?days=7'); } catch { /* */ } enter70('ov', true); } paintMain(); paintTop(); }
       if (M.tab === 'kal') enter70('kal', true);
     }
@@ -275,12 +274,12 @@ function glHtml() {
 async function glimt(q) {
   q = q.trim(); if (!q) return;
   M.gl = { q, busy: true, res: null }; paint();
-  // Prompt 45: den felles Glimt-agenten (module media) først. Ren prat eller eldre server → Media-Glimt som før.
+  // Prompt 45: den felles Glimt-agenten (module media) først. Ren prat (eller agenten av) → Media-Glimt som før.
   try {
     const a = agentOn() ? await agent(q, 'media') : null;
     if (a && !isPlain(a)) { if (M.gl) { M.gl.busy = false; M.gl.res = { text: agentFull(a), actions: [] }; } if (a.done.length) { M.tor = null; loadTor(); } paint(); return; }
   } catch { /* faller tilbake */ }
-  try { M.gl.res = await mapi('/glimt', { method: 'POST', json: { q } }); } catch (e) { M.gl.err = e.status === 404 ? 'Serveren har ikke Glimt for Media ennå.' : e.message; }
+  try { M.gl.res = await mapi('/glimt', { method: 'POST', json: { q } }); } catch (e) { M.gl.err = e.message; }
   if (M.gl) M.gl.busy = false;
   const k = M.gl?.res?.kind;
   if (k === 'pause' || k === 'resume') { M.tor = null; loadTor(); }
@@ -501,7 +500,6 @@ function sheetHtml() {
 
 function mainHtml() {
   if (M.restricted) return `<div class="m43-empty"><b>Ingen tilgang</b><span>${esc(M.restricted)}</span></div>`;
-  if (M.missing) return '<div class="m43-empty"><b>Media er ikke klart på serveren ennå</b><span>Serveren mangler /api/media. Oppdater Homelab-serveren, og sett opp Sonarr, Radarr, qBittorrent og Prowlarr under Innstillinger → Tilkoblinger → Media.</span><button type="button" class="m43-btn line" data-m43="integ">Åpne Integrasjoner</button></div>';
   if (M.srch) return srchHtml();
   if (M.det) return detHtml();
   if (M.tab === 'kal') return kal70();
@@ -737,7 +735,7 @@ async function act44(b, d) {
   if (a === 'mdel') {
     const x = M.detail; if (!x || !confirm(`Slette filen til «${x.title}»?\nFilmen slutter å overvåkes, så den ikke lastes ned igjen med en gang.`)) return true;
     try { const r = await mapi(`/movies/${x.id}/file`, { method: 'DELETE' }); undoToast(r?.message ?? `Filen til «${x.title}» er slettet`, () => (r?.undo?.path ? mapi(r.undo.path.replace(/^\/api\/media/, ''), { method: r.undo.method ?? 'PUT', json: r.undo.body ?? { monitored: true } }) : mapi(`/movies/${x.id}`, { method: 'PUT', json: { monitored: true } }))); M.mov = null; loadDetail(); }
-    catch (e) { toast(e.status === 404 ? 'Serveren kan ikke slette filer ennå.' : e.status === 403 ? 'Bare admin kan slette filer.' : e.message); }
+    catch (e) { toast(e.status === 403 ? 'Bare admin kan slette filer.' : e.message); }
     return true;
   }
   if (a === 'relagain') { loadRel(true); return true; }
@@ -754,7 +752,7 @@ async function delFiles(eps, label) {
     for (const ep of eps) await mapi(`/episodes/${ep.id}/file`, { method: 'DELETE' }); // slår også av overvåkingen (SERVER44)
     undoToast(`Slettet ${label}`, async () => { for (const ep of eps) await mapi(`/episodes/${ep.id}`, { method: 'PUT', json: { monitored: true } }); });
     M.ser = null; loadDetail();
-  } catch (e) { toast(e.status === 404 ? 'Serveren kan ikke slette filer ennå.' : e.status === 403 ? 'Bare admin kan slette filer.' : e.message); }
+  } catch (e) { toast(e.status === 403 ? 'Bare admin kan slette filer.' : e.message); }
 }
 
 /* ---------------- Hendelser ---------------- */
@@ -910,7 +908,7 @@ export function render() {
     if (!applyHash()) { M.det = null; M.srch = null; }
     const op = q.get('open'); if (op) { const [svc, id] = op.split(':'); if (id) { openDet(svc === 'radarr' || svc === 'm' ? 'm' : 's', id, true); nav(true); } }
     const mg = q.get('magnet'); if (mg) { M.tab = 'ned'; M.det = null; M.srch = null; M.sh = 'mag'; M.mag = { q: decodeURIComponent(mg), cat: '', paused: false, sequential: false, firstLast: false, check: null, err: '' }; setTimeout(magCheck, 50); }
-    M.missing = false; M.restricted = '';
+    M.restricted = '';
     mapi('/status').then((s) => { M.status = s; M.prefs = s.settings ?? null; }).catch(() => {}).finally(() => paint());
     enterTab(); poll(); paint(); nav(true);
     if (!r.contains(document.activeElement)) r.focus({ preventScroll: true });

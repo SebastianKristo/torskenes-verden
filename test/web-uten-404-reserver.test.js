@@ -71,6 +71,18 @@ const GRUPPER = {
       'ai-control.js': [/404/, /G\.missing/, /G\.legacy/, /missingNote/, OPPDATER], 'chat.js': [/C\.missing/, /Serveren mangler/], 'stemmer.js': [/404/, /unsupported/, OPPDATER],
     },
   },
+  Media: {
+    endepunkter: [
+      ['/api/media/status'], ['/api/media/upcoming?days=7'], ['/api/media/servers'], ['/api/media/release/search', 'POST', { movieId: 1 }], ['/api/media/glimt', 'POST', { q: 'film' }],
+      ['/api/medctl51/now'], ['/api/media/yubal/subscriptions'], ['/api/media/nrk/status'], ['/api/media/unmonitored?service=radarr'], ['/api/media/unmonitored/delete', 'POST', {}],
+      ['/api/playback/sessions?server=plex'], ['/api/playback/history?server=plex'], ['/api/playback/stats?server=plex'], ['/api/playback/libraries?server=plex'], ['/api/playback/plex/pin', 'POST', {}],
+    ],
+    filer: {
+      'media-side.js': [/M\.missing/, /status !== 404 && e\.status !== 405/, /e\.status === 404 \?/, OPPDATER], 'media-avspilling.js': [/'missing'/, /404/, OPPDATER],
+      'media-fjernkontroll.js': [/missing/, /404/], 'media-musikk.js': [/404/, OPPDATER], 'media-nrk.js': [/404/, OPPDATER], 'media-slett.js': [/404/, OPPDATER],
+      'media-plakater.js': [/eldre server \*/],
+    },
+  },
   'Innstillinger og system': {
     endepunkter: [
       ['/api/me/server'], ['/api/me/server', 'PUT', { auto: true }], ['/api/backup/settings'], ['/api/backup/list'], ['/api/backup/status'],
