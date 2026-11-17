@@ -225,25 +225,8 @@ struct Track26Flow: Layout {
 // kaller POST /api/tracking/refresh.
 
 extension Store {
-    /// Pull-to-refresh og «Sjekk nå»: be serveren hente status hos fraktselskapene nå (POST /api/tracking/refresh).
-    /// Q19: ingen omvei om /tracking/check ved 404 lenger; serveren har ruten, og /api/version sier fra om en for gammel server.
-    func refreshTracking22() async {
-        trkChecking = true
-        defer { trkChecking = false }
-        do {
-            let d: Data = try await api.callAt("/api", "POST", "/tracking/refresh", timeout: 60)
-            let o: [String: Any] = JS.obj(d)
-            if o["items"] != nil {
-                let t: TrackingData = TrackingData(o)
-                tracking = t
-                notifyTracking(t)
-                return
-            }
-        } catch {
-            flash("Kunne ikke oppdatere sporingen: \(error.localizedDescription)")
-        }
-        try? await loadTracking()
-    }
+    /// Pull-to-refresh og «Sjekk nå»: be serveren hente status hos fraktselskapene nå (POST /api/tracking/refresh, SporingModell.swift).
+    func refreshTracking22() async { await sporing.refresh(self) }
 }
 
 /// Logoen til fraktselskapet: manuelt kontrollert fil fra logobiblioteket, ellers fargefyll med navnet.

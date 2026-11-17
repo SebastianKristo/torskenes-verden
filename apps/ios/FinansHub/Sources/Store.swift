@@ -108,6 +108,8 @@ final class Store {
     let matplan: MatplanModell = MatplanModell()
     /// Boliger (BoligerModell.swift).
     let boliger: BoligerModell = BoligerModell()
+    /// Sporing (SporingModell.swift).
+    let sporing: SporingModell = SporingModell()
     var domains: [DomainRef]? { get { domener.domains } set { domener.domains = newValue } }
     var domain: String? { get { domener.domain } set { domener.domain = newValue } }
     var analytics: Analytics? { get { domener.analytics } set { domener.analytics = newValue } }
@@ -229,15 +231,13 @@ final class Store {
 
     /* ---------- Sporing, vær, aksjer og abonnement (prompt 11) ---------- */
 
-    var tracking: TrackingData?
-    /// De 2 viktigste pakkene på Homelab-hjem (fra /mobile/home, oppdateres av Sporing).
-    var homePackages: [Shipment]?
+    /// Sporing (SporingModell.swift): sendingene, de 2 viktigste på Homelab-hjem, åpen sending, filteret og «Sjekk nå».
+    var tracking: TrackingData? { get { sporing.tracking } set { sporing.tracking = newValue } }
+    var homePackages: [Shipment]? { get { sporing.homePackages } set { sporing.homePackages = newValue } }
     var homeWeather: WeatherX?
-    /// Åpen sending (kortet er utvidet med tidslinjen).
-    var trkSel: String?
-    /// active | pickup | out | done
-    var trkFilter = "active"
-    var trkChecking = false
+    var trkSel: String? { get { sporing.sel } set { sporing.sel = newValue } }
+    var trkFilter: String { get { sporing.filter } set { sporing.filter = newValue } }
+    var trkChecking: Bool { get { sporing.checking } set { sporing.checking = newValue } }
     var stocksX: StocksX?
     /// ov | det | tx (Portefølje, Aksjedetaljer, Transaksjoner)
     var stockScreen = "ov"
@@ -264,8 +264,8 @@ final class Store {
     var paperTab = "hjem"
     /// En Finans-fane fra den klassiske appen, åpnet fra Papir (Liste, Budsjett, Søk, Finn, Oversikt).
     var paperFin: Tab?
-    /// «Alt om sporing»: den klassiske Sporing-siden med kilder, varsler og transportører.
-    var paperTrackFull = false
+    /// «Alt om sporing»: den klassiske Sporing-siden med kilder, varsler og transportører (SporingModell.swift).
+    var paperTrackFull: Bool { get { sporing.full } set { sporing.full = newValue } }
     var photoWindow: PhotoWindow?
     var photoImage: UIImage?
     /// Bakgrunnen fra /api/background (prompt 19): kreditering, theme_hint, partikler. nil = eldre server.
@@ -292,14 +292,10 @@ final class Store {
     var onboarding: Int?
     /// Fase 6 (Q35): når siste dyplenke kom (Dyplenker.swift). Velkomststegene vises ikke rett etter en dyplenke.
     @ObservationIgnored var deepLinkAt: Date = .distantPast
-    /// Sporing i Papir: Aktive | Klar for henting | På vei | Registrert | Levert | Alle
-    var trkTab = "Aktive"
-    /// «Varsler og kilder» i Papir-sporing.
-    var trkSettings = false
-    /// Rekkefølgen på Sporing-kortene (lagres per bruker i layout.trkOrder).
-    var trkOrder: [String] = UserDefaults.standard.stringArray(forKey: "fh_trk_order") ?? ["add", "shipments", "notify", "carriers"] {
-        didSet { UserDefaults.standard.set(trkOrder, forKey: "fh_trk_order") }
-    }
+    /// Sporing i Papir (SporingModell.swift): fanen, «Varsler og kilder» og rekkefølgen på kortene.
+    var trkTab: String { get { sporing.tab } set { sporing.tab = newValue } }
+    var trkSettings: Bool { get { sporing.settings } set { sporing.settings = newValue } }
+    var trkOrder: [String] { get { sporing.order } set { sporing.order = newValue } }
     /// Finn i Papir: Alle | På vei | Kjøpt | Solgt | Fullført
     var finnSeg = "Alle"
     /// Abonnementet som redigeres (arket), og om arket er åpent for et nytt abonnement.
@@ -344,8 +340,8 @@ final class Store {
     var reviewCount: Int?
     /// De 15 siste transaksjonene (Finans → Oversikt).
     var recent15: [Tx]?
-    /// «Ny sending»-arket (den flytende knappen på Sporing).
-    var trackAddOpen = false
+    /// «Ny sending»-arket (den flytende knappen på Sporing, SporingModell.swift).
+    var trackAddOpen: Bool { get { sporing.addOpen } set { sporing.addOpen = newValue } }
 
     /* ---------- Papir, prompt 16 ---------- */
 

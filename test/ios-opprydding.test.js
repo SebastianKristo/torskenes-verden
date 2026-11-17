@@ -147,6 +147,31 @@ test('Struktur: Finn, Matplan og Boliger er ute av Store etter samme mønster (m
   assert.doesNotMatch(s, /^\s+var (finn|finnSel|finnDetail|finnBusy|week|matDay|matFull|folders|folder|boligCats|uploadFolder)(: [^{\n]+)?( = [^{\n]+)?$/m);
 });
 
+test('Struktur: Sporing er ute av Store (SporingModell eier tilstanden og kallene, Store videresender)', () => {
+  const s = code(raw('FinansHub/Sources/Store.swift'));
+  const m = code(raw('FinansHub/Sources/SporingModell.swift'));
+  assert.match(m, /@MainActor\s+@Observable\s+final class SporingModell \{/);
+  assert.match(s, /let sporing: SporingModell = SporingModell\(\)/);
+  for (const [navn, til] of [['tracking', 'tracking'], ['homePackages', 'homePackages'], ['trkSel', 'sel'], ['trkFilter', 'filter'], ['trkChecking', 'checking'],
+    ['trkTab', 'tab'], ['trkSettings', 'settings'], ['trkOrder', 'order'], ['paperTrackFull', 'full'], ['trackAddOpen', 'addOpen']]) {
+    assert.match(s, new RegExp(`var ${navn}: [^{\\n]+\\{ get \\{ sporing\\.${til} \\} set \\{ sporing\\.${til} = newValue \\} \\}`), navn);
+  }
+  assert.doesNotMatch(s, /^\s+var (tracking|homePackages|trkSel|trkFilter|trkChecking|trkTab|trkSettings|trkOrder|paperTrackFull|trackAddOpen)(: [^{\n]+)?( = [^{\n]+)?( \{)?$/m);
+  // Rekkefølgen lagres som før.
+  assert.match(m, /UserDefaults\.standard\.stringArray\(forKey: "fh_trk_order"\) \?\? \["add", "shipments", "notify", "carriers"\]/);
+  // Kallene bor i modellen; Store-utvidelsene videresender (skjermene kaller store.loadTracking() osv. som før).
+  for (const f of ['func load\\(_ store: Store\\) async throws', 'func poll\\(_ store: Store\\) async', 'func add\\(', 'func archive\\(', 'func delete\\(', 'func check\\(_ store: Store\\)',
+    'func setPref\\(', 'func setSource\\(', 'func notify\\(_ t: TrackingData, _ store: Store\\)', 'func refresh\\(_ store: Store\\) async']) {
+    assert.match(m, new RegExp(f), f);
+  }
+  const tr = code(raw('FinansHub/Sources/Tracking.swift'));
+  assert.match(tr, /func loadTracking\(\) async throws \{ try await sporing\.load\(self\) \}/);
+  assert.match(tr, /func notifyTracking\(_ t: TrackingData\) \{ sporing\.notify\(t, self\) \}/);
+  assert.doesNotMatch(tr, /callAt\("\/api", "(GET|POST|PATCH|PUT|DELETE)", "\/tracking/);
+  assert.match(code(raw('FinansHub/Sources/TrackCarriers.swift')), /func refreshTracking22\(\) async \{ await sporing\.refresh\(self\) \}/);
+  assert.match(code(raw('FinansHub/Sources/HomelabMiljo.swift')), /\.environment\(store\.sporing\)/);
+});
+
 test('Q19: Finn har ikke lenger «404 → Oppdater homelab»-reserver (serveren har endepunktene)', () => {
   const m = code(raw('FinansHub/Sources/FinnModell.swift'));
   assert.doesNotMatch(m, /status == 404/);

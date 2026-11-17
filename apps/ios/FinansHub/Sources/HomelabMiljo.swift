@@ -13,5 +13,6 @@ extension View {
             .environment(store.finnModell)
             .environment(store.matplan)
             .environment(store.boliger)
+            .environment(store.sporing)
     }
 }
