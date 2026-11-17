@@ -64,7 +64,7 @@ export function tfLayer() {
   const st = TF.step, sec = String(TF.d?.secret ?? '').replace(/\s/g, ''), grp = sec.replace(/(.{4})/g, '$1 ').trim();
   const back = st === 0 || st >= 4 ? 'Sikkerhet' : 'Tilbake';
   const title = st === 9 ? 'Totrinnsbekreftelse er på' : TT[st];
-  const sub = st === 9 ? `Autentiseringsapp${TF.st?.enabledAt ? ` · lagt til ${new Date(TF.st.enabledAt).toLocaleDateString('nb-NO')}` : ''}${TF.st?.backupLeft != null ? ` · ${TF.st.backupLeft} reservekoder igjen` : ''}` : TS[st];
+  const sub = st === 9 ? `Autentiseringsapp${TF.st?.enabledAt ? ` · lagt til ${new Date(TF.st.enabledAt).toLocaleDateString('nb-NO', { timeZone: 'Europe/Oslo' })}` : ''}${TF.st?.backupLeft != null ? ` · ${TF.st.backupLeft} reservekoder igjen` : ''}` : TS[st];
   const bars = st < 4 ? `<div class="p40-tfb">${[0, 1, 2, 3].map((i) => `<i class="${i <= st ? 'on' : ''}"></i>`).join('')}</div>` : '';
   let body = '';
   if (st === 0) body = `<div class="p40-tfm">${[['app', 'Autentiseringsapp', 'Passord, Google Authenticator, 1Password', 'A', '#2b5d8a', 'Anbefalt'], ['pk', 'Passnøkkel med Face ID', 'Ingen kode å skrive. Lagres i iCloud-nøkkelring / Google', 'F', '#2f7a4f', 'Raskest']].map(([k, n, s, i, c, tag], j) => `<button type="button" data-p40="tfm" data-k="${k}"><span class="p40-tfi" style="background:${c}">${i}</span><span class="m-grow"><b>${n}</b><span>${s}</span></span><span class="p40-tag${j ? ' g' : ''}">${tag}</span></button>`).join('')}</div>`;

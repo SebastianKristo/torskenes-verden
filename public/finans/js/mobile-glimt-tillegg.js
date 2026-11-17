@@ -289,7 +289,7 @@ const STD = [
 export const stdQ = (q) => STD.some(([, re]) => re.test(String(q ?? '')));
 const stdKind = (q) => STD.find(([, re]) => re.test(String(q ?? '')))?.[0] ?? null;
 const daysTo = (d) => { if (!d) return null; const x = new Date(`${String(d).slice(0, 10)}T12:00`); return Math.round((x - new Date(`${dayIso(0)}T12:00`)) / 864e5); };
-const dShort = (d) => new Date(`${String(d).slice(0, 10)}T12:00`).toLocaleDateString('nb-NO', { day: 'numeric', month: 'short' }).replace('.', '');
+const dShort = (d) => new Date(`${String(d).slice(0, 10)}T12:00:00Z`).toLocaleDateString('nb-NO', { timeZone: 'Europe/Oslo', day: 'numeric', month: 'short' }).replace('.', '');
 const perMonth = (a, cyc) => (/year|år|annual/i.test(cyc ?? '') ? a / 12 : /week|uke/i.test(cyc ?? '') ? (a * 52) / 12 : /quarter|kvartal/i.test(cyc ?? '') ? a / 3 : a);
 /** POST /finans/api/search/ask {q}; reserve lokalt for abonnementer og forbruk. → {text, source, kpis, cards, open} */
 export async function searchAsk(q) {
@@ -397,7 +397,7 @@ function ngLayer() {
   }).join('');
   const srcList = R.filter((r) => used.has(+r.n));
   const nS = new Set(srcList.map((r) => r.source)).size;
-  const meta = D ? `${new Date(D.updatedAt ?? Date.now()).toLocaleDateString('nb-NO', { weekday: 'short', day: 'numeric', month: 'short' })} · ${R.length} saker · ${nS || new Set(R.map((r) => r.source)).size} kilder · ${NG.len === 'lang' ? 'langt' : 'kort'}` : '';
+  const meta = D ? `${new Date(D.updatedAt ?? Date.now()).toLocaleDateString('nb-NO', { timeZone: 'Europe/Oslo', weekday: 'short', day: 'numeric', month: 'short' })} · ${R.length} saker · ${nS || new Set(R.map((r) => r.source)).size} kilder · ${NG.len === 'lang' ? 'langt' : 'kort'}` : '';
   const pick = NG.pick ? ngPick() : '';
   return `<div class="p40-ng" role="dialog" aria-modal="true" aria-label="Glimt · nyhetsoppsummering"><div class="p40-ngin">
     <div class="p40-ngh"><button type="button" class="p40-back" data-p40="ngx">‹ Nyheter</button><span class="m-grow"></span><button type="button" class="p40-chip" data-p40="ngtalk">${NG.talk ? '■ Stopp' : '▶ Les opp'}</button><button type="button" class="p40-chip" data-p40="ngpick">Innhold</button></div>
