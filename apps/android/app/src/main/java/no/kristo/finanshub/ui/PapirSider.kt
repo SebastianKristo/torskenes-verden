@@ -57,6 +57,9 @@ import no.kristo.finanshub.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.ui.semantics.Role
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.toggleable
 
 /*
  * Papir, prompt 14: Finans med egen fanelinje (Oversikt · Liste · Finn · Mer), Finn som rutenett,
@@ -71,7 +74,7 @@ internal fun PChip(text: String, on: Boolean, count: String? = null, onClick: ()
     val p = PaperPal.current
     Row(
         Modifier.height(34.dp).clip(CircleShape).background(if (on) p.ink else Color.Transparent)
-            .border(1.dp, if (on) p.ink else p.line, CircleShape).clickable { Haptics.select(); onClick() }.padding(horizontal = 13.dp),
+            .border(1.dp, if (on) p.ink else p.line, CircleShape).selectable(selected = on, role = Role.RadioButton) { Haptics.select(); onClick() }.padding(horizontal = 13.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         Text(text, color = if (on) p.bg else p.ink, fontWeight = FontWeight.SemiBold, fontSize = 13.sp, maxLines = 1)
@@ -134,7 +137,7 @@ internal fun PToggle(title: String, sub: String?, on: Boolean, top: Boolean = fa
     Column {
         if (top) { if (icons) SetRule36() else Box(Modifier.fillMaxWidth().height(1.dp).background(p.line)) }
         Row(
-            Modifier.fillMaxWidth().clickable { Haptics.select(); onChange(!on) }.padding(14.dp, 12.dp),
+            Modifier.fillMaxWidth().toggleable(value = on, role = Role.Switch) { Haptics.select(); onChange(!on) }.padding(14.dp, 12.dp),
             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             if (icons) SetChip36(title)
@@ -222,7 +225,7 @@ internal fun PaperList(vm: AppViewModel, navBottom: Dp) {
             val t = txs[i]
             val rc = when (t.receipt) { "booked" -> "kvittering"; null -> "ingen kvittering"; else -> "til gjennomgang" }
             Column {
-                Row(Modifier.fillMaxWidth().clickable { vm.openTxHl30(t.id, q) }.padding(2.dp, 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Row(Modifier.fillMaxWidth().clickable(role = Role.Button, onClickLabel = "Åpne transaksjonen") { vm.openTxHl30(t.id, q) }.padding(2.dp, 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Logo(vm, t.domain, t.merchant ?: t.description, t.color, 38, RoundedCornerShape(11.dp))
                     Column(Modifier.weight(1f)) {
                         Text(t.merchant ?: t.description, color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 14.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -331,7 +334,7 @@ private fun FinnCard(vm: AppViewModel, d: FinnDeal, modifier: Modifier, open: ()
             }
             Box(
                 Modifier.align(Alignment.TopEnd).padding(6.dp).size(30.dp).clip(CircleShape).background(Color(0xCC1B1A17))
-                    .clickable { vm.finnEdit = if (edit) null else d.id },
+                    .clickable(role = Role.Button, onClickLabel = "Rediger") { vm.finnEdit = if (edit) null else d.id },
                 contentAlignment = Alignment.Center,
             ) { Text("✎", color = Color.White, fontSize = 14.sp) }
         }
@@ -392,7 +395,7 @@ private fun FinnEditPanel(vm: AppViewModel, d: FinnDeal) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 PLabel("Rediger · ${if (d.sold) "salg" else "kjøp"}", modifier = Modifier.weight(1f))
-                Text("Lukk", color = p.mut, fontSize = 13.sp, modifier = Modifier.clickable { vm.finnEdit = null })
+                Text("Lukk", color = p.mut, fontSize = 13.sp, modifier = Modifier.clickable(role = Role.Button) { vm.finnEdit = null })
             }
             PField("Tittel", title, { title = it })
             Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -465,7 +468,7 @@ internal fun PaperTracking(vm: AppViewModel, navBottom: Dp) {
                         TRK_TABS.forEach { (tk, n) ->
                             val on = vm.trkTab == tk
                             Row(
-                                Modifier.height(34.dp).clip(CircleShape).background(if (on) p.ink else Color.Transparent).clickable { Haptics.select(); vm.trkTab = tk; vm.trkPickDone(); if (tk == "arkiv") vm.loadArchived() }.padding(horizontal = 12.dp),
+                                Modifier.height(34.dp).clip(CircleShape).background(if (on) p.ink else Color.Transparent).selectable(selected = on, role = Role.Tab) { Haptics.select(); vm.trkTab = tk; vm.trkPickDone(); if (tk == "arkiv") vm.loadArchived() }.padding(horizontal = 12.dp),
                                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp),
                             ) {
                                 Text(n, color = if (on) p.bg else p.mut, fontWeight = FontWeight.SemiBold, fontSize = 13.sp, maxLines = 1)
@@ -473,7 +476,7 @@ internal fun PaperTracking(vm: AppViewModel, navBottom: Dp) {
                                 Text("$cnt", color = if (on) p.bg.copy(alpha = .7f) else p.mut, fontFamily = PaperFonts.mono, fontSize = 11.5.sp)
                             }
                         }
-                        Box(Modifier.size(34.dp).clip(CircleShape).clickable { vm.trkSettings = true }, contentAlignment = Alignment.Center) { Text("⚙", color = p.ink, fontSize = 16.sp) }
+                        Box(Modifier.size(34.dp).clip(CircleShape).clickable(role = Role.Button, onClickLabel = "Innstillinger for sporing") { vm.trkSettings = true }, contentAlignment = Alignment.Center) { Text("⚙", color = p.ink, fontSize = 16.sp) }
                     }
                 }
                 // Prompt 37: «Bruker husstandens ParcelsApp-nøkkel · 17 oppslag igjen» under listen.
@@ -673,7 +676,7 @@ internal fun PaperLogin(vm: AppViewModel) {
                     QrLoginButton46 { vm.openQrLogin46(server) }
                     Join51Button() // prompt 51 (ANDFEAT51): ny i familien med invitasjon (ui/Invitasjon.kt)
                     Text("Face ID / fingeravtrykk kan slås på etter innlogging, under Innstillinger → Konto og sikkerhet.", color = p.mut, fontSize = 12.sp)
-                    if (vm.addingAccount) Text("‹ Avbryt", color = p.lab, fontWeight = FontWeight.SemiBold, modifier = Modifier.clickable { vm.addingAccount = false })
+                    if (vm.addingAccount) Text("‹ Avbryt", color = p.lab, fontWeight = FontWeight.SemiBold, modifier = Modifier.clickable(role = Role.Button) { vm.addingAccount = false })
                 } else {
                     Text("Skriv inn den sekssifrede koden fra autentiseringsappen for ${pend.username.ifBlank { "kontoen" }}.", color = p.mut, fontSize = 14.sp)
                     PField("Kode", code, { v -> code = v.filter { it.isLetterOrDigit() || it == '-' }.take(11) },
@@ -681,7 +684,7 @@ internal fun PaperLogin(vm: AppViewModel) {
                         onDone = { if (code.length >= 6) vm.login(pend.server, pend.username, pend.password, code) })
                     PToggle("Husk denne enheten i 30 dager", "På lokalt nett hoppes passordet over med en gyldig enhet", trust) { trust = it }
                     PButton(if (vm.busy) "Bekrefter …" else "Bekreft", Modifier.fillMaxWidth(), height = 54.dp) { if (code.length >= 6 && !vm.busy) vm.login(pend.server, pend.username, pend.password, code) }
-                    Text("‹ Tilbake", color = p.lab, fontWeight = FontWeight.SemiBold, modifier = Modifier.clickable { vm.cancelTotp(); code = "" })
+                    Text("‹ Tilbake", color = p.lab, fontWeight = FontWeight.SemiBold, modifier = Modifier.clickable(role = Role.Button) { vm.cancelTotp(); code = "" })
                     Text("Har du mistet telefonen, kan du bruke en gjenopprettingskode.", color = p.mut, fontSize = 12.sp)
                 }
             }
@@ -738,7 +741,7 @@ internal fun PaperOnboarding(vm: AppViewModel) {
                         ).forEach { (k, n, sub) ->
                             Row(
                                 Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(p.card).border(2.dp, if (cur == k) p.ink else Color.Transparent, RoundedCornerShape(18.dp))
-                                    .clickable {
+                                    .selectable(selected = cur == k, role = Role.RadioButton) {
                                         Haptics.select()
                                         vm.setPaperMode(k)
                                     }.padding(12.dp),
@@ -765,7 +768,7 @@ internal fun PaperOnboarding(vm: AppViewModel) {
                                 row.forEach { (k, n) ->
                                     Column(
                                         Modifier.weight(1f).clip(RoundedCornerShape(16.dp)).background(p.card)
-                                            .border(2.dp, if (vm.photoKind == k) p.ink else Color.Transparent, RoundedCornerShape(16.dp)).clickable { vm.setPhotoKind(k) },
+                                            .border(2.dp, if (vm.photoKind == k) p.ink else Color.Transparent, RoundedCornerShape(16.dp)).selectable(selected = vm.photoKind == k, role = Role.RadioButton) { vm.setPhotoKind(k) },
                                     ) {
                                         Box(Modifier.fillMaxWidth().height(90.dp).background(Brush.linearGradient(listOf(Color(0xFF4A5A6A), Color(0xFF1D242C))))) {
                                             vm.photoThumbs[k]?.let { Image(it.asImageBitmap(), null, contentScale = ContentScale.Crop, modifier = Modifier.matchParentSize()) }

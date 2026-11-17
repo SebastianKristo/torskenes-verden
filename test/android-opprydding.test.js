@@ -129,6 +129,7 @@ test('P85 E: Nyheter, Mat, Domener, Vær, Avganger og kalendervisningen har roll
 // Runde 4: sidene som sto igjen. Hver fil i lista har ingen clickable uten rolle; valg og brytere sier om de er valgt/på.
 const P85E_RUNDE4 = {
   okonomi: ['Abonnement.kt', 'Aksjer.kt'],
+  papir: ['PapirSider.kt', 'PapirInnstillinger.kt', 'PapirByggeklosser.kt'],
 };
 
 test('P85 E (runde 4): Abonnement, Aksjer og de andre sidene som sto igjen har rolle på trykkflatene', () => {
@@ -145,6 +146,9 @@ test('P85 E (runde 4): Abonnement, Aksjer og de andre sidene som sto igjen har r
   const aks = strip(raw(join(APP, 'ui/Aksjer.kt')));
   assert.match(aks, /\.selectable\(selected = on, role = Role\.Tab\) \{ Haptics\.select\(\); onPick\(k\) \}/, 'periodevalget sier hvilken som er valgt');
   assert.match(aks, /\.clickable\(role = Role\.Button, onClickLabel = "Åpne aksjen"\) \{ openStock23\(vm, ps\) \}/);
+  const ps = strip(raw(join(APP, 'ui/PapirSider.kt')));
+  assert.match(ps, /\.toggleable\(value = on, role = Role\.Switch\) \{ Haptics\.select\(\); onChange\(!on\) \}/, 'bryterradene i Papir er brytere');
+  assert.match(ps, /\.selectable\(selected = on, role = Role\.Tab\) \{ Haptics\.select\(\); vm\.trkTab = tk/);
 });
 
 test('P85 G: kvitteringer lastes opp med Idempotency-Key fra bildet, også fra køen; logo 204 betyr «ingen logo»', () => {

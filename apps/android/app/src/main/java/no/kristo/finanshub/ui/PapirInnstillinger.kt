@@ -37,6 +37,8 @@ import java.time.LocalDate
 import kotlinx.coroutines.delay
 import no.kristo.finanshub.*
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.ui.semantics.Role
+import androidx.compose.foundation.selection.selectable
 
 /* ================= Innstillinger i Papir (design: Mobil Papir App → side «innst») ================= */
 
@@ -272,7 +274,7 @@ private fun NotifySub(vm: AppViewModel) {
                 Column {
                     if (i > 0) Box(Modifier.fillMaxWidth().padding(start = 14.dp).height(1.dp).background(p.line))
                     Row(
-                        Modifier.fillMaxWidth().clickable {
+                        Modifier.fillMaxWidth().selectable(selected = on, role = Role.RadioButton) {
                             if (k == "egen" && !n.customSound) pick.launch(arrayOf("audio/mpeg", "audio/wav", "audio/x-wav", "audio/mp4", "audio/x-m4a", "audio/*"))
                             else { vm.saveNotify(n.copy(sound = k)); Notify.preview(ctx, k, n.volume) }
                         }.padding(14.dp, 11.dp),
@@ -284,7 +286,7 @@ private fun NotifySub(vm: AppViewModel) {
                             if (k == "egen") Text(if (n.customSound) "Lastet opp · trykk «Bytt» for ny" else "Last opp MP3, WAV eller M4A under 1 MB", color = p.mut, fontSize = 12.sp)
                         }
                         if (k == "egen" && n.customSound) Text("Bytt", color = p.lab, fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
-                            modifier = Modifier.clip(CircleShape).clickable { pick.launch(arrayOf("audio/*")) }.padding(8.dp, 4.dp))
+                            modifier = Modifier.clip(CircleShape).clickable(role = Role.Button) { pick.launch(arrayOf("audio/*")) }.padding(8.dp, 4.dp))
                         if (on) Icon(Icons.Filled.Check, contentDescription = "Valgt", tint = p.ink, modifier = Modifier.size(19.dp))
                     }
                 }
@@ -629,12 +631,12 @@ internal fun HomeTasksCard(vm: AppViewModel) {
         Column(Modifier.padding(14.dp, 12.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 PLabel("Gjøremål", modifier = Modifier.weight(1f))
-                Text("+ Ny", color = p.lab, fontSize = 12.5.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.clip(CircleShape).clickable { vm.openTasks(newTask = true) }.padding(8.dp, 4.dp))
+                Text("+ Ny", color = p.lab, fontSize = 12.5.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.clip(CircleShape).clickable(role = Role.Button) { vm.openTasks(newTask = true) }.padding(8.dp, 4.dp))
             }
             if (next.isEmpty()) Text("Ingen oppgaver. Trykk + Ny for å legge til.", color = p.mut, fontSize = 13.sp, modifier = Modifier.padding(vertical = 6.dp))
             next.forEach { t ->
                 Row(Modifier.fillMaxWidth().padding(vertical = 5.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Box(Modifier.size(20.dp).clip(CircleShape).border(2.dp, p.mut, CircleShape).clickable { vm.toggleTask(t.id) })
+                    Box(Modifier.size(20.dp).clip(CircleShape).border(2.dp, p.mut, CircleShape).clickable(role = Role.Button, onClickLabel = "Merk som gjort") { vm.toggleTask(t.id) })
                     Text(t.title, color = p.ink, fontSize = 14.sp, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
                     dueText(t.due, LocalDate.now().toString())?.let { Text(it, color = if (t.due!! < LocalDate.now().toString()) p.lab else p.mut, fontSize = 11.5.sp) }
                 }
@@ -652,7 +654,7 @@ internal fun TrkPickBar(vm: AppViewModel, ids: List<String>, archive: Boolean) {
     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(p.ink).padding(12.dp, 10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text("${vm.trkPicked.size} valgt", color = p.bg, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, modifier = Modifier.weight(1f))
-            Text("Ferdig", color = p.bg, fontWeight = FontWeight.Bold, fontSize = 13.sp, modifier = Modifier.clip(CircleShape).clickable { vm.trkPickDone() }.padding(10.dp, 4.dp))
+            Text("Ferdig", color = p.bg, fontWeight = FontWeight.Bold, fontSize = 13.sp, modifier = Modifier.clip(CircleShape).clickable(role = Role.Button) { vm.trkPickDone() }.padding(10.dp, 4.dp))
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             BarBtn(if (vm.trkPicked.containsAll(ids) && ids.isNotEmpty()) "Velg ingen" else "Velg alle", Modifier.weight(1f)) { vm.trkPickAll(ids) }
