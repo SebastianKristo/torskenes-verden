@@ -127,12 +127,13 @@ test('LED-oppsett per skap: vert, test, rader, status og veiviseren', () => {
   assert.match(v, /l\.calibrate\(cabinetId, index: index, store\)/);
 });
 
-test('feil: 404 skjuler knappene, 429 og tidsavbrudd gir norsk tekst; innstillingene faller tilbake til lokal lagring', () => {
+test('feil: 404 skjuler knappene, 429 og tidsavbrudd gir norsk tekst; innstillingene har lokal kopi uten nett (Q19: ingen lokal lagring for godt ved 404)', () => {
   const s = code('SkjoldLED.swift');
   assert.match(s, /var anyEnabled: Bool \{ !missing && /);
   assert.match(s, /a\.status == 429 \{ return "Vent litt/);
   assert.match(s, /WLED svarte ikke i tide/);
-  assert.match(s, /localSettings = true\n\s+readLocal\(\)/);
+  assert.match(s, /settingsError = ""\n\s+\} catch \{\s+readLocal\(\)\s+\}/);
+  assert.doesNotMatch(s, /localSettings/);
   assert.match(s, /UserDefaults\.standard\.set\(o, forKey: Skjold78\.localKey\)/);
   // untilMs: epoch-ms eller varighet.
   assert.match(s, /if v > 1_000_000_000_000 \{ return Date\(timeIntervalSince1970: v \/ 1000\) \}/);

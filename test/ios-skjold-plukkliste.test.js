@@ -91,7 +91,7 @@ test('plukklista: +/✓ på rad og detalj, linja nederst, arket med ±, Fjern, T
   assert.match(md, /case \.pick: return "pick"/);
 });
 
-test('lagring: lokalt per konto og GET|PUT /picklist {items:[{partId, qty}]}, 404 = bare lokalt', () => {
+test('lagring: lokalt per konto og GET|PUT /picklist {items:[{partId, qty}]}, 404 slår ikke av synken (Q19)', () => {
   const pick = code('SkjoldPick.swift');
   assert.match(pick, /"skj79\.pick\." \+ s/);
   assert.match(pick, /AcctScope\.current/);
@@ -100,8 +100,8 @@ test('lagring: lokalt per konto og GET|PUT /picklist {items:[{partId, qty}]}, 40
   assert.match(pick, /"PUT", Skjold76\.root \+ "\/picklist", json: body/);
   assert.match(pick, /\["items": items\.map \{ Skjold79\.remote\(\$0\) \}\]/);
   assert.match(pick, /\["partId": Skjold76\.idv\(x\.partId\), "qty": x\.take\]/);
-  assert.match(pick, /e\.status == 404/);
-  assert.match(pick, /localOnly = true/);
+  assert.doesNotMatch(pick, /e\.status == 404/);
+  assert.doesNotMatch(pick, /localOnly/);
 });
 
 test('Feilsøk LED: knapp i oppsettet, POST /cabinets/:id/leds/diagnose, Ja/Nei-spørsmål og hint etter kontrakten', () => {

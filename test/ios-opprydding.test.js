@@ -209,6 +209,36 @@ test('Q19: flere «404 → gammel vei / lokalt»-reserver er borte der serveren 
   assert.match(srv('server/sporing/shipments.js'), /api\.post\('\/refresh'/);
 });
 
+test('Q19 (runde 4): Skjold Lab, Familie og Sporing har ikke lenger «404 → bare lokalt / støttes ikke ennå»', () => {
+  const src = (f) => code(raw(`FinansHub/Sources/${f}`));
+  const srv = (f) => readFileSync(join(IOS, '..', '..', f), 'utf8');
+  // Skjold Lab: plukklista og LED-innstillingene synkes alltid (serveren har GET|PUT); 404 slår ikke av synken.
+  const pick = src('SkjoldPick.swift');
+  assert.doesNotMatch(pick, /status == 404/);
+  assert.doesNotMatch(pick, /localOnly/);
+  assert.match(srv('server/skjold/picklist.js'), /app\.get\('\/picklist'/);
+  assert.match(srv('server/skjold/picklist.js'), /app\.put\('\/picklist'/);
+  const led = src('SkjoldLED.swift');
+  assert.doesNotMatch(led, /localSettings/);
+  assert.match(led, /settingsError = Skjold78\.message\(error\)/, 'feil ved lagring vises');
+  assert.match(srv('server/skjold/leds.js'), /app\.get\('\/leds\/settings'/);
+  assert.match(srv('server/skjold/leds.js'), /app\.put\('\/leds\/settings'/);
+  // Familie: sonevarslene lagres på serveren; den lokale kopien er bare til bruk uten nett.
+  const zone = src('ZoneAlerts.swift');
+  assert.doesNotMatch(zone, /status == 404/);
+  assert.doesNotMatch(zone, /var server: Bool/);
+  assert.match(srv('server/familie/zone-alerts.js'), /zone45Api\.get\('\/zone-alerts'/);
+  // Familie: valg av kilde viser serverens feil («Ukjent enhet»), ikke «støtter ikke ennå».
+  const dev = src('FamilyDevices.swift');
+  assert.doesNotMatch(dev, /Serveren støtter ikke valg av kilde ennå/);
+  assert.match(srv('server/familie/positions.js'), /api\.put\('\/me\/source'/);
+  // Sporing: 400/404 på valgt tjeneste er ekte feil (ugyldig verdi, sendingen er borte), og serverens melding vises.
+  const tc = src('TrackCarriers.swift');
+  assert.doesNotMatch(tc, /Serveren støtter ikke valg av tjeneste ennå/);
+  assert.match(tc, /catch let e as APIError \{\s*store\.flash\("Kunne ikke endre: " \+ e\.message\)/);
+  assert.match(srv('server/sporing/shipments.js'), /if \('carrierOverride' in b\)/);
+});
+
 test('Serveren: logo 204 = «ingen logo» (spørres ikke igjen), og discovery med local: [] sletter ikke lagret lokal adresse', () => {
   const s = code(raw('FinansHub/Sources/Store.swift'));
   const logo = s.slice(s.indexOf('func logo(_ domain: String?)'), s.indexOf('private func sendImage('));

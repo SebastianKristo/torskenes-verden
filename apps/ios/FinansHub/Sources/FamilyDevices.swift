@@ -112,9 +112,8 @@ extension FamilyModel {
                 _ = try await store.api.callAt("/api", "PUT", "/family/me/source", json: body)
                 store.flash(deviceId == nil ? "Kilde: automatisk" : "Kilde er valgt")
                 await self.load(store)
-            } catch let e as APIError where e.status == 404 {
-                store.flash("Serveren støtter ikke valg av kilde ennå")
             } catch {
+                // Q19: serveren har alltid PUT /family/me/source; feilen (f.eks. «Ukjent enhet») vises som den er.
                 store.flash("Kunne ikke velge kilde: \(error.localizedDescription)")
             }
         }
