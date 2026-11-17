@@ -33,7 +33,10 @@ html[data-theme=mork] .b42 .green,html[data-theme=glod] .b42 .green{color:#8fd0a
 .b42-btn.dark{border:0;background:var(--b-btn);color:var(--b-btn-ink)}.b42-btn.dark:hover{background:var(--b-btn-h)}
 .b42-btn.green{border:0;background:var(--b-green);color:#fff}
 /* Prompt 85: html[data-theme=mork|glod] .b42 .green (grønn tekst) slo knappens hvite tekst → lys grønn på grønn (2,3:1). */
-html[data-theme="mork"] .b42 .b42-btn.green,html[data-theme="glod"] .b42 .b42-btn.green{color:#fff}.b42-btn.green:hover{background:var(--b-green-h)}
+/* M9: hvit tekst på --b-green (#3f8a60) var 4,19:1; i mørk modus og Glass får knappen suksessfargen med mørk tekst. */
+html[data-theme="mork"] .b42 .b42-btn.green,html[data-theme="glod"] .b42 .b42-btn.green{background:var(--ds-success);color:var(--ds-on-success)}
+html[data-theme="mork"] .b42 .b42-btn.green:hover,html[data-theme="glod"] .b42 .b42-btn.green:hover{background:color-mix(in oklab,var(--ds-success) 85%,var(--ds-text-primary))}
+.b42-btn.green:hover{background:var(--b-green-h)}
 .b42-btn.link{border:0;text-decoration:underline;text-underline-offset:4px;padding:0 14px}
 .b42-btn.red,.b42-btn.danger{color:var(--b-red)}.b42-btn.danger{border-color:var(--b-red)}
 .b42-btn.lg{height:56px;border-radius:28px;font-size:18px}

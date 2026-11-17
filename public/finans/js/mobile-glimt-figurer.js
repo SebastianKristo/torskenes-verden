@@ -41,7 +41,7 @@ import('/assets/js/glimt-figs.js').then((x) => { GF = typeof x.fig === 'function
 /** fig(id, størrelse, humør) → HTML. humør: idle | glad | talk | sov. */
 export function fig(id, S0 = 56, mood = 'idle', o = null) {
   // Prompt 40 (claude-code-glimt-jul.md): julemodus legges på av figurbiblioteket selv (julOn); mangler det i en eldre
-  // glimt-figs.js, kler mobile-jul-og-totrinn.js på figuren her. {noJul:true} = figurvelgeren.
+  // glimt-figs.js, kler mobile-jul.js på figuren her. {noJul:true} = figurvelgeren.
   const h = GF ? GF.fig(IDS.includes(id) ? id : 'glimt', S0, mood, o ?? undefined) : P34.figure(S0, mood === 'talk' ? 'talk' : 'idle');
   return o?.noJul || typeof GF?.julOn === 'function' || typeof GF?.fig?.julOn === 'function' ? h : globalThis.P40?.dress?.(h, S0) ?? h;
 }

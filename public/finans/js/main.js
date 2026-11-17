@@ -44,6 +44,10 @@ async function pick() {
   ui = next;
   mobileCss(mob); // et raskere valg kan ha slått den av eller på i mellomtiden
   document.documentElement.dataset.ui = mob ? 'mobile' : 'desktop';
+  // Mobilvisningen har egne farger (--pp-*/--m3-* fra mobile-theme.js) og bruker --ds-* som Papir lys-verdier (mobile.css).
+  // Desktop setter data-theme etter Homelab-temaet; når vinduet går fra bredt til smalt, settes det tilbake til «lys» som ved
+  // første lasting på mobil. Desktop setter det igjen ved neste tegning (applyTheme i desktop.js).
+  if (mob) document.documentElement.dataset.theme = 'lys';
   const old = document.getElementById('app');
   const fresh = old.cloneNode(false); // fjern gamle lyttere
   old.replaceWith(fresh);

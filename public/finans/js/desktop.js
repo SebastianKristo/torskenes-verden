@@ -462,7 +462,7 @@ function transactions() {
 
 /* ===================== Kvitteringer ===================== */
 
-const STATUS = { pending: ['I kø', 'var(--blue-soft)', 'var(--blue-l)'], processing: ['Leser …', 'var(--blue-soft)', 'var(--blue-l)'], needs_review: ['Gjennomgå', 'var(--warn-soft)', 'var(--acc-l)'] };
+const STATUS = { pending: ['I kø', 'var(--blue-soft)', 'var(--blue-l)'], processing: ['Leser …', 'var(--blue-soft)', 'var(--blue-l)'], needs_review: ['Gjennomgå', 'var(--warn-soft)', 'color-mix(in srgb,var(--acc-l) 70%,var(--text))'] };
 
 function receipts() {
   const all = S.receipts;
@@ -510,7 +510,7 @@ function confirmPanel(R) {
   const log = (R.log ?? []).length ? `<details class="note" style="font-size:12.5px"><summary style="cursor:pointer">Skannelogg (${R.log.length} steg)</summary><div class="mono" style="display:flex;flex-direction:column;gap:2px;margin-top:6px">${R.log.map((l) => `<div><span class="muted">${new Date(l.t).toLocaleTimeString('nb-NO')}</span> ${esc(l.step)}${l.detail ? ` – ${esc(l.detail)}` : ''}</div>`).join('')}</div></details>` : '';
   const catBtns = cats('expense').map((c) => `<button data-rc-cat="${c.id}" aria-pressed="${R.categoryId === c.id}" ${done ? 'disabled' : ''}>${esc(c.name)}</button>`).join('');
   return `<div class="card-h"><div><h2 style="font-size:18px">${done ? (R.status === 'booked' ? 'Bokført kvittering' : 'Avvist kvittering') : 'Bekreft kvittering'}</h2><div class="note" style="font-size:13px">${via48(R) ? `${via48(R)} ${R.model ? `Tolket av ${esc(R.model)}` : ''}${R.extraction?.receipt48?.seconds ? ` · ${n2(R.extraction.receipt48.seconds).replace(/,?0+$/, '')} s` : ''}` : R.provider && R.provider !== 'Manuell' ? `Lest av ${esc(R.provider)}${R.seconds ? ` · ${n2(R.seconds).replace(/,?0+$/, '')} s` : ''}${R.model ? ` · ${esc(R.model)}` : ''}` : 'Manuell utfylling'}</div></div>
-      ${R.error ? `<span class="conf" style="background:var(--warn-soft);color:var(--acc-l)"><i></i>Må fylles ut</span>` : `<span class="conf" style="background:${high ? 'var(--pos-soft)' : 'var(--warn-soft)'};color:${high ? 'var(--pos)' : 'var(--acc-l)'}"><i></i>${high ? 'Høy sikkerhet' : 'Sjekk beløp'}</span>`}</div>
+      ${R.error ? `<span class="conf" style="background:var(--warn-soft);color:var(--acc-l)"><i></i>Må fylles ut</span>` : `<span class="conf" style="background:${high ? 'var(--pos-soft)' : 'var(--warn-soft)'};color:${high ? 'color-mix(in srgb,var(--pos) 70%,var(--text))' : 'color-mix(in srgb,var(--acc-l) 70%,var(--text))'}"><i></i>${high ? 'Høy sikkerhet' : 'Sjekk beløp'}</span>`}</div>
     ${R.error ? `<div class="err-msg">${esc(R.error)}</div>` : R.flag ? `<div class="err-msg">${esc(R.flag)}</div>` : ''}
     ${hlTop}
     ${!done && (R.canReanalyze || R.reanalyzeReason) ? `<div class="rc-low50" style="display:flex;flex-direction:column;gap:10px;padding:12px 14px;border-radius:14px;background:var(--inner);border:1px solid var(--line)"><span style="font-size:13px;color:var(--text2)">${R.error ? 'Lesingen mislyktes.' : `Lav sikkerhet${R.source_label ? ` fra ${esc(R.source_label)}` : ''}.`} Glimt kan lese originalbildet på nytt lokalt, og du velger hvilket resultat du vil beholde.</span><div style="display:flex;gap:10px;flex-wrap:wrap">${reanalyzeBtn(R, 'btn', 'height:40px', 'btn pri')}</div>${!R.canReanalyze && R.reanalyzeReason ? `<span style="font-size:12px;color:var(--text2)">${esc(R.reanalyzeReason)}</span>` : ''}</div>` : ''}

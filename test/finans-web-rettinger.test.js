@@ -143,7 +143,8 @@ test('CSS (desktop): kompakt sidemeny viser ikonene, lange navn i Planlegging br
   // finans.css skjuler alle span-er i menylenkene i kompakt modus; ikonet (.n42-tile) er også en span og må vises igjen.
   assert.match(fin, /html\[data-compact\][^{]*\.nav a>span:not\(\.badge\)[^{]*\{display:none\}/);
   assert.match(f42, /html\[data-ui=desktop\]\[data-compact\] \.nav a>span\.n42-tile\{display:grid\}/);
-  assert.match(src('public/finans/css/boliger.css'), /html\[data-theme="mork"\] \.b42 \.b42-btn\.green,html\[data-theme="glod"\] \.b42 \.b42-btn\.green\{color:#fff\}/);
+  // Runde 4 (M9): hvit på --b-green var 4,19:1 i mørk og Glass; knappen bruker suksessfargen med mørk tekst der.
+  assert.match(src('public/finans/css/boliger.css'), /html\[data-theme="mork"\] \.b42 \.b42-btn\.green,html\[data-theme="glod"\] \.b42 \.b42-btn\.green\{background:var\(--ds-success\);color:var\(--ds-on-success\)\}/);
   assert.match(src('public/finans/css/planlegging.css'), /\.p51-list li span\{[^}]*overflow-wrap:anywhere/);
   assert.doesNotMatch(src('public/finans/js/modules.js'), /'#A9C3FF'/, 'Kjøp-merket bruker temaets blå');
   assert.doesNotMatch(src('public/finans/js/subs-desktop.js'), /color:#FF8A3D/, 'PRØVEPERIODER-etiketten bruker temaets etikettfarge');
@@ -153,7 +154,7 @@ test('CSS (mobil): lyse farger fra det mørke designet får papirfarger', () => 
   const css = src('public/finans/css/mobile.css');
   // Runde 3: fargene rettes i JS (amtC, papirTekst i mobile-theme.js), ikke med !important mot inline stil.
   assert.doesNotMatch(css, /\[style\*="color:#(9FE3C6|FFB08A)"\]/);
-  assert.match(css, /\.m\.papir \.pp-cta,[^{]*\.m\.papir \.p43-gpill\{color:var\(--pp-onLab,#fff\)\}/); // runde 3: målt uten virkning av !important
+  assert.match(css, /\.m\.papir \.pp-cta,[^{]*\.m\.papir \.p43-gpill\{color:var\(--pp-onLab\)\}/); // runde 3: målt uten virkning av !important; runde 4: uten hex-reserve
   assert.doesNotMatch(src('public/finans/js/mobile-pages.js'), /vc: [^,]*'#(9FE3C6|FFB08A)'/);
   assert.match(src('public/finans/js/mobile-pages.js'), /style="color:\$\{o\.vc \?\? 'inherit'\}"/);
 });

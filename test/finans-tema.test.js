@@ -120,3 +120,32 @@ test('Aksjer: kjøp/salg-merkene bruker klasser og holder 4,5:1 i Papir lys og m
     assert.ok(r >= 4.5, `${navn}: ${r.toFixed(2)}:1`);
   }
 });
+
+// M9 / B-F6: små statusmerker i Økonomi på desktop (Abonnementer, Faste betalinger, Kvitteringer, Oversikt) hadde farget tekst
+// på en 14–20 % tone av samme farge, 3,47–4,39:1. Teksten blandes nå 65–70 % mot --text, så den holder 4,5:1 i Papir lys og mørk.
+test('Økonomi desktop: statusmerkene holder 4,5:1 i Papir lys og mørk', () => {
+  const css = readFileSync(new URL('../public/finans/css/finans.css', import.meta.url), 'utf8');
+  const vars = (block) => Object.fromEntries([...block.matchAll(/--([\w-]+):(#[0-9a-f]{6})/gi)].map((x) => [x[1], x[2]]));
+  const lys = vars(css.split('}')[0]), mork = vars(css.slice(css.indexOf('html[data-ui=desktop][data-theme=mork]{')).split('}')[0]);
+  const hx = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+  const mix = (a, b, p) => a.map((v, i) => v * p + b[i] * (1 - p));
+  const lum = (rgb) => { const c = rgb.map((v) => v / 255).map((v) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4)); return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]; };
+  const ratio = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
+  for (const sel of ['.so-chip.green', '.so-st.ok', '.so-st.low', '.so-st.up', '.cal7 .has']) {
+    const esc = sel.replace(/\./g, '\\.');
+    const m = css.match(new RegExp(`${esc}\\{background:color-mix\\(in srgb,var\\(--([\\w-]+)\\) (\\d+)%,transparent\\);color:color-mix\\(in srgb,var\\(--([\\w-]+)\\) (\\d+)%,var\\(--text\\)\\)`));
+    assert.ok(m, `regelen for ${sel}`);
+    const [, tone, tp, fg, fp] = m;
+    for (const [navn, v] of [['Papir lys', lys], ['Papir mørk', mork]]) {
+      for (const flate of ['card', 'inner']) {
+        const r = ratio(mix(hx(v[fg]), hx(v.text), fp / 100), mix(hx(v[tone]), hx(v[flate]), tp / 100));
+        assert.ok(r >= 4.5, `${sel} på --${flate} i ${navn}: ${r.toFixed(2)}:1`);
+      }
+    }
+  }
+  const js = readFileSync(new URL('../public/finans/js/desktop.js', import.meta.url), 'utf8');
+  assert.match(js, /needs_review: \['Gjennomgå', 'var\(--warn-soft\)', 'color-mix\(in srgb,var\(--acc-l\) 70%,var\(--text\)\)'\]/);
+  // «Trenger gjennomgang» i Papir mørk (grønt kort): dempet tekst og varseltekst blandes fra kortets egne farger.
+  assert.match(css, /--rev-mute:color-mix\(in oklab,var\(--rev-ink\) 70%,var\(--rev-bg\)\)/);
+  assert.match(css, /html\[data-theme=mork\]\{--rev-warn:color-mix\(in oklab,var\(--acc-l\) 40%,var\(--rev-ink\)\)\}/);
+});
