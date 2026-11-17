@@ -28,12 +28,15 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.ViewModelStore
+import no.kristo.finanshub.repository.AksjerRepository
 import no.kristo.finanshub.repository.DomenerRepository
 import no.kristo.finanshub.repository.MatRepository
 import no.kristo.finanshub.repository.NyheterRepository
 import no.kristo.finanshub.repository.NySending
 import no.kristo.finanshub.repository.SporingRepository
 import no.kristo.finanshub.repository.VaerRepository
+import no.kristo.finanshub.skjerm.AksjerTilstand
+import no.kristo.finanshub.skjerm.AksjerViewModel
 import no.kristo.finanshub.skjerm.DomenerTilstand
 import no.kristo.finanshub.skjerm.DomenerViewModel
 import no.kristo.finanshub.skjerm.MatTilstand
@@ -164,6 +167,16 @@ class AppViewModel(app: Application, private val lagret: SavedStateHandle) : And
     private var vaerSpeil by mutableStateOf<VaerTilstand?>(null)
     private fun vaerNa(): VaerTilstand = vaerSpeil.let { vaer.tilstand.value }
 
+    /** Aksjer (skjerm/AksjerViewModel.kt), mot /finans/api/stocks via AksjerRepository. */
+    val aksjer: AksjerViewModel = ViewModelProvider(
+        skjermer,
+        AksjerViewModel.fabrikk(AksjerRepository { api }),
+    )[AksjerViewModel::class.java]
+
+    /** Speil av AksjerViewModel.tilstand, som for Domener: skjermer som leser vm.stocks osv. tegnes på nytt. */
+    private var aksjerSpeil by mutableStateOf<AksjerTilstand?>(null)
+    private fun aksjerNa(): AksjerTilstand = aksjerSpeil.let { aksjer.tilstand.value }
+
     /* ---------- Kontoer ---------- */
 
     var accounts by mutableStateOf(store.load())
@@ -250,7 +263,8 @@ class AppViewModel(app: Application, private val lagret: SavedStateHandle) : And
     /* ---------- Mer ---------- */
 
     var recurring by mutableStateOf<List<Recurring>?>(null)
-    var stocks by mutableStateOf<Stocks?>(null)
+    /** Porteføljen: tilstanden ligger i AksjerViewModel (skjerm/AksjerViewModel.kt). */
+    val stocks: Stocks? get() = aksjerNa().oversikt
     var stockPeriod by mutableStateOf("1M")
     var report by mutableStateOf<Report?>(null)
     var reportYear by mutableStateOf(false)
@@ -307,7 +321,7 @@ class AppViewModel(app: Application, private val lagret: SavedStateHandle) : And
     var trkSel by mutableStateOf<String?>(null)
     /** active | pickup | out | done */
     var trkFilter by mutableStateOf("active")
-    var stocksX by mutableStateOf<StocksX?>(null)
+    val stocksX: StocksX? get() = aksjerNa().detaljer
     /** ov | det | tx (Portefølje, Aksjedetaljer, Transaksjoner) */
     var stockScreen by mutableStateOf("ov")
     var stockSel by mutableStateOf<String?>(null)
@@ -562,7 +576,7 @@ class AppViewModel(app: Application, private val lagret: SavedStateHandle) : And
         mat.nullstill(); subs = null; folders = null; folder = null; finn = null; tokens = null; domener.nullstill()
         mobileHome = null; homeError = null; history = emptyList(); suggestions = emptyList(); todayMeal = null; domainToday = null; avatar = null
         ai = null; aiHistory = emptyList(); editing = null; original = null; detail = null; detailTx = null
-        recurring = null; stocks = null; report = null; importResult = null; importUris = emptyList(); importText = ""
+        recurring = null; aksjer.nullstill(); report = null; importResult = null; importUris = emptyList(); importText = ""
         editHome = false; domainManager = false; matDay = null; matFull = false; aiNote = null; suggestGroups = emptyList()
         nyheter.nullstill(); homeNews = emptyList(); newsOpen = false; photo = null; media = null
         dishOpen = null; paperPage = null
@@ -697,7 +711,7 @@ class AppViewModel(app: Application, private val lagret: SavedStateHandle) : And
                 Screen.Scan -> { loadReceipts(); loadJobs() }
                 Screen.Fast -> recurring = parseRecurring(api.get("/recurring"))
                 Screen.Accounts -> boot = parseBoot(api.get("/bootstrap"))
-                Screen.Stocks -> { val d = api.get("/stocks"); stocks = runCatching { parseStocks(d) }.getOrNull(); stocksX = parseStocksX(d) }
+                Screen.Stocks -> aksjer.last()
                 Screen.Reports -> loadReport()
                 Screen.Mat -> loadWeek()
                 Screen.Sub -> loadSubs()
@@ -1313,7 +1327,7 @@ class AppViewModel(app: Application, private val lagret: SavedStateHandle) : And
         runCatching { subs = parseSubs(api.get("/subscriptions")) }
         runCatching { folders = parseFolders(api.get("/folders")) }
         runCatching { finn = parseFinn(api.get("/finn")) }
-        runCatching { stocks = parseStocks(api.get("/stocks")) }
+        aksjer.lastOversikt()
     }
 
     fun openDetail(info: DetailInfo) {
@@ -1330,7 +1344,7 @@ class AppViewModel(app: Application, private val lagret: SavedStateHandle) : And
 
     fun syncStocks() = launch {
         busy = true
-        try { val d = api.post("/stocks/sync"); stocks = runCatching { parseStocks(d) }.getOrNull(); stocksX = parseStocksX(d); flash("Synket med Trading 212") } finally { busy = false }
+        try { aksjer.synk(); flash("Synket med Trading 212") } finally { busy = false }
     }
 
     private suspend fun loadReport() { report = parseReport(api.get("/reports?mode=" + if (reportYear) "year" else "month")) }
@@ -3874,6 +3888,7 @@ class AppViewModel(app: Application, private val lagret: SavedStateHandle) : And
         viewModelScope.launch { sporing.tilstand.collect { sporingSpeil = it } }
         viewModelScope.launch { mat.tilstand.collect { matSpeil = it } }
         viewModelScope.launch { vaer.tilstand.collect { vaerSpeil = it } }
+        viewModelScope.launch { aksjer.tilstand.collect { aksjerSpeil = it } }
         // P85 F: siden og søket fra før prosessdød (lastes av refresh), og lagringen til neste gang.
         runCatching { gjenopprettNavigasjon() }
         lagret.setSavedStateProvider(NAV_LAGRET, object : SavedStateRegistry.SavedStateProvider {

@@ -244,3 +244,26 @@ test('Struktur: Vær har egen ViewModel med StateFlow og repository; AppViewMode
   assert.match(strip(raw(join(APP, 'domene/Vaer.kt'))), /weatherFull != null && weatherPlace\.startsWith\("geo:"\)/);
   assert.match(strip(raw(join(APP, 'Bakgrunn.kt'))), /val w = weatherFull/);
 });
+
+test('Struktur: Aksjer har egen ViewModel med StateFlow og repository; AppViewModel sender bare videre', () => {
+  const avm = strip(raw(join(APP, 'skjerm/AksjerViewModel.kt')));
+  assert.match(avm, /class AksjerViewModel\([\s\S]*?\) : ViewModel\(\)/);
+  assert.match(avm, /val tilstand: StateFlow<AksjerTilstand> = _tilstand\.asStateFlow\(\)/);
+  assert.doesNotMatch(avm, /JSONObject\(|\.get\("|\.post\("|parseStocks/, 'ingen nett eller JSON i ViewModel-en');
+  assert.match(avm, /fun nullstill\(\) \{\s*_tilstand\.update \{ AksjerTilstand\(\) \}/, 'både oversikt og detaljer tømmes');
+  const repo = strip(raw(join(APP, 'repository/AksjerRepository.kt')));
+  assert.match(repo, /withContext\(Dispatchers\.Default\) \{\s*AksjerSvar\(runCatching \{ parseStocks\(raw\) \}\.getOrNull\(\), parseStocksX\(raw\)\)/, 'JSON tolkes utenfor Main');
+  for (const sti of ['api().get("/stocks")', 'api().post("/stocks/sync")']) assert.ok(repo.includes(sti), sti);
+  const vm = strip(raw(join(APP, 'AppViewModel.kt')));
+  assert.doesNotMatch(vm, /var stocks by mutableStateOf|var stocksX by mutableStateOf/);
+  assert.doesNotMatch(vm, /"\/stocks/, 'Aksje-kallene går via AksjerRepository');
+  assert.match(vm, /val stocks: Stocks\? get\(\) = aksjerNa\(\)\.oversikt/);
+  assert.match(vm, /val stocksX: StocksX\? get\(\) = aksjerNa\(\)\.detaljer/);
+  assert.match(vm, /Screen\.Stocks -> aksjer\.last\(\)/);
+  assert.match(vm, /try \{ aksjer\.synk\(\); flash\("Synket med Trading 212"\) \} finally \{ busy = false \}/);
+  assert.match(vm, /recurring = null; aksjer\.nullstill\(\); report = null/, 'utlogging tømmer Aksjer');
+  assert.match(vm, /aksjer\.tilstand\.collect \{ aksjerSpeil = it \}/);
+  // Periode og delside er navigasjon og blir i AppViewModel.
+  assert.match(vm, /var stockPeriod by mutableStateOf\("1M"\)/);
+  assert.match(vm, /var stockScreen by mutableStateOf\("ov"\)/);
+});
