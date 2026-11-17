@@ -179,7 +179,10 @@ test('Q19: 404-reservene for Kalender-vær, stedssøket, Gjøremål-kortene og L
   assert.match(kal, /if \(e\.status != 404 && e\.status != 405\) throw e\s*\n\s*emptyMap\(\)/);
   const vm = strip(raw(join(APP, 'AppViewModel.kt')));
   assert.doesNotMatch(vm, /\/weather\/search/);
-  assert.match(vm, /wxSearch = parseWxSearch28\(api\.hlGet\("\/weather\/places\?q=\$enc", timeout = 15_000\)\) \?: emptyList\(\)/);
+  // Stedssøket ligger i VaerRepository (Struktur: Android), uten reserve.
+  const vaer = strip(raw(join(APP, 'repository/VaerRepository.kt')));
+  assert.doesNotMatch(vaer, /\/weather\/search/);
+  assert.match(vaer, /api\(\)\.hlGet\("\/weather\/places\?q=" \+ enc\(q\), timeout = 15_000\)[\s\S]{0,120}parseWxSearch28\(raw\)/);
   assert.match(strip(raw(join(APP, 'Glimt.kt'))), /if \(e\.status == 404 \|\| e\.status == 405\) s\.cards = emptyList\(\)/);
   const led = strip(raw(join(APP, 'SkjoldLED.kt')));
   assert.doesNotMatch(led, /settingsLocal|prefs78/);

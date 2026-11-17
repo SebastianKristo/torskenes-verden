@@ -33,6 +33,7 @@ import no.kristo.finanshub.repository.MatRepository
 import no.kristo.finanshub.repository.NyheterRepository
 import no.kristo.finanshub.repository.NySending
 import no.kristo.finanshub.repository.SporingRepository
+import no.kristo.finanshub.repository.VaerRepository
 import no.kristo.finanshub.skjerm.DomenerTilstand
 import no.kristo.finanshub.skjerm.DomenerViewModel
 import no.kristo.finanshub.skjerm.MatTilstand
@@ -41,6 +42,8 @@ import no.kristo.finanshub.skjerm.NyheterTilstand
 import no.kristo.finanshub.skjerm.NyheterViewModel
 import no.kristo.finanshub.skjerm.SporingTilstand
 import no.kristo.finanshub.skjerm.SporingViewModel
+import no.kristo.finanshub.skjerm.VaerTilstand
+import no.kristo.finanshub.skjerm.VaerViewModel
 import androidx.savedstate.SavedStateRegistry
 import android.os.Bundle
 import androidx.lifecycle.viewModelScope
@@ -150,6 +153,16 @@ class AppViewModel(app: Application, private val lagret: SavedStateHandle) : And
     /** Speil av MatViewModel.tilstand, som for Domener: skjermer som leser vm.week osv. tegnes på nytt. */
     private var matSpeil by mutableStateOf<MatTilstand?>(null)
     private fun matNa(): MatTilstand = matSpeil.let { mat.tilstand.value }
+
+    /** Vær (skjerm/VaerViewModel.kt), mot /api/weather via VaerRepository. Glimt, Hjem og bakgrunnen leser de samme feltene. */
+    val vaer: VaerViewModel = ViewModelProvider(
+        skjermer,
+        VaerViewModel.fabrikk(VaerRepository { api }, { visFeil(it) }),
+    )[VaerViewModel::class.java]
+
+    /** Speil av VaerViewModel.tilstand, som for Domener: skjermer som leser vm.weatherFull osv. tegnes på nytt. */
+    private var vaerSpeil by mutableStateOf<VaerTilstand?>(null)
+    private fun vaerNa(): VaerTilstand = vaerSpeil.let { vaer.tilstand.value }
 
     /* ---------- Kontoer ---------- */
 
@@ -556,7 +569,7 @@ class AppViewModel(app: Application, private val lagret: SavedStateHandle) : And
         logos.clear()
         // Prompt 21 (brukerskille): alt som tilhører brukeren tømmes ved kontobytte og utlogging.
         tasks = null; taskNext = emptyList(); tasksOpen = false; family = null; famTrack = emptyList(); famSel = null; familyOpen = false
-        famPositions = null; sporing.nullstill(); homePackages = null; myStops = emptyList(); stopDeps = emptyMap(); stopSel = null; ruterOpen = false
+        famPositions = null; sporing.nullstill(); homePackages = null; myStops = emptyList(); stopDeps = emptyMap(); stopSel = null; ruterOpen = false; vaer.nullstill()
         photoThumbs = emptyMap(); photoFailed = emptySet(); bgInfo = null; depOpen = null; shareListId = null; taskUsers = emptyList()
         kal26.open = false; kal26.events = null; kal26.loadedFor = null; kal26.layoutFor = null
         chat27.open = false; chat27.loadedFor = null
@@ -2617,12 +2630,10 @@ class AppViewModel(app: Application, private val lagret: SavedStateHandle) : And
 
     /* Vær i appen (trykk på temperaturen på Hjem). */
     var weatherOpen by mutableStateOf(false)
-    var weatherFull by mutableStateOf<WeatherFull?>(null)
-        private set
-    var weatherError by mutableStateOf<String?>(null)
-        private set
-    var weatherPlace by mutableStateOf("oslo")
-        private set
+    /** Været, feilen og stedet: tilstanden ligger i VaerViewModel (skjerm/VaerViewModel.kt). */
+    val weatherFull: WeatherFull? get() = vaerNa().full
+    val weatherError: String? get() = vaerNa().feil
+    val weatherPlace: String get() = vaerNa().sted
     /** «Forhold»-arket: valgt dag (0 = i dag), null = lukket. */
     var weatherSheetDay by mutableStateOf<Int?>(null)
     fun openWeather() {
@@ -2631,22 +2642,8 @@ class AppViewModel(app: Application, private val lagret: SavedStateHandle) : And
         if (wxGps46()) { openGps46(); return }
         if (weatherFull == null || weatherFull?.placeId != weatherPlace) loadWeather(weatherPlace)
     }
-    fun loadWeather(place: String) {
-        weatherPlace = place
-        weatherError = null
-        launch {
-            try {
-                // Prompt 35: «geo:lat,lon,navn» = midlertidig sted fra AI-søket («været i New York»).
-                val q = if (place.startsWith("geo:")) place.removePrefix("geo:").split(',', limit = 3).let { g ->
-                    "lat=" + g.getOrElse(0) { "" } + "&lon=" + g.getOrElse(1) { "" } + "&name=" + URLEncoder.encode(g.getOrElse(2) { "" }, "UTF-8")
-                } else "place=" + URLEncoder.encode(place, "UTF-8")
-                val raw = api.hlGet("/weather/full?$q", timeout = 15_000)
-                weatherFull = parseWeatherFull(raw)
-                loadWxCmp22(place, raw)
-            }
-            catch (e: ApiException) { weatherError = if (e.status == 404) "Værappen trenger en nyere Homelab-server." else e.message }
-        }
-    }
+    /** «geo:lat,lon,navn» = midlertidig sted fra AI-søket («været i New York») eller Min posisjon. */
+    fun loadWeather(place: String) { vaer.last(place) }
 
     /* Ny sending (den flytende knappen på Sporing). */
     var trkAddOpen by mutableStateOf(false)
@@ -2726,62 +2723,28 @@ class AppViewModel(app: Application, private val lagret: SavedStateHandle) : And
     }
 
     /* Vær: egne steder (søk, legg til, fjern). Data fra MET/yr.no via serveren. */
-    var wxPlaces by mutableStateOf<List<WxPlace>>(emptyList())
-        private set
-    var wxSearch by mutableStateOf<List<WxPlace>>(emptyList())
-        private set
-    var wxSearchBusy by mutableStateOf(false)
-        private set
+    /* Data og kall ligger i VaerViewModel; her står videresendingene og om arket er åpent. */
+    val wxPlaces: List<WxPlace> get() = vaerNa().steder
+    val wxSearch: List<WxPlace> get() = vaerNa().sok
+    val wxSearchBusy: Boolean get() = vaerNa().sokOpptatt
     var wxPlacesSheet by mutableStateOf(false)
-    fun loadWxPlaces() = launch {
-        wxPlaces = runCatching { parseWxPlaces(api.hlGet("/weather/places")) }.getOrNull()
-            ?: WX_PLACES.map { (id, n) -> WxPlace(id, n, 0.0, 0.0, "") }
-    }
+    fun loadWxPlaces() = vaer.lastSteder()
     /** Prompt 28: søket feilet (nett/server), og søket svarene gjelder (så «Fant ingen» ikke vises før søket er ferdig). */
-    var wxSearchFailed by mutableStateOf(false)
-        private set
-    var wxSearchDoneQ by mutableStateOf("")
-        private set
-    private var wxSearchJob: kotlinx.coroutines.Job? = null
+    val wxSearchFailed: Boolean get() = vaerNa().sokFeilet
+    val wxSearchDoneQ: String get() = vaerNa().sokFerdigFor
     /**
      * Stedssøk (prompt 28): GET /api/weather/places?q= (Open-Meteo + foldet variant + Nominatim, slått sammen på serveren).
      * Q19: ingen reserve mot /weather/search for eldre servere (for gammel server får «Oppdater serveren» via /api/version).
      * Debounce 250 ms, minst 2 tegn.
      */
-    fun searchWxPlaces(q: String) {
-        wxSearchJob?.cancel()
-        val t = q.trim()
-        if (t.length < 2) { wxSearch = emptyList(); wxSearchFailed = false; wxSearchDoneQ = ""; wxSearchBusy = false; return }
-        wxSearchJob = viewModelScope.launch {
-            kotlinx.coroutines.delay(250)
-            wxSearchBusy = true
-            val enc = URLEncoder.encode(t, "UTF-8")
-            try {
-                wxSearch = parseWxSearch28(api.hlGet("/weather/places?q=$enc", timeout = 15_000)) ?: emptyList()
-                wxSearchFailed = false
-                wxSearchDoneQ = t
-                wxSearchBusy = false
-            } catch (e: kotlinx.coroutines.CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                wxSearch = emptyList()
-                wxSearchFailed = true
-                wxSearchDoneQ = t
-                wxSearchBusy = false
-            }
-        }
-    }
+    fun searchWxPlaces(q: String) { vaer.sok(q) }
     fun addWxPlace(p: WxPlace) = launch {
-        val body = JSONObject().put("name", p.name).put("lat", p.lat).put("lon", p.lon).put("region", p.region)
-        val r = runCatching { api.hlPost("/weather/places", body) }.getOrNull()
-        wxPlaces = runCatching { parseWxPlaces(api.hlGet("/weather/places")) }.getOrNull() ?: (wxPlaces + p)
-        wxSearch = emptyList()
-        flash(if (r != null) "${p.name} er lagt til" else "Kunne ikke lagre ${p.name}")
+        val lagret: Boolean = vaer.leggTil(p)
+        flash(if (lagret) "${p.name} er lagt til" else "Kunne ikke lagre ${p.name}")
         wxPlaces.lastOrNull { it.name == p.name }?.let { loadWeatherAt(it) }
     }
     fun removeWxPlace(id: String) = launch {
-        runCatching { api.hlDelete("/weather/places/" + URLEncoder.encode(id, "UTF-8")) }
-        wxPlaces = wxPlaces.filter { it.id != id }
+        vaer.fjern(id)
         if (weatherPlace == id) wxPlaces.firstOrNull()?.let { loadWeatherAt(it) }
     }
     /** Været for et sted: kjente steder med ID, egne steder med koordinater. */
@@ -2789,38 +2752,13 @@ class AppViewModel(app: Application, private val lagret: SavedStateHandle) : And
 
     /* ---------- Prompt 22: Yr og Pent, steder i egen rekkefølge, Huskeliste ↔ HA, logo for fraktselskap ---------- */
 
-    /** «Yr og Pent» på værsiden: lastes automatisk når værsiden åpnes eller stedet byttes. */
-    var wxCmp22 by mutableStateOf<WxCmp22?>(null)
-        private set
-    var wxCmp22Busy by mutableStateOf(false)
-        private set
-    var wxCmp22Failed by mutableStateOf(false)
-        private set
-    private var wxCmp22Place: String? = null
-    /** compare i /weather/full (ny server), ellers /weather/compare (eldre). 404 på begge: kortet sier at Pent ikke svarte. */
-    private fun loadWxCmp22(place: String, raw: String?) {
-        val fromFull = raw?.let { r -> runCatching { parseWxCmp22(JSONObject(r).optJSONObject("compare")) }.getOrNull() }
-        if (fromFull != null) { wxCmp22 = fromFull; wxCmp22Place = place; wxCmp22Failed = false; return }
-        if (wxCmp22Place == place && wxCmp22 != null) return
-        wxCmp22 = null
-        wxCmp22Failed = false
-        wxCmp22Busy = true
-        viewModelScope.launch {
-            val c = runCatching { parseWxCmp22(JSONObject(api.hlGet("/weather/compare?" + (if (place.startsWith("geo:")) place.removePrefix("geo:").split(',', limit = 3).let { g -> "lat=" + g.getOrElse(0) { "" } + "&lon=" + g.getOrElse(1) { "" } + "&name=" + URLEncoder.encode(g.getOrElse(2) { "" }, "UTF-8") } else "place=" + URLEncoder.encode(place, "UTF-8")), timeout = 15_000))) }.getOrNull()
-            if (weatherPlace == place) {
-                wxCmp22 = c
-                wxCmp22Place = place
-                wxCmp22Failed = c == null
-            }
-            wxCmp22Busy = false
-        }
-    }
+    /** «Yr og Pent» på værsiden: lastes automatisk når værsiden åpnes eller stedet byttes (VaerViewModel). */
+    val wxCmp22: WxCmp22? get() = vaerNa().pent
+    val wxCmp22Busy: Boolean get() = vaerNa().pentOpptatt
+    val wxCmp22Failed: Boolean get() = vaerNa().pentFeilet
 
     /** Steder: hold inne og dra for å endre rekkefølgen. Lagres med PUT /weather/places/order. */
-    fun reorderWxPlaces(list: List<WxPlace>) {
-        wxPlaces = list
-        viewModelScope.launch { runCatching { api.hlPut("/weather/places/order", JSONObject().put("ids", JSONArray(list.map { it.id }))) } }
-    }
+    fun reorderWxPlaces(list: List<WxPlace>) { vaer.settRekkefolge(list) }
 
     /** Bare admin ser og endrer synken med Home Assistant To-do. */
     val userIsAdmin: Boolean get() = (me?.role ?: account?.role) == "admin"
@@ -3453,21 +3391,11 @@ class AppViewModel(app: Application, private val lagret: SavedStateHandle) : And
 
     // Vær: «Sammenlign Yr og Storm» (Yr fra MET, Storm har ikke åpent API, så ECMWF fra Open-Meteo brukes).
     var compareOpen by mutableStateOf(false)
-    var wxCompare by mutableStateOf<WxCompare?>(null)
-        private set
-    var wxCompareError by mutableStateOf<String?>(null)
-        private set
+    val wxCompare: WxCompare? get() = vaerNa().sammenligning
+    val wxCompareError: String? get() = vaerNa().sammenligningFeil
     fun openCompare() {
         compareOpen = true
-        wxCompare = null
-        wxCompareError = null
-        val place = weatherPlace
-        viewModelScope.launch {
-            try { wxCompare = parseWxCompare(api.hlGet("/weather/compare?place=" + URLEncoder.encode(place, "UTF-8"), timeout = 15_000)) }
-            catch (e: ApiException) { wxCompareError = if (e.status == 404) "Sammenligning trenger en nyere Homelab-server." else e.message }
-            catch (e: kotlinx.coroutines.CancellationException) { throw e }
-            catch (e: Exception) { wxCompareError = uiErr73(e, "Fikk ikke hentet sammenligningen") }
-        }
+        vaer.sammenlign()
     }
 
     // Sporing: velg flere (hold inne på en pakke), og arkiver, gjenopprett eller slett dem samlet.
@@ -3945,6 +3873,7 @@ class AppViewModel(app: Application, private val lagret: SavedStateHandle) : And
         viewModelScope.launch { nyheter.tilstand.collect { nyheterSpeil = it } }
         viewModelScope.launch { sporing.tilstand.collect { sporingSpeil = it } }
         viewModelScope.launch { mat.tilstand.collect { matSpeil = it } }
+        viewModelScope.launch { vaer.tilstand.collect { vaerSpeil = it } }
         // P85 F: siden og søket fra før prosessdød (lastes av refresh), og lagringen til neste gang.
         runCatching { gjenopprettNavigasjon() }
         lagret.setSavedStateProvider(NAV_LAGRET, object : SavedStateRegistry.SavedStateProvider {

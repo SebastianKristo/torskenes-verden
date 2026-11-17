@@ -214,3 +214,33 @@ test('Struktur: Mat har egen ViewModel med StateFlow og repository; AppViewModel
   assert.match(vm, /var matDay by mutableStateOf<Int\?>\(null\)/);
   assert.match(vm, /var dishOpen by mutableStateOf<String\?>\(null\)/);
 });
+
+test('Struktur: Vær har egen ViewModel med StateFlow og repository; AppViewModel sender bare videre', () => {
+  const vvm = strip(raw(join(APP, 'skjerm/VaerViewModel.kt')));
+  assert.match(vvm, /class VaerViewModel\([\s\S]*?\) : ViewModel\(\)/);
+  assert.match(vvm, /val tilstand: StateFlow<VaerTilstand> = _tilstand\.asStateFlow\(\)/);
+  assert.doesNotMatch(vvm, /JSONObject\(|JSONArray\(|hlGet\(|hlPost\(|parseWeatherFull\(/, 'ingen nett eller JSON i ViewModel-en');
+  // Meldingene og reservene er de samme som før.
+  assert.match(vvm, /if \(e\.status == 404\) "Værappen trenger en nyere Homelab-server\." else e\.message/);
+  assert.match(vvm, /runCatching \{ repo\.steder\(\) \}\.getOrNull\(\) \?: standardSteder\(\)/);
+  assert.match(vvm, /delay\(250\)/, 'stedssøket venter 250 ms');
+  assert.match(vvm, /fun nullstill\(\) \{\s*sokJobb\?\.cancel\(\)/);
+  const repo = strip(raw(join(APP, 'repository/VaerRepository.kt')));
+  assert.match(repo, /withContext\(Dispatchers\.Default\) \{\s*val full: WeatherFull = parseWeatherFull\(raw\)/, 'JSON tolkes utenfor Main');
+  for (const sti of ['"/weather/full?"', '"/weather/compare?"', '"/weather/compare?place="', '"/weather/places"', '"/weather/places?q="', '"/weather/places/"', '"/weather/places/order"']) assert.ok(repo.includes(sti), sti);
+  assert.doesNotMatch(repo, /\/weather\/search/, 'Q19: ingen reserve mot det gamle stedssøket');
+  const vm = strip(raw(join(APP, 'AppViewModel.kt')));
+  for (const f of ['weatherFull', 'weatherError', 'weatherPlace', 'wxPlaces', 'wxSearch', 'wxCmp22', 'wxCompare']) assert.doesNotMatch(vm, new RegExp(`var ${f} by mutableStateOf`), f);
+  assert.doesNotMatch(vm, /"\/weather\/(full|compare|places)/, 'Vær-kallene går via VaerRepository');
+  assert.match(vm, /val weatherFull: WeatherFull\? get\(\) = vaerNa\(\)\.full/);
+  assert.match(vm, /val weatherPlace: String get\(\) = vaerNa\(\)\.sted/);
+  assert.match(vm, /fun loadWeather\(place: String\) \{ vaer\.last\(place\) \}/);
+  assert.match(vm, /vaer\.tilstand\.collect \{ vaerSpeil = it \}/);
+  assert.match(vm, /ruterOpen = false; vaer\.nullstill\(\)\n/, 'utlogging tømmer Vær (stedene er per bruker)');
+  // Om siden og arkene er åpne, er navigasjon og blir i AppViewModel.
+  for (const f of ['weatherOpen', 'wxPlacesSheet', 'compareOpen']) assert.match(vm, new RegExp(`var ${f} by mutableStateOf\\(false\\)`), f);
+  assert.match(vm, /var weatherSheetDay by mutableStateOf<Int\?>\(null\)/);
+  // Glimt, bakgrunnen og «Min posisjon» leser og kaller de samme navnene som før.
+  assert.match(strip(raw(join(APP, 'domene/Vaer.kt'))), /weatherFull != null && weatherPlace\.startsWith\("geo:"\)/);
+  assert.match(strip(raw(join(APP, 'Bakgrunn.kt'))), /val w = weatherFull/);
+});
