@@ -1,9 +1,9 @@
-// Prompt 40 (PWA40): mobilpunktene i design_handoff_homelab/prompts/prompt-40-pakke/ som trenger ny kode.
+// Glimt-tillegg i Gjøremål, Økonomi og Nyheter (prompt 40, PWA40: mobilpunktene i design_handoff_homelab/prompts/prompt-40-pakke/),
+// og hendelsene for julemodus (mobile-jul.js) og totrinnsbekreftelse (mobile-totrinn.js). Het mobile-jul-og-totrinn.js før.
 //   1. Gjøremål: Glimt deler setninger i flere punkter (rekkefølge, dato/tid, sted, person) · baren over tastaturet ·
 //      tilbake går alltid til Hjem (claude-code-huskeliste-glimt-forstar.md, claude-code-gjoremal-tastatur-tilbake.md)
-//   2. Julemodus: kortet i Innstillinger → Glimt (Auto · Av · På + fase, snø, julelyd) og antrekk overalt
-//      (claude-code-glimt-jul.md, fasit glimt-figurer.js julOn/dress)
-//   3. Totrinnsbekreftelse satt opp i appen (claude-code-2fa-i-appen.md, fasit tfVals)
+//   2. Julemodus: egen fil, mobile-jul.js
+//   3. Totrinnsbekreftelse satt opp i appen: egen fil, mobile-totrinn.js
 //   4. Finans: «Lagt til …»-linja, «✦ La Glimt lese kvitteringen på nytt», «Rediger alt», søk med Glimt-kort
 //      (claude-code-finans-lagt-til.md, -les-pa-nytt-rediger.md, -sok-glimt-kort.md)
 //   5. Brief → Bibel (trykk på verset) og Nyheter → Glimt-siden (claude-code-brief-bibel-trykk.md, -nyheter-glimt-side.md)
@@ -13,11 +13,10 @@
 import { S, esc, api, hlApi, n0, n2 } from './core.js';
 import { m, draw, flash } from './mobile.js';
 import { haptic } from './mobile-haptics.js';
+import { tfaGroup, tfLayer, tfBind, tfInput, tfSubmit, tfOpenNow, tfAfterDraw } from './mobile-totrinn.js';
+import { julOn, julCard, dress, julTake, julBind } from './mobile-jul.js';
+import { lsGet, lsSet } from './mobile-lagring.js';
 
-const lsGet = (k, d = null) => { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch { return d; } };
-const lsSet = (k, v) => { try { if (v == null) localStorage.removeItem(k); else localStorage.setItem(k, JSON.stringify(v)); } catch {} };
-const lsRaw = (k, d = null) => { try { return localStorage.getItem(k) ?? d; } catch { return d; } };
-const lsRawSet = (k, v) => { try { if (v == null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch {} };
 const reduce = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 const vib = (p) => { try { navigator.vibrate?.(p); } catch {} };
 const pad = (n) => String(n).padStart(2, '0');
@@ -153,168 +152,6 @@ function kbTrack() {
   addEventListener('focusin', (e) => { if (e.target?.id === 'p37-tk') { KB.y = scrollY; f(); setTimeout(f, 80); setTimeout(f, 320); setTimeout(f, 650); } });
   addEventListener('focusout', () => setTimeout(f, 120));
   KB.base = Math.max(innerHeight, vv.height);
-}
-
-/* =====================================================================
-   2. Julemodus (Innstillinger → Glimt og AI → Glimt) + antrekk overalt
-   ===================================================================== */
-const PH = [['Advent', 'advent'], ['Jul', 'jul'], ['Nyttår', 'nyttar'], ['Vinter', 'vinter']];
-const J = { snow: lsGet('glimt_snow', true) !== false, sound: lsRaw('glimt_jul_sound', 'av') };
-const julMode = () => { const v = lsRaw('glimt_jul', 'auto'); return v === 'av' || v === 'pa' ? v : 'auto'; };
-const julPh = () => { const v = lsRaw('glimt_jul_p', 'Advent'); return PH.some(([n]) => n === v) ? v : 'Advent'; };
-/** Fasen som gjelder nå (fasit julOn): null utenfor perioden eller når Av. */
-export function julOn(d = new Date()) {
-  const mo = julMode();
-  if (mo === 'av') return null;
-  if (mo === 'pa') return julPh();
-  const M = d.getMonth(), D = d.getDate();
-  if (M === 11) return D <= 23 ? 'Advent' : D <= 30 ? 'Jul' : 'Nyttår';
-  if (M === 0) return D === 1 ? 'Nyttår' : D <= 13 ? 'Vinter' : null;
-  return null;
-}
-function julNote() {
-  const mo = julMode(), ph = julOn();
-  if (mo === 'av') return 'Av hele året';
-  if (mo === 'pa') return `På · ${julPh()}`;
-  return ph ? 'På nå · slås av 13. januar' : 'Slås på 1. desember';
-}
-function julSet(mode, phase) {
-  if (mode) lsRawSet('glimt_jul', mode);
-  if (phase) lsRawSet('glimt_jul_p', phase);
-  try { window.dispatchEvent(new Event('glimt-jul')); } catch {}
-  const P = PH.find(([n]) => n === julPh())?.[1] ?? 'advent';
-  hlApi('/glimt/settings', { method: 'PUT', json: { jul: julMode(), julPhase: julMode() === 'pa' ? P : null } }).catch(() => {});
-  haptic('tab'); draw();
-}
-function julTake(r) {
-  if (!r || typeof r !== 'object') return;
-  let ch = false;
-  if (['auto', 'av', 'pa'].includes(r.jul) && r.jul !== julMode()) { lsRawSet('glimt_jul', r.jul); ch = true; }
-  const p = PH.find(([, k]) => k === r.julPhase)?.[0]; if (p && p !== julPh()) { lsRawSet('glimt_jul_p', p); ch = true; }
-  if (typeof r.snow === 'boolean' && r.snow !== J.snow) { J.snow = r.snow; lsSet('glimt_snow', r.snow); ch = true; }
-  if ((r.julSound === 'av' || r.julSound === 'bjelle') && r.julSound !== J.sound) { J.sound = r.julSound; lsRawSet('glimt_jul_sound', r.julSound); ch = true; }
-  if (ch) { try { window.dispatchEvent(new Event('glimt-jul')); } catch {} }
-}
-const HAT = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 18 Q9 5 18 5 Q20 6 20 8 Q16 8 15 18 Z"/><path d="M3 18h14"/><circle cx="20" cy="8" r="1.6"/></svg>';
-/** Kortet rett under figurvalget (fasit Glimt Brief.dc.html, mode settings). */
-export function julCard() {
-  const mo = julMode(), sw = (on) => `<span class="p35-sw${on ? ' on' : ''}" aria-hidden="true"><i></i></span>`;
-  return `<span class="p35-lab">JULEMODUS</span><div class="p40-jul">
-    <div class="p40-julh"><span class="p40-juli">${HAT}</span><span class="p40-jult"><b>Julemodus</b><span>${esc(julNote())}</span></span></div>
-    <div class="p40-seg" role="radiogroup" aria-label="Julemodus">${[['auto', 'Auto'], ['av', 'Av'], ['pa', 'På']].map(([k, n]) => `<button type="button" data-p40="jul" data-v="${k}" role="radio" aria-checked="${mo === k}">${n}</button>`).join('')}</div>
-    ${mo === 'pa' ? `<div class="p40-jph">${PH.map(([n]) => `<button type="button" data-p40="julp" data-v="${n}" aria-pressed="${julPh() === n}">${n}</button>`).join('')}</div>` : ''}
-    <span class="p40-julx">Auto: 1. desember til 13. januar (advent, jul, nyttår og vinter). Glimt får lue og skjerf overalt, og en varmere tone.</span></div>
-  <div class="p35-list"><button type="button" class="p35-row" data-p40="julsnow" role="switch" aria-checked="${J.snow}"><span class="p35-rt"><b>Snø i Vær og brief</b><span>Når det snør eller er minus</span></span>${sw(J.snow)}</button>
-    <div class="p35-row"><span class="p35-rt"><b>Julelyd på varsler</b><span>${J.sound === 'bjelle' ? 'Myk bjelle (lav og kort)' : 'Av'}</span></span><div class="p40-seg sm">${[['av', 'Av'], ['bjelle', 'Bjelle']].map(([k, n]) => `<button type="button" data-p40="julsnd" data-v="${k}" aria-pressed="${J.sound === k}">${n}</button>`).join('')}</div></div></div>`;
-}
-const ab = (st) => `position:absolute;pointer-events:none;${st}`;
-/** Antrekket (fasit dress) som HTML rundt figuren. Brukes bare når figurbiblioteket ikke gjør det selv. */
-export function dress(html, S = 56) {
-  const ph = julOn(); if (!ph || !html) return html;
-  const P = { Advent: { hat: 1, scarf: 1 }, Jul: { hat: 1, scarf: 1, gift: 1 }, Nyttår: { party: 1 }, Vinter: { beanie: 1, scarf: 1, sc: '#b23a2a' } }[ph] ?? {};
-  const k = [];
-  if (P.scarf) k.push(`<svg width="${S * 1.05}" height="${S * 0.5}" viewBox="0 0 105 50" style="${ab(`left:50%;bottom:${-S * 0.2}px;margin-left:${-S * 0.525}px;overflow:visible`)}"><path d="M8 10 Q52 26 97 10 L95 24 Q52 40 10 24 Z" fill="${P.sc || '#2f7a4f'}"/><path d="M22 16 l4 12 M40 20 l3 13 M58 20 l-1 13 M76 17 l-3 12" stroke="#f6f1e7" stroke-width="3"/><path d="M70 22 L80 48 L68 50 L62 26 Z" fill="${P.sc || '#2f7a4f'}"/></svg>`);
-  if (P.hat) k.push(`<svg width="${S * 0.95}" height="${S * 0.7}" viewBox="0 0 95 70" style="${ab(`left:50%;top:${-S * 0.44}px;margin-left:${-S * 0.42}px;transform:rotate(-14deg);overflow:visible`)}"><path d="M14 56 Q40 4 74 8 Q86 10 88 20 Q70 18 66 56 Z" fill="#c8302a"/><circle cx="89" cy="22" r="8" fill="#fbf7ee"/><rect x="6" y="50" width="70" height="15" rx="7.5" fill="#fbf7ee"/></svg>`);
-  if (P.beanie) k.push(`<svg width="${S * 0.9}" height="${S * 0.6}" viewBox="0 0 90 60" style="${ab(`left:50%;top:${-S * 0.36}px;margin-left:${-S * 0.45}px;overflow:visible`)}"><path d="M10 50 Q10 10 45 10 Q80 10 80 50 Z" fill="#3b6fb0"/><rect x="6" y="42" width="78" height="14" rx="6" fill="#2b5d8a"/><circle cx="45" cy="8" r="8" fill="#fbf7ee"/></svg>`);
-  if (P.party) k.push(`<svg width="${S * 0.6}" height="${S * 0.62}" viewBox="0 0 60 62" style="${ab(`left:50%;top:${-S * 0.48}px;margin-left:${-S * 0.22}px;transform:rotate(12deg);overflow:visible`)}"><path d="M8 56 L30 4 L52 56 Z" fill="#1b1a17"/><path d="M14 42 L46 42 M19 30 L41 30 M24 18 L36 18" stroke="#f2c14e" stroke-width="3"/><circle cx="30" cy="4" r="5" fill="#f2c14e"/></svg>`);
-  if (P.gift) k.push(`<span style="${ab(`right:${-S * 0.2}px;bottom:${-S * 0.16}px;width:${S * 0.34}px;height:${S * 0.3}px;border-radius:4px;background:#b23a2a;box-shadow:inset 0 0 0 2px #8a2a1d;transform:rotate(8deg)`)}"><span style="position:absolute;left:44%;top:0;bottom:0;width:12%;background:#f2c14e"></span><span style="position:absolute;top:40%;left:0;right:0;height:14%;background:#f2c14e"></span></span>`);
-  return `<span class="p40-dress" style="position:relative;display:inline-block;line-height:0">${html}${k.join('')}</span>`;
-}
-
-/* =====================================================================
-   3. Totrinnsbekreftelse i appen (GET /api/auth/2fa/status, POST setup/enable/disable/backup/regenerate)
-   ===================================================================== */
-const TF = { st: null, open: false, step: 0, d: null, code: '', err: '', busy: false, codes: [], saved: false, qr: false, cp: false, cc: false, pw: '', needPw: false, off: false, miss: false };
-async function tfLoad() {
-  try { TF.st = await hlApi('/auth/2fa/status'); TF.miss = false; }
-  catch (e) { if (e.status === 404) TF.miss = true; TF.st = { enabled: !!m.me?.totp, backupLeft: null }; }
-}
-const tfOn = () => (TF.st ? !!TF.st.enabled : !!m.me?.totp);
-/** Gruppen «Tofaktor» i Innstillinger → Konto og sikkerhet (erstatter lenken til web). G = gruppebyggeren i mobile-set.js. */
-export function tfaGroup(G) {
-  if (!TF.st) tfLoad().then(() => { if (m.screen === 'set') draw(); });
-  const on = tfOn(), left = TF.st?.backupLeft;
-  const sub = on ? `På · autentiseringsapp${left != null ? ` · ${left} reservekoder igjen` : ''}` : 'Av · sett opp i appen på 1 minutt';
-  return G('Tofaktor', [`<button type="button" class="opt-row p40-tfr" data-p40="tfa"><span class="m-grow"><b style="font-weight:500">Totrinnsbekreftelse</b><br><span style="font-size:13px;opacity:.65">${esc(sub)}</span></span><span class="sval" style="opacity:1;color:var(--pp-lab,#f08a76);font-weight:700">${on ? 'Endre ›' : 'Sett opp ›'}</span></button>`],
-    'Alt skjer her i appen. Bruk Passord (iOS), Google Authenticator, 1Password eller Aegis.');
-}
-async function tfSetup() {
-  TF.busy = true; TF.err = ''; draw();
-  try {
-    TF.d = await hlApi('/auth/2fa/setup', { method: 'POST', json: TF.pw ? { password: TF.pw } : {} });
-    TF.needPw = false; TF.step = 1;
-  } catch (e) {
-    if (e.status === 401 || e.status === 403 || /passord|password/i.test(e.message)) { TF.needPw = true; TF.err = TF.pw ? 'Feil passord.' : ''; TF.step = 1; }
-    else TF.err = e.status === 404 ? 'Serveren støtter ikke oppsett fra appen ennå. Oppdater Nordlys OS.' : e.message;
-  }
-  TF.busy = false; draw();
-}
-async function tfVerify() {
-  if (TF.code.length !== 6) { TF.err = 'Skriv alle 6 sifrene.'; draw(); return; }
-  TF.busy = true; TF.err = ''; draw();
-  try {
-    const r = await hlApi('/auth/2fa/enable', { method: 'POST', json: { code: TF.code } });
-    TF.codes = Array.isArray(r?.backupCodes) ? r.backupCodes : []; TF.step = 3; TF.saved = false; haptic('ok');
-  } catch (e) { haptic('err'); TF.err = e.status === 400 || e.status === 401 || e.status === 422 ? 'Koden stemmer ikke. Prøv den neste som vises.' : e.message; }
-  TF.busy = false; draw();
-}
-async function tfRegen() {
-  TF.busy = true; draw();
-  try { const r = await hlApi('/auth/2fa/backup/regenerate', { method: 'POST' }); TF.codes = r?.backupCodes ?? r?.codes ?? []; TF.step = 3; TF.saved = false; }
-  catch (e) { flash(e.message, 'err'); }
-  TF.busy = false; draw();
-}
-async function tfDisable() {
-  if (!TF.pw) { TF.err = 'Skriv passordet ditt for å slå av.'; draw(); return; }
-  TF.busy = true; draw();
-  try { await hlApi('/auth/2fa/disable', { method: 'POST', json: { password: TF.pw } }); TF.open = false; TF.st = { ...(TF.st ?? {}), enabled: false }; if (m.me) m.me.totp = false; flash('Totrinnsbekreftelse er slått av'); }
-  catch (e) { TF.err = e.status === 401 || e.status === 403 ? 'Feil passord.' : e.message; }
-  TF.busy = false; draw();
-}
-function tfOpen() { Object.assign(TF, { open: true, step: tfOn() ? 9 : 0, d: null, code: '', err: '', codes: [], saved: false, qr: false, cp: false, cc: false, pw: '', needPw: false, off: false }); haptic('tap'); draw(); }
-const TT = ['Velg metode', 'Koble til autentiseringsappen', 'Skriv inn koden', 'Lagre reservekodene', 'Totrinnsbekreftelse er på'];
-const TS = ['Du setter det opp her i appen. Det tar et minutt.', 'Trykk knappen, så legger autentiseringsappen på denne telefonen inn Homelab av seg selv.', 'Skriv de 6 sifrene som vises i autentiseringsappen nå.', 'Bruk en av disse hvis du mister telefonen. Hver kode virker én gang.', 'Kontoen din er nå beskyttet med passord og kode.'];
-function tfLayer() {
-  if (!TF.open) return '';
-  const st = TF.step, sec = String(TF.d?.secret ?? '').replace(/\s/g, ''), grp = sec.replace(/(.{4})/g, '$1 ').trim();
-  const back = st === 0 || st >= 4 ? 'Sikkerhet' : 'Tilbake';
-  const title = st === 9 ? 'Totrinnsbekreftelse er på' : TT[st];
-  const sub = st === 9 ? `Autentiseringsapp${TF.st?.enabledAt ? ` · lagt til ${new Date(TF.st.enabledAt).toLocaleDateString('nb-NO')}` : ''}${TF.st?.backupLeft != null ? ` · ${TF.st.backupLeft} reservekoder igjen` : ''}` : TS[st];
-  const bars = st < 4 ? `<div class="p40-tfb">${[0, 1, 2, 3].map((i) => `<i class="${i <= st ? 'on' : ''}"></i>`).join('')}</div>` : '';
-  let body = '';
-  if (st === 0) body = `<div class="p40-tfm">${[['app', 'Autentiseringsapp', 'Passord, Google Authenticator, 1Password', 'A', '#2b5d8a', 'Anbefalt'], ['pk', 'Passnøkkel med Face ID', 'Ingen kode å skrive. Lagres i iCloud-nøkkelring / Google', 'F', '#2f7a4f', 'Raskest']].map(([k, n, s, i, c, tag], j) => `<button type="button" data-p40="tfm" data-k="${k}"><span class="p40-tfi" style="background:${c}">${i}</span><span class="m-grow"><b>${n}</b><span>${s}</span></span><span class="p40-tag${j ? ' g' : ''}">${tag}</span></button>`).join('')}</div>`;
-  else if (st === 1 && TF.needPw) body = `<form class="p40-tff" data-p40form="tfpw"><label><span>Bekreft med passordet ditt</span><input type="password" id="p40-tfpw" autocomplete="current-password" data-p40in="pw" value="${esc(TF.pw)}"></label><button type="submit" class="p40-pri"${TF.busy ? ' disabled' : ''}>${TF.busy ? 'Kobler til …' : 'Fortsett'}</button></form>`;
-  else if (st === 1) body = `<a class="p40-pri p40-big" href="${esc(TF.d?.otpauth ?? TF.d?.otpauth_uri ?? '#')}" data-p40="tfotp">Åpne i autentiseringsappen</a>
-    <div class="p40-tfs"><span class="p40-lab">HEMMELIG NØKKEL</span><code>${esc(grp || '…')}</code><button type="button" data-p40="tfcp">${TF.cp ? '✓ Kopiert' : 'Kopier'}</button></div>
-    <button type="button" class="p40-lnk" data-p40="tfqr">${TF.qr ? 'Skjul QR-kode' : 'Vis QR-kode for en annen enhet'}</button>
-    ${TF.qr ? `<div class="p40-tfq">${TF.d?.qrSvg ? TF.d.qrSvg : TF.d?.qrPng ? `<img src="${esc(TF.d.qrPng)}" alt="QR-kode for autentiseringsappen" width="200" height="200">` : '<span>Serveren sendte ingen QR-kode. Bruk nøkkelen over.</span>'}</div>` : ''}
-    <button type="button" class="p40-sec" data-p40="tfnext">Jeg har lagt den inn ›</button>`;
-  else if (st === 2) body = `<form class="p40-tff" data-p40form="tfcode"><input id="p40-tfc" class="p40-code" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code" maxlength="6" placeholder="••••••" value="${esc(TF.code)}" data-p40in="code" aria-label="Sekssifret kode">
-    <button type="submit" class="p40-pri" style="opacity:${TF.code.length === 6 ? 1 : 0.45}"${TF.busy ? ' disabled' : ''}>${TF.busy ? 'Sjekker …' : 'Bekreft'}</button></form>`;
-  else if (st === 3) body = `<div class="p40-tfk">${(TF.codes.length ? TF.codes : ['–']).map((c) => `<code>${esc(c)}</code>`).join('')}</div>
-    <div class="p40-two"><button type="button" class="p40-sec" data-p40="tfcc">${TF.cc ? '✓ Kopiert' : 'Kopier alle'}</button><button type="button" class="p40-sec" data-p40="tfshare">Lagre i Passord / Del</button></div>
-    <button type="button" class="p40-ck" data-p40="tfsaved" role="checkbox" aria-checked="${TF.saved}"><i>${TF.saved ? '✓' : ''}</i>Jeg har lagret reservekodene</button>
-    <button type="button" class="p40-pri" data-p40="tffin" style="opacity:${TF.saved ? 1 : 0.45}">${TF.off ? 'Ferdig' : 'Slå på totrinnsbekreftelse'}</button>`;
-  else if (st === 4) body = `<div class="p40-tfok"><span>✓</span><b>Totrinnsbekreftelse er på</b><span>Denne telefonen er merket som pålitelig enhet.</span></div><button type="button" class="p40-pri" data-p40="tfx">Ferdig</button>`;
-  else if (st === 9) body = `<div class="p40-tfman">${[['tfregen', 'Nye reservekoder', TF.st?.backupLeft != null ? `${TF.st.backupLeft} igjen` : ''], ['tfswap', 'Bytt autentiseringsapp', ''], ['tfpk', 'Legg til passnøkkel (Face ID)', ''], ['tfoff', 'Slå av totrinnsbekreftelse', '']].map(([k, n, v]) => `<button type="button" data-p40="${k}" class="${k === 'tfoff' ? 'red' : ''}"><span class="m-grow">${n}</span>${v ? `<span>${esc(v)}</span>` : ''}<span>›</span></button>`).join('')}</div>
-    ${TF.off ? `<form class="p40-tff" data-p40form="tfoff"><label><span>Skriv passordet ditt for å slå av</span><input type="password" id="p40-tfpw2" autocomplete="current-password" data-p40in="pw" value="${esc(TF.pw)}"></label><button type="submit" class="p40-pri red"${TF.busy ? ' disabled' : ''}>Slå av</button></form>` : ''}`;
-  return `<div class="p40-tf" role="dialog" aria-modal="true" aria-label="Totrinnsbekreftelse"><div class="p40-tfin">
-    <div class="p40-tfh"><button type="button" class="p40-back" data-p40="tfback">‹ ${back}</button>${st < 4 ? `<span class="p40-lab">STEG ${st + 1} AV 4</span>` : '<span></span>'}</div>
-    ${bars}<b class="p40-tft">${esc(title)}</b><span class="p40-tfsub">${esc(sub)}</span>
-    ${TF.err ? `<span class="p40-err" role="alert">${esc(TF.err)}</span>` : ''}${body}</div></div>`;
-}
-async function tfPasskey() {
-  try {
-    const o = await hlApi('/auth/passkey/register/options', { method: 'POST' });
-    if (!window.PublicKeyCredential || !o) throw Object.assign(new Error('Passnøkkel støttes ikke her'), { status: 501 });
-    const b64 = (s) => Uint8Array.from(atob(String(s).replace(/-/g, '+').replace(/_/g, '/')), (c) => c.charCodeAt(0));
-    const pk = { ...(o.publicKey ?? o), challenge: b64((o.publicKey ?? o).challenge), user: { ...(o.publicKey ?? o).user, id: b64((o.publicKey ?? o).user.id) } };
-    const cred = await navigator.credentials.create({ publicKey: pk });
-    const enc = (buf) => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-    await hlApi('/auth/passkey/register/verify', { method: 'POST', json: { id: cred.id, rawId: enc(cred.rawId), type: cred.type, response: { clientDataJSON: enc(cred.response.clientDataJSON), attestationObject: enc(cred.response.attestationObject) } } });
-    flash('Passnøkkelen er lagt til', 'ok');
-    if (!tfOn()) { TF.step = 3; await tfRegen(); }
-  } catch (e) { flash(e.status === 404 || e.status === 501 ? 'Passnøkkel krever en nyere server. Bruk autentiseringsapp.' : e.name === 'NotAllowedError' ? 'Avbrutt' : e.message); }
 }
 
 /* =====================================================================
@@ -611,6 +448,8 @@ export async function bind40(e, t) {
   if (m.screen === 'huske' && t.closest?.('.pp-hero .pp-back')) { e.preventDefault(); haptic('tap'); location.replace('#/hl'); return true; }
   const x = t.closest?.('[data-p40]'); if (!x) return false;
   const k = x.dataset.p40, id = x.dataset.id;
+  if (k.startsWith('tf')) return tfBind(k, x, e);
+  if (k.startsWith('jul')) return julBind(k, x);
   switch (k) {
     case 'bibel': {
       if (t.closest('button, a') && t.closest('button, a') !== x) return false; // Kopier / Nytt vers gjør sin egen handling
@@ -627,26 +466,6 @@ export async function bind40(e, t) {
     case 'nglen': NG.len = x.dataset.v; haptic('tab'); draw(); return true;
     case 'ngrun': NG.pick = false; ngPrefs(); NG.d = null; ngLoad(true); return true;
     case 'ngtalk': ngTalk(); return true;
-    case 'jul': julSet(x.dataset.v); return true;
-    case 'julp': julSet('pa', x.dataset.v); return true;
-    case 'julsnow': J.snow = !J.snow; lsSet('glimt_snow', J.snow); hlApi('/glimt/settings', { method: 'PUT', json: { snow: J.snow } }).catch(() => {}); haptic('tab'); draw(); return true;
-    case 'julsnd': J.sound = x.dataset.v; lsRawSet('glimt_jul_sound', J.sound); hlApi('/glimt/settings', { method: 'PUT', json: { julSound: J.sound } }).catch(() => {}); haptic('tab'); draw(); return true;
-    case 'tfa': e.preventDefault(); tfOpen(); return true;
-    case 'tfback': if (TF.step === 0 || TF.step >= 4) { TF.open = false; tfLoad().then(draw); } else { TF.step = TF.step === 1 && TF.needPw ? 0 : TF.step - 1; TF.err = ''; } haptic('tap'); draw(); return true;
-    case 'tfx': TF.open = false; tfLoad().then(draw); draw(); return true;
-    case 'tfm': if (x.dataset.k === 'pk') { await tfPasskey(); return true; } await tfSetup(); return true;
-    case 'tfotp': setTimeout(() => { if (TF.open && TF.step === 1) { TF.step = 2; draw(); setTimeout(() => document.getElementById('p40-tfc')?.focus(), 60); } }, 600); return false; // lenken åpner appen
-    case 'tfcp': try { await navigator.clipboard?.writeText(String(TF.d?.secret ?? '').replace(/\s/g, '')); } catch {} TF.cp = true; haptic('ok'); draw(); return true;
-    case 'tfqr': TF.qr = !TF.qr; draw(); return true;
-    case 'tfnext': TF.step = 2; TF.err = ''; draw(); setTimeout(() => document.getElementById('p40-tfc')?.focus(), 60); return true;
-    case 'tfcc': try { await navigator.clipboard?.writeText(TF.codes.join('\n')); } catch {} TF.cc = true; haptic('ok'); draw(); return true;
-    case 'tfshare': try { await navigator.share?.({ title: 'Homelab reservekoder', text: TF.codes.join('\n') }); } catch {} return true;
-    case 'tfsaved': TF.saved = !TF.saved; haptic('tab'); draw(); return true;
-    case 'tffin': if (!TF.saved) return true; TF.step = 4; TF.st = { ...(TF.st ?? {}), enabled: true, backupLeft: TF.codes.length || TF.st?.backupLeft }; if (m.me) m.me.totp = true; haptic('ok'); draw(); return true;
-    case 'tfregen': await tfRegen(); return true;
-    case 'tfswap': TF.pw = ''; await tfSetup(); return true;
-    case 'tfpk': await tfPasskey(); return true;
-    case 'tfoff': TF.off = !TF.off; TF.err = ''; draw(); setTimeout(() => document.getElementById('p40-tfpw2')?.focus(), 60); return true;
     case 'reread': e.preventDefault(); reread(id, x.dataset.r); return true;
     case 'rrapply': rrApply(id, false); return true;
     case 'rrkeep': rrApply(id, true); return true;
@@ -663,8 +482,7 @@ export async function bind40(e, t) {
 }
 function onInput(e) {
   const t = e.target;
-  if (t.dataset?.p40in === 'code') { TF.code = t.value.replace(/\D/g, '').slice(0, 6); if (t.value !== TF.code) t.value = TF.code; const b = t.form?.querySelector('.p40-pri'); if (b) b.style.opacity = TF.code.length === 6 ? '1' : '.45'; if (TF.code.length === 6 && e.inputType !== 'deleteContentBackward') tfVerify(); return; }
-  if (t.dataset?.p40in === 'pw') { TF.pw = t.value; return; }
+  if (tfInput(t, e)) return;
   if (HM?.input?.(t)) return;
   if (t.dataset?.p40ed && TXE.f) { TXE.f[t.dataset.p40ed] = t.value; if (t.dataset.p40ed === 'amt') sumPaint(); return; }
   if (t.dataset?.p40ln && TXE.f) { const L = TXE.f.lines[+t.dataset.i]; if (L) { L[t.dataset.p40ln] = t.value; sumPaint(); } }
@@ -678,7 +496,7 @@ function onSubmit(e) {
   const f = e.target?.dataset?.p40form; if (!f) return;
   e.preventDefault(); e.stopPropagation();
   if (HM?.submit?.(f)) return;
-  if (f === 'tfcode') tfVerify(); else if (f === 'tfpw') tfSetup(); else if (f === 'tfoff') tfDisable();
+  tfSubmit(f);
 }
 /** Sanntid: hjemlys, glimt:settings. */
 export function onRt40(d) {
@@ -691,10 +509,10 @@ export function afterDraw40() {
   const r = document.documentElement;
   // Bilder som ikke laster (Glimt-siden, kilder): skjules i stedet for et brukket bilde.
   for (const im of document.querySelectorAll('#app .p40-ng img:not([data-e])')) { im.dataset.e = '1'; const bad = () => { const f = im.closest('figure'); if (f) f.remove(); else im.replaceWith(document.createElement('i')); }; if (im.complete && !im.naturalWidth) bad(); else im.addEventListener('error', bad, { once: true }); }
-  r.classList.toggle('p40-ov', !!(TF.open || (NG.open && m.screen === 'nyheter')));
+  r.classList.toggle('p40-ov', !!(tfOpenNow() || (NG.open && m.screen === 'nyheter')));
   if (m.screen !== 'nyheter' && NG.open) { NG.open = false; NG.pick = false; }
   HM?.afterDraw?.();
-  if (TF.open && TF.step === 2) { const c = document.getElementById('p40-tfc'); if (c && document.activeElement !== c && !c.dataset.f) { c.dataset.f = '1'; c.focus({ preventScroll: true }); } }
+  tfAfterDraw();
 }
 let booted = false;
 export function boot40() {

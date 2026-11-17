@@ -39,3 +39,19 @@ test('Økonomi mobil-web: alle mobilmodulene som lastes, står i SHELL (virker u
   const mob = filer.filter((f) => f.startsWith('mobile-'));
   assert.deepEqual(mob.filter((f) => !sw.includes(`'/assets/finans/js/${f}'`)), []);
 });
+
+// Runde 4: mobile-jul-og-totrinn.js er delt etter funksjon. Julemodus (mobile-jul.js) og totrinnsbekreftelse (mobile-totrinn.js)
+// har egne filer; mobile-glimt-tillegg.js tar hendelsene og sender dem videre. De nye filene importerer ikke tilbake til
+// mobile-glimt-tillegg.js, så delingen lager ingen ny syklisk import.
+test('Økonomi mobil-web: julemodus og totrinnsbekreftelse har egne filer uten import tilbake', () => {
+  const les = (f) => readFileSync(join(JS, f), 'utf8');
+  assert.ok(!existsSync(join(JS, 'mobile-jul-og-totrinn.js')));
+  const tillegg = les('mobile-glimt-tillegg.js');
+  assert.match(tillegg, /from '\.\/mobile-totrinn\.js'/);
+  assert.match(tillegg, /from '\.\/mobile-jul\.js'/);
+  assert.doesNotMatch(tillegg, /\bconst TF = |\bfunction julSet\b/);
+  for (const f of ['mobile-jul.js', 'mobile-totrinn.js', 'mobile-lagring.js']) assert.doesNotMatch(les(f), /mobile-glimt-tillegg\.js'/, f);
+  assert.match(les('mobile-totrinn.js'), /export function tfaGroup\(G\)/);
+  assert.match(les('mobile-jul.js'), /export function julOn\(d = new Date\(\)\)/);
+  assert.match(les('mobile.js'), /import\('\.\/mobile-glimt-tillegg\.js'\)/);
+});

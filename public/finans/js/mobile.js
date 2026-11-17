@@ -48,7 +48,7 @@ import * as P37 from './mobile-gjoremal.js'; // prompt 37: Gjøremål (uten fane
 import * as P37B from './mobile-bibel-og-onboarding.js'; // prompt 37: bibelvers, onboarding med profil, «hvor er X», Pakker-widget, prøveperioder
 import * as P38 from './mobile-okt-og-qr.js'; // prompt 38: AI-svar lukk, nye brief-kort, prestedrakt, ØKT, QR-innlogging, Glimt i Domener
 import * as P39 from './mobile-sveip-bort.js'; // prompt 39: sveip bort myk, Bibel uten fanelinje, wiggle-ark, Tilpass/Appprofil, Yr mot Storm 2a, ukas vær, kvittering på nytt
-let P40 = null; // prompt 40: mobile-jul-og-totrinn.js (dynamisk import i bind())
+let P40 = null; // prompt 40: mobile-glimt-tillegg.js (dynamisk import i bind())
 let P41 = null; // prompt 41: mobile-bakgrunn-og-hoytider.js (dynamisk import i bind(); TDZ i sykliske importer)
 let P42 = null; // prompt 42: mobile-oversikt-knapp.js (dynamisk import i bind())
 let P43 = null; // prompt 43: mobile-widgets-og-media.js (+ mobile-media.js for Media), dynamisk import i bind()
@@ -796,7 +796,7 @@ export function bind() {
   applyIcon(); appLoad().then(() => draw()).catch(() => {}); ptrBind(); wsConnect(onRealtime);
   wxBindScroll(); P23.icBoot(); P25.boot(); P26.boot26(); P27.boot27(); P28.boot28(); P30.boot30({ target: backTarget, cancel: cancelOthers }); P31.boot31(); P32.boot32(); P34.boot34(); P35.boot35(); P36.boot36(); P37.boot37(); P37B.boot37b(); P38.boot38(); P39.boot39();
   // Prompt 40: lastes lat (dynamisk import), så modulrekkefølgen ikke endres (TDZ i sykliske importer).
-  import('./mobile-jul-og-totrinn.js').then((x) => { P40 = x; x.boot40(); if (document.documentElement.dataset.ui === 'mobile') draw(); }).catch((err) => console.warn('mobile-jul-og-totrinn', err));
+  import('./mobile-glimt-tillegg.js').then((x) => { P40 = x; x.boot40(); if (document.documentElement.dataset.ui === 'mobile') draw(); }).catch((err) => console.warn('mobile-glimt-tillegg', err));
   // Prompt 41: også lat (dynamisk import). globalThis.P41 brukes av de andre modulene.
   import('./mobile-bakgrunn-og-hoytider.js').then((x) => { P41 = x; x.boot41(); if (document.documentElement.dataset.ui === 'mobile') draw(); }).catch((err) => console.warn('mobile-bakgrunn-og-hoytider', err));
   // Prompt 42: Hjem-knapp i fanelinja, Vel fremme, ikonsøk, PostNord-logo, Gjøremål-Glimt del opp (lat, som 40 og 41).
