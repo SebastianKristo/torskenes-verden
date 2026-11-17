@@ -43,7 +43,19 @@ test('kategorifargene fra serveren blir papirfarger i JS, ikke med !important mo
 
 test('antall !important i mobile.css går bare ned', () => {
   const n = (utenKommentarer.match(/!important/g) || []).length;
-  assert.ok(n <= 582, `${n} !important (maks 582; 861 før oppryddingen)`);
+  assert.ok(n <= 561, `${n} !important (maks 561; 861 før oppryddingen, 582 etter runde 3)`);
+});
+
+test('hver linje i mobile.css med !important har en begrunnelse på linja over (CLAUDE.md)', () => {
+  const KJENTE = ['Reduser bevegelse', 'animasjon', 'inline stil fra JS', 'målt: temaregler', 'konkurrerer med annen !important', 'ikke målt'];
+  assert.match(css, /!important i denne fila/, 'forklaringen av kategoriene øverst i fila');
+  const linjer = css.split('\n'), kode = css.replace(/\/\*[\s\S]*?\*\//g, (c) => c.replace(/[^\n]/g, ' ')).split('\n'), mangler = [];
+  linjer.forEach((l, i) => {
+    if (!/!important/.test(kode[i])) return;
+    const m = (linjer[i - 1] ?? '').match(/^\/\* !important: (.+) \*\/$/);
+    if (!m || !m[1].split(', ').every((k) => KJENTE.includes(k))) mangler.push(`${i + 1}: ${l.slice(0, 70)}`);
+  });
+  assert.deepEqual(mangler, []);
 });
 
 test('butikkfargen bak logoen i Papir-radene er en CSS-variabel (--ti), så hvit bunn under logoen trenger ikke !important', () => {
