@@ -52,3 +52,41 @@ test('butikkfargen bak logoen i Papir-radene er en CSS-variabel (--ti), så hvit
   assert.match(utenKommentarer, /\.pp-ti\{[^}]*background:var\(--ti\)/);
   assert.match(utenKommentarer, /\.pp-ti\.p20-lg\{[^}]*background:#fff;/);
 });
+
+// STATUS «Unike hex i CSS»: fargene i mobile.css kommer fra tokens der et token har samme farge. På mobil står <html> alltid i
+// Papir lys (data-theme="lys"), og mørk modus går via --pp-*/--m3-* fra mobile-theme.js, så --ds-* er Papir lys-verdiene her.
+test('mobilvisningen setter data-theme="lys", så --ds-* i mobile.css alltid er Papir lys (også etter at vinduet har vært bredt)', () => {
+  assert.match(js('main.js'), /if \(mob\) document\.documentElement\.dataset\.theme = 'lys';/);
+});
+
+test('mobile.css har ingen hex-reserve i var(--m3-…) og var(--pp-…): applyPaper setter dem alltid før første tegning', async () => {
+  assert.doesNotMatch(utenKommentarer, /var\(--m3-[0-9A-Fa-f]{6},#/);
+  const papir = js('mobile-theme.js').match(/light: \{([^}]*)\}/)[1];
+  const pp = new Set([...papir.matchAll(/(\w+):/g)].map((x) => x[1]));
+  assert.deepEqual([...utenKommentarer.matchAll(/var\(--pp-(\w+),\s*#/g)].map((x) => x[1]).filter((n) => pp.has(n)), []);
+  const roller = js('mobile-theme.js').match(/const ROLE = \{([\s\S]*?)\};/)[1];
+  const kjente = new Set([...roller.matchAll(/'?([0-9A-F]{6})'?\s*:/g)].map((x) => x[1]));
+  const brukt = new Set([...utenKommentarer.matchAll(/var\(--m3-([0-9A-Fa-f]{6})\)/g)].map((x) => x[1].toUpperCase()));
+  assert.deepEqual([...brukt].filter((h) => !kjente.has(h)), []);
+});
+
+test('mobile.css: tokenfargene fra Papir lys står ikke som hex i regler utenfor mørk modus', () => {
+  // Fargene som har et token med samme verdi i Papir lys, brukes via tokenet (unntatt #fff, mørke regler (.pd) og verdier i
+  // gradienter og skygger, der fargen ikke er en flate- eller tekstfarge).
+  const rest = [];
+  for (const m of utenKommentarer.matchAll(/([^{}]*)\{([^{}]*)\}/g)) {
+    if (/\.pd\b/.test(m[1])) continue;
+    for (const d of m[2].split(';')) {
+      const [p, ...v] = d.split(':'); const val = v.join(':');
+      if (!/^\s*(color|background-color|border-color|border(-top|-right|-bottom|-left)?-color)\s*$/.test(p)) continue;
+      if (/#(1b1a17|b23a2a|2f7a4f|5c5850|8f897c)\b/i.test(val) && /^\s*color\s*$/.test(p)) rest.push(`${m[1].trim().slice(0, 60)} { ${d.trim()} }`);
+      if (/#(f3efe6|fffdf8|ebe5d8|ece6da)\b/i.test(val) && /background-color/.test(p)) rest.push(`${m[1].trim().slice(0, 60)} { ${d.trim()} }`);
+    }
+  }
+  assert.deepEqual(rest, []);
+});
+
+test('antall hex-farger i mobile.css går bare ned', () => {
+  const n = (utenKommentarer.match(/#[0-9a-fA-F]{3,8}\b/g) || []).length;
+  assert.ok(n <= 1741, `${n} hex (maks 1741)`);
+});

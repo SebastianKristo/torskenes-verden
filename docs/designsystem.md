@@ -114,6 +114,8 @@ Verdiene velges av attributtene som allerede settes på `<html>` (av `hl-boot.js
 
 `data-kal-theme` (Kalenders eget lys/mørk) er ikke med: etter Q14 skal Kalender følge felles stil og modus.
 
+**Økonomi på mobil-web** (`public/finans/css/mobile.css`) har egne farger for lys og mørk modus (`--pp-*` og `--m3-*`, satt av `applyPaper` i `mobile-theme.js`). `<html>` står alltid i `data-theme="lys"` der (`main.js`), så `--ds-*` er Papir lys-verdiene: de brukes for farger som er de samme i begge modusene (for eksempel aksentrødt på et lyst ark) og i regler som bare gjelder lys modus. Regler for mørk modus (`.m.papir.pd …`) bruker `--pp-*`. Når mobilvisningen en gang følger `data-theme` som resten av Homelab, må disse reglene gås gjennom.
+
 **iOS og Mac** (`apps/ios/Shared/DesignTokens.swift` + `DesignTokens.xcassets`, med i FinansHub, FinansHubWidgets, Kalender, KalenderWidgets, KalenderMac og KalenderMacWidgets):
 
 ```swift
