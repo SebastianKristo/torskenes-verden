@@ -34,7 +34,7 @@ const ruter = await import('../server/reise/ruter.js');
 const chat41 = await import('../server/ai/chat/auto-model.js');
 const wx41 = await import('../server/vaer/week-glimt.js');
 const ai41 = await import('../server/ai/job-times.js');
-const mai = await import('../server/mai17-41.js');
+const mai = await import('../server/glimt/mai17.js');
 const kal41 = await import('../server/kalender/glimt-search.js');
 const bd41 = await import('../server/kalender/birthday-photos.js');
 

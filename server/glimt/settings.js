@@ -37,7 +37,7 @@ import { broadcast } from '../realtime.js';
 import * as ai from '../ai/run.js';
 import { cardsOf, cleanCards, saveCards, auroraNotifyOf, setAuroraNotify } from './brief-card-settings.js'; // prompt 38: kortene i Now Brief
 import { julActive, cleanJul, JUL_DEFAULTS } from './jul.js'; // prompt 40: julemodus
-import { mai17Active, cleanMai17, MAI17_DEFAULTS } from '../mai17-41.js'; // prompt 41: 17. mai
+import { mai17Active, cleanMai17, MAI17_DEFAULTS } from './mai17.js'; // 17. mai
 import { isVxId57, vxVoiceOf57, classicOf57, vxSpeakFor57, vxEnqueue57, VX_LABEL57 } from '../ai/voxcpm/voices.js'; // prompt 57: VoxCPM2 på Mac mini-en
 import { vxReady57, vxConfigured57 } from '../ai/voxcpm/health.js';
 

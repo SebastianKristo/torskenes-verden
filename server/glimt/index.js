@@ -17,6 +17,7 @@
 //   recipes/             – «Glimt lærer»: lagrede planer (oppskrifter) som lærer av bruk og rettelser (engine.js er krokene i motoren)
 //   schedules/           – planlagte oppgaver («Faste oppgaver»): tolkning, lagring, verktøyene schedule.*, kjøring og tikket
 //   jul.js               – julemodus (Auto/Av/På, faser, dagens luke) for Glimt-innstillingene og briefen
+//   mai17.js             – 17. mai (flagg 14.–17. mai, program, design-bryter og hurra; /api/glimt/mai17 i server/index.js)
 //   brief-card-settings.js – rekkefølge og av/på for kortene (Innstillinger → Glimt → Brief) og bryteren for nordlysvarselet
 //   brief-content.js     – «Innhold i briefen» (/api/brief-cards, montert i mountGlimtEarly) og filteret på GET /api/brief
 //   brief.js             – Glimt-brief (morgen/dag/kveld), widget og innstillinger; brief-cards.js – kortene i briefen og nordlysvarselet

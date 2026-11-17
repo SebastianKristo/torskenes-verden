@@ -48,7 +48,7 @@ import profilesApi from './familie/profiles.js'; // profiler og onboarding
 import { mountBibel } from './bibel/index.js'; // Bibel: dagens bibelvers, leseplan og lagrede vers (/api/bible)
 import { bearerFallthrough46 } from './auth/bearer-fallthrough.js'; // prompt 46 (SERVER46)
 import { pages40Api } from './system/app-pages.js'; // alle sider i Mer (fanelinja)
-import { mai17Api } from './mai17-41.js'; // 17. mai (program, design-bryter, hurra)
+import { mai17Api } from './glimt/mai17.js'; // 17. mai (program, design-bryter, hurra)
 import { mountFamilie, startFamilie, hlPage41 } from './familie/index.js'; // Familie: /api/family, /api/kart, /api/famcal51, /api/hjemlys (+ /api/velfremme)
 import { mountFinans, mountFinansAliases, mountTrialWidgets, mountSubsCalendar, registerLegacyReceipts, legacyReceiptOwner } from './finans/index.js'; // Økonomi: /finans/api, Boliger-aliasene, prøveperiode-widgets og kalenderen «Abonnementer»
 import { widgets43Api } from './widgets/index.js'; // /api/widgets/media og /catalog

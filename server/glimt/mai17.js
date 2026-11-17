@@ -1,4 +1,4 @@
-// Prompt 41 (SERVER41): 17. mai – Glimt med flagg (14.–17. mai) og eget Hjem på selve dagen (claude-code-17-mai.md).
+// 17. mai – Glimt med flagg (14.–17. mai) og eget Hjem på selve dagen (claude-code-17-mai.md).
 // Valget ligger i Glimt-innstillingene (glimt/settings.js): mai17:'auto'|'av'|'pa' (auto = 17. mai i Norge, pa = «Vis nå» som forhåndsvisning).
 // Avledet mai17Active = {on, phase:'17mai'|null, day, home, label, mode, design, until, flag:{red, white, blue}} i GET/PUT /api/glimt/settings (sanntid glimt:settings).
 // GET  /api/glimt/mai17 → {active, dateLabel:'Søndag 17. mai · Grunnlovsdagen', greeting:'Gratulerer med dagen, Sebastian!', city:'Oslo',
@@ -7,11 +7,11 @@
 // POST /api/glimt/mai17/hurra → {count, text:'Hurra nr. 3', sent}   («Hipp hipp hurra fra Sebastian!» til familien)
 // Brief på dagen: brief.mai17 = {title:'17. MAI', text, items}.
 import { Hono } from 'hono';
-import { kv } from './db.js';
-import { authOrToken as authOrToken0 } from './mobile.js';
+import { kv } from '../db.js';
+import { authOrToken as authOrToken0 } from '../mobile.js';
 const authOrToken = (c, next) => authOrToken0(c, next); // sen binding (mobile.js kan være midt i lastingen)
-import { userInfo, listUsers } from './auth/session.js';
-import { notifyUser } from './notify.js';
+import { userInfo, listUsers } from '../auth/session.js';
+import { notifyUser } from '../notify.js';
 
 export const MAI17_MODES = ['auto', 'av', 'pa'];
 export const MAI17_DEFAULTS = { mai17: 'auto' };
@@ -49,8 +49,8 @@ export const CITY_PROGRAM41 = {
 };
 async function calendarToday(u, iso) {
   try {
-    const { eventsFor } = await import('./kalender/events.js');
-    const { runAsUser } = await import('./settings.js');
+    const { eventsFor } = await import('../kalender/events.js');
+    const { runAsUser } = await import('../settings.js');
     const { events } = await runAsUser(u, () => eventsFor(u, iso, iso));
     return (events ?? []).filter((e) => !e.allDay).map((e) => ({ time: new Date(Date.parse(e.start)).toLocaleTimeString('nb-NO', { timeZone: 'Europe/Oslo', hour: '2-digit', minute: '2-digit' }), title: e.title, kind: 'calendar' }));
   } catch { return []; }
@@ -91,12 +91,12 @@ export async function mai17Day41(u, s, t = Date.now()) {
 
 export const mai17Api = new Hono();
 mai17Api.use('*', authOrToken);
-mai17Api.get('/', async (c) => { const { glimtSettingsOf } = await import('./glimt/settings.js'); return c.json(await mai17Day41(c.get('user'), glimtSettingsOf(c.get('user')))); });
+mai17Api.get('/', async (c) => { const { glimtSettingsOf } = await import('./settings.js'); return c.json(await mai17Day41(c.get('user'), glimtSettingsOf(c.get('user')))); });
 mai17Api.put('/design', async (c) => {
   const u = c.get('user'), b = await c.req.json().catch(() => ({}));
   if (typeof b?.on !== 'boolean') return c.json({ error: 'on må være true eller false' }, 400);
   kv.set(u, designKey, { date: ymd().iso, on: b.on });
-  const { glimtSettingsOf } = await import('./glimt/settings.js');
+  const { glimtSettingsOf } = await import('./settings.js');
   return c.json({ design: b.on, mai17Active: mai17Active(glimtSettingsOf(u), Date.now(), u) });
 });
 mai17Api.post('/hurra', async (c) => {

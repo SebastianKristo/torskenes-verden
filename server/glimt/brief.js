@@ -60,7 +60,7 @@ const MOCK = process.env.MOCK_DATA === '1';
 import { registerJob } from '../jobs/index.js';
 import { sessionUser } from '../auth/session.js';
 import { ski41 } from '../vaer/week-glimt.js'; // skiføre i briefen
-import { mai17Active, mai17Day41 } from '../mai17-41.js'; // 17. mai i briefen
+import { mai17Active, mai17Day41 } from './mai17.js'; // 17. mai i briefen
 import { journeyOf41 } from '../reise/ruter.js'; // Min reise («forlot skolen») i briefen
 import { julBrief } from './jul.js'; // julemodus i briefen
 const WX_EMOJI = { clear: '☀️', partly: '⛅', cloudy: '☁️', fog: '🌫️', drizzle: '🌦️', rain: '🌧️', sleet: '🌨️', snow: '❄️', thunder: '⛈️' };
@@ -418,7 +418,7 @@ export default api;
 /* ---------------- Felt som legges på det ferdige svaret ---------------- */
 // Før to mellomvarer i index.js (briefJul40 i api40.js og brief41 i api41.js), nå én, montert i mountGlimt rett før briefApi:
 //   ski:{text, chip:'Ski: blå', …, places[]}  når skiføret er relevant (vaer/week-glimt.js; skiføre i /api/weather/full ligger i vaer/layout.js)
-//   mai17:{title, text, items, active, greeting} på 17. mai (mai17-41.js)
+//   mai17:{title, text, items, active, greeting} på 17. mai (mai17.js)
 //   minReise:{leftSchoolAt, title, homeCard}  når «forlot skolen» er aktiv (reise/ruter.js)
 //   jul:{phase, label, outfit, countdown, countdownText, luke:{n, text}|null, aaret?, snow}  når julemodus er på (glimt/jul.js)
 const BRIEF = /^\/api\/brief\/?$/;
