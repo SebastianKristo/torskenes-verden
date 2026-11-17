@@ -1,7 +1,7 @@
 // Felles UI-komponenter på web (public/js/ui/ + public/css/components/ui.css): riktige klasser, escaping, og bare tokens.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync, readdirSync } from 'node:fs';
+import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { buttonHtml } from '../public/js/ui/button.js';
 import { cardHtml } from '../public/js/ui/card.js';
@@ -48,4 +48,16 @@ test('ui-mappen: én fil per komponent, uten nummer i navnet, og ui.css lastes i
   for (const f of ['button.js', 'card.js', 'empty.js', 'loader.js', 'sheet.js', 'toast.js']) assert.ok(files.includes(f), f);
   for (const f of files) assert.doesNotMatch(f, /\d/, f);
   assert.match(readFileSync(join(ROOT, 'public/app.html'), 'utf8'), /\/assets\/css\/components\/ui\.css/);
+});
+
+test('CSS (runde 4): skallkomponentene er én fil, og app.html lenker bare til filer som finnes, i samme rekkefølge', () => {
+  const html = readFileSync(join(ROOT, 'public/app.html'), 'utf8');
+  const links = [...html.matchAll(/href="\/assets\/(css\/[^"?]+\.css)/g)].map((m) => m[1]);
+  for (const l of links) assert.ok(existsSync(join(ROOT, 'public', l)), `${l} finnes ikke`);
+  for (const gammel of ['card', 'controls', 'overlay', 'feedback', 'module']) assert.ok(!existsSync(join(ROOT, `public/css/components/${gammel}.css`)), `${gammel}.css er slått sammen`);
+  const i = (f) => links.indexOf(`css/components/${f}.css`);
+  assert.ok(i('shell') > links.indexOf('css/layout.css') && i('shell') < i('glimt') && i('glimt') < i('ui'), 'rekkefølgen er som før sammenslåingen');
+  const shell = readFileSync(join(ROOT, 'public/css/components/shell.css'), 'utf8');
+  const pos = ['card', 'controls', 'overlay', 'feedback', 'module'].map((s) => shell.indexOf(`/* ======================= ${s} ======================= */`));
+  assert.ok(pos.every((p, k) => p >= 0 && (k === 0 || p > pos[k - 1])), 'card → controls → overlay → feedback → module');
 });

@@ -31,7 +31,7 @@ Dette dokumentet går gjennom alle funnene i [AUDIT.md](AUDIT.md) og detaljrappo
 
 | Mål | AUDIT (før) | Før, samme telling | Etter | Kommentar |
 |---|---:|---:|---:|---|
-| CSS-filer på web | 65 | 65 | **50** | `public/css` 58 → 42 (tokens, base, layout, components, pages), Økonomi 7 → 8. Målet var ca. 15 |
+| CSS-filer på web | 65 | 65 | **46** | `public/css` 58 → 42 → 38 (tokens, base, layout, components, pages), Økonomi 7 → 8. Runde 4: skallkomponentene `card`, `controls`, `overlay`, `feedback` og `module` er én fil, `components/shell.css`, i samme rekkefølge (skjermbildene er like før og etter; `test/ui-komponenter.test.js`). Målet var ca. 15; resten er sidefiler som lastes når siden åpnes (`pageCss`), og å slå dem sammen gir mer å laste på hver side |
 | CSS-størrelse | 1,99 MB | 1 992 230 B | **1 958 208 B** | −2 %. Mesteparten er `public/finans/css/mobile.css` (925 KB med resten av Økonomi) |
 | CSS-filer med nummer | 41 | 41 | **0** | – |
 | CSS lastet per Homelab-rute | 42–47 | 42–47 | **28–30** | Fra `test:perf`, se §2.2 |
