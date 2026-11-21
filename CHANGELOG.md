@@ -2,6 +2,16 @@
 
 Alle merkbare endringer i Homelab OS, FinansHub og mobilappene. Nyeste øverst. Versjonene med APK og IPA ligger under [Releases](https://github.com/SebastianKristo/torskenes-verden/releases).
 
+## [5.1.1] – 21.11.2026 · Glimt forstår innlimte meldinger, og ryddigere apper
+- **Glimt:** en innlimt melding om en time («teoriprøve», «førerprøve», «blodprøve») blir ikke lenger lagret som en prøveperiode. Modellen avgjør hva meldingen gjelder, og timen legges i kalenderen. Har du fått en feil prøveperiode (for eksempel «Hei»), sletter du den under Økonomi → Faste betalinger → Abonnementer.
+- **Når serveren mangler noe:** web og appene viser nå hva som er galt, i stedet for «Oppdater serveren» eller å regne ut svaret selv.
+- **Økonomi:** bedre kontrast i Abonnementer, Faste betalinger, Kvitteringer og Import, og i «Trenger gjennomgang» i mørk modus.
+- **Android:**
+  - Knappene og valgene er tydeligere for TalkBack.
+  - Været og Aksjer tømmes når du logger ut eller bytter bruker.
+- **Ikoner:** hentes alltid via Homelab-serveren.
+- **Rettet:** datoen «lagt til» for autentiseringsappen og datoene i Glimt-briefen i Økonomi på mobil følger norsk tid.
+
 ## [5.1.0] – 17.11.2026 · Velg fanelinje på iPhone og skjulte beløp i varsler og widgeter
 - **Fanelinje (iPhone):** under Innstillinger → Utseende → Fanelinje velger du mellom «Systemets (Liquid Glass)» og «Papir (klassisk)». Papir er den fanelinjen appen har brukt hele tiden, med Hjem-knappen og merkene på fanene. Liquid Glass er fortsatt standard.
 - **Skjul beløp:** med «Skjul beløp i varsler og widgeter» (Innstillinger → Varsler) står det «••• kr» i stedet for beløpet i push-varsler, ntfy og widgetene. Har du «Skjul beløp» på i appen, gjelder det nå også widgetene på Hjem-skjermen og låseskjermen (iPhone og Android).
