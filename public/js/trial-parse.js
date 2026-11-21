@@ -74,8 +74,21 @@ export function cancelUrlFor(service) {
   return hit ? hit[2] : null;
 }
 
-export const TRIAL_INTENT = /pr(ø|o)ve|gratis|avslutt|si opp|oppsig|trial/i;
+// Hele ord: «teoriprøve», «førerprøve» og «blodprøve» er ikke prøveperioder (Glimt laget en prøveperiode av en melding fra
+// Statens vegvesen om teoriprøven).
+export const TRIAL_INTENT = /(?<![a-zæøå])(?:pr(?:ø|o)ve(?:n|r|ne|periode\w*|tid\w*)?|gratis\w*|avslutt\w*|si\s+opp|oppsig\w*|trial)(?![a-zæøå])/i;
 export const isTrialText = (text) => TRIAL_INTENT.test(String(text ?? ''));
+/** Tjenesten bare når den er kjent (TRIAL_SERVICES), ikke første ord med stor forbokstav. */
+export const knownServiceOf = (text) => { const t = String(text ?? '').toLowerCase(); return TRIAL_SERVICES.find(([, re]) => re.test(t))?.[0] ?? ''; };
+/**
+ * Ser teksten ut som en prøveperiode for et abonnement? Et prøveord som hele ord, og enten et entydig ord (gratis, trial,
+ * prøveperiode, prøvetid) eller en kjent tjeneste. Alt annet (timer, prøver, innlimte meldinger) avgjør modellen.
+ */
+export function looksLikeTrial(text) {
+  const t = String(text ?? '');
+  if (!isTrialText(t)) return false;
+  return /(?<![a-zæøå])(?:gratis\w*|trial|pr(?:ø|o)veperiode\w*|pr(?:ø|o)vetid\w*|gratisperiode\w*)(?![a-zæøå])/i.test(t) || !!knownServiceOf(t);
+}
 
 /** VARSLE MEG-valgene i skjemaet. */
 export const REMIND_OPTIONS = [{ days: 0, label: 'Samme dag' }, { days: 1, label: '1 dag før' }, { days: 3, label: '3 dager før' }, { days: 7, label: '1 uke før' }];
@@ -83,7 +96,7 @@ export const DEFAULT_OFFSETS = [1];
 
 const NUM = { en: 1, ett: 1, ei: 1, én: 1, to: 2, tre: 3, fire: 4, fem: 5, seks: 6, sju: 7, syv: 7, åtte: 8, ni: 9, ti: 10, elleve: 11, tolv: 12, fjorten: 14, femten: 15, tjue: 20, tjuefem: 25, tretti: 30, førti: 40, seksti: 60, nitti: 90 };
 const MONTH_RE = /(\d{1,2})\.?\s*(jan|feb|mar|apr|mai|jun|jul|aug|sep|okt|nov|des)[a-zæøå]*\.?(?:\s+(\d{4}))?/;
-const SKIP_WORD = /^(gratis|påminn|påmind|prøve|prøven|prøveperiode|prøveperioden|minn|husk|jeg|si|avslutt|avslutte|start|startet|har|ny|nytt|en|et|kr|i|til|meg|om|the|trial|free|når|hva|hvor|hvem|hvordan|hvilken|hvilke|kan|er|skal|lag|legg|sett|neste|min|mitt|mine|det|den)$/i;
+const SKIP_WORD = /^(hei|hallo|heisann|hilsen|mvh|påminnelse|dette|du|vi|gratis|påminn|påmind|prøve|prøven|prøveperiode|prøveperioden|minn|husk|jeg|si|avslutt|avslutte|start|startet|har|ny|nytt|en|et|kr|i|til|meg|om|the|trial|free|når|hva|hvor|hvem|hvordan|hvilken|hvilke|kan|er|skal|lag|legg|sett|neste|min|mitt|mine|det|den)$/i;
 
 /** Sluttdato fra varighet («14 dager», «1 uke», «en måned») eller dato («25.11», «til 3. desember»). */
 export function endDateOf(text, todayISO) {

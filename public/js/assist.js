@@ -9,7 +9,7 @@
 // Serveren sender selv Web Push når fanen ikke er synlig (presence, se webpush.js).
 import { onLive } from './realtime.js';
 import { aiStart, aiUpdate, aiDone } from './ai-jobs.js';
-import { parseTrial, trialSentence } from './trial-parse.js';
+import { parseTrial, trialSentence, looksLikeTrial } from './trial-parse.js';
 import { isQuestion } from './glimt-sporsmal.js';
 
 const ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
@@ -28,7 +28,7 @@ export const TOOL_RE = {
   packages: /pakke(n|r|ne)?\b|sending(en)?\b|levert\b|hentested/i,
   finance: /brukt på|bruker jeg på|forbruk|kostet|utgifter|hvor mye (har jeg )?brukt/i,
   tasks: /huskeliste|handleliste|gjøremål|to-?do|oppgaver|må jeg huske/i,
-  trial: /pr(ø|o)ve(periode)?|gratis i|avslutt|si opp|oppsig|trial/i,
+  trial: /(?<![a-zæøå])(?:pr(?:ø|o)ve(?:n|periode\w*)?|gratis i|avslutt\w*|si opp|oppsig\w*|trial)(?![a-zæøå])/i,
   // Prompt 62 (prompt 49 del 2): faste oppgaver («send meg strømprisene hver morgen kl. 7», «si fra hvis …», «flytt morgenbriefen …»)
   schedule: /\bhver\s+(dag|morgen|kveld|natt|uke|måned|år|hverdag|helg|mandag|tirsdag|onsdag|torsdag|fredag|lørdag|søndag)|\bhverdag(er)?\b|\bannenhver\b|\bden \d{1,2}\.? (i )?hver\b|\bfaste oppgaver?|\bplanlagte? oppgaver?|\bsi (fra|ifra)\b.*\b(hvis|når|om)\b|\bvarsle? meg\b|\bgi (meg )?beskjed\b.*\b(hvis|når|om)\b|strømpris|morgenbrief|kveldsbrief|\bbriefen\b|\bminn meg\b|påminnels/i,
   // Prompt 33: «husk at Påhåret er frisøren min», «det var frisør», «dette er for tannlegen»
@@ -236,7 +236,7 @@ const STOP = /\b(når|er|neste|time(n)?|timer|hos|min|mitt|jeg|har|en|et|til|på
 export async function localAssist(q, o = {}) {
   const n = q.toLowerCase(), t0 = Date.now();
   try {
-    if (TOOL_RE.trial.test(n)) {
+    if (TOOL_RE.trial.test(n) && looksLikeTrial(q)) { // hele ord og en kjent tjeneste eller et entydig ord (ikke «teoriprøve»)
       const p = parseTrial(q);
       if (p.ok) {
         const body = { service: p.service, endsAt: p.endsAt, priceAfter: p.priceAfter, remindOffsetsDays: p.remindOffsetsDays, source: 'glimt' };

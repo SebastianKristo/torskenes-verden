@@ -70,7 +70,7 @@ import { createTrial, trialOut } from '../finans/trials.js';
 import { startQuickJob } from '../kalender/quick.js';
 import { parseQuick, osloTodayISO, quickLabel, senderOf } from '../dates/quick.js'; // dato og tid fra den felles tolkeren
 import { aliasesOf, aliasPrompt, parseMemoryIntent, learnFromAssist, typeOfWord, eventHitsAlias, getContext, setContext } from './memory/remember.js'; // prompt 33
-import { serviceOf, trialSentence, MONTHS, WEEKDAYS, addDaysISO, daysBetween } from '../../public/js/trial-parse.js';
+import { serviceOf, trialSentence, MONTHS, WEEKDAYS, addDaysISO, daysBetween, TRIAL_INTENT, looksLikeTrial } from '../../public/js/trial-parse.js';
 import { parseTrialText as parseTrial } from '../finans/trials.js'; // den ene prøvetolkeren på serveren
 import * as integrations from '../integrations.js';
 import { calendarAnswer } from '../kalender/calendars.js'; // prompt 33: source:'calendar'
@@ -145,7 +145,7 @@ const dayWord = (date, today) => (date === today ? 'I dag' : date === addDaysISO
 /* ---------------- Intensjon (før LLM) ---------------- */
 
 const RE = {
-  trial: /pr(ø|o)ve|gratis|avslutt|si opp|oppsig|trial/,
+  trial: TRIAL_INTENT, // hele ord (ikke «teoriprøve»)
   next: /neste|når (er|skal|har)|når.*time/,
   nextWhat: /time|avtale|frisør|lege|tannlege|møte|trening|prøve|eksamen|hos\b/,
   weather: /v(æ|ae)r(et|meldingen)?\b|regn|paraply|grader|temperatur|snø|vind|sol(a|en)?\b|kaldt|varmt|jakke|ute i dag|i morgen.*(ute|tur)|\bweather\b|\bforecast\b/,
@@ -236,11 +236,12 @@ export function detectIntent(text, today = osloTodayISO()) {
   // Prompt 36: dagslys/soloppgang/solnedgang besvares lokalt (før avtaletolkning).
   if (isSunQuestion(text)) return 'sun.daylight';
   const asked = isQuestion(text);
-  // Prøveperiode: «gratis», «trial», «prøveperiode», eller «prøve/avslutt/si opp» sammen med en tjeneste («Storytel prøve til 25.11»).
+  // Prøveperiode: «gratis», «trial», «prøveperiode», eller «prøve/avslutt/si opp» sammen med en kjent tjeneste («Storytel prøve til 25.11»).
+  // Et vilkårlig ord med stor forbokstav («Hei», «Statens») er ingen tjeneste; da avgjør modellen.
   // Prompt 37: «Neste prøve på skolen» er en skoleprøve (Studie), ikke en prøveperiode.
   const pi = parseIntent37(text);
   if (pi.schoolTest && pi.schoolContext) return 'calendar.school';
-  if (RE.trial.test(n) && (/gratis|trial|prøveperiode|prøvetid/.test(n) || serviceOf(text))) return 'trial.create';
+  if (looksLikeTrial(text)) return 'trial.create';
   if (bareDay37(text, today)) return 'calendar.day'; // «i morgen?»
   if (parseMemoryIntent(text)) return 'memory.add';
   // Prompt 47: vær før «neste …» – «været i Oslo neste time» er et værspørsmål, ikke neste avtale.
@@ -567,16 +568,20 @@ const TOPIC_INTENT47 = { departures: 'departures', packages: 'packages', sun: 's
 export async function answer(user, text, { today: today0 = null, onStep = () => {}, ctx = null, skipAgent = false, module = 'home', jobId = null, noWeb = false, topic = null } = {}) {
   const today = today0 ?? osloTodayISO();
   const t0 = Date.now();
+  let planned = false;
   // Prompt 45: handlinger og data-søk (kalender, gjøremål, finans) går gjennom Glimt-motoren: modellen forstår, koden validerer og
   // utfører, datakilden bekrefter. Vær, avganger, pakker, sol, familie, prøveperioder og prat går videre til svarene under.
   if (!skipAgent) {
     try {
       const g = await agent45(user, text, { module, today: today0 ?? undefined, requestId: jobId ? `assist-${jobId}` : null, legacyOk: false });
       if (!g.legacy) { const a = toAssist45(g, text, today); onStep(1, a.intent); onStep(2, a.intent); return { ...a, ms: Date.now() - t0 }; }
-      if (g.plan?.engine && g.plan.engine !== 'lokal') topic = g.plan.calls?.find((c) => c.tool === 'app.answer')?.args?.topic ?? topic;
+      if (g.plan?.engine && g.plan.engine !== 'lokal') { planned = true; topic = g.plan.calls?.find((c) => c.tool === 'app.answer')?.args?.topic ?? topic; }
     } catch (e) { console.warn('[glimt45] assist:', String(e?.message ?? e).slice(0, 160)); }
   }
   let intent = TOPIC_INTENT47[topic] ?? detectIntent(text, today);
+  // Modellen har forstått meldingen: tekstreglene kan svare på spørsmål (vær, avganger …), men aldri lagre noe modellen ikke valgte
+  // (prøveperiode, avtale, minne, gjøremål). Da svarer modellen selv.
+  if (planned && !TOPIC_INTENT47[topic] && ACTION_INTENTS.has(intent)) intent = 'llm';
   // Prompt 39: «hva slags timer har jeg i dag», «hva er fysikk» og oppfølging («hva slags fag er det») med forrige svar.
   const f39 = await fagAnswer(user, text, { today, followNeedsCtx: true }).catch(() => null);
   if (f39) intent = 'calendar.fag';
