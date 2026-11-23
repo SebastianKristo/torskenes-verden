@@ -141,6 +141,8 @@ stolpe_b = 6;
 stag_b = 9;
 // Minste materiale foran vinduene i siderammene
 vindu_kant = 6;
+// Vinkelen på taket over vinduene i siderammene, fra vannrett i printen. 45 er minimum uten support; 60 printer sikrere.
+vindu_vinkel = 60;
 // Stivere ramme: vinduene i siderammene deles av stag langs dybden, og tverrstag binder skinnene sammen på samme dybder
 vindu_stag_n = 2;
 vindu_stag_b = 8;
@@ -572,10 +574,11 @@ module langs_x(W) { rotate([90, 0, 90]) linear_extrude(W) children(); }
 // Loddrett forside, 45° bakside: bakkanten er undersiden når rammen ligger på ryggen.
 module ribbe_opp2d(ya, zs) { polygon([[ya, zs - e], [ya + ribbe_t + ribbe_h, zs - e], [ya + ribbe_t, zs + ribbe_h], [ya, zs + ribbe_h]]); }
 module ribbe_ned2d(ya, zs) { polygon([[ya, zs + e], [ya + ribbe_t + ribbe_h, zs + e], [ya + ribbe_t, zs - ribbe_h], [ya, zs - ribbe_h]]); }
-// Vindu i en sideramme (YZ): spiss 45° foran (taket når rammen ligger på ryggen), flat bak
+// Vindu i en sideramme (YZ): spiss foran (taket når rammen ligger på ryggen), flat bak. Taket heller vindu_vinkel grader
+// fra vannrett i printen (60°: 45° hang og ble trådete i den tynne sideveggen i PETG).
 // Dybdene til stagene i siderammene og tverrstagene (jevnt fordelt mellom vindu_kant og bakkant av vinduene)
 function stag_y(y1) = [for (k = [1 : 1 : vindu_stag_n]) vindu_kant + (y1 - vindu_kant) * k / (vindu_stag_n + 1)];
-// Vinduene i en sideramme for én rad, delt av stagene. Hvert stykke har spiss 45° foran og flat bakkant (bunnen i printen).
+// Vinduene i en sideramme for én rad, delt av stagene. Hvert stykke har spiss foran (vindu_vinkel) og flat bakkant (bunnen i printen).
 // Foran stag 1: et lavt vindu helt fram (yf, opp til zbf) og et høyt bak taket (yd, opp til zbd), som før – spissen på det høye
 // ligger inni det lave. Bak hvert stag: bare det høye vinduet, så det aldri blir løse trekanter mellom to spisser.
 module vinduer2d(yf, yd, y1, za, zbf, zbd) {
@@ -586,9 +589,11 @@ module vinduer2d(yf, yd, y1, za, zbf, zbd) {
     for (i = [0 : 1 : len(cuts) - 1]) vindu2d(cuts[i] + vindu_stag_b / 2, i + 1 < len(cuts) ? cuts[i + 1] - vindu_stag_b / 2 : y1, za, zbd);
 }
 module vindu2d(y0, y1, za, zb) {
-    hm = (zb - za) / 2;
-    if (zb - za >= 4 && y1 - y0 > hm + 2)
-        polygon([[y0, za + hm], [y0 + hm, za], [y1, za], [y1, zb], [y0 + hm, zb]]);
+    k = tan(vindu_vinkel);                              // høyde på taket i printen per mm halv vindusbredde (45° gir 1)
+    hm = min((zb - za) / 2, (y1 - y0 - 2) / k);         // er stykket for kort til hele taket, blir vinduet smalere
+    zm = (za + zb) / 2;
+    if (hm >= 2)
+        polygon([[y0, zm], [y0 + hm * k, zm - hm], [y1, zm - hm], [y1, zm + hm], [y0 + hm * k, zm + hm]]);
 }
 
 // ---------------------------------------------------------------------

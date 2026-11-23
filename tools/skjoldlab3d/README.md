@@ -193,7 +193,7 @@ Nå er rammen bygd slik:
 
 - Ribbene for masken har loddrett forside og 45° bakside.
 - Stoppkanten er 45° både foran og bak (den bakre flaten hekter leppa på skuffen).
-- Vinduene i siderammene har 45° spiss foran, der taket på vinduet havner i printen.
+- Vinduene i siderammene har spiss foran, der taket på vinduet havner i printen. Taket heller 60° fra vannrett (`vindu_vinkel`). Med 45° hang skråkantene og spissene ble trådete i den tynne sideveggen i PETG (2026-11-23). Er et stykke for kort til hele taket, blir vinduet smalere. Med `vindu_vinkel = 45` blir modulene som før. 60° gir ca. 15 g mer per modul (massivt anslag).
 - LED-veggen i øverste rad bæres av et 45° skråstag bak.
 - Liggende hull er dråpeformede.
 - **Stivere fra 2026-11-10:** modulene printes stående på ryggen og er 165 mm høye. Over bakstoppen bestod de nesten bare av tynne plater, så de ble skjøre høyt oppe. Nå er det to stag i hver sideramme, som deler vinduene i tre med 45° spiss. Tverrstag i gulvet binder skinnene sammen på de samme dybdene. Skinnene er 6 × 2 mm (før 4,5 × 1,6), midtskinnene 8 mm, skråstagene 3,2 × 6 mm (før 2 × 3), ryggkrysset 9 mm og kanten foran vinduene 6 mm.

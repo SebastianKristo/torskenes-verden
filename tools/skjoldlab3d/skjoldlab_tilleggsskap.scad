@@ -216,6 +216,8 @@ bakstopp_h = 4;
 stag_b = 6;
 // Minste materiale foran vinduene i siderammene (mm)
 vindu_kant = 4;
+// Vinkelen på taket over vinduene i siderammene, fra vannrett i printen. 45 er minimum uten support; 60 printer sikrere.
+vindu_vinkel = 60;
 // Tunge under hver modul som låser fronten mot modulen under: høyde (mm)
 tunge_h_maks = 3;
 // Tunge: bredde (mm)
@@ -530,11 +532,14 @@ module skillevegg_stor_g(w, h) { skillevegg_g(w - 2 * stor_vegg - toleranse, h -
 // ---------------------------------------------------------------------
 // 2D-profil i YZ ([y, z]) ekstrudert langs X fra x = 0 til W
 module langs_x(W) { rotate([90, 0, 90]) linear_extrude(W) children(); }
-// Vindu i en sideramme (YZ): spiss 45° foran (taket når rammen ligger på ryggen), flat bak
+// Vindu i en sideramme (YZ): spiss foran (taket når rammen ligger på ryggen), flat bak. Taket heller vindu_vinkel grader
+// fra vannrett i printen (60°: 45° hang og ble trådete i den tynne sideveggen i PETG).
 module vindu2d(y0, y1, za, zb) {
-    hm = (zb - za) / 2;
-    if (zb - za >= 4 && y1 - y0 > hm + 2)
-        polygon([[y0, za + hm], [y0 + hm, za], [y1, za], [y1, zb], [y0 + hm, zb]]);
+    k = tan(vindu_vinkel);                              // høyde på taket i printen per mm halv vindusbredde (45° gir 1)
+    hm = min((zb - za) / 2, (y1 - y0 - 2) / k);         // er stykket for kort til hele taket, blir vinduet smalere
+    zm = (za + zb) / 2;
+    if (hm >= 2)
+        polygon([[y0, zm], [y0 + hm * k, zm - hm], [y1, zm - hm], [y1, zm + hm], [y0 + hm * k, zm + hm]]);
 }
 function n_midt(s) = max(0, ceil((s - 2 * flens_b) / bro_maks) - 1);
 
