@@ -44,7 +44,11 @@ echo "curl $url" >> "${calls}"
 case "$url" in
   https://api.github.com/*) [ -n "\${FAKE_API_403:-}" ] && exit 22; echo '{"sha":"${SHA}"}';;
   https://github.com/*info/refs*) printf '001e# service=git-upload-pack\n0000003f${SHA} refs/heads/main\n0000';;
-  https://codeload.github.com/*) cp "${tgz}" "$out";;
+  https://codeload.github.com/*)
+    # FAKE_CODELOAD_FAIL=n: de n første nedlastingene feiler som et DNS-oppslag som ikke svarer (curl: (6)).
+    n=$(cat "${calls}.dl" 2>/dev/null || echo 0); echo $((n + 1)) > "${calls}.dl"
+    if [ "$n" -lt "\${FAKE_CODELOAD_FAIL:-0}" ]; then echo "curl: (6) Could not resolve host: codeload.github.com" >&2; exit 6; fi
+    cp "${tgz}" "$out";;
   *healthz) exit "\${FAKE_HEALTH_RC:-0}";;
   *) exit 22;;
 esac
@@ -118,6 +122,27 @@ test('GitHub-API-et gir 403 (grensen på 60 kall i timen): siste commit leses fr
   assert.equal(r.status.sha, SHA);
   assert.match(r.calls, /curl https:\/\/github\.com\/SebastianKristo\/torskenes-verden\.git\/info\/refs\?service=git-upload-pack/);
   assert.match(r.calls, new RegExp(`curl https://codeload.github.com/SebastianKristo/torskenes-verden/tar.gz/${SHA}`));
+});
+
+test('DNS-oppslaget feiler et øyeblikk («Could not resolve host»): nedlastingen prøves på nytt', { skip }, () => {
+  const t = setup();
+  const r = run(t, { id: 'req-dns', at: Date.now() }, { FAKE_CODELOAD_FAIL: '2', NET_RETRY_S: '0' });
+  const log = readFileSync(join(t.host, 'data', 'update', 'log.txt'), 'utf8');
+  assert.equal(r.status?.state, 'done', `${r.stderr}\n${log}`);
+  assert.equal(r.status.sha, SHA);
+  assert.equal(r.calls.split('\n').filter((l) => l.includes('codeload.github.com')).length, 3, 'to feil og ett vellykket forsøk');
+  assert.match(log, /Nedlastingen feilet \(forsøk 1 av 3\)/);
+  untouched(t);
+});
+
+test('DNS svarer ikke i det hele tatt: tre forsøk, så «Nedlastingen feilet» med nettverk som årsak og ingenting endret', { skip }, () => {
+  const t = setup();
+  const r = run(t, { id: 'req-dns2', at: Date.now() }, { FAKE_CODELOAD_FAIL: '9', NET_RETRY_S: '0' });
+  assert.equal(r.status?.state, 'failed');
+  assert.match(r.status.error ?? r.status.message ?? JSON.stringify(r.status), /Nedlastingen feilet/);
+  assert.equal(r.calls.split('\n').filter((l) => l.includes('codeload.github.com')).length, 3);
+  assert.doesNotMatch(r.calls, /docker compose /);
+  untouched(t);
 });
 
 test('tunnel-profil når CLOUDFLARE_TUNNEL_TOKEN er satt', { skip }, () => {

@@ -70,6 +70,10 @@ SELF_UPDATE="${SELF_UPDATE:-1}"
 REQUEST_MAX_AGE="${REQUEST_MAX_AGE:-900}"   # sekunder; eldre forespørsler ignoreres
 # Prompt 46: tidsavbrudd per steg (sekunder), vakt og ressurskrav.
 DOWNLOAD_TIMEOUT="${DOWNLOAD_TIMEOUT:-600}"
+# Nettverksfeil i nedlastingen (DNS som ikke svarer et øyeblikk, «Could not resolve host», brutt forbindelse) prøves på nytt:
+# NET_TRIES forsøk med NET_RETRY_S, 2 × NET_RETRY_S … sekunders pause. Tidsavbrudd og «Avbryt» prøves ikke på nytt.
+NET_TRIES="${NET_TRIES:-3}"
+NET_RETRY_S="${NET_RETRY_S:-5}"
 BUILD_TIMEOUT="${BUILD_TIMEOUT:-1200}"
 UP_TIMEOUT="${UP_TIMEOUT:-90}"
 STALL_TIMEOUT="${STALL_TIMEOUT:-180}"
@@ -434,8 +438,18 @@ run_job() {
   log "Siste commit: $SHA"
   fi
   # Prompt 46: med tidsavbrudd og vakt (fremdrift = arkivet vokser); retry/abort virker her også.
-  WATCH_FILE="$TMPD/src.tgz" step_run "$DOWNLOAD_TIMEOUT" curl -fsSL --max-time "$DOWNLOAD_TIMEOUT" -H 'User-Agent: homelab-updater' -o "$TMPD/src.tgz" \
-    "https://codeload.github.com/$UPDATE_REPO/tar.gz/$SHA"; rc=$?
+  # Nettverksfeil (f.eks. «Could not resolve host: codeload.github.com» et øyeblikk etter at api.github.com svarte) prøves på nytt.
+  local try=1
+  while :; do
+    rm -f "$TMPD/src.tgz"
+    WATCH_FILE="$TMPD/src.tgz" step_run "$DOWNLOAD_TIMEOUT" curl -fsSL --max-time "$DOWNLOAD_TIMEOUT" -H 'User-Agent: homelab-updater' -o "$TMPD/src.tgz" \
+      "https://codeload.github.com/$UPDATE_REPO/tar.gz/$SHA"; rc=$?
+    case "$rc" in 0|124|130) break ;; esac
+    [ "$try" -ge "$NET_TRIES" ] && break
+    log "Nedlastingen feilet (forsøk $try av $NET_TRIES). Prøver igjen om $(( NET_RETRY_S * try )) s."
+    sleep $(( NET_RETRY_S * try ))
+    try=$(( try + 1 ))
+  done
   case "$rc" in
     0) ;;
     130) fail_code cancelled "Avbrutt under nedlastingen. Ingenting er endret – ${FROM_VERSION:-forrige versjon} kjører som før."; return ;;
@@ -705,7 +719,12 @@ install_sha() {
   local sha="$1" d
   [[ "$sha" =~ ^[0-9a-f]{40}$ ]] || return 1
   d=$(mktemp -d "${TMPDIR:-/tmp}/homelab-revert.XXXXXX") || return 1
-  curl -fsSL --max-time "$DOWNLOAD_TIMEOUT" -H 'User-Agent: homelab-updater' -o "$d/src.tgz" "https://codeload.github.com/$UPDATE_REPO/tar.gz/$sha" 2>>"$LOG" || { rm -rf "$d"; return 1; }
+  local try=1
+  until curl -fsSL --max-time "$DOWNLOAD_TIMEOUT" -H 'User-Agent: homelab-updater' -o "$d/src.tgz" "https://codeload.github.com/$UPDATE_REPO/tar.gz/$sha" 2>>"$LOG"; do
+    [ "$try" -ge "$NET_TRIES" ] && { rm -rf "$d"; return 1; }
+    log "Nedlastingen feilet (forsøk $try av $NET_TRIES). Prøver igjen om $(( NET_RETRY_S * try )) s."
+    sleep $(( NET_RETRY_S * try )); try=$(( try + 1 ))
+  done
   mkdir "$d/src" && tar -xzf "$d/src.tgz" -C "$d/src" --strip-components=1 --no-same-owner 2>>"$LOG" || { rm -rf "$d"; return 1; }
   [ -f "$d/src/docker-compose.yml" ] && [ -f "$d/src/server/index.js" ] || { rm -rf "$d"; return 1; }
   rm -rf "$d/src/.env" "$d/src/data" "$d/src/proton"
