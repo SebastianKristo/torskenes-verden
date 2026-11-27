@@ -1,0 +1,178 @@
+# Laster opp iOS-appene til TestFlight: Homelab (FinansHub, no.kristo.finanshub, med FinansHubWidgets) og
+# Kalender (no.kristo.kalender, med KalenderWidgets). Oppsettet i Apple Developer og App Store Connect: docs/testflight.md.
+#
+# Start: Actions → TestFlight → Run workflow (velg begge, homelab eller kalender), eller push en tag v* (samme tag som
+# release.yml bruker; de to workflowene kjører hver for seg og deler ingenting).
+#
+# Hemmeligheter (uten dem hopper workflowen over med «Mangler TestFlight-hemmeligheter», og kjøringen er grønn):
+#   ASC_KEY_ID, ASC_ISSUER_ID, ASC_KEY_P8_BASE64 (App Store Connect API-nøkkel med Admin-rolle), IOS_TEAM_ID
+# Signering: Xcodes automatiske signering med API-nøkkelen (-allowProvisioningUpdates). Xcode lager sertifikat og profiler
+# selv, så det trengs ingen .p12 eller profiler i hemmelighetene. Nøkkelfila skrives til $RUNNER_TEMP og slettes til slutt.
+name: TestFlight
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      app:
+        description: 'Hvilken app som lastes opp'
+        type: choice
+        options: [begge, homelab, kalender]
+        default: begge
+
+permissions:
+  contents: read
+
+concurrency:
+  group: testflight-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  hemmeligheter:
+    runs-on: ubuntu-latest
+    outputs:
+      klar: ${{ steps.sjekk.outputs.klar }}
+      apper: ${{ steps.sjekk.outputs.apper }}
+    steps:
+      - name: Sjekk TestFlight-hemmeligheter
+        id: sjekk
+        env:
+          # Bare 'true'/'false' – selve verdiene eksponeres ikke her.
+          HAR_KEY_ID: ${{ secrets.ASC_KEY_ID != '' }}
+          HAR_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID != '' }}
+          HAR_KEY_P8: ${{ secrets.ASC_KEY_P8_BASE64 != '' }}
+          HAR_TEAM_ID: ${{ secrets.IOS_TEAM_ID != '' }}
+          VALG: ${{ github.event.inputs.app || 'begge' }}
+        run: |
+          MANGLER=""
+          [ "$HAR_KEY_ID" = "true" ] || MANGLER="$MANGLER ASC_KEY_ID"
+          [ "$HAR_ISSUER_ID" = "true" ] || MANGLER="$MANGLER ASC_ISSUER_ID"
+          [ "$HAR_KEY_P8" = "true" ] || MANGLER="$MANGLER ASC_KEY_P8_BASE64"
+          [ "$HAR_TEAM_ID" = "true" ] || MANGLER="$MANGLER IOS_TEAM_ID"
+          if [ -n "$MANGLER" ]; then
+            echo "::warning title=TestFlight::Mangler TestFlight-hemmeligheter:$MANGLER. Hopper over opplastingen, se docs/testflight.md."
+            echo "## Mangler TestFlight-hemmeligheter" >> "$GITHUB_STEP_SUMMARY"
+            echo "Ikke satt:$MANGLER. Se docs/testflight.md." >> "$GITHUB_STEP_SUMMARY"
+            echo "klar=false" >> "$GITHUB_OUTPUT"
+            echo "apper=[]" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          HOMELAB='{"navn": "Homelab", "scheme": "FinansHub", "bundle": "no.kristo.finanshub", "widget": "FinansHubWidgets"}'
+          KALENDER='{"navn": "Kalender", "scheme": "Kalender", "bundle": "no.kristo.kalender", "widget": "KalenderWidgets"}'
+          case "$VALG" in
+            homelab) APPER="[$HOMELAB]" ;;
+            kalender) APPER="[$KALENDER]" ;;
+            *) APPER="[$HOMELAB, $KALENDER]" ;;
+          esac
+          echo "klar=true" >> "$GITHUB_OUTPUT"
+          echo "apper=$APPER" >> "$GITHUB_OUTPUT"
+          echo "TestFlight-hemmeligheter funnet. Laster opp: $VALG."
+
+  testflight:
+    needs: hemmeligheter
+    if: needs.hemmeligheter.outputs.klar == 'true'
+    name: TestFlight (${{ matrix.navn }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.hemmeligheter.outputs.apper) }}
+    # Samme runner som release.yml (Xcode 26 / iOS 26-SDK, som App Store Connect krever).
+    runs-on: macos-26
+    # Henger signeringen (f.eks. en nøkkelring som venter på svar), stopper jobben i stedet for å gå i seks timer.
+    timeout-minutes: 60
+    defaults:
+      run:
+        working-directory: apps/ios
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Versjon og build-nummer
+        # Marketing-versjonen er den øverste «## [x.y.z]» i CHANGELOG.md (som serveren). Build-nummeret er kjøringens
+        # nummer og forsøk (f.eks. 57.1), så det alltid øker og en ny kjøring av samme jobb ikke kolliderer med den forrige.
+        run: |
+          V=$(grep -m1 -oE '^## \[[0-9]+\.[0-9]+\.[0-9]+\]' ../../CHANGELOG.md | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')
+          [ -n "$V" ] || { echo "::error title=Versjon::Fant ingen «## [x.y.z]» øverst i CHANGELOG.md."; exit 1; }
+          BUILD="${{ github.run_number }}.${{ github.run_attempt }}"
+          if [ "${{ github.ref_type }}" = "tag" ] && [ "${{ github.ref_name }}" != "v$V" ]; then
+            echo "::warning title=Versjon::Taggen ${{ github.ref_name }} er ikke lik versjonen i CHANGELOG.md ($V). TestFlight får $V."
+          fi
+          echo "V=$V" >> "$GITHUB_ENV"
+          echo "BUILD=$BUILD" >> "$GITHUB_ENV"
+          echo "${{ matrix.navn }} $V ($BUILD)"
+
+      - name: Installer XcodeGen og generer prosjekt
+        run: brew install xcodegen && xcodegen generate
+
+      - name: App Store Connect-nøkkel og midlertidig nøkkelring
+        # Nøkkelen dekodes rett til fil (aldri til loggen). Den midlertidige nøkkelringen er standard under jobben, så
+        # sertifikatet Xcode lager havner der og slettes sammen med den til slutt.
+        env:
+          KEY_P8_B64: ${{ secrets.ASC_KEY_P8_BASE64 }}
+        run: |
+          umask 077
+          printf '%s' "$KEY_P8_B64" | base64 --decode > "$RUNNER_TEMP/AuthKey_testflight.p8"
+          grep -q "BEGIN PRIVATE KEY" "$RUNNER_TEMP/AuthKey_testflight.p8" || {
+            echo "::error title=TestFlight::ASC_KEY_P8_BASE64 er ikke en base64-kodet .p8-nøkkel, se docs/testflight.md."; exit 1; }
+          KC="$RUNNER_TEMP/testflight.keychain-db"
+          KP=$(uuidgen)
+          security create-keychain -p "$KP" "$KC"
+          security set-keychain-settings -lut 21600 "$KC"
+          security unlock-keychain -p "$KP" "$KC"
+          security list-keychains -d user -s "$KC" $(security list-keychains -d user | tr -d '"')
+          security default-keychain -s "$KC"
+          echo "ASC_KEY_PATH=$RUNNER_TEMP/AuthKey_testflight.p8" >> "$GITHUB_ENV"
+
+      - name: Arkiver ${{ matrix.navn }}
+        env:
+          KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          TEAM_ID: ${{ secrets.IOS_TEAM_ID }}
+          SCHEME: ${{ matrix.scheme }}
+        run: |
+          xcodebuild -project FinansHub.xcodeproj -scheme "$SCHEME" -configuration Release \
+            -destination 'generic/platform=iOS' -archivePath "$RUNNER_TEMP/$SCHEME.xcarchive" \
+            MARKETING_VERSION="$V" CURRENT_PROJECT_VERSION="$BUILD" \
+            DEVELOPMENT_TEAM="$TEAM_ID" CODE_SIGN_STYLE=Automatic \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$ASC_KEY_PATH" \
+            -authenticationKeyID "$KEY_ID" \
+            -authenticationKeyIssuerID "$ISSUER_ID" \
+            archive > archive.log 2>&1 && s=0 || s=$?
+          grep -E ": error: |: fatal error: |error: No |requires a provisioning profile|Signing for " archive.log | sort -u | head -80 || true
+          tail -25 archive.log
+          [ $s -eq 0 ] || exit $s
+          # Widgetene og App Group-en skal være med i den signerte appen.
+          APP="$RUNNER_TEMP/$SCHEME.xcarchive/Products/Applications/$SCHEME.app"
+          [ -d "$APP/PlugIns/${{ matrix.widget }}.appex" ] || { echo "::error::Fant ikke ${{ matrix.widget }} i arkivet"; exit 1; }
+          codesign -d --entitlements - "$APP" 2>/dev/null | grep -q group.no.kristo.finanshub || { echo "::error::Mangler App Group i signaturen"; exit 1; }
+
+      - name: Eksporter og last opp ${{ matrix.navn }} til TestFlight
+        env:
+          KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          TEAM_ID: ${{ secrets.IOS_TEAM_ID }}
+          SCHEME: ${{ matrix.scheme }}
+        run: |
+          sed "s/__TEAM_ID__/$TEAM_ID/" ../../.github/ios-ExportOptions-testflight.plist > "$RUNNER_TEMP/ExportOptions-testflight.plist"
+          xcodebuild -exportArchive -archivePath "$RUNNER_TEMP/$SCHEME.xcarchive" \
+            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions-testflight.plist" -exportPath "$RUNNER_TEMP/export-$SCHEME" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$ASC_KEY_PATH" \
+            -authenticationKeyID "$KEY_ID" \
+            -authenticationKeyIssuerID "$ISSUER_ID" > export.log 2>&1 && s=0 || s=$?
+          grep -iE "error|upload|succeeded|failed" export.log | sort -u | head -60 || true
+          tail -25 export.log
+          [ $s -eq 0 ] || exit $s
+          {
+            echo "## ${{ matrix.navn }} $V ($BUILD) er lastet opp"
+            echo "Bundle-id \`${{ matrix.bundle }}\`. Builden dukker opp i App Store Connect → TestFlight etter behandlingen (vanligvis 5–30 minutter)."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Slett nøkkelen og nøkkelringen
+        if: always()
+        # Fra roten av arbeidsmappa, så steget også kjører når checkout feilet.
+        working-directory: ${{ github.workspace }}
+        run: |
+          rm -f "$RUNNER_TEMP"/AuthKey_*.p8 "$RUNNER_TEMP/ExportOptions-testflight.plist"
+          security delete-keychain "$RUNNER_TEMP/testflight.keychain-db" 2>/dev/null || true
