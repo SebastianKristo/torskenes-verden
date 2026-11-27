@@ -206,7 +206,7 @@ const SCALAR = {
 };
 // Filternavn og fag: bokstaver (også æøå), tall, mellomrom og noen tegn, 1–40 tegn.
 const KAL_CARDS = ['A', 'B', 'C', 'D', 'E'];
-export const PROFILE_MENU_KEYS = ['innstillinger', 'tema', 'sprak', 'sokebar', 'nyhetslinje', 'tilpass', 'cv', 'las'];
+export const PROFILE_MENU_KEYS = ['innstillinger', 'tema', 'sprak', 'sokebar', 'nyhetslinje', 'tilpass', 'faner', 'widgets', 'cv', 'las']; // prompt 57: «Rediger faner» og «Rediger widgets» (web)
 // Standard: alle i fast rekkefølge, søkebar, nyhetslinje og lås skjermen skjult.
 const layoutDefaults30 = () => ({ profile_menu: { order: [...PROFILE_MENU_KEYS], hidden: ['sokebar', 'nyhetslinje', 'las'] }, finance_more_hidden: [], hs_timeout_s: 8 });
 const KAL_FILTERS = ['timeplan', 'prover', 'bursdager', 'skole', 'privat', 'familie'];

@@ -402,12 +402,12 @@ export async function subsBind(e, t) {
     const files = [...t.files]; t.value = '';
     if (!files.length) return true;
     const fd = new FormData(); for (const f of files) fd.append('file', f);
-    flash(`✦ AI leser ${files.length === 1 ? 'kvitteringen' : `${files.length} kvitteringer`} …`);
+    flash(`✦ Glimt leser ${files.length === 1 ? 'kvitteringen' : `${files.length} kvitteringer`} …`);
     await api('/subscriptions/receipts', { method: 'POST', body: fd });
     SB.sheet = false; SB.mode = null;
     // Kvitteringen leses i bakgrunnen og blir et abonnement når den er ferdig.
     setTimeout(async () => { if (m.screen === 'sub') { await subsLoad(); draw(); } }, 6000);
-    flash('✦ Kvitteringen leses · abonnementet dukker opp når den er ferdig'); return true;
+    flash('✦ Glimt leser kvitteringen · abonnementet dukker opp når den er ferdig …'); return true;
   }
   if (e.type === 'submit' && d('[data-sbform]')) {
     e.preventDefault();

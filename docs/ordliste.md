@@ -37,7 +37,9 @@ Når du finner et begrep som mangler eller brukes ulikt, legg det til her i samm
 | **Oversikt-knapp** (valgfri knapp i fanelinja på mobil-web, Tilpass → Fanelinje) | Hjem-knapp | O1 |
 | **Tilpass Oversikt** (profilmenyen: kortene på Oversikt) | Rediger widgets | O4 |
 | **Utseende og faner** (profilmenyen: åpner Utseende) | Tilpass forside og meny | |
+| **Rediger faner** (profilmenyen, mellom «Utseende og faner» og «Tilpass Oversikt»: redigeringsmodus i toppmenyen, samme som å holde inne en fane), **Legg til fane** (lista bak «+»), **Ferdig** | Faner i menyen, Rediger meny, Fjern fane (det er «Skjul») | Prompt 57. En fane skjules, den slettes ikke |
 | **Kort** (på Oversikt), **Widgets** (på telefonen) | Widgets (om kort på Oversikt) | |
+| Bakgrunnene **Vær nå**, **Planeter**, **Oslo**, **Gradient**, **Eget bilde**, **Google Photos-album** (i den rekkefølgen) | Vær (som bakgrunn), Nåværende, Ingen (som bakgrunn), Mørk gradient | Prompt 57. «Gradient» er bakgrunnen uten bilde (nøkkelen `none`, `cur` i Økonomi) |
 | Media-fanene **Nå**, **Kommer**, **Bibliotek**, **Nedlastinger**, **Kilder** (NRK og Musikk) | Oversikt (i Media), Kalender (i Media) | «Kommer» er det som kommer ut snart. `#/media/kalender` virker fortsatt |
 | **I kveld** | Hva skal vi se i kveld? (som fanenavn) | |
 | **Domener / Sporing** (mellomrom rundt skråstrek) | Domener/Sporing | Likt på alle plattformer |
@@ -126,6 +128,7 @@ Når du finner et begrep som mangler eller brukes ulikt, legg det til her i samm
 | **Brief** | Now Brief | Q7 |
 | **Tilpass Oversikt** (profilmenyen: kortene på Oversikt) | Rediger widgets | O4 |
 | **Utseende og faner** (profilmenyen: åpner Utseende) | Tilpass forside og meny | |
+| **Rediger faner** (profilmenyen, mellom «Utseende og faner» og «Tilpass Oversikt»: redigeringsmodus i toppmenyen, samme som å holde inne en fane), **Legg til fane** (lista bak «+»), **Ferdig** | Faner i menyen, Rediger meny, Fjern fane (det er «Skjul») | Prompt 57. En fane skjules, den slettes ikke |
 | Innstillinger: **Konto og sikkerhet** · **Utseende** · **Varsler** · **Husstand** · **Glimt og AI** · **Tilkoblinger** · **Moduler** · **Enheter og widgets** · **Server** | Konto (alene), Brukere og familie, App (som side), Generelt (som gruppe) | Samme rekkefølge på alle plattformer (E-ia §4, Q12) |
 | **Enheter og widgets** (widgets på telefonen, API-tokens, logg inn på en annen enhet) | App, Mobilapper | O4. Navn og ikon på appen står under Utseende |
 | **Levering** (Varsler: haptikk, lyd og volum) | Haptikk (som varselgruppe), Varsellyd (som egen gruppe) | O9. Varselgruppene heter som modulene: Sporing, Økonomi, Familie, Reise, Kalender, Media |

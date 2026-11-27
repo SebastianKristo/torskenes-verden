@@ -497,7 +497,7 @@ export async function bolUpload(id, files) {
     try { await api(`/folders/${id}/receipts`, { method: 'POST', body: fd }); ok++; } catch (e) { flash(e.message); }
     BO.up--; draw();
   }
-  if (ok) flash(`${ok} kvittering${ok > 1 ? 'er' : ''} lastet opp ✓ · ✦ AI leser i bakgrunnen`);
+  if (ok) flash(`✦ Lastet opp · Glimt leser ${ok > 1 ? `${ok} kvitteringer` : 'kvitteringen'} …`);
   await bolLoad(String(id)); BO.tab = 'kv'; draw();
   setTimeout(() => { if (m.screen === 'dir') bolLoad(String(id)).then(draw).catch(() => {}); }, 8000);
 }

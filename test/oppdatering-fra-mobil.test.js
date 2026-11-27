@@ -245,7 +245,7 @@ test('POST /api/settings/ask: lokal modell først, så Gemini (logges i ai_audit
 
 test('profile_menu og finance_more_hidden lagres per bruker', async () => {
   let l = (await A('/api/me/layout')).body;
-  assert.deepEqual(l.profile_menu, { order: ['innstillinger', 'tema', 'sprak', 'sokebar', 'nyhetslinje', 'tilpass', 'cv', 'las'], hidden: ['sokebar', 'nyhetslinje', 'las'] });
+  assert.deepEqual(l.profile_menu, { order: ['innstillinger', 'tema', 'sprak', 'sokebar', 'nyhetslinje', 'tilpass', 'faner', 'widgets', 'cv', 'las'], hidden: ['sokebar', 'nyhetslinje', 'las'] });
   assert.deepEqual(l.finance_more_hidden, []);
   assert.equal((await A('/api/me/layout', 'PUT', { profile_menu: { order: ['logg-ut'] } })).status, 400);
   assert.equal((await A('/api/me/layout', 'PUT', { profile_menu: { hidden: ['cv', 'cv'] } })).status, 400);
@@ -254,7 +254,11 @@ test('profile_menu og finance_more_hidden lagres per bruker', async () => {
   assert.equal(r.status, 200, r.text);
   l = (await A('/api/me/layout')).body;
   assert.deepEqual(l.profile_menu.hidden, ['cv']);
-  assert.equal(l.profile_menu.order.length, 8, 'order beholdes');
+  assert.equal(l.profile_menu.order.length, 10, 'order beholdes');
+  // Prompt 57: web lagrer «Rediger faner» og «Rediger widgets» i menyen; serveren avviste dem, så valget ble bare lokalt.
+  const web = ['innstillinger', 'sprak', 'sokebar', 'nyhetslinje', 'tilpass', 'faner', 'widgets', 'cv', 'las'];
+  assert.equal((await A('/api/me/layout', 'PUT', { profile_menu: { order: web, hidden: ['faner'] } })).status, 200);
+  assert.deepEqual((await A('/api/me/layout')).body.profile_menu, { order: web, hidden: ['faner'] });
   assert.deepEqual(l.finance_more_hidden, ['aksjer', 'rapp']);
   assert.deepEqual((await K('/api/me/layout')).body.finance_more_hidden, [], 'per bruker');
 });

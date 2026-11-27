@@ -6,12 +6,12 @@
 import { api } from './util.js';
 
 export const BG_TYPES = [
-  ['weather', 'Vær', 'Følger været ute, dag og natt'],
+  ['weather', 'Vær nå', 'Følger været ute, dag og natt'], // prompt 57: «Vær nå» og «Gradient» (ordlisten)
   ['planets', 'Planeter', 'Jorda, Månen, Jupiter, Mars og Saturn fra NASA'],
   ['oslo', 'Oslo', 'Oslo fra lufta · skifter gjennom dagen'],
   ['custom', 'Eget bilde', 'Ditt opplastede bilde'],
   ['gphoto', 'Google Photos-album', 'Delt album · bytter bilde hver time'], // prompt 46
-  ['none', 'Ingen', 'Bare fargeovergang'],
+  ['none', 'Gradient', 'Bare fargeovergang'],
 ];
 export const PLANETS = [['auto', 'Bytt automatisk'], ['earth', 'Jorda'], ['moon', 'Månen'], ['jupiter', 'Jupiter'], ['mars', 'Mars'], ['saturn', 'Saturn']];
 const TYPES = BG_TYPES.map((t) => t[0]);

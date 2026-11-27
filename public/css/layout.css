@@ -315,16 +315,40 @@ html[data-hl="2c"] .top>[data-hp=menu]{margin-left:0;flex:none}
 html[data-hl="2c"] .hl-bgdd{margin-left:auto;flex:none;position:relative}
 html[data-hl="2c"] .hl-bgdd-btn{height:36px;padding:0 14px;border-radius:999px;border:0;background:rgba(27,26,23,.55);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);color:var(--ds-on-category);cursor:pointer;font:600 12.5px var(--sans);white-space:nowrap}
 html[data-hl="2c"] body:not(.pw-on) .hl-bgdd-btn{background:var(--ds-surface-raised);color:var(--ink);border:1px solid var(--rule)}
-html[data-hl="2c"] .hl-bgdd-menu{position:absolute;top:46px;right:0;z-index:40;width:236px;padding:6px;border-radius:18px;background:var(--ds-surface);color:var(--ink);box-shadow:0 20px 40px -10px rgba(0,0,0,.45);display:flex;flex-direction:column;gap:2px;opacity:0;transform:scale(.96);transform-origin:top right;pointer-events:none;transition:opacity .14s,transform .14s,visibility 0s linear .14s;text-shadow:none;visibility:hidden}
-html[data-hl="2c"] .hl-bgdd-menu.open{opacity:1;transform:none;pointer-events:auto;visibility:visible;transition:opacity .14s,transform .14s,visibility 0s}
-html[data-hl="2c"] .hl-bgdd-menu button{display:flex;align-items:center;gap:10px;height:50px;padding:0 10px;border-radius:12px;border:0;background:transparent;color:var(--ink);cursor:pointer;text-align:left;font:600 14px var(--sans)}
-html[data-hl="2c"] .hl-bgdd-menu button[aria-checked=true]{background:#e6e0d2}
-html[data-hl="2c"] .hl-bgdd-menu button:hover{background:var(--ds-surface-chip)}
-html[data-hl="2c"] .hl-bgdd-menu .th{flex:none;width:30px;height:30px;border-radius:8px;background:#5d7690 center/cover}
-html[data-hl="2c"] .hl-bgdd-menu .tx{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.2}
-html[data-hl="2c"] .hl-bgdd-menu small{font:500 11.5px var(--sans);color:var(--ink2)}
-html[data-hl="2c"] .hl-bgdd-up{display:block;padding:10px 12px;border-top:1px solid var(--rule);margin-top:4px;font:600 13px var(--sans);color:var(--acc);cursor:pointer;border-radius:0 0 12px 12px}
-html[data-hl="2c"] .hl-bgdd-up:hover{background:var(--ds-surface-chip)}
+/* Bakgrunnsvelgeren (prompt 57, claude-code-bakgrunnsvelger.md): vokser ut fra knappen (skala .6 → 1, 260 ms), står rett under den
+   med en pil mot knappen (--bgdd-arrow, plassert av hltheme.js), 2×2-rutenett med store forhåndsvisninger, så Eget bilde og Google Photos. */
+html[data-hl="2c"] .hl-bgdd-menu{position:absolute;top:48px;right:0;z-index:40;width:min(320px,calc(100vw - 32px));box-sizing:border-box;padding:12px;border-radius:24px;background:var(--ds-surface);color:var(--ds-text-primary);box-shadow:0 24px 50px -12px rgba(0,0,0,.5);display:flex;flex-direction:column;gap:2px;text-shadow:none;white-space:normal;
+  opacity:0;transform:scale(.6);transform-origin:var(--bgdd-arrow,50%) -12px;pointer-events:none;visibility:hidden;transition:opacity .2s var(--ds-ease-exit),transform .2s var(--ds-ease-exit),visibility 0s linear .2s}
+html[data-hl="2c"] .hl-bgdd-menu.open{opacity:1;transform:none;pointer-events:auto;visibility:visible;transition:opacity .26s cubic-bezier(.2,.9,.25,1.12),transform .26s cubic-bezier(.2,.9,.25,1.12),visibility 0s}
+html[data-hl="2c"] .hl-bgdd-menu::before{content:'';position:absolute;top:-6px;left:calc(var(--bgdd-arrow,50%) - 7px);width:14px;height:14px;border-radius:3px 0 0 0;background:inherit;transform:rotate(45deg)}
+html[data-hl="2c"] .hl-bgdd-h{display:flex;align-items:baseline;justify-content:space-between;gap:8px;padding:2px 4px 10px}
+html[data-hl="2c"] .hl-bgdd-h span{font:600 10.5px var(--ds-font-mono);letter-spacing:.14em;color:var(--ds-text-secondary)}
+html[data-hl="2c"] .hl-bgdd-h small{font:500 11.5px var(--ds-font-sans);color:var(--ds-text-tertiary)}
+html[data-hl="2c"] .hl-bgdd-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px 10px}
+html[data-hl="2c"] .hl-bgdd-grid button{display:flex;flex-direction:column;align-items:stretch;gap:2px;min-width:0;padding:4px;border:0;border-radius:18px;background:transparent;color:var(--ds-text-primary);text-align:left;cursor:pointer}
+html[data-hl="2c"] .hl-bgdd-grid button:hover{background:var(--ds-surface-chip)}
+html[data-hl="2c"] .hl-bgdd-th{position:relative;display:block;flex:none;height:78px;border-radius:14px;background:var(--ds-surface-sunken) center/cover;margin-bottom:6px}
+html[data-hl="2c"] .hl-bgdd-grid button[aria-checked=true] .hl-bgdd-th{box-shadow:0 0 0 2px var(--ds-surface),0 0 0 4px var(--ds-accent),0 0 0 5.5px var(--ds-text-primary)}
+html[data-hl="2c"] .hl-bgdd-ck{position:absolute;top:6px;right:6px;display:grid;place-items:center;width:22px;height:22px;border-radius:var(--ds-radius-full);background:var(--ds-success);color:var(--ds-on-success);font:700 12px/1 var(--ds-font-sans);box-shadow:0 1px 4px rgba(0,0,0,.3)}
+html[data-hl="2c"] .hl-bgdd-ck:empty{display:none}
+html[data-hl="2c"] .hl-bgdd-ck.bad{background:var(--ds-danger);color:var(--ds-on-danger)}
+html[data-hl="2c"] .hl-bgdd-n{font:700 13.5px/1.25 var(--ds-font-sans);color:var(--ds-text-primary)}
+html[data-hl="2c"] .hl-bgdd-menu small{font:500 11.5px/1.3 var(--ds-font-sans);color:var(--ds-text-secondary);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+html[data-hl="2c"] .hl-bgdd-h small{display:block}
+html[data-hl="2c"] .hl-bgdd-sep{display:block;height:1px;margin:10px 4px 6px;background:var(--ds-line)}
+html[data-hl="2c"] .hl-bgdd-row{display:flex;align-items:center;gap:10px;width:100%;min-height:50px;padding:6px 8px;border:0;border-radius:14px;background:transparent;color:var(--ds-text-primary);text-align:left;text-decoration:none;cursor:pointer;box-sizing:border-box}
+html[data-hl="2c"] .hl-bgdd-row:hover{background:var(--ds-surface-chip)}
+html[data-hl="2c"] .hl-bgdd-row .hl-bgdd-th{width:38px;height:38px;border-radius:10px;margin:0}
+html[data-hl="2c"] .hl-bgdd-row .hl-bgdd-ck{top:-5px;right:-5px;width:18px;height:18px;font-size:10px}
+html[data-hl="2c"] .hl-bgdd-row[aria-checked=true] .hl-bgdd-th{box-shadow:0 0 0 2px var(--ds-surface),0 0 0 3.5px var(--ds-accent)}
+html[data-hl="2c"] .hl-bgdd-th.plus{display:grid;place-items:center;background:transparent;border:1.5px dashed var(--ds-text-tertiary);box-sizing:border-box;color:var(--ds-text-secondary);font:500 20px/1 var(--ds-font-sans)}
+html[data-hl="2c"] .hl-bgdd-tx{flex:1;min-width:0;display:flex;flex-direction:column}
+html[data-hl="2c"] .hl-bgdd-pair{display:flex;align-items:center;gap:6px}
+html[data-hl="2c"] .hl-bgdd-swap{flex:none;padding:6px 12px;border-radius:var(--ds-radius-full);background:var(--ds-surface-chip);color:var(--ds-text-primary);font:600 12.5px var(--ds-font-sans);cursor:pointer}
+html[data-hl="2c"] .hl-bgdd-more{display:block;margin-top:4px;padding:8px 8px 2px;color:var(--ds-text-secondary);font:500 12.5px var(--ds-font-sans);text-decoration:none}
+html[data-hl="2c"] .hl-bgdd-more:hover{color:var(--ds-text-primary)}
+html[data-hl="2c"] .hl-bgdd :focus-visible{outline:2px solid var(--ds-focus);outline-offset:2px}
+@media (prefers-reduced-motion:reduce){html[data-hl="2c"] .hl-bgdd-menu,html[data-hl="2c"] .hl-bgdd-menu.open{transform:none;transition:opacity .12s,visibility 0s linear .12s}}
 html[data-hl="2c"] .menu{right:0;width:220px;padding:6px;border-radius:18px;background:var(--ds-surface);border:0;box-shadow:0 20px 40px -10px rgba(0,0,0,.45);text-shadow:none}
 html[data-hl="2c"] .menu-head{padding:10px 12px;border-bottom:1px solid var(--rule);font:500 18px var(--serif);color:var(--ink)}
 html[data-hl="2c"] .menu [data-act="head-edit"],html[data-hl="2c"] .menu [data-act="reset-layout"]{display:none}
@@ -363,8 +387,6 @@ html[data-hl="2c"] .pw.pw-light{color:var(--ds-text-primary);text-shadow:0 1px 1
 html[data-hl="2c"] .pw.pw-light .pw-img::after{background:linear-gradient(180deg,rgba(255,255,255,.35),transparent 35%,rgba(255,255,255,.4))}
 html[data-hl="2c"] .pw.pw-light .pw-wx{color:var(--ds-text-primary)}
 html[data-hl="2c"] .pw-credit a{color:inherit;text-decoration:underline;text-underline-offset:2px}
-html[data-hl="2c"] .hl-bgdd-more{display:block;padding:10px 10px 8px;border-top:1px solid var(--rule);margin-top:4px;color:var(--ink2);font:500 13px var(--sans);text-decoration:none}
-html[data-hl="2c"] .hl-bgdd-more:hover{color:var(--ink)}
 html[data-hl="2c"] .bgc-img{border-color:var(--rule);border-radius:4px}
 html[data-hl="2c"] .bgc[aria-pressed=true] .bgc-img{border-color:var(--ink)}
 html[data-hl="2c"] .bgc-img i{background:var(--ink);color:var(--pp)}
@@ -467,3 +489,34 @@ html[data-hl="2c"] .nav-more.on,html[data-hl="2c"] .nav-more[aria-expanded="true
 html[data-hl="cur"] .nav-more-menu{background:color-mix(in srgb,var(--ds-surface) 94%,transparent)}
 /* M5: Skjold Lab sitt tomme skall har samme bredde og plass som siden før side-CSS-en er lastet (skjold.css har resten). */
 #sk76[aria-busy="true"]{display:block;width:100%;max-width:1280px;margin:0 auto;min-height:50vh;box-sizing:border-box}
+
+/* ---------- Redigere toppmenyen som på iOS (prompt 57, nav-rediger.js) ----------
+   Hold inne en fane: fanene vibrerer og kan dras, rødt «−» skjuler, «+» legger til, «Ferdig» avslutter. Alle fanene står synlige
+   (over flere linjer om nødvendig) så lenge menyen redigeres. Pilene ‹ › er for tastaturet og vises når fanen har fokus. */
+.pillnav>a[data-r]{-webkit-touch-callout:none}
+html[data-hl] .top .pillnav.nav-edit{flex-wrap:wrap;overflow:visible;max-width:none;row-gap:var(--ds-space-sm);padding-top:var(--ds-space-sm)}
+.pillnav.nav-edit>a[data-r]{position:relative;cursor:grab;user-select:none;-webkit-user-select:none;touch-action:none;animation:nav-wiggle .26s ease-in-out infinite alternate}
+.pillnav.nav-edit>a[data-r]:nth-child(2n){animation-delay:-.13s;animation-direction:alternate-reverse}
+.pillnav.nav-edit>a.nav-drag{cursor:grabbing;animation:none;transform:scale(1.08);box-shadow:var(--ds-shadow-mid);z-index:var(--ds-z-raised)}
+@keyframes nav-wiggle{from{transform:rotate(-1.4deg)}to{transform:rotate(1.4deg)}}
+.nav-x{position:absolute;top:-7px;left:-7px;z-index:1;display:grid;place-items:center;width:20px;height:20px;padding:0;border:2px solid var(--ds-surface);border-radius:var(--ds-radius-full);background:var(--ds-danger);color:var(--ds-on-danger);font:700 15px/1 var(--ds-font-sans);cursor:pointer}
+.nav-x:focus-visible,.nav-mv:focus-visible,.nav-add:focus-visible,.nav-done:focus-visible{outline:2px solid var(--ds-focus);outline-offset:2px}
+/* Pilene er usynlige til fanen har fokus (tastatur); da står de under fanen, uten å flytte noe (ingen hopp under pekeren). */
+.nav-mv{position:absolute;width:1px;height:1px;margin:-1px;padding:0;border:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.pillnav.nav-edit>a:focus-within .nav-mv{top:calc(100% + 4px);left:calc(50% - 26px);z-index:var(--ds-z-raised);width:24px;height:24px;margin:0;clip:auto;overflow:visible;display:grid;place-items:center;border:1px solid var(--ds-line);border-radius:var(--ds-radius-full);background:var(--ds-surface-raised);color:var(--ds-text-primary);box-shadow:var(--ds-shadow-low);font:700 14px/1 var(--ds-font-sans);cursor:pointer}
+.pillnav.nav-edit>a:focus-within .nav-mv[data-nav-mv="1"]{left:calc(50% + 2px)}
+.pillnav.nav-edit>a:focus-within .nav-mv:disabled{opacity:.35;cursor:default}
+.nav-edit-bar{order:10000;flex:none;display:inline-flex;align-items:center;gap:var(--ds-space-xs);margin-left:var(--ds-space-xs)}
+.nav-edit-bar[hidden]{display:none}
+.nav-add{display:grid;place-items:center;width:32px;height:32px;padding:0;border:1.5px dashed var(--ds-line);border-radius:var(--ds-radius-full);background:transparent;color:var(--ds-text-primary);font:600 18px/1 var(--ds-font-sans);cursor:pointer}
+.nav-add[aria-expanded="true"]{border-style:solid;background:var(--ds-surface-chip)}
+.nav-done{height:32px;padding:0 var(--ds-space-md);border:0;border-radius:var(--ds-radius-full);background:var(--ds-accent);color:var(--ds-on-accent);font:600 13px var(--ds-font-sans);cursor:pointer}
+.nav-add-h{margin:0;padding:var(--ds-space-sm) var(--ds-space-md) var(--ds-space-xs);color:var(--ds-text-secondary);font-size:var(--ds-text-caption-size);font-weight:var(--ds-weight-semibold);text-transform:uppercase;letter-spacing:.06em}
+.nav-add-menu button{display:flex;align-items:center;gap:var(--ds-space-sm);padding:var(--ds-space-sm) var(--ds-space-md);border:0;border-radius:var(--ds-radius-sm);background:transparent;color:var(--ds-text-primary);font:var(--ds-weight-medium) var(--ds-text-callout-size)/var(--ds-text-callout-line) var(--ds-font-sans);text-align:left;cursor:pointer}
+.nav-add-menu button:hover,.nav-add-menu button:focus-visible{background:var(--ds-surface-sunken)}
+.nav-add-plus{display:grid;place-items:center;width:20px;height:20px;border-radius:var(--ds-radius-full);background:var(--ds-success);color:var(--ds-on-success);font-weight:700;line-height:1}
+.nav-add-none{margin:0;padding:var(--ds-space-sm) var(--ds-space-md);color:var(--ds-text-secondary);font-size:var(--ds-text-callout-size)}
+.nav-live{position:absolute;width:1px;height:1px;margin:-1px;padding:0;border:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+@media (prefers-reduced-motion:reduce){
+  .pillnav.nav-edit>a[data-r]{animation:none;outline:1.5px dashed var(--ds-line);outline-offset:-2px}
+}

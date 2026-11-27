@@ -425,7 +425,7 @@ export async function txBind15(e, t) {
   if (e.type === 'change' && t.matches?.('[data-pptxfile]')) {
     const f = t.files?.[0]; t.value = ''; if (!f) return true;
     TX.busy = true; flash('Laster opp kvitteringen …');
-    try { const r = await uploadReceipt(f, T?.accountId ?? null); if (r?.id) await api(`/transactions/${id}`, { method: 'PATCH', json: { receiptId: r.id } }).catch(() => {}); await txLoad(id, true); flash('Kvitteringen er lagt ved · ✦ AI leser varelinjene'); }
+    try { const r = await uploadReceipt(f, T?.accountId ?? null); if (r?.id) await api(`/transactions/${id}`, { method: 'PATCH', json: { receiptId: r.id } }).catch(() => {}); await txLoad(id, true); flash('✦ Kvitteringen er lagt ved · Glimt leser varelinjene …'); }
     catch (err) { flash(err.message); }
     TX.busy = false; draw(); return true;
   }

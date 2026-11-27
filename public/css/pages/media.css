@@ -12,8 +12,9 @@ html[data-hl="2c"] .mh-user{color:#8c600b}
 /* ---------- Media (media-side.js, prompt 44): servervalg, søk, 2:3-plakater, Kommer snart Liste, banner, jobbsøk ---------- */
 .m44-srv{position:relative;flex:none}
 .m44-sb{display:flex;align-items:center;gap:8px;height:38px;padding:0 14px;border-radius:19px;border:1px solid var(--ln);background:var(--cd);color:var(--k);font:700 13px Manrope,system-ui,sans-serif;cursor:pointer;white-space:nowrap}
-.m44-sm{position:absolute;top:46px;left:0;z-index:40;width:min(420px,calc(100vw - 32px));border-radius:16px;background:var(--cd);border:1px solid var(--ln);box-shadow:0 18px 40px -18px rgba(0,0,0,.4);padding:10px;display:flex;flex-direction:column;gap:4px}
-.m44-sm>.m43-lab{padding:4px 6px 6px;line-height:1.4}
+/* Prompt 57: knappen står ytterst til høyre på desktop, så menyen forankres til høyre kant av knappen (ellers gikk den ut av siden). */
+.m44-sm{position:absolute;top:46px;right:0;z-index:40;width:420px;max-width:calc(100vw - 32px);border-radius:16px;background:var(--cd);border:1px solid var(--ln);box-shadow:0 18px 40px -18px rgba(0,0,0,.4);padding:10px;display:flex;flex-direction:column;gap:4px}
+.m44-sm>.m43-lab{padding:4px 6px 6px;line-height:1.4;white-space:normal} /* topplinja (.m70-tl) har nowrap; overskriften brytes inne i menyen */
 .m44-si{display:flex;align-items:center;gap:10px;min-height:52px;padding:6px 10px;border:0;border-radius:10px;background:transparent;color:var(--k);cursor:pointer;text-align:left;font-family:inherit}
 .m44-si:hover,.m44-si.on{background:var(--sf)}
 .m44-sadd{height:40px;border-radius:10px;border:1px dashed var(--ln);background:transparent;color:var(--k);font:700 13px Manrope,system-ui,sans-serif;cursor:pointer;margin-top:4px}
@@ -133,7 +134,7 @@ button.m44-gc{cursor:pointer}
 .m44-dh{display:none}
 /* !important: skjuler elementet uansett hvilken display-verdi skallet eller modulen ellers gir det (fullskjerm-visning). */
 .m43 .m44-dh{display:none!important}
-@media (max-width:900px){.m43 .m44-srv{order:20;flex-basis:100%}.m43 .m44-sb{height:34px}.m44-sm{left:0}}
+@media (max-width:900px){.m43 .m44-srv{order:20;flex-basis:100%}.m43 .m44-sb{height:34px}.m44-sm{left:0;right:auto}} /* smal skjerm: knappen står til venstre på egen linje */
 
 /* ---------- Media: mer farge (claude-code-media-mer-farger.md) ----------
    Hver tjeneste har sin farge (ikonprikk, aktiv fane); statuspiller i farger; svak toning fra plakaten bak banneret.

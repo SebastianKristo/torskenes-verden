@@ -1,4 +1,4 @@
-// Flyttbare elementer: på desktop hold inne museknappen i 280 ms og dra (ellers kan tekst markeres og kopieres som vanlig),
+// Flyttbare elementer (fanene i toppmenyen: se nav-rediger.js): på desktop hold inne museknappen i 280 ms og dra (ellers kan tekst markeres og kopieres som vanlig),
 // på mobil long-press (450 ms) og dra. Mens et skjemafelt i kortet har fokus, kan kortet ikke dras.
 // Rekkefølge og kortstørrelser lagres på serveren per gruppe.
 // Kortrutenett (alle grupper unntatt header, faner og toppområdet) får masonry og usynlig resize-håndtak.
@@ -106,6 +106,8 @@ export function setupDnd(root) {
     const cards = !FLAT.includes(g) && !isMobile();
     if (cards) { grid.classList.add('masonry'); [...grid.children].forEach((el) => setupResize(grid, el)); }
     let dragEl = null;
+    // Prompt 57: fanene i toppmenyen dras i redigeringsmodus (hold inne 0,5 s, nav-rediger.js); her settes bare rekkefølgen.
+    if (g === 'tabs') return;
 
     for (const el of grid.children) {
       // Ingen innebygd HTML5-dra (lenker og bilder ville ellers dras med en gang).

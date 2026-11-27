@@ -43,7 +43,7 @@ function view() {
   const ob = G.ob, name = (G.layout?.name || '').split(' ')[0];
   const dots = [0, 1, 2].map((i) => `<span class="${i <= ob ? 'on' : ''}"></span>`).join('');
   const THEMES = [['lys', 'Papir · lys', 'Lyst papir, avisspalter og svart fanelinje.', 'linear-gradient(#5d7690 0 40%,#f3efe6 40%)'], ['mork', 'Papir · mørk', 'Kveldspapir med lys fanelinje.', 'linear-gradient(#2a3440 0 40%,#14130f 40%)']]; // prompt 42: Klassisk er slettet
-  const BGS = [['cur', 'Nåværende'], ['oslo', 'Oslo'], ['weather', 'Vær nå'], ['planets', 'Planeter']];
+  const BGS = [['weather', 'Vær nå'], ['planets', 'Planeter'], ['oslo', 'Oslo'], ['cur', 'Gradient']]; // prompt 57: rekkefølgen og navnene som i bakgrunnsvelgeren
   const PERMS = [['push', 'Varsler', 'Pakker, frister og kvitteringer'], ['cam', 'Kamera', 'For å skanne kvitteringer og oppskrifter'], ['bio', 'Lås med Face ID / fingeravtrykk', 'Låser appen når den har vært i bakgrunnen'], ['hap', 'Haptisk tilbakemelding', 'Små vibrasjoner ved trykk']];
   const pick = G.pick ?? 'lys', ph = G.photo ?? 'oslo';
   const body = ob === 0 ? `<span class="pp-glab">VELG DESIGN</span>${THEMES.map(([k, n, s, sw]) => `<button class="pp-gopt${pick === k ? ' on' : ''}" data-g="theme" data-k="${k}"><span class="pp-gsw" style="background:${sw}"></span><span class="pp-gmi"><b>${n}</b><span>${s}</span></span><span class="pp-gck">${pick === k ? '✓' : ''}</span></button>`).join('')}`
