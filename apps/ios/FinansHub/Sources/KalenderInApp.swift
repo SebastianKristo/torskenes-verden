@@ -51,7 +51,11 @@ final class Kal84Host {
         if let url { KalLinks.handle(url, trusted: true) }
         let direkte: Bool = direkteAt.map { (d: Date) -> Bool in Date().timeIntervalSince(d) < 3 } ?? false
         direkteAt = nil
-        KalEmbed84.shared.tilbake = direkte ? nil : { Kal84Host.shared.close() }
+        if direkte {
+            KalEmbed84.shared.tilbake = nil
+        } else {
+            KalEmbed84.shared.tilbake = { @MainActor () -> Void in Kal84Host.shared.close() }
+        }
         present(0)
     }
 

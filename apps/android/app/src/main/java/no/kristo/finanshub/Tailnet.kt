@@ -9,7 +9,7 @@ import org.json.JSONObject
 
 /*
  * Mer → Tailnet (Tailscale, prompt 57). Bare admin: modulen «tailnet» er adminOnly i modullisten, så serveren sender den bare til
- * administratorer, og /api/tailscale/* svarer 403 for andre. Serveren regner alt og sender ferdige tekster (latencyLabel,
+ * administratorer, og endepunktene under /api/tailscale svarer 403 for andre. Serveren regner alt og sender ferdige tekster (latencyLabel,
  * statusLabel, fakta, oppetid); appen viser dem.
  *   GET  /api/tailscale/devices          → counts, filters, devices
  *   GET  /api/tailscale/stats            → tiles (stat-rutenettet), maintenance.count

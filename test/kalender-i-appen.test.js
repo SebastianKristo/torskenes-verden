@@ -386,7 +386,7 @@ test('fullskjerm uten «‹ Homelab»-linje; «Homelab» øverst i menyen og kan
   assert.match(s, /\.edgeSwipeClose30\(enabled: kantTilbake\) \{ Kal84Host\.shared\.close\(\) \}/);
   assert.match(s, /if let p = h\.presentingViewController \{ p\.dismiss\(animated: true/);
   // Raden bare når Kalender er åpnet fra Homelab (widget og varsel setter direkte()).
-  assert.match(s, /KalEmbed84\.shared\.tilbake = direkte \? nil : \{ Kal84Host\.shared\.close\(\) \}/);
+  assert.match(s, /if direkte \{\s*KalEmbed84\.shared\.tilbake = nil\s*\} else \{\s*KalEmbed84\.shared\.tilbake = \{ @MainActor \(\) -> Void in Kal84Host\.shared\.close\(\) \}/);
   assert.match(read('FinansHub/Sources/AppWidgets.swift'), /if page == "kalender" \|\| page == "calendar" \{ Kal84Host\.shared\.direkte\(\) \}/);
   assert.match(read('FinansHub/Sources/BackgroundNotifications.swift'), /Kal84Host\.shared\.direkte\(\)\n\s+store\.paperGo\("kalender"\)/);
   const drawer = read('Kalender/Sources/KalDrawer.swift');
