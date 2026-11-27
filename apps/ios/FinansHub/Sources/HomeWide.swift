@@ -281,7 +281,7 @@ struct Home45Right: View {
             }
             .scrollIndicators(.hidden)
             .id("home45-" + t.tab)
-            .refreshable {
+            .oppfrisk("HomeWide") {
                 await store.loadHome()
                 await store.loadPhotoWindow()
             }

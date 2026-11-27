@@ -210,7 +210,7 @@ struct HomeView: View {
             }
             .padding(.horizontal, 18).padding(.bottom, 110)
         }
-        .refreshable { try? await store.reload() }
+        .oppfrisk("Views.1") { try? await store.reload() }
     }
 }
 
@@ -258,7 +258,7 @@ struct ListView: View {
             }
             .padding(.horizontal, 18).padding(.bottom, 110)
         }
-        .refreshable { try? await store.loadTx() }
+        .oppfrisk("Views.2") { try? await store.loadTx() }
     }
 }
 
@@ -313,7 +313,7 @@ struct BudgetView: View {
             }
             .padding(.horizontal, 18).padding(.bottom, 110)
         }
-        .refreshable { try? await store.reload() }
+        .oppfrisk("Views.3") { try? await store.reload() }
     }
     private func stat(_ k: String, _ v: String) -> some View {
         VStack(spacing: 2) { Text(k).font(.caption).foregroundStyle(Color.skinFg.opacity(0.6)); Text(v).font(.system(.headline, design: .monospaced)) }.frame(maxWidth: .infinity)
@@ -474,7 +474,7 @@ struct ScanView: View {
             .padding(.horizontal, 18).padding(.bottom, 30)
         }
         .task { try? await store.loadReceipts(); await store.loadJobs() }
-        .refreshable { try? await store.loadReceipts() }
+        .oppfrisk("Views.4") { try? await store.loadReceipts() }
     }
 }
 
@@ -805,7 +805,7 @@ struct MatWeekView: View {
         }
         .background(Backdrop())
         .skinScheme()
-        .refreshable { try? await store.loadWeek() }
+        .oppfrisk("Views.5") { try? await store.loadWeek() }
     }
 }
 

@@ -288,7 +288,7 @@ struct SubsMobileView: View {
             }
             .padding(.horizontal, 18).padding(.bottom, 110)
         }
-        .refreshable { await store.reloadModule() }
+        .oppfrisk("AbonnementModul") { await store.reloadModule() }
         .sheet(isPresented: $adding) {
             SubAddSheet().presentationDetents([.medium, .large]).skinSheetBackground()
         }

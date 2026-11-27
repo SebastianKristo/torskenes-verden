@@ -397,7 +397,7 @@ struct PaperWeatherView: View {
             if abs(s - scroll) > 2 { Vaer41.shared.lastScroll = Date() }
             if abs(s - scroll) > 8 { scroll = s }
         }
-        .refreshable { await store.loadWeatherFull(force: true) }
+        .oppfrisk("PaperWeather") { await store.loadWeatherFull(force: true) }
     }
 
     @ViewBuilder private func content(_ w: WeatherFull) -> some View {

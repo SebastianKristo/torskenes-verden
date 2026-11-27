@@ -144,7 +144,7 @@ struct Brief35Page: View {
                 }
                 .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
                 .frame(width: geo.size.width)
-                .refreshable {
+                .oppfrisk("BriefPage") {
                     await m.load(store, force: true)
                     g.refreshExtra()
                 }

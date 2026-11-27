@@ -211,7 +211,7 @@ struct News40Page: View {
                 .padding(.horizontal, 20).padding(.top, 10).padding(.bottom, 40)
             }
             .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
-            .refreshable { await m.load(store) }
+            .oppfrisk("NewsGlimt") { await m.load(store) }
         }
         .background(p.bg.ignoresSafeArea())
         .sheet(isPresented: Binding<Bool>(get: { m.contentOpen }, set: { (v: Bool) in m.contentOpen = v })) {

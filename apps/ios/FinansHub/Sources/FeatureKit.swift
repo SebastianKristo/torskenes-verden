@@ -333,7 +333,7 @@ struct F51Scaffold<C: View>: View {
                     .frame(maxWidth: 1180).frame(maxWidth: .infinity)
             }
             .scrollDismissesKeyboard(.interactively)
-            .refreshable { await refresh() }
+            .oppfrisk("FeatureKit") { await refresh() }
         }
         .background(p.bg.ignoresSafeArea())
         .environment(\.colorScheme, p.dark ? .dark : .light)

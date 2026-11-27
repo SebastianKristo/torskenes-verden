@@ -787,7 +787,7 @@ struct PaperPage: View {
             // Prompt 28: pillene i redigeringsmodus ligger over listen, utenfor scroll-innholdet (WiggleMode.swift).
             .edit28Layer(p)
             .overlay(alignment: .top) { Mer30Pills() }
-            .refreshable { await refresh() }
+            .oppfrisk("Paper") { await refresh() }
             // Prompt 26: nytt trykk på aktiv fane på roten scroller til toppen (NavRoute.swift).
             .onChange(of: Nav26.shared.topTick) { _, _ in
                 withAnimation(.easeOut(duration: 0.3)) { proxy.scrollTo("nav26top", anchor: .top) }
@@ -860,7 +860,7 @@ struct PaperPage: View {
     private func refresh() async {
         switch store.paperTab {
         case "finans", "fmer": await store.loadPaperFinance(force: true); await store.loadPaperFinance15()
-        case "fliste": try? await store.loadTx()
+        case "fliste": await store.reloadTx()
         case "finn": try? await store.loadFinn()
         case "abo": try? await store.loadSubs(); await FasteBetalingerModell.shared.last(store)
         case "mat": try? await store.loadWeek(); await store.loadMatExtras()

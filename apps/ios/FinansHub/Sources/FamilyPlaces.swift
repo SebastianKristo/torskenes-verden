@@ -39,7 +39,7 @@ struct Fam50PlacesList: View {
             .padding(.bottom, 24)
         }
         .scrollIndicators(.hidden)
-        .refreshable { await m.loadPlaces(store) }
+        .oppfrisk("FamilyPlaces") { await m.loadPlaces(store) }
         .task { if m.places.isEmpty { await m.loadPlaces(store) } }
         .sheet(item: $notifyFor) { (r: Fam50PlaceRef) in
             Fam50NotifySheet(placeId: r.id) { notifyFor = nil }

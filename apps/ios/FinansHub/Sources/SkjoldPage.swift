@@ -48,7 +48,7 @@ struct Skjold76Page: View {
                 .frame(maxWidth: 760).frame(maxWidth: .infinity)
             }
             .scrollDismissesKeyboard(.interactively)
-            .refreshable { await m.load(store) }
+            .oppfrisk("SkjoldPage") { await m.load(store) }
         }
         .background(p.bg.ignoresSafeArea())
         .environment(\.colorScheme, p.dark ? .dark : .light)

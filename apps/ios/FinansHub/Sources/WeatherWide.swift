@@ -69,7 +69,7 @@ struct WxWide25: View {
             .frame(maxWidth: .infinity)
         }
         .scrollIndicators(.hidden)
-        .refreshable { await store.loadWeatherFull(force: true) }
+        .oppfrisk("WeatherWide") { await store.loadWeatherFull(force: true) }
     }
 
     private var leftColumn: some View {

@@ -178,7 +178,7 @@ struct MoreView: View {
             .padding(.horizontal, 18).padding(.bottom, 110)
         }
         .scrollDismissesKeyboard(.interactively)
-        .refreshable { try? await store.reload() }
+        .oppfrisk("More.1") { try? await store.reload() }
     }
 
     private func tile(_ t: MoreTile) -> some View {
@@ -373,7 +373,7 @@ struct FastView: View {
             }
             .padding(.horizontal, 18).padding(.bottom, 110)
         }
-        .refreshable { await store.reloadModule() }
+        .oppfrisk("More.2") { await store.reloadModule() }
     }
 
     private func detail(_ r: Recurring) -> DetailInfo {
@@ -423,7 +423,7 @@ struct AccountsView: View {
             }
             .padding(.horizontal, 18).padding(.bottom, 110)
         }
-        .refreshable { await store.reloadModule() }
+        .oppfrisk("More.3") { await store.reloadModule() }
     }
 
     private func detail(_ a: Account) -> DetailInfo {
@@ -458,7 +458,7 @@ struct ReportsView: View {
             }
             .padding(.horizontal, 18).padding(.bottom, 110)
         }
-        .refreshable { await store.reloadModule() }
+        .oppfrisk("More.4") { await store.reloadModule() }
     }
 
     @ViewBuilder private func content(_ r: Report) -> some View {

@@ -47,7 +47,20 @@ struct PaperFinList: View {
         VStack(spacing: 10) {
             search
             chips(all)
-            if store.txs == nil { ProgressView().padding(30) }
+            // Prompt 57: egen spinner bare ved første lasting, aldri under pull-to-refresh (systemets spinner holder).
+            // Feilet lastingen (eller tok den over 15 s), står «Prøv igjen» i stedet for en spinner som aldri blir ferdig.
+            if store.txs == nil && !Oppfrisking.shared.laster("Paper") {
+                if store.txFeil && !Oppfrisking.shared.laster("fliste") {
+                    PCard {
+                        VStack(spacing: 10) {
+                            Text("Kunne ikke laste transaksjonene.").font(PF.ui(13.5)).foregroundStyle(p.mut)
+                            PLineButton(title: "Prøv igjen", height: 40, full: true) { Task { await store.reloadTx() } }
+                        }
+                    }
+                } else {
+                    ProgressView().padding(30)
+                }
+            }
             if store.txs != nil && list.isEmpty {
                 PCard { Text("Ingen transaksjoner i utvalget.").font(PF.ui(13.5)).foregroundStyle(p.mut) }
             }
@@ -70,7 +83,7 @@ struct PaperFinList: View {
                 }
             }
         }
-        .task { if store.txs == nil { try? await store.loadTx() } }
+        .task { if store.txs == nil && !Oppfrisking.shared.laster("fliste") { await store.reloadTx() } }
     }
 
     /// Feltet er en pille (44 høyt), og AI-knappen inni er også en pille (34 høy, 5 pt fra kanten).
@@ -176,7 +189,8 @@ struct PaperFinn: View {
             segments(all)
             PLineButton(title: adding ? "Lukk" : "+ Legg til kjøp eller salg", height: 44, full: true) { withAnimation { adding.toggle() } }
             if adding { PaperFinnAdd { adding = false } }
-            if store.finn == nil { ProgressView().padding(30) }
+            // Prompt 57: ingen egen spinner under pull-to-refresh.
+            if store.finn == nil && !Oppfrisking.shared.laster("Paper") { ProgressView().padding(30) }
             if store.finn != nil && list.isEmpty {
                 PCard { Text("Ingen handler i utvalget.").font(PF.ui(13.5)).foregroundStyle(p.mut) }
             }

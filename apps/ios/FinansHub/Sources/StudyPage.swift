@@ -283,7 +283,7 @@ struct Study44Page: View {
                 .padding(.horizontal, 16).padding(.top, 6).padding(.bottom, 40)
                 .frame(maxWidth: 720).frame(maxWidth: .infinity)
             }
-            .refreshable { await m.load(store) }
+            .oppfrisk("StudyPage") { await m.load(store) }
         }
         .background(p.bg.ignoresSafeArea())
         .environment(\.colorScheme, p.dark ? .dark : .light)
