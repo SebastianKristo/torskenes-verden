@@ -168,3 +168,22 @@ test('Kalender for Mac i TestFlight: egen app i matrisen, sandkassen uten unntak
   assert.match(upd, /if MacUpdater43\.appStore \{ return \}/);
   assert.match(upd, /guard !MacUpdater43\.appStore, autoDl/);
 });
+
+test('Apple Watch i TestFlight: klokka bygges inn i Homelab-appen bare i TestFlight-bygget', () => {
+  const wf = readFileSync(join(ROOT, '.github/workflows/testflight.yml'), 'utf8');
+  // Før xcodegen: FinansHub får HomelabWatch som innebygd avhengighet (Watch/FinansHubWatch.app), bare for Homelab.
+  const i = wf.indexOf('Klokka i Homelab-appen'), x = wf.indexOf('xcodegen generate');
+  assert.ok(i > 0 && i < x, 'innbyggingen skjer før xcodegen');
+  assert.match(wf, /- target: HomelabWatch\\n {8}embed: true/);
+  assert.match(wf, /"\$SCHEME" = FinansHub/);
+  // Etter arkiveringen: klokka ligger i appen.
+  assert.match(wf, /\$APP\/Watch\/FinansHubWatch\.app/);
+  // project.yml er uendret: klokka er eget target, og de usignerte byggene legger den ikke i FinansHub.app.
+  const y = readFileSync(join(ROOT, 'apps/ios/project.yml'), 'utf8');
+  const fh = y.slice(y.indexOf('\n  FinansHub:\n'), y.indexOf('\n  FinansHubWidgets:\n'));
+  assert.doesNotMatch(fh, /target: HomelabWatch/);
+  assert.match(y, /PRODUCT_BUNDLE_IDENTIFIER: no\.kristo\.finanshub\.watchkitapp/);
+  assert.match(y, /INFOPLIST_KEY_WKCompanionAppBundleIdentifier: no\.kristo\.finanshub/);
+  const doc = readFileSync(join(ROOT, 'docs/testflight.md'), 'utf8');
+  assert.match(doc, /no\.kristo\.finanshub\.watchkitapp/);
+});

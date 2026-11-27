@@ -104,6 +104,26 @@ jobs:
           echo "BUILD=$BUILD" >> "$GITHUB_ENV"
           echo "${{ matrix.navn }} $V ($BUILD)"
 
+      - name: Klokka i Homelab-appen (bare TestFlight)
+        # App Store krever at en klokke-app med følgeapp (WKCompanionAppBundleIdentifier) ligger i iPhone-appen (Watch/).
+        # I project.yml er HomelabWatch et eget target, så de usignerte byggene (release.yml, mobile.yml) er uendret. Her får
+        # FinansHub klokka som innebygd avhengighet før xcodegen, og arkivet sjekkes etterpå.
+        env:
+          SCHEME: ${{ matrix.scheme }}
+        run: |
+          if [ "$SCHEME" = FinansHub ]; then
+            python3 - <<'PY'
+          p = 'project.yml'
+          s = open(p).read()
+          i = s.index('\n  FinansHub:\n'); j = s.index('\n  FinansHubWidgets:\n')
+          a = '      - target: FinansHubWidgets\n        embed: true\n'
+          assert s[i:j].count(a) == 1, 'fant ikke widget-avhengigheten i FinansHub'
+          blk = s[i:j].replace(a, a + '      - target: HomelabWatch\n        embed: true\n')
+          open(p, 'w').write(s[:i] + blk + s[j:])
+          PY
+            grep -n "target: HomelabWatch" project.yml
+          fi
+
       - name: Installer XcodeGen og generer prosjekt
         run: brew install xcodegen && xcodegen generate
 
@@ -177,6 +197,7 @@ jobs:
           [ -d "$APP/${{ matrix.plugins }}/${{ matrix.widget }}.appex" ] || { echo "::error::Fant ikke ${{ matrix.widget }} i arkivet"; exit 1; }
           codesign -d --entitlements - "$APP" 2>/dev/null | grep -q "group.no.kristo" || { echo "::error::Mangler App Group i signaturen"; exit 1; }
           if [ "$SCHEME" = FinansHub ]; then
+            [ -d "$APP/Watch/FinansHubWatch.app" ] || { echo "::error::Fant ikke klokke-appen (Watch/FinansHubWatch.app) i Homelab-appen"; exit 1; }
             codesign -d --entitlements - "$APP" 2>/dev/null | grep -q aps-environment || { echo "::error::Mangler push (aps-environment) i signaturen. Slå på Push Notifications for no.kristo.finanshub i Apple Developer."; exit 1; }
           fi
 

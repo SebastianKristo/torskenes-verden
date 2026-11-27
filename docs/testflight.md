@@ -6,12 +6,11 @@ må fornyes hver 7. dag.
 
 | App | Target | Bundle-id | Widgets |
 |---|---|---|---|
-| **Homelab** | `FinansHub` | `no.kristo.finanshub` | `FinansHubWidgets` (`no.kristo.finanshub.widgets`) |
+| **Homelab** | `FinansHub` | `no.kristo.finanshub` | `FinansHubWidgets` (`no.kristo.finanshub.widgets`), og klokka `HomelabWatch` (`no.kristo.finanshub.watchkitapp`) inni appen |
 | **Kalender** | `Kalender` | `no.kristo.kalender` | `KalenderWidgets` (`no.kristo.kalender.widgets`) |
 | **Kalender for Mac** | `KalenderMac` | `no.kristo.kalender.mac` | `KalenderMacWidgets` (`no.kristo.kalender.mac.widgets`) |
 
-Apple Watch-appen (`HomelabWatch`) er ikke med. Den usignerte IPA-en og DMG-en i Releases
-(`release.yml`) lages som før.
+Den usignerte IPA-en og DMG-en i Releases (`release.yml`) lages som før.
 
 Signeringen gjøres av Xcode selv (automatisk signering) med en App Store Connect API-nøkkel. Xcode lager sertifikatet og
 profilene under bygget, så du trenger ingen `.p12`-fil eller profiler i GitHub. Du trenger et betalt medlemskap i
@@ -24,12 +23,13 @@ Logg inn på [developer.apple.com/account](https://developer.apple.com/account).
 1. **Team ID:** under Membership details. Ti tegn, f.eks. `AB12CD34EF`. Dette blir `IOS_TEAM_ID`.
 2. **App Group:** Certificates, IDs & Profiles → Identifiers → **+** → App Groups. Identifier
    `group.no.kristo.finanshub`. Gruppen deles av begge appene og widgetene (innlogging, widgetdata og Nøkkelringen).
-3. **App ID-er:** Identifiers → **+** → App IDs → App, med «Explicit» bundle-id. Lag seks:
+3. **App ID-er:** Identifiers → **+** → App IDs → App, med «Explicit» bundle-id. Lag sju:
 
    | Bundle-id | Capabilities |
    |---|---|
    | `no.kristo.finanshub` | **App Groups** (velg `group.no.kristo.finanshub`), **HealthKit** (kryss også av for «Background Delivery» hvis valget finnes), **Push Notifications** (Live Activities og varsler) |
    | `no.kristo.finanshub.widgets` | **App Groups** (`group.no.kristo.finanshub`) |
+   | `no.kristo.finanshub.watchkitapp` (plattform watchOS) | ingen |
    | `no.kristo.kalender` | **App Groups** (`group.no.kristo.finanshub`) |
    | `no.kristo.kalender.widgets` | **App Groups** (`group.no.kristo.finanshub`) |
    | `no.kristo.kalender.mac` (plattform macOS) | **App Groups** (`<Team-ID>.group.no.kristo.kalender`) |
@@ -48,6 +48,14 @@ TestFlight-bygget av Homelab har push (`aps-environment`). Det legges bare inn i
 2. Homelab → Innstillinger → Tilkoblinger → **APNs**: Team-ID, Nøkkel-ID, nøkkelen og **Miljø: produksjon** (`apns_env`). TestFlight og App Store bruker produksjon; bygg fra Xcode bruker sandbox.
 
 Nøkkelen ligger bare på serveren, ikke i GitHub og ikke i appen.
+
+### Apple Watch
+
+Klokka (`HomelabWatch`) er et eget target i `project.yml`. App Store krever at en klokke-app med følgeapp ligger inne i
+iPhone-appen, så TestFlight-jobben bygger den inn i Homelab-appen (`Watch/FinansHubWatch.app`) før `xcodegen`, og sjekker
+at den er med i arkivet. Den kommer med i den samme TestFlight-builden som Homelab; det trengs ingen egen app i App Store
+Connect. Installer Homelab fra TestFlight på iPhone, så kan klokka installeres fra Watch-appen (eller automatisk). Klokka
+kan også kjøre uten iPhone (`WKRunsIndependentlyOfCompanionApp`). De usignerte byggene legger den ikke i appen, som før.
 
 ### Kalender for Mac
 
