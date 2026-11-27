@@ -59,7 +59,7 @@ function injectCss() { if (document.getElementById('x51-css')) return; const s =
    Søkepalett
    ===================================================================================================================== */
 
-const ICON = { check: '✓', cart: '🛒', list: '☰', calendar: '▦', car: '🚗', receipt: '🧾', card: '▭', pin: '⌖', person: '☺', box: '▣', book: '❑', chat: '✎', cake: '✱', home: '⌂', gear: '⚙', bolt: '↯' };
+const ICON = { check: '✓', cart: '🛒', list: '☰', calendar: '▦', car: '🚗', receipt: '🧾', card: '▭', pin: '⌖', person: '☺', box: '▣', book: '❑', chat: '✎', cake: '✱', home: '⌂', gear: '⚙', bolt: '↯', server: '⌁' };
 const P = { el: null, input: null, list: null, results: [], groups: [], sel: 0, seq: 0, timer: 0, q: '', lastFocus: null, open: false };
 
 function build() {

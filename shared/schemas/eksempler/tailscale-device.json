@@ -82,7 +82,7 @@
       "direkte": null,
       "derp": null,
       "relay": null,
-      "label": "ukjent"
+      "label": "tunnel ukjent"
     },
     "traffic": {
       "rx": 0,
@@ -113,5 +113,11 @@
     ]
   },
   "services": [],
+  "alerts": {
+    "offline": true,
+    "nokkel": true,
+    "ny": true,
+    "derp": true
+  },
   "canPing": true
 }

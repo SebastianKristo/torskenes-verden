@@ -4,6 +4,7 @@
 //   GET  /api/tailscale/devices              → {source, updatedAt, tailnet, counts, filters, groups, devices:[…], lastChange}
 //   GET  /api/tailscale/devices/:id?range=   → {device, facts, history:{range, uptime, latency, tunnel, traffic, stripe}, services, alerts}
 //   POST /api/tailscale/devices/:id/ping     → {ok, latencyMs, tunnel, label}  (disco-ping via LocalAPI; ingen skriving mot Tailscale)
+//   PUT  /api/tailscale/devices/:id/varsler  → {alerts}  (varslene per enhet av/på, lagres i Homelab)
 //   GET  /api/tailscale/stats                → tall for hele tailnetet, vedlikehold og trafikk i dag
 //   GET  /api/tailscale/test                 → {ok, message, ms} (samme test som Innstillinger → Tilkoblinger → Tailscale)
 //   GET|PUT /api/tailscale/visning           → filter, søk, gruppering og åpen/lukket per bruker
@@ -18,6 +19,7 @@ import { peek } from '../cache.js';
 import { hent, settLatens, sisteEndring } from './tilstand.js';
 import { pingIp } from './kilde.js';
 import * as S from './statistikk.js';
+import { varslerFor, settVarsler, VARSLER } from './varsler.js';
 import { medTekster, fakta, filtre, grupper, antall, latensTekst, byteTekst, prosent, FILTRE } from './etiketter.js';
 
 const NO_STORE = { 'Cache-Control': 'no-store' };
@@ -94,7 +96,7 @@ tailscaleApi.get('/devices/:id', async (c) => {
         latency: { ...lat, medianLabel: latensTekst(lat.median), p95Label: latensTekst(lat.p95) },
         tunnel: { ...tunnel, label: tunnel.direkte == null ? 'tunnel ukjent' : `${prosent(tunnel.direkte)} direkte${tunnel.relay ? ` · DERP ${tunnel.relay}` : ''}` },
         traffic: { ...traffic, label: `↓ ${byteTekst(traffic.rx)} · ↑ ${byteTekst(traffic.tx)}` }, stripe: S.stripe30(d.id, now) },
-      services: tjenesterFor(d, c.get('user')), canPing: !d.self && !!d.ip && d.online,
+      services: tjenesterFor(d, c.get('user')), alerts: varslerFor(d.id), canPing: !d.self && !!d.ip && d.online,
     }, 200, NO_STORE);
   } catch (e) { return feil(c, e); }
 });
@@ -110,6 +112,15 @@ tailscaleApi.post('/devices/:id/ping', async (c) => {
     settLatens(d.id, r);
     return c.json({ ok: r.ok, latencyMs: r.latencyMs, tunnel: r.tunnel, label: r.ok ? `Svar på ${latensTekst(r.latencyMs)}` : 'Ingen svar' }, 200, NO_STORE);
   } catch (e) { return feil(c, e); }
+});
+
+tailscaleApi.put('/devices/:id/varsler', async (c) => {
+  const b = await c.req.json().catch(() => null);
+  if (!b || typeof b !== 'object' || Array.isArray(b)) return c.json({ error: 'Ugyldig kropp', code: 'BAD_REQUEST' }, 400, NO_STORE);
+  const id = c.req.param('id');
+  if (!/^[\w:.-]{1,120}$/.test(id)) return c.json({ error: 'Ugyldig enhet', code: 'BAD_REQUEST' }, 400, NO_STORE);
+  const changes = Object.fromEntries(VARSLER.filter((k) => typeof b[k] === 'boolean').map((k) => [k, b[k]]));
+  return c.json({ alerts: settVarsler(id, changes) }, 200, NO_STORE);
 });
 
 tailscaleApi.get('/stats', async (c) => {

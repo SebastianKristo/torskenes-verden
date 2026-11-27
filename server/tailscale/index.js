@@ -5,6 +5,8 @@
 //   statistikk.js  tailscale_samples i SQLite (hvert 5. min, slettes etter 90 d), oppetid, latens, trafikk, vedlikehold
 //   etiketter.js   tekstene klientene viser (latens, «sist sett», fakta, filtre, grupper)
 //   api.js         /api/tailscale/* (requireAdmin, økt eller app-token)
+//   varsler.js     varslene til administratorene (notify.js), av/på globalt og per enhet
+//   glimt.js       Glimt-verktøyet tailscale.status (bare lesing) og enhetene i ⌘K-søket
 //   demo.js        eksempeldata (MOCK_DATA=1)
 // Bakgrunnsjobbene går i den felles planleggeren (server/jobs/), så de ikke kjører i test eller sandkassen.
 import { registerJob } from '../jobs/index.js';
@@ -13,8 +15,10 @@ import { cfg } from '../settings.js';
 import { osloParts, osloDate } from '../dates/oslo.js';
 import { chooseSource } from './kilde.js';
 import { hent, pingAlle } from './tilstand.js';
-import { lagreProver, slettGamle } from './statistikk.js';
+import { lagreProver, slettGamle, forsteRunde } from './statistikk.js';
+import { sjekkVarsler } from './varsler.js';
 import { tailscaleApi } from './api.js';
+import './glimt.js'; // registrerer Glimt-verktøyet tailscale.status og den lokale planen
 
 const MIN = 60_000;
 const pingMin = () => { const n = Math.round(Number(cfg('ts_ping_min'))); return n >= 1 && n <= 60 ? n : 3; };
@@ -23,7 +27,9 @@ const pingMin = () => { const n = Math.round(Number(cfg('ts_ping_min'))); return
 export async function taProver(now = Date.now()) {
   if (!chooseSource()) return null;
   const t = await hent(now);
+  const forste = forsteRunde();
   const r = lagreProver(t.devices, now);
+  await sjekkVarsler(t.devices, { nye: r.nye, forste, now }); // offline > 10 min, nøkkel om 7 d, ny enhet, DERP > 1 t
   return { antall: t.devices.length, nye: r.nye, devices: t.devices };
 }
 
