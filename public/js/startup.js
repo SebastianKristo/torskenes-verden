@@ -18,7 +18,10 @@ function snapshotTabs() {
   clearTimeout(snapT);
   snapT = setTimeout(() => {
     try {
-      const list = (sel) => [...document.querySelectorAll(`${sel} [data-r]`)].map((a) => ({ r: a.dataset.r, h: a.hidden ? 1 : 0, t: a.textContent.trim() }));
+      // Prompt 57: ikke mens fanene redigeres (knappene står i fanene), og i rekkefølgen brukeren ser (style.order fra dnd.js).
+      if (document.querySelector('.pillnav.nav-edit')) return;
+      const list = (sel) => [...document.querySelectorAll(`${sel} [data-r]`)].map((a, i) => [a, Number(a.style.order) || 0, i]).sort((x, y) => x[1] - y[1] || x[2] - y[2])
+        .map(([a]) => ({ r: a.dataset.r, h: a.hidden ? 1 : 0, t: a.textContent.trim() }));
       const top = list('.pillnav');
       if (!top.length) return;
       const logo = document.querySelector('header.top .logo')?.textContent.trim() || '';
@@ -109,8 +112,9 @@ export function initWeb52() {
   // Hver gang topplinjen endres (skjul/vis fane, nytt navn, ny rekkefølge, appnavn): oppdater cachen.
   const obs = new MutationObserver(snapshotTabs);
   for (const el of [document.querySelector('.pillnav'), document.querySelector('.bottomnav'), document.querySelector('header.top .logo')]) {
-    if (el) obs.observe(el, { childList: true, subtree: true, attributes: true, attributeFilter: ['hidden'], characterData: true });
+    if (el) obs.observe(el, { childList: true, subtree: true, attributes: true, attributeFilter: ['hidden', 'style'], characterData: true });
   }
+  document.addEventListener('hl:nav-saved', snapshotTabs); // prompt 57: når redigeringen av fanene er ferdig
 }
 
 export function after52(route, view) {

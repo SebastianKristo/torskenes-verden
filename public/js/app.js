@@ -24,6 +24,7 @@ import { initPageAddons, afterPageAddons, renderKart } from './page-addons.js'; 
 import { renderFam51, renderMedia51, afterMedfam51 } from './mediakveld-familiekalender.js'; // prompt 51 (MEDFAM51): Familiekalender og «I kveld»
 import { initWeb52, after52 } from './startup.js'; // oppstart, sideanimasjon, Ruter-buffer m.m.
 import { initNavOverflow } from './nav-overflow.js'; // «Alle sider ▾» i toppmenyen (Q6, B-B1/B2)
+import { initNavEdit, startNavEdit } from './nav-rediger.js'; // prompt 57: hold inne en fane for å redigere toppmenyen
 import { bindAvkortet } from './ui/avkortet.js'; // hele teksten som tooltip når den er kuttet med «…» (Sporing og Media, E-B13)
 import { pageCss } from './lib/page-css.js';
 import { loadModuler, aliasTil, viewOf, navKeyOf, tittel, subtabs } from './moduler.js'; // Fase 6: modullisten (GET /api/moduler)
@@ -223,6 +224,7 @@ function bindShell() {
     if (act === 'toggle-search') await toggle('search');
     if (act === 'toggle-news') await toggle('news');
     if (act === 'head-edit') toggleHeadEdit();
+    if (act === 'nav-edit') startNavEdit();
     if (act === 'dash-edit') { if (current() !== 'dash' || !mods.dash) { isEditingPending = true; location.hash = '#/oversikt'; } else mods.dash.startEdit(); }
     if (act === 'logout') {
       if (!confirm('Logge ut? Denne enheten må da logge inn med passord igjen.')) return;
@@ -275,7 +277,7 @@ async function main() {
   initWeb52();
   bindSearch();
   setupDnd(document.querySelector('header'));
-  if (!KAL_APP) initNavOverflow(); // etter setupDnd: «Mer ▾» er ikke en flyttbar fane
+  if (!KAL_APP) { initNavOverflow(); initNavEdit(); } // etter setupDnd: «Mer ▾» er ikke en flyttbar fane
   study.bind(view); // Rom, Hjem, Mat, Sporing og Domener kobler seg til når modulen lastes (BIND)
   applyTop();
   applyHead();

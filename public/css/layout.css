@@ -467,3 +467,34 @@ html[data-hl="2c"] .nav-more.on,html[data-hl="2c"] .nav-more[aria-expanded="true
 html[data-hl="cur"] .nav-more-menu{background:color-mix(in srgb,var(--ds-surface) 94%,transparent)}
 /* M5: Skjold Lab sitt tomme skall har samme bredde og plass som siden før side-CSS-en er lastet (skjold.css har resten). */
 #sk76[aria-busy="true"]{display:block;width:100%;max-width:1280px;margin:0 auto;min-height:50vh;box-sizing:border-box}
+
+/* ---------- Redigere toppmenyen som på iOS (prompt 57, nav-rediger.js) ----------
+   Hold inne en fane: fanene vibrerer og kan dras, rødt «−» skjuler, «+» legger til, «Ferdig» avslutter. Alle fanene står synlige
+   (over flere linjer om nødvendig) så lenge menyen redigeres. Pilene ‹ › er for tastaturet og vises når fanen har fokus. */
+.pillnav>a[data-r]{-webkit-touch-callout:none}
+html[data-hl] .top .pillnav.nav-edit{flex-wrap:wrap;overflow:visible;max-width:none;row-gap:var(--ds-space-sm);padding-top:var(--ds-space-sm)}
+.pillnav.nav-edit>a[data-r]{position:relative;cursor:grab;user-select:none;-webkit-user-select:none;touch-action:none;animation:nav-wiggle .26s ease-in-out infinite alternate}
+.pillnav.nav-edit>a[data-r]:nth-child(2n){animation-delay:-.13s;animation-direction:alternate-reverse}
+.pillnav.nav-edit>a.nav-drag{cursor:grabbing;animation:none;transform:scale(1.08);box-shadow:var(--ds-shadow-mid);z-index:var(--ds-z-raised)}
+@keyframes nav-wiggle{from{transform:rotate(-1.4deg)}to{transform:rotate(1.4deg)}}
+.nav-x{position:absolute;top:-7px;left:-7px;z-index:1;display:grid;place-items:center;width:20px;height:20px;padding:0;border:2px solid var(--ds-surface);border-radius:var(--ds-radius-full);background:var(--ds-danger);color:var(--ds-on-danger);font:700 15px/1 var(--ds-font-sans);cursor:pointer}
+.nav-x:focus-visible,.nav-mv:focus-visible,.nav-add:focus-visible,.nav-done:focus-visible{outline:2px solid var(--ds-focus);outline-offset:2px}
+/* Pilene er usynlige til fanen har fokus (tastatur); da står de under fanen, uten å flytte noe (ingen hopp under pekeren). */
+.nav-mv{position:absolute;width:1px;height:1px;margin:-1px;padding:0;border:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.pillnav.nav-edit>a:focus-within .nav-mv{top:calc(100% + 4px);left:calc(50% - 26px);z-index:var(--ds-z-raised);width:24px;height:24px;margin:0;clip:auto;overflow:visible;display:grid;place-items:center;border:1px solid var(--ds-line);border-radius:var(--ds-radius-full);background:var(--ds-surface-raised);color:var(--ds-text-primary);box-shadow:var(--ds-shadow-low);font:700 14px/1 var(--ds-font-sans);cursor:pointer}
+.pillnav.nav-edit>a:focus-within .nav-mv[data-nav-mv="1"]{left:calc(50% + 2px)}
+.pillnav.nav-edit>a:focus-within .nav-mv:disabled{opacity:.35;cursor:default}
+.nav-edit-bar{order:10000;flex:none;display:inline-flex;align-items:center;gap:var(--ds-space-xs);margin-left:var(--ds-space-xs)}
+.nav-edit-bar[hidden]{display:none}
+.nav-add{display:grid;place-items:center;width:32px;height:32px;padding:0;border:1.5px dashed var(--ds-line);border-radius:var(--ds-radius-full);background:transparent;color:var(--ds-text-primary);font:600 18px/1 var(--ds-font-sans);cursor:pointer}
+.nav-add[aria-expanded="true"]{border-style:solid;background:var(--ds-surface-chip)}
+.nav-done{height:32px;padding:0 var(--ds-space-md);border:0;border-radius:var(--ds-radius-full);background:var(--ds-accent);color:var(--ds-on-accent);font:600 13px var(--ds-font-sans);cursor:pointer}
+.nav-add-h{margin:0;padding:var(--ds-space-sm) var(--ds-space-md) var(--ds-space-xs);color:var(--ds-text-secondary);font-size:var(--ds-text-caption-size);font-weight:var(--ds-weight-semibold);text-transform:uppercase;letter-spacing:.06em}
+.nav-add-menu button{display:flex;align-items:center;gap:var(--ds-space-sm);padding:var(--ds-space-sm) var(--ds-space-md);border:0;border-radius:var(--ds-radius-sm);background:transparent;color:var(--ds-text-primary);font:var(--ds-weight-medium) var(--ds-text-callout-size)/var(--ds-text-callout-line) var(--ds-font-sans);text-align:left;cursor:pointer}
+.nav-add-menu button:hover,.nav-add-menu button:focus-visible{background:var(--ds-surface-sunken)}
+.nav-add-plus{display:grid;place-items:center;width:20px;height:20px;border-radius:var(--ds-radius-full);background:var(--ds-success);color:var(--ds-on-success);font-weight:700;line-height:1}
+.nav-add-none{margin:0;padding:var(--ds-space-sm) var(--ds-space-md);color:var(--ds-text-secondary);font-size:var(--ds-text-callout-size)}
+.nav-live{position:absolute;width:1px;height:1px;margin:-1px;padding:0;border:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+@media (prefers-reduced-motion:reduce){
+  .pillnav.nav-edit>a[data-r]{animation:none;outline:1.5px dashed var(--ds-line);outline-offset:-2px}
+}

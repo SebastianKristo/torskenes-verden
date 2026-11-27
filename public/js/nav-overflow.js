@@ -13,6 +13,9 @@ let nav = null, btn = null, panel = null, raf = 0, open = false;
 const tabs = () => [...nav.querySelectorAll(':scope > a[data-r]')].filter((a) => !a.hidden)
   .map((a, i) => [a, Number(a.style.order) || 0, i]).sort((x, y) => x[1] - y[1] || x[2] - y[2]).map((x) => x[0]);
 
+/** Måler menyen på nytt (nav-rediger.js kaller den når redigeringsmodus starter og slutter). */
+export function scheduleNavLayout() { if (nav) schedule(); }
+
 function schedule() {
   if (raf) return;
   raf = requestAnimationFrame(() => { raf = 0; layout(); });
@@ -22,6 +25,8 @@ function layout() {
   if (!nav || !btn) return;
   const all = [...nav.querySelectorAll(':scope > a[data-r]')];
   all.forEach((a) => a.classList.remove('nav-ovf'));
+  // Prompt 57: i redigeringsmodus (nav-rediger.js) står alle fanene synlige, også over flere linjer, og «Alle sider» er borte.
+  if (nav.classList.contains('nav-edit')) { btn.hidden = true; if (open) setOpen(false); return; }
   btn.hidden = false;
   if (matchMedia(MOBILE).matches || !nav.offsetParent) { btn.hidden = true; fill(); return; }
   const fits = () => nav.scrollWidth <= nav.clientWidth + 1;
