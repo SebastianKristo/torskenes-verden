@@ -8,10 +8,10 @@ import UserNotifications
 // SharedKal/Core) er med i FinansHub-målet med flagget KAL_EMBED (project.yml). Innstillinger → «Kalender i appen»
 // (kal84_embed, standard på). På: alt som i dag åpner Kalender-appen (KalLink33 – Hjem-kortet og -flisen, kalenderfanen,
 // Mer → Kalender, Glimt, varsler, Chat-kort, briefen, finanshub://kalender fra widgetene) åpner i stedet den innebygde
-// Kalenderen i fullskjerm, med «‹ Homelab» øverst. Av: Kalender-appen hvis den er installert, ellers også den innebygde
+// Kalenderen i fullskjerm (prompt 57: «Homelab» øverst i sidemenyen, ikke en egen linje). Av: Kalender-appen hvis den er installert, ellers også den innebygde
 // (Q26: Homelabs gamle kalenderside er fjernet; alt den kunne, finnes i Kalender).
 // Presentasjonen er en UIKit-fullskjerm (samme som SwiftUI fullScreenCover) fra øverste kontroller, så den virker også over
-// andre fullskjermer (briefen, Vær …) – og «‹ Homelab» går tilbake dit man var.
+// andre fullskjermer (briefen, Vær …) – og «Homelab» i menyen (eller kant-sveip) går tilbake dit man var.
 // Innlogging: samme konto som Homelab. Kalender-økten ligger i App Group-en (kal.token, delt med den frittstående appen og
 // widgetene); mangler den, logger Homelab inn med et ferskt enhets-token («Fortsett som», POST /api/auth/device-token →
 // KalShared41 → device-exchange), ellers companion-tokenet (KalCompanion33 → kal.hl.*). Ingen egen innloggingsskjerm normalt.
@@ -34,6 +34,10 @@ final class Kal84Host {
     private var loginBusy: Bool = false
 
     var isOpen: Bool { vc != nil }
+    /// Prompt 57: en widget eller et varsel åpner Kalender (ikke Homelab selv): da vises ikke «Homelab» i menyen.
+    /// Settes rett før lenken håndteres og gjelder bare den neste visningen (innen 3 s).
+    private var direkteAt: Date? = nil
+    func direkte() { direkteAt = Date() }
 
     /* ---------- Åpne og lukke ---------- */
 
@@ -45,6 +49,9 @@ final class Kal84Host {
             return
         }
         if let url { KalLinks.handle(url, trusted: true) }
+        let direkte: Bool = direkteAt.map { (d: Date) -> Bool in Date().timeIntervalSince(d) < 3 } ?? false
+        direkteAt = nil
+        KalEmbed84.shared.tilbake = direkte ? nil : { Kal84Host.shared.close() }
         present(0)
     }
 
@@ -248,56 +255,34 @@ final class Kal84Host {
     }
 }
 
-/* ---------- Fullskjermen: «‹ Homelab» + hele Kalender-appen ---------- */
+/* ---------- Fullskjermen: hele Kalender-appen ---------- */
+// Prompt 57 (claude-code-kalender-homelab-i-meny.md): «‹ Homelab»-linja over Kalender er fjernet. Headeren starter rett under
+// statuslinja; «Homelab» ligger øverst i sidemenyen (☰, KalDrawer) når Kalender er åpnet fra Homelab. Kant-sveip fra venstre
+// (UIKit-kantgesten, EdgeClose50) går tilbake til Homelab, også når Kalender er åpnet fra en widget eller et varsel.
 
 struct Kal84Root: View {
     @Environment(\.colorScheme) private var cs
+    @MainActor private var s: KalStore { KalStore.shared }
 
     private var t: KalTheme { cs == .dark ? KalTheme.darkTheme : KalTheme.light }
 
-    var body: some View {
-        VStack(spacing: 0) {
-            Kal84Bar(t: t) { Kal84Host.shared.close() }
-            KalAppRoot()
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-        }
-        .background(t.bg.ignoresSafeArea())
-        .onAppear { Kal84Host.shared.appeared() }
-        .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { (_: Notification) in
-            Kal84Host.shared.active()
-        }
-        .onReceive(NotificationCenter.default.publisher(for: UIApplication.didEnterBackgroundNotification)) { (_: Notification) in
-            Kal84Host.shared.background()
-        }
+    /// Kant-sveipet går tilbake bare fra selve kalenderen (ikke over menyen, Innstillinger eller et ark).
+    private var kantTilbake: Bool {
+        !s.drawerOpen && !s.settingsOpen && !s.overviewOpen && !s.cals39Open && s.cal39Edit == nil && s.detId == nil && s.newForm == nil
     }
-}
-
-/// Topplinjen over Kalender (ikke over innholdet): «‹ Homelab» i Kalenders rødfarge og skrift.
-struct Kal84Bar: View {
-    let t: KalTheme
-    let close: () -> Void
 
     var body: some View {
-        HStack(spacing: 0) {
-            Button(action: {
-                KalHaptic.tap()
-                close()
-            }) {
-                Text("‹ Homelab")
-                    .font(KalFont.ui(15, .semibold))
-                    .foregroundStyle(t.acc)
-                    .padding(.horizontal, 14)
-                    .frame(minHeight: 44)
-                    .contentShape(Rectangle())
+        KalAppRoot()
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .edgeSwipeClose30(enabled: kantTilbake) { Kal84Host.shared.close() }
+            .background(t.bg.ignoresSafeArea())
+            .onAppear { Kal84Host.shared.appeared() }
+            .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { (_: Notification) in
+                Kal84Host.shared.active()
             }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Tilbake til Homelab")
-            Spacer(minLength: 0)
-        }
-        .padding(.horizontal, 4)
-        .frame(maxWidth: .infinity)
-        .background(t.bg.ignoresSafeArea(edges: .top))
-        .overlay(alignment: .bottom) { Rectangle().fill(t.line2).frame(height: 1) }
+            .onReceive(NotificationCenter.default.publisher(for: UIApplication.didEnterBackgroundNotification)) { (_: Notification) in
+                Kal84Host.shared.background()
+            }
     }
 }
 

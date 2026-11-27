@@ -371,21 +371,33 @@ test('lenkene går via bryteren: KalLink33 åpner den innebygde Kalenderen før 
   assert.match(read('FinansHub/Sources/HomeGrid.swift'), /KalLink33\.event\(e\) \{ return \}\n\s+store\.paperGo\("kalender"\)/);
   assert.match(read('FinansHub/Sources/KalenderHjemkort.swift'), /KalLink33\.day\(/);
   assert.match(read('FinansHub/Sources/AppWidgets.swift'), /KalLink33\.forward\(url\)/);
-  assert.match(read('FinansHub/Sources/BackgroundNotifications.swift'), /case "kalender":\n\s+store\.paperGo\("kalender"\)/);
+  assert.match(read('FinansHub/Sources/BackgroundNotifications.swift'), /case "kalender":\n(?:\s+\/\/[^\n]*\n)?\s+Kal84Host\.shared\.direkte\(\)\n\s+store\.paperGo\("kalender"\)/);
   // Ingen andre steder i Homelab åpner kalender:// direkte.
   const direct = swiftFiles('FinansHub/Sources').filter((f) => f !== 'FinansHub/Sources/KalenderLink.swift' && /UIApplication\.shared\.open\([^)]*kalender/.test(strip(read(f))));
   assert.deepEqual(direct, []);
 });
 
-test('fullskjerm med «‹ Homelab» øverst (ikke over innholdet) som lukker og går tilbake', () => {
+test('fullskjerm uten «‹ Homelab»-linje; «Homelab» øverst i menyen og kant-sveip lukker og går tilbake', () => {
   const s = emb();
   assert.match(s, /h\.modalPresentationStyle = \.fullScreen/);
-  assert.match(s, /VStack\(spacing: 0\) \{\n\s+Kal84Bar\(t: t\) \{ Kal84Host\.shared\.close\(\) \}\n\s+KalAppRoot\(\)/);
-  assert.match(s, /Text\("‹ Homelab"\)\n\s+\.font\(KalFont\.ui\(15, \.semibold\)\)\n\s+\.foregroundStyle\(t\.acc\)/);
-  assert.match(s, /\.accessibilityLabel\("Tilbake til Homelab"\)/);
+  // Prompt 57 (claude-code-kalender-homelab-i-meny.md): ingen linje over Kalender, headeren starter under statuslinja.
+  assert.doesNotMatch(strip(s), /Kal84Bar|‹ Homelab/);
+  assert.match(s, /var body: some View \{\n\s+KalAppRoot\(\)/);
+  assert.match(s, /\.edgeSwipeClose30\(enabled: kantTilbake\) \{ Kal84Host\.shared\.close\(\) \}/);
   assert.match(s, /if let p = h\.presentingViewController \{ p\.dismiss\(animated: true/);
-  // Bare innebygd: Kal84Bar finnes ikke i Kalender-appens kode.
-  assert.ok(KAL_DIRS.flatMap(swiftFiles).every((f) => !/Kal84Bar|‹ Homelab/.test(read(f))));
+  // Raden bare når Kalender er åpnet fra Homelab (widget og varsel setter direkte()).
+  assert.match(s, /KalEmbed84\.shared\.tilbake = direkte \? nil : \{ Kal84Host\.shared\.close\(\) \}/);
+  assert.match(read('FinansHub/Sources/AppWidgets.swift'), /if page == "kalender" \|\| page == "calendar" \{ Kal84Host\.shared\.direkte\(\) \}/);
+  assert.match(read('FinansHub/Sources/BackgroundNotifications.swift'), /Kal84Host\.shared\.direkte\(\)\n\s+store\.paperGo\("kalender"\)/);
+  const drawer = read('Kalender/Sources/KalDrawer.swift');
+  assert.match(drawer, /if let tilbake = KalEmbed84\.shared\.tilbake \{ homelabRow\(tilbake\) \}\n\s+HStack \{\n\s+Text\("Kalendere"\)/);
+  assert.match(drawer, /Image\(systemName: "house"\)/);
+  assert.match(drawer, /Text\("Homelab"\)/);
+  assert.match(drawer, /\.accessibilityLabel\("Tilbake til Homelab"\)/);
+  // Kant-sveipet åpner ikke menyen når det skal gå tilbake til Homelab.
+  assert.match(read('Kalender/Sources/KalApp.swift'), /abs\(dx\) > abs\(dy\) && KalEmbed84\.shared\.tilbake == nil \{/);
+  // Bare innebygd: Kal84Bar og «‹ Homelab» finnes ikke i Kalender-appens kode; tilbake settes bare av Homelab.
+  assert.ok(KAL_DIRS.flatMap(swiftFiles).every((f) => !/Kal84Bar|‹ Homelab|\.tilbake = /.test(read(f))));
   // Over andre fullskjermer: presenteres fra øverste kontroller, venter til en som lukkes er borte.
   assert.match(s, /while let p = vc\?\.presentedViewController \{/);
   assert.match(s, /if p\.isBeingDismissed \{/);

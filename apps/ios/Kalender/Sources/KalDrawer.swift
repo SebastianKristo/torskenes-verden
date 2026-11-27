@@ -20,6 +20,8 @@ struct KalDrawer: View {
             let w: CGFloat = Swift.min(340, geo.size.width * 0.86)
             ScrollView {
                 VStack(alignment: .leading, spacing: 12) {
+                    // Prompt 57: tilbake-linja over Kalender er flyttet hit som en rad (bare når Kalender er åpnet fra Homelab).
+                    if let tilbake = KalEmbed84.shared.tilbake { homelabRow(tilbake) }
                     HStack {
                         Text("Kalendere").font(KalFont.serif(28)).foregroundStyle(t.ink)
                         Spacer()
@@ -155,6 +157,34 @@ struct KalDrawer: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel("Oversikt")
+    }
+
+    /// Prompt 57: «Homelab» med hus-ikonet og «‹ Tilbake til appen» – samme radstil som Oversikt og Innstillinger, med en
+    /// tynn strek under. Trykk lukker menyen og går tilbake til Homelab dit man var.
+    private func homelabRow(_ tilbake: @escaping @MainActor () -> Void) -> some View {
+        Button(action: {
+            KalHaptic.tap()
+            s.drawerOpen = false
+            s.addCalTab = nil
+            tilbake()
+        }) {
+            HStack(spacing: 12) {
+                Image(systemName: "house").font(.system(size: 16, weight: .semibold)).foregroundStyle(t.ink)
+                    .frame(width: 34, height: 34)
+                    .background(RoundedRectangle(cornerRadius: 10).fill(t.chip))
+                    .accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("Homelab").font(KalFont.ui(14.5, .bold)).foregroundStyle(t.ink)
+                    Text("‹ Tilbake til appen").font(KalFont.ui(12)).foregroundStyle(t.mut)
+                }
+                Spacer()
+            }
+            .padding(.bottom, 12)
+            .overlay(alignment: .bottom) { Rectangle().fill(t.line2).frame(height: 1) }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Tilbake til Homelab")
     }
 
     private var settingsRow: some View {

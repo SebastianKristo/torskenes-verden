@@ -247,6 +247,8 @@ enum Notify31 {
         case "abo":
             store.paperGo("abo")
         case "kalender":
+            // Prompt 57: fra et varsel – ingen «Homelab»-rad i Kalenders meny.
+            Kal84Host.shared.direkte()
             store.paperGo("kalender")
         case "system":
             System31Model.shared.show()
