@@ -27,7 +27,7 @@ Logg inn på [developer.apple.com/account](https://developer.apple.com/account).
 
    | Bundle-id | Capabilities |
    |---|---|
-   | `no.kristo.finanshub` | **App Groups** (velg `group.no.kristo.finanshub`), **HealthKit** (kryss også av for «Background Delivery» hvis valget finnes) |
+   | `no.kristo.finanshub` | **App Groups** (velg `group.no.kristo.finanshub`), **HealthKit** (kryss også av for «Background Delivery» hvis valget finnes), **Push Notifications** (Live Activities og varsler) |
    | `no.kristo.finanshub.widgets` | **App Groups** (`group.no.kristo.finanshub`) |
    | `no.kristo.kalender` | **App Groups** (`group.no.kristo.finanshub`) |
    | `no.kristo.kalender.widgets` | **App Groups** (`group.no.kristo.finanshub`) |
@@ -36,6 +36,15 @@ Logg inn på [developer.apple.com/account](https://developer.apple.com/account).
    Rettighetene appene får, står i `apps/ios/project.yml` (`entitlements`). Push, Communication Notifications, delt
    Nøkkelring (`keychain-access-groups`) og Associated Domains er **ikke** slått på. Appene virker uten dem (se
    kommentarene i `project.yml`), og de ville brukket de usignerte byggene for AltStore og SideStore.
+
+### Push (Live Activities)
+
+TestFlight-bygget av Homelab har push (`aps-environment`). Det legges bare inn i TestFlight-jobben, så de usignerte byggene og sideloading er som før. For at serveren skal kunne starte og oppdatere Live Activities:
+
+1. developer.apple.com → **Keys** → «+» → kryss av **Apple Push Notifications service (APNs)** → last ned nøkkelen (`.p8`, kan bare lastes ned én gang) og noter **Key ID**.
+2. Homelab → Innstillinger → Tilkoblinger → **APNs**: Team-ID, Nøkkel-ID, nøkkelen og **Miljø: produksjon** (`apns_env`). TestFlight og App Store bruker produksjon; bygg fra Xcode bruker sandbox.
+
+Nøkkelen ligger bare på serveren, ikke i GitHub og ikke i appen.
 
 ## 2. App Store Connect
 

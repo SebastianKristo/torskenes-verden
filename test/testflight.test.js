@@ -130,3 +130,18 @@ test('dokumentasjonen finnes og er lenket fra README og CLAUDE.md', () => {
   assert.match(raw('README.md'), /docs\/testflight\.md/);
   assert.match(raw('CLAUDE.md'), /docs\/testflight\.md/);
 });
+
+test('Push i TestFlight-bygget: aps-environment bare for Homelab, bare i TestFlight-jobben, og sjekket i signaturen', () => {
+  const wf = readFileSync(join(ROOT, '.github/workflows/testflight.yml'), 'utf8');
+  // Legges inn etter xcodegen, bare for hovedappen (Live Activities og varsler), og sjekkes etter arkiveringen.
+  assert.match(wf, /PlistBuddy -c "Add :aps-environment string development" FinansHub\/FinansHub\.entitlements/);
+  assert.match(wf, /if \[ "\$SCHEME" = FinansHub \]/);
+  assert.match(wf, /grep -q aps-environment/);
+  // De usignerte byggene (release.yml, mobile.yml) og project.yml får ikke push, så sideloading virker som før.
+  for (const f of ['.github/workflows/release.yml', '.github/workflows/mobile.yml', 'apps/ios/project.yml']) {
+    assert.doesNotMatch(readFileSync(join(ROOT, f), 'utf8'), /aps-environment:|Add :aps-environment/, f);
+  }
+  const doc = readFileSync(join(ROOT, 'docs/testflight.md'), 'utf8');
+  assert.match(doc, /Push Notifications/);
+  assert.match(doc, /apns_env|Miljø.*produksjon/);
+});

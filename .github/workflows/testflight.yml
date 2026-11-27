@@ -104,6 +104,16 @@ jobs:
       - name: Installer XcodeGen og generer prosjekt
         run: brew install xcodegen && xcodegen generate
 
+      - name: Push for Live Activities og varsler (bare Homelab, bare TestFlight)
+        # aps-environment legges bare inn her, ikke i project.yml: de usignerte byggene (release.yml, mobile.yml, sideloading)
+        # ville ellers mistet signaturen. Xcode setter «production» ved eksport til App Store Connect.
+        env:
+          SCHEME: ${{ matrix.scheme }}
+        run: |
+          if [ "$SCHEME" = FinansHub ]; then
+            /usr/libexec/PlistBuddy -c "Add :aps-environment string development" FinansHub/FinansHub.entitlements
+          fi
+
       - name: App Store Connect-nøkkel og midlertidig nøkkelring
         # Nøkkelen dekodes rett til fil (aldri til loggen). Den midlertidige nøkkelringen er standard under jobben, så
         # sertifikatet Xcode lager havner der og slettes sammen med den til slutt.
@@ -146,6 +156,9 @@ jobs:
           APP="$RUNNER_TEMP/$SCHEME.xcarchive/Products/Applications/$SCHEME.app"
           [ -d "$APP/PlugIns/${{ matrix.widget }}.appex" ] || { echo "::error::Fant ikke ${{ matrix.widget }} i arkivet"; exit 1; }
           codesign -d --entitlements - "$APP" 2>/dev/null | grep -q group.no.kristo.finanshub || { echo "::error::Mangler App Group i signaturen"; exit 1; }
+          if [ "$SCHEME" = FinansHub ]; then
+            codesign -d --entitlements - "$APP" 2>/dev/null | grep -q aps-environment || { echo "::error::Mangler push (aps-environment) i signaturen. Slå på Push Notifications for no.kristo.finanshub i Apple Developer."; exit 1; }
+          fi
 
       - name: Eksporter og last opp ${{ matrix.navn }} til TestFlight
         env:
