@@ -447,6 +447,8 @@ targets:
         INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.productivity
         INFOPLIST_KEY_NSHumanReadableCopyright: "Torskenes verden · Homelab"
         INFOPLIST_KEY_NSLocalNetworkUsageDescription: "Kalender kobler til Homelab-serveren din på lokalt nett."
+        # YES bare i TestFlight-bygget (testflight.yml): appens egen oppdaterer er av (MacUpdater43.appStore).
+        KAL_APP_STORE: "NO"
       configs:
         Debug:
           ONLY_ACTIVE_ARCH: YES
@@ -474,6 +476,9 @@ targets:
         # Klartekst-HTTP bare til lokalt nett via NSAllowsLocalNetworking over (ATS er ikke slått av globalt).
         KalDefaultServer41: "https://os.smarthjemeksperten.no"
         KalKeychainGroup41: "$(AppIdentifierPrefix)no.kristo.shared"
+        KalAppStore: "$(KAL_APP_STORE)"
+        # Bare vanlig HTTPS (eksportkryptering unntatt), så App Store Connect ikke spør ved hver build.
+        ITSAppUsesNonExemptEncryption: false
 
   # Prompt 41: Kalender-widgets på Mac (skrivebord og Varslingssenter, macOS 14+). Samme kode som iOS (KalenderWidgets/Sources,
   # #if os(macOS) bare for størrelser/farger): liten, medium, stor og ekstra stor. Data fra App Group-en <TeamID>.group.no.kristo.kalender,

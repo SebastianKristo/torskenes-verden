@@ -41,6 +41,9 @@ enum MacUpdPhase43: String {
 @Observable
 final class MacUpdater43 {
     static let shared: MacUpdater43 = MacUpdater43()
+    /// TestFlight/App Store-bygget (KAL_APP_STORE=YES → Info «KalAppStore»): oppdateringer kommer fra TestFlight og App Store,
+    /// så appens egen oppdaterer (DMG fra serveren) er av. Sandkassen i det bygget har heller ikke unntakene den trenger.
+    static let appStore: Bool = (Bundle.main.object(forInfoDictionaryKey: "KalAppStore") as? String) == "YES"
 
     var phase: MacUpdPhase43 = .idle
     var rel: MacRelease43? = nil
@@ -129,6 +132,7 @@ final class MacUpdater43 {
     /// Én gang om dagen ved oppstart (når «Se etter oppdateringer automatisk» er på). Laster ned i bakgrunnen hvis valgt.
     func autoCheck() async {
         // «✓ oppdatert» etter en installasjon skal stå til brukeren har sett det.
+        if MacUpdater43.appStore { return }
         if !auto || phase == .done || phase == .err { return }
         if Date().timeIntervalSince1970 - lastCheck < 20 * 3600 { return }
         await check(quiet: true)
@@ -136,6 +140,11 @@ final class MacUpdater43 {
     }
 
     func check(quiet: Bool = false) async {
+        if MacUpdater43.appStore {
+            phase = MacUpdPhase43.none
+            message = "Kalender oppdateres via TestFlight og App Store."
+            return
+        }
         if phase == .dl || phase == .inst { return }
         if !quiet { phase = .check }
         message = ""
@@ -370,7 +379,7 @@ final class MacUpdater43 {
 
     /// «Last ned og installer i bakgrunnen»: en ferdig sjekket versjon installeres når appen avslutter.
     func installOnQuitIfReady() {
-        guard autoDl, phase == .ready, let dmg, let r = rel else { return }
+        guard !MacUpdater43.appStore, autoDl, phase == .ready, let dmg, let r = rel else { return }
         let err: String? = MacUpdater43.prepare(dmg: dmg, target: Bundle.main.bundleURL, pid: ProcessInfo.processInfo.processIdentifier,
                                                 bundleId: Bundle.main.bundleIdentifier ?? "no.kristo.kalender.mac", relaunch: false)
         if err == nil { UserDefaults.standard.set(r.version + "|" + String(r.build), forKey: "mac43.updExpect") }

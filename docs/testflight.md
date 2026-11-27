@@ -1,15 +1,16 @@
-# iOS: TestFlight
+# TestFlight (iPhone og Mac)
 
-Workflowen **TestFlight** (`.github/workflows/testflight.yml`) bygger iOS-appene, signerer dem og laster dem opp til
-App Store Connect. Derfra installeres de med TestFlight-appen på iPhone og iPad, uten sideloading og uten at signaturen
+Workflowen **TestFlight** (`.github/workflows/testflight.yml`) bygger appene, signerer dem og laster dem opp til
+App Store Connect. Derfra installeres de med TestFlight-appen på iPhone, iPad og Mac, uten sideloading og uten at signaturen
 må fornyes hver 7. dag.
 
 | App | Target | Bundle-id | Widgets |
 |---|---|---|---|
 | **Homelab** | `FinansHub` | `no.kristo.finanshub` | `FinansHubWidgets` (`no.kristo.finanshub.widgets`) |
 | **Kalender** | `Kalender` | `no.kristo.kalender` | `KalenderWidgets` (`no.kristo.kalender.widgets`) |
+| **Kalender for Mac** | `KalenderMac` | `no.kristo.kalender.mac` | `KalenderMacWidgets` (`no.kristo.kalender.mac.widgets`) |
 
-Apple Watch-appen (`HomelabWatch`) og Kalender for Mac er ikke med. Den usignerte IPA-en og DMG-en i Releases
+Apple Watch-appen (`HomelabWatch`) er ikke med. Den usignerte IPA-en og DMG-en i Releases
 (`release.yml`) lages som før.
 
 Signeringen gjøres av Xcode selv (automatisk signering) med en App Store Connect API-nøkkel. Xcode lager sertifikatet og
@@ -23,7 +24,7 @@ Logg inn på [developer.apple.com/account](https://developer.apple.com/account).
 1. **Team ID:** under Membership details. Ti tegn, f.eks. `AB12CD34EF`. Dette blir `IOS_TEAM_ID`.
 2. **App Group:** Certificates, IDs & Profiles → Identifiers → **+** → App Groups. Identifier
    `group.no.kristo.finanshub`. Gruppen deles av begge appene og widgetene (innlogging, widgetdata og Nøkkelringen).
-3. **App ID-er:** Identifiers → **+** → App IDs → App, med «Explicit» bundle-id. Lag fire:
+3. **App ID-er:** Identifiers → **+** → App IDs → App, med «Explicit» bundle-id. Lag seks:
 
    | Bundle-id | Capabilities |
    |---|---|
@@ -31,6 +32,8 @@ Logg inn på [developer.apple.com/account](https://developer.apple.com/account).
    | `no.kristo.finanshub.widgets` | **App Groups** (`group.no.kristo.finanshub`) |
    | `no.kristo.kalender` | **App Groups** (`group.no.kristo.finanshub`) |
    | `no.kristo.kalender.widgets` | **App Groups** (`group.no.kristo.finanshub`) |
+   | `no.kristo.kalender.mac` (plattform macOS) | **App Groups** (`<Team-ID>.group.no.kristo.kalender`) |
+   | `no.kristo.kalender.mac.widgets` (plattform macOS) | **App Groups** (samme) |
 
    Xcode kan registrere App ID-ene selv første gang, men App Group-tilknytningen er sikrest å gjøre for hånd.
    Rettighetene appene får, står i `apps/ios/project.yml` (`entitlements`). Push, Communication Notifications, delt
@@ -46,6 +49,16 @@ TestFlight-bygget av Homelab har push (`aps-environment`). Det legges bare inn i
 
 Nøkkelen ligger bare på serveren, ikke i GitHub og ikke i appen.
 
+### Kalender for Mac
+
+TestFlight-bygget av Mac-appen er litt annerledes enn DMG-en i Releases, fordi App Store krever det:
+
+- De midlertidige unntakene i sandkassen (`/Applications` og `/Volumes`) er fjernet. Dem trenger bare appens egen oppdaterer.
+- Appens egen oppdaterer er av (`KAL_APP_STORE=YES` → `KalAppStore`). Oppdateringer kommer fra TestFlight, og Innstillinger → Oppdateringer sier det.
+- App Group-en for skrivebords-widgetene (`<Team-ID>.group.no.kristo.kalender`) er slått på, så widgetene får data.
+
+DMG-en i Releases er uendret og oppdaterer seg selv som før. Ha bare én av dem installert.
+
 ## 2. App Store Connect
 
 Logg inn på [appstoreconnect.apple.com](https://appstoreconnect.apple.com).
@@ -53,6 +66,7 @@ Logg inn på [appstoreconnect.apple.com](https://appstoreconnect.apple.com).
 1. **Appene:** Apper → **+** → Ny app, plattform iOS. Lag én for hver:
    - Navn «Homelab» (eller et ledig navn), bundle-id `no.kristo.finanshub`, SKU f.eks. `homelab`.
    - Navn «Kalender» (eller et ledig navn), bundle-id `no.kristo.kalender`, SKU f.eks. `kalender`.
+   - **Mac:** Ny app med plattform **macOS**, navn f.eks. «Kalender for Mac», bundle-id `no.kristo.kalender.mac`, SKU f.eks. `kalender-mac`. Den har en annen bundle-id enn iPhone-appen og blir derfor en egen app.
 
    Navnet i App Store Connect må være unikt i hele App Store. Navnet på hjemskjermen kommer fra appen og er uendret.
 2. **API-nøkkel:** Brukere og tilgang → Integrasjoner → App Store Connect API → Teamnøkler → **+**.
@@ -87,8 +101,8 @@ I workflowen skrives nøkkelen til `$RUNNER_TEMP`, med tilgang bare for eieren, 
 
 ## 4. Kjør jobben
 
-- **Manuelt:** Actions → **TestFlight** → Run workflow, og velg `begge`, `homelab` eller `kalender`.
-- **Ved release:** push en tag `vX.Y.Z`. Da kjører både Release og TestFlight (begge appene), hver for seg.
+- **Manuelt:** Actions → **TestFlight** → Run workflow, og velg `alle`, `homelab`, `kalender` eller `kalender-mac`.
+- **Ved release:** push en tag `vX.Y.Z`. Da kjører både Release og TestFlight (alle tre appene), hver for seg.
 
 Mangler en av hemmelighetene, hopper workflowen over opplastingen med «Mangler TestFlight-hemmeligheter» og er grønn.
 

@@ -1,7 +1,7 @@
-# Laster opp iOS-appene til TestFlight: Homelab (FinansHub, no.kristo.finanshub, med FinansHubWidgets) og
-# Kalender (no.kristo.kalender, med KalenderWidgets). Oppsettet i Apple Developer og App Store Connect: docs/testflight.md.
+# Laster opp appene til TestFlight: Homelab (FinansHub, no.kristo.finanshub, med FinansHubWidgets), Kalender for iPhone
+# (no.kristo.kalender, med KalenderWidgets) og Kalender for Mac (no.kristo.kalender.mac, med KalenderMacWidgets). Oppsettet i Apple Developer og App Store Connect: docs/testflight.md.
 #
-# Start: Actions → TestFlight → Run workflow (velg begge, homelab eller kalender), eller push en tag v* (samme tag som
+# Start: Actions → TestFlight → Run workflow (velg alle, homelab, kalender eller kalender-mac), eller push en tag v* (samme tag som
 # release.yml bruker; de to workflowene kjører hver for seg og deler ingenting).
 #
 # Hemmeligheter (uten dem hopper workflowen over med «Mangler TestFlight-hemmeligheter», og kjøringen er grønn):
@@ -18,8 +18,8 @@ on:
       app:
         description: 'Hvilken app som lastes opp'
         type: choice
-        options: [begge, homelab, kalender]
-        default: begge
+        options: [alle, homelab, kalender, kalender-mac]
+        default: alle
 
 permissions:
   contents: read
@@ -43,7 +43,7 @@ jobs:
           HAR_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID != '' }}
           HAR_KEY_P8: ${{ secrets.ASC_KEY_P8_BASE64 != '' }}
           HAR_TEAM_ID: ${{ secrets.IOS_TEAM_ID != '' }}
-          VALG: ${{ github.event.inputs.app || 'begge' }}
+          VALG: ${{ github.event.inputs.app || 'alle' }}
         run: |
           MANGLER=""
           [ "$HAR_KEY_ID" = "true" ] || MANGLER="$MANGLER ASC_KEY_ID"
@@ -58,12 +58,15 @@ jobs:
             echo "apper=[]" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          HOMELAB='{"navn": "Homelab", "scheme": "FinansHub", "bundle": "no.kristo.finanshub", "widget": "FinansHubWidgets"}'
-          KALENDER='{"navn": "Kalender", "scheme": "Kalender", "bundle": "no.kristo.kalender", "widget": "KalenderWidgets"}'
+          # produkt = navnet på .app-en i arkivet, plugins = der widgeten ligger i appen.
+          HOMELAB='{"navn": "Homelab", "scheme": "FinansHub", "bundle": "no.kristo.finanshub", "widget": "FinansHubWidgets", "mal": "generic/platform=iOS", "produkt": "FinansHub", "plugins": "PlugIns", "mac": false}'
+          KALENDER='{"navn": "Kalender", "scheme": "Kalender", "bundle": "no.kristo.kalender", "widget": "KalenderWidgets", "mal": "generic/platform=iOS", "produkt": "Kalender", "plugins": "PlugIns", "mac": false}'
+          KALMAC='{"navn": "Kalender for Mac", "scheme": "KalenderMac", "bundle": "no.kristo.kalender.mac", "widget": "KalenderMacWidgets", "mal": "generic/platform=macOS", "produkt": "Kalender", "plugins": "Contents/PlugIns", "mac": true}'
           case "$VALG" in
             homelab) APPER="[$HOMELAB]" ;;
             kalender) APPER="[$KALENDER]" ;;
-            *) APPER="[$HOMELAB, $KALENDER]" ;;
+            kalender-mac) APPER="[$KALMAC]" ;;
+            *) APPER="[$HOMELAB, $KALENDER, $KALMAC]" ;;
           esac
           echo "klar=true" >> "$GITHUB_OUTPUT"
           echo "apper=$APPER" >> "$GITHUB_OUTPUT"
@@ -114,6 +117,19 @@ jobs:
             /usr/libexec/PlistBuddy -c "Add :aps-environment string development" FinansHub/FinansHub.entitlements
           fi
 
+      - name: Kalender for Mac i App Store-form (bare TestFlight)
+        # App Store godtar ikke de midlertidige unntakene i sandkassen (/Applications og /Volumes), som bare trengs av appens
+        # egen oppdaterer. TestFlight oppdaterer appen selv, så oppdatereren slås av (KAL_APP_STORE=YES i arkiveringen).
+        # App Group-en for skrivebords-widgetene slås på her (den krever Team ID og ligger derfor ikke i project.yml).
+        if: matrix.mac
+        run: |
+          E=KalenderMac/KalenderMac.entitlements
+          /usr/libexec/PlistBuddy -c "Delete :com.apple.security.temporary-exception.files.absolute-path.read-write" "$E" || true
+          /usr/libexec/PlistBuddy -c "Delete :com.apple.security.temporary-exception.files.absolute-path.read-only" "$E" || true
+          /usr/libexec/PlistBuddy -c "Add :com.apple.security.application-groups array" "$E"
+          /usr/libexec/PlistBuddy -c "Add :com.apple.security.application-groups:0 string \$(TeamIdentifierPrefix)group.no.kristo.kalender" "$E"
+          ! grep -q temporary-exception "$E" || { echo "::error::Unntakene i sandkassen er fortsatt med"; exit 1; }
+
       - name: App Store Connect-nøkkel og midlertidig nøkkelring
         # Nøkkelen dekodes rett til fil (aldri til loggen). Den midlertidige nøkkelringen er standard under jobben, så
         # sertifikatet Xcode lager havner der og slettes sammen med den til slutt.
@@ -140,10 +156,14 @@ jobs:
           TEAM_ID: ${{ secrets.IOS_TEAM_ID }}
           SCHEME: ${{ matrix.scheme }}
         run: |
+          EKSTRA=()
+          # Mac: project.yml signerer ad hoc («-») for lokale bygg; her signerer Xcode med teamet, og oppdatereren er av.
+          if [ "${{ matrix.mac }}" = "true" ]; then EKSTRA=(KAL_APP_STORE=YES "CODE_SIGN_IDENTITY=Apple Development"); fi
           xcodebuild -project FinansHub.xcodeproj -scheme "$SCHEME" -configuration Release \
-            -destination 'generic/platform=iOS' -archivePath "$RUNNER_TEMP/$SCHEME.xcarchive" \
+            -destination "${{ matrix.mal }}" -archivePath "$RUNNER_TEMP/$SCHEME.xcarchive" \
             MARKETING_VERSION="$V" CURRENT_PROJECT_VERSION="$BUILD" \
             DEVELOPMENT_TEAM="$TEAM_ID" CODE_SIGN_STYLE=Automatic \
+            "${EKSTRA[@]}" \
             -allowProvisioningUpdates \
             -authenticationKeyPath "$ASC_KEY_PATH" \
             -authenticationKeyID "$KEY_ID" \
@@ -153,9 +173,9 @@ jobs:
           tail -25 archive.log
           [ $s -eq 0 ] || exit $s
           # Widgetene og App Group-en skal være med i den signerte appen.
-          APP="$RUNNER_TEMP/$SCHEME.xcarchive/Products/Applications/$SCHEME.app"
-          [ -d "$APP/PlugIns/${{ matrix.widget }}.appex" ] || { echo "::error::Fant ikke ${{ matrix.widget }} i arkivet"; exit 1; }
-          codesign -d --entitlements - "$APP" 2>/dev/null | grep -q group.no.kristo.finanshub || { echo "::error::Mangler App Group i signaturen"; exit 1; }
+          APP="$RUNNER_TEMP/$SCHEME.xcarchive/Products/Applications/${{ matrix.produkt }}.app"
+          [ -d "$APP/${{ matrix.plugins }}/${{ matrix.widget }}.appex" ] || { echo "::error::Fant ikke ${{ matrix.widget }} i arkivet"; exit 1; }
+          codesign -d --entitlements - "$APP" 2>/dev/null | grep -q "group.no.kristo" || { echo "::error::Mangler App Group i signaturen"; exit 1; }
           if [ "$SCHEME" = FinansHub ]; then
             codesign -d --entitlements - "$APP" 2>/dev/null | grep -q aps-environment || { echo "::error::Mangler push (aps-environment) i signaturen. Slå på Push Notifications for no.kristo.finanshub i Apple Developer."; exit 1; }
           fi

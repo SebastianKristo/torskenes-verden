@@ -19,7 +19,7 @@ function steg(wf) {
 
 test('workflowen kan startes manuelt med valg av app, og ved tag v*', () => {
   assert.match(WF, /workflow_dispatch:/);
-  assert.match(WF, /options:\s*\[\s*begge,\s*homelab,\s*kalender\s*\]/);
+  assert.match(WF, /options:\s*\[\s*alle,\s*homelab,\s*kalender,\s*kalender-mac\s*\]/);
   assert.match(WF, /tags:\s*\['v\*'\]/);
   // Begge appene med riktige skjema og bundle-id.
   assert.match(WF, /"scheme":\s*"FinansHub"/);
@@ -144,4 +144,27 @@ test('Push i TestFlight-bygget: aps-environment bare for Homelab, bare i TestFli
   const doc = readFileSync(join(ROOT, 'docs/testflight.md'), 'utf8');
   assert.match(doc, /Push Notifications/);
   assert.match(doc, /apns_env|Miljø.*produksjon/);
+});
+
+test('Kalender for Mac i TestFlight: egen app i matrisen, sandkassen uten unntak, oppdatereren av og App Group med team', () => {
+  const wf = readFileSync(join(ROOT, '.github/workflows/testflight.yml'), 'utf8');
+  assert.match(wf, /options: \[alle, homelab, kalender, kalender-mac\]/);
+  assert.match(wf, /"scheme": "KalenderMac", "bundle": "no\.kristo\.kalender\.mac", "widget": "KalenderMacWidgets", "mal": "generic\/platform=macOS"/);
+  assert.match(wf, /"plugins": "Contents\/PlugIns", "mac": true/);
+  assert.match(wf, /Delete :com\.apple\.security\.temporary-exception\.files\.absolute-path\.read-write/);
+  assert.match(wf, /Delete :com\.apple\.security\.temporary-exception\.files\.absolute-path\.read-only/);
+  assert.match(wf, /group\.no\.kristo\.kalender/);
+  assert.match(wf, /EKSTRA=\(KAL_APP_STORE=YES "CODE_SIGN_IDENTITY=Apple Development"\)/);
+  assert.match(wf, /"\$\{EKSTRA\[@\]\}"/);
+  // project.yml: flagget er NO som standard (DMG-en fra release.yml har oppdatereren), Info-nøkkelen leses av appen.
+  const y = readFileSync(join(ROOT, 'apps/ios/project.yml'), 'utf8');
+  const mac = y.slice(y.indexOf('\n  KalenderMac:\n'), y.indexOf('\n  KalenderMacWidgets:\n'));
+  assert.match(mac, /KAL_APP_STORE: "NO"/);
+  assert.match(mac, /KalAppStore: "\$\(KAL_APP_STORE\)"/);
+  assert.match(mac, /ITSAppUsesNonExemptEncryption: false/);
+  assert.match(mac, /temporary-exception/, 'DMG-bygget beholder unntakene for sin egen oppdaterer');
+  const upd = readFileSync(join(ROOT, 'apps/ios/KalenderMac/Sources/MacUpdater.swift'), 'utf8');
+  assert.match(upd, /static let appStore: Bool = \(Bundle\.main\.object\(forInfoDictionaryKey: "KalAppStore"\) as\? String\) == "YES"/);
+  assert.match(upd, /if MacUpdater43\.appStore \{ return \}/);
+  assert.match(upd, /guard !MacUpdater43\.appStore, autoDl/);
 });
