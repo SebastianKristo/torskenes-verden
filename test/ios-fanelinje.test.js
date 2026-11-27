@@ -156,3 +156,18 @@ test('3) ingen merke med antall kvitteringer på Økonomi-fanen (begge fanelinje
   assert.doesNotMatch(blokk, /reviewCount|review\.count|"finans"/);
   assert.match(blokk, /return 0/);
 });
+
+test('4) valgt fane: ikon og navn side om side (8 pt), inaktive bare navn', () => {
+  const s = code('PapirFanelinje.swift');
+  assert.match(s, /let showIcon: Bool = style != "text" \|\| on/);
+  assert.match(s, /let ikonStil: DS\.Tekst = showLabel && !on \? \.callout : \.headline/);
+  assert.match(s, /HStack\(spacing: DS\.Space\.sm\)/);
+  assert.match(s, /\.layoutPriority\(on && style != "icons" \? 1 : 0\)/);
+  assert.match(code('Store.swift'), /forKey: "fh_nav_style25"\) \?\? "text"/);
+});
+
+test('5) Skann-knappen blir, 12 pt over den øverste linjen og 16 pt fra kanten', () => {
+  const s = code('Paper.swift');
+  assert.match(s, /let fabBottom: CGFloat = DS\.Space\.md \+ \(section \? ShellMetrics\.sectionBarHeight : 0\)/);
+  assert.match(s, /PaperFab\(tap: fabTap, hold: fabHold\)\n\s+\.padding\(\.trailing, wide \? 24 : 16\)/);
+});

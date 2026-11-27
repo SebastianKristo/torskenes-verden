@@ -265,7 +265,9 @@ struct PaperShell: View {
         let kb28: Bool = g.safeAreaInsets.bottom > 120
         // Skanneknappen: alle sider med fanelinje, unntatt Aksjer, Familie og Domener (Glimt ligger i domenekortet, prompt 43).
         let fab: Bool = showBar && store.paperTab != "familie" && !store.nav23NoScan && !store.paperInDomains
-        let fabBottom: CGFloat = 14 + (section ? ShellMetrics.sectionBarHeight : 0)
+        // Prompt 57 (claude-code-ios-fanelinje.md, punkt 5): Skann-knappen blir, og står 12 pt over den øverste linjen
+        // (hovedlinjen, eller Økonomi-fanene over den), aldri oppå eller bak dem.
+        let fabBottom: CGFloat = DS.Space.md + (section ? ShellMetrics.sectionBarHeight : 0)
         let fp: PaperPalette = store.finPalette22(p)
         ZStack(alignment: .bottom) {
             p.bg.ignoresSafeArea()
@@ -307,7 +309,7 @@ struct PaperShell: View {
         .overlay(alignment: .bottomTrailing) {
             if fab {
                 PaperFab(tap: fabTap, hold: fabHold)
-                    .padding(.trailing, wide ? 24 : 18)
+                    .padding(.trailing, wide ? 24 : 16)
                     .padding(.bottom, fabBottom)
             }
         }

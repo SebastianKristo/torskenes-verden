@@ -115,8 +115,10 @@ struct PapirFaneEtikett: View {
         let showIcon: Bool = style != "text" || on
         let showLabel: Bool = style == "text" || (style == "icons_active_label" && on)
         let expand: Bool = style == "icons" || !on
-        let ikonStil: DS.Tekst = showLabel ? .callout : .headline
-        HStack(spacing: 7) {
+        // Prompt 57 (punkt 4): den valgte fanen viser ikon og navn side om side, ikonet ≈ 20 pt (headline, følger Dynamic
+        // Type) med 8 pt luft. Inaktive faner viser bare navnet (stilen «Tekst», standard), i hvitt (navInk).
+        let ikonStil: DS.Tekst = showLabel && !on ? .callout : .headline
+        HStack(spacing: DS.Space.sm) {
             if showIcon {
                 Image(systemName: tab.symbol)
                     .font(Font.ds(ikonStil))
