@@ -106,6 +106,9 @@ targets:
     info:
       path: FinansHub/Info.plist
       properties:
+        # Prompt 57 (TestFlight): appen bruker bare vanlig HTTPS (ingen egen kryptering), så App Store Connect skal ikke
+        # spørre om eksportdokumentasjon for hver build.
+        ITSAppUsesNonExemptEncryption: false
         NSAppTransportSecurity:
           NSAllowsLocalNetworking: true
         # Prompt 52 (Familie-krasjet): personverntekstene står også direkte i Info.plist, ikke bare som INFOPLIST_KEY_-
@@ -253,6 +256,9 @@ targets:
     info:
       path: Kalender/Info.plist
       properties:
+        # Prompt 57 (TestFlight): appen bruker bare vanlig HTTPS (ingen egen kryptering), så App Store Connect skal ikke
+        # spørre om eksportdokumentasjon for hver build.
+        ITSAppUsesNonExemptEncryption: false
         # Prompt 71: 120 Hz på ProMotion-skjermer (jevne animasjoner: orb, skimmer, ark).
         CADisableMinimumFrameDurationOnPhone: true
         NSAppTransportSecurity:
