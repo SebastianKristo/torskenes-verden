@@ -39,6 +39,7 @@ Når du finner et begrep som mangler eller brukes ulikt, legg det til her i samm
 | **Utseende og faner** (profilmenyen: åpner Utseende) | Tilpass forside og meny | |
 | **Rediger faner** (profilmenyen, mellom «Utseende og faner» og «Tilpass Oversikt»: redigeringsmodus i toppmenyen, samme som å holde inne en fane), **Legg til fane** (lista bak «+»), **Ferdig** | Faner i menyen, Rediger meny, Fjern fane (det er «Skjul») | Prompt 57. En fane skjules, den slettes ikke |
 | **Kort** (på Oversikt), **Widgets** (på telefonen) | Widgets (om kort på Oversikt) | |
+| Bakgrunnene **Vær nå**, **Planeter**, **Oslo**, **Gradient**, **Eget bilde**, **Google Photos-album** (i den rekkefølgen) | Vær (som bakgrunn), Nåværende, Ingen (som bakgrunn), Mørk gradient | Prompt 57. «Gradient» er bakgrunnen uten bilde (nøkkelen `none`, `cur` i Økonomi) |
 | Media-fanene **Nå**, **Kommer**, **Bibliotek**, **Nedlastinger**, **Kilder** (NRK og Musikk) | Oversikt (i Media), Kalender (i Media) | «Kommer» er det som kommer ut snart. `#/media/kalender` virker fortsatt |
 | **I kveld** | Hva skal vi se i kveld? (som fanenavn) | |
 | **Domener / Sporing** (mellomrom rundt skråstrek) | Domener/Sporing | Likt på alle plattformer |

@@ -45,7 +45,7 @@ export const paper = () => true;
 export const paperDark = () => { if (homelabStil() === 'glass') return true; const h = homelabMorkt(); if (h != null) return h; const v = pref('paperMode'); return v === 'mork' || (v === 'auto' && !!matchMedia('(prefers-color-scheme: dark)').matches); };
 /** Valgt modus i temavelgeren: Homelab-modusen, ellers paperMode. */
 export const paperModeValgt = () => homelabModus() ?? pref('paperMode');
-const PHOTOS = [['weather', 'Vær'], ['planets', 'Planeter'], ['oslo', 'Oslo'], ['cur', 'Ingen']];
+const PHOTOS = [['weather', 'Vær nå'], ['planets', 'Planeter'], ['oslo', 'Oslo'], ['cur', 'Gradient']]; // prompt 57: navnene i ordlisten
 const PHOTO_SUB = { cur: 'Bare mørk gradient', oslo: 'Oslo fra lufta · skifter gjennom dagen', weather: 'Følger været der du er (MET)', planets: 'Jorda, Månen, Jupiter, Mars og Saturn (NASA)', custom: 'Ditt eget bilde' };
 const WX_NB = { clear: 'klart', klart: 'klart', cloudy: 'skyet', sky: 'skyet', rain: 'regn', regn: 'regn', snow: 'snø', fog: 'tåke', night: 'natt' };
 export const photoKind = () => pref('photo') || 'cur';
@@ -229,7 +229,7 @@ export function paperHero(scr) {
   const mai = home ? globalThis.P41?.heroMai?.() : null; // prompt 41: 17. mai (rød topp, flaggrekke, «Gratulerer med dagen»)
   return `<header class="pp-hero${home ? ' home' : ''}${mai ? ' p41-mai' : ''}${bgPill && P.open ? ' p29-open' : ''}${own ? ' own' : ''}${!own && heroHint(kind) === 'light' ? ' hint-light' : ''}" style="${own ?? ''}">${own ? '' : bgOf(kind)}${scr === 'dir' ? P24.bolFade() : ''}
     <div class="pp-top">${backBtn}<span class="m-grow"></span>
-      ${bgPill ? `<button class="p29-bgp" data-pp="photo" aria-haspopup="menu" aria-expanded="${P.open}">${esc(BG_N[kind] ?? 'Nåværende')} ▾</button>` : ''}<a class="pp-av${avatarUrl() ? ' img' : ''}" href="#/set" aria-label="Innstillinger">${avInner()}</a></div>
+      ${bgPill ? `<button class="p29-bgp" data-pp="photo" aria-haspopup="menu" aria-expanded="${P.open}">${esc(BG_N[kind] ?? 'Gradient')} ▾</button>` : ''}<a class="pp-av${avatarUrl() ? ' img' : ''}" href="#/set" aria-label="Innstillinger">${avInner()}</a></div>
     ${failNote}${bgPill && P.open ? bgMenu(kind) : ''}
     ${mai ? mai.top : ''}<div class="pp-bottom"><div class="m-grow"><div class="pp-kick">${esc(mai?.kicker ?? bolK ?? kicker)}</div><h1 class="pp-title${home ? ' big' : ''}${mai ? ' p41-mait' : ''}">${mai ? mai.title : ttl}</h1></div>${scr === 'dir' ? P24.domPill() : ''}
       ${home && w ? `<a class="pp-temp" href="${esc(yrUrl(w))}" target="_blank" rel="noopener" data-p36temp title="Trykk: Vær · Hold inne: åpne Yr" aria-label="Åpne værvisningen (hold inne for Yr)"><b>${w.temp != null ? Math.round(w.temp) + '°' : '–'}</b><span>${esc(w.text ?? '')}${w.updated ? ` · ${esc(new Date(w.updated).toLocaleTimeString('nb-NO', { hour: '2-digit', minute: '2-digit' }))}` : ''} ›</span></a>` : ''}</div>
@@ -237,12 +237,12 @@ export function paperHero(scr) {
 }
 
 // Prompt 29: bakgrunnsmenyen fra pillen (fasit: Mobil Papir App → Hjem/Innstillinger, «Planeter ▾»).
-const BG_N = { cur: 'Nåværende', oslo: 'Oslo', weather: 'Vær nå', planets: 'Planeter', custom: 'Eget bilde' };
-const BG_S = { cur: 'Mørk gradient', oslo: 'Oslo fra lufta · skifter gjennom dagen', weather: 'Følger været nå', planets: 'Ny planet hver dag (NASA)' };
+const BG_N = { cur: 'Gradient', oslo: 'Oslo', weather: 'Vær nå', planets: 'Planeter', custom: 'Eget bilde' };
+const BG_S = { cur: 'Bare fargeovergang', oslo: 'Oslo fra lufta · skifter gjennom dagen', weather: 'Følger været nå', planets: 'Ny planet hver dag (NASA)' };
 function bgMenu(kind) {
   const th = (k) => (P.img[k] ? `background-image:url("${esc(P.img[k])}")` : `background-image:${P.photo[k]?.gradient || FALLBACK[k] || 'linear-gradient(170deg,#4a5a6a,#1d242c)'}`);
   const opt = (k) => `<button class="p29-bo${kind === k ? ' on' : ''}" role="menuitemradio" aria-checked="${kind === k}" data-pp="setphoto" data-k="${k}"><span class="p29-bth" style='${th(k)}'></span><span class="m-grow"><b>${BG_N[k]}</b><small>${P.fail[k] ? 'Fikk ikke lastet bildet · trykk for å prøve igjen' : BG_S[k]}</small></span><span class="p29-bck">${kind === k ? '✓' : P.fail[k] ? '!' : ''}</span></button>`;
-  return `<div class="pp-menu p29-bgm open" role="menu" aria-label="Bakgrunn">${['cur', 'oslo', 'weather', 'planets'].map(opt).join('')}<i class="p29-bsep"></i>
+  return `<div class="pp-menu p29-bgm open" role="menu" aria-label="Bakgrunn">${['weather', 'planets', 'oslo', 'cur'].map(opt).join('')}<i class="p29-bsep"></i>
     <label class="p29-bo own"><span class="p29-bth plus">+</span><span class="m-grow"><b>Eget bilde</b>${kind === 'custom' ? '<small>Valgt · trykk for å bytte</small>' : ''}</span><span class="p29-bck">${kind === 'custom' ? '✓' : ''}</span><input class="m-file" type="file" accept="image/jpeg,image/png,image/webp" data-ppfile></label></div>`;
 }
 

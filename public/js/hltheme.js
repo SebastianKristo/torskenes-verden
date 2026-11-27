@@ -100,30 +100,62 @@ export async function paintPhoto(force) {
   renderBgMenu();
 }
 
-/** Bakgrunnsvelgeren i topplinjen: egen nedtrekksmeny med miniatyrer, ✓ på valgt rad og «+ Eget bilde». */
+/** Bakgrunnsvelgeren i topplinjen (prompt 57, claude-code-bakgrunnsvelger.md): vokser ut fra knappen og står rett under den med en
+ *  pil mot knappen. 2×2-rutenett med store forhåndsvisninger (Vær nå, Planeter, Oslo, Gradient), valgt bakgrunn med dobbel ring og
+ *  grønt ✓ (rødt ! når bildet ikke lastet), så Eget bilde og Google Photos-album. Samme velger på mobil og desktop. */
+const GRID = ['weather', 'planets', 'oslo', 'none'];
+const cssUrl = (u) => `url('${u.replace(/['"()\s]/g, (c) => '%' + c.charCodeAt(0).toString(16).padStart(2, '0'))}')`;
 export function renderBgMenu() {
   const host = document.getElementById('hl-bgdd');
   if (!host) return;
   if (!is2c()) { host.innerHTML = ''; host.__html87 = ''; return; }
   const cur = bgState().type;
   const custom = store.me?.layout?.photoCustom || cachedBg('custom')?.url || cur === 'custom';
-  // Prompt 46: Google Photos-album vises når et album er lagt til (ellers «+ Google Photos-album …» som åpner Innstillinger).
+  // Prompt 46: Google Photos-album kan velges når et album er lagt til; ellers åpner raden lenkeskjemaet i Innstillinger.
   const gp = gphotoAlbum()?.configured || cur === 'gphoto';
   if (!gphotoAlbum()) loadGphoto().then(() => { if (bgOpen) renderBgMenu(); });
-  const rows = BG_TYPES.filter(([k]) => (k !== 'custom' || custom) && (k !== 'gphoto' || gp));
-  const thumb = (k) => { const e = cachedBg(k); return k !== 'none' && e?.url ? `url('${e.url.replace(/['"()\s]/g, (c) => '%' + c.charCodeAt(0).toString(16).padStart(2, '0'))}')` : FALLBACK_GRAD; };
-  const html87 = `<button type="button" class="hl-bgdd-btn" data-bgdd aria-haspopup="menu" aria-expanded="${bgOpen}">${esc(photoName(cur))} ▾</button>
-    <div class="hl-bgdd-menu${bgOpen ? ' open' : ''}" role="menu">${rows.map(([k, n, s]) => {
-      const fail = cachedBg(k)?.failed && k !== 'none';
-      return `<button type="button" role="menuitemradio" aria-checked="${cur === k}" data-photo="${k}"><span class="th" style="background-image:${thumb(k)}"></span><span class="tx"><span>${esc(n)}</span><small>${esc(fail ? 'Fikk ikke lastet bildet' : s)}</small></span><b>${cur === k ? '✓' : ''}</b></button>`;
-    }).join('')}
-      <label class="hl-bgdd-up">+ Eget bilde<input type="file" accept="image/*" hidden data-photo-up></label>
-      ${gp ? '' : '<a class="hl-bgdd-up" href="#/innstillinger/look/bg" data-bg-more>+ Google Photos-album …</a>'}
+  const info = Object.fromEntries(BG_TYPES.map(([k, n, s]) => [k, { n, s }]));
+  const thumb = (k) => { const e = cachedBg(k); return k !== 'none' && e?.url ? cssUrl(e.url) : FALLBACK_GRAD; };
+  const fail = (k) => k !== 'none' && !!cachedBg(k)?.failed;
+  const mark = (k) => `<span class="hl-bgdd-ck${fail(k) ? ' bad' : ''}" aria-hidden="true">${cur === k ? '✓' : fail(k) ? '!' : ''}</span>`;
+  const tile = (k) => `<button type="button" role="menuitemradio" aria-checked="${cur === k}" data-photo="${k}"><span class="hl-bgdd-th" style="background-image:${thumb(k)}">${mark(k)}</span><span class="hl-bgdd-n">${esc(info[k].n)}</span><small>${esc(fail(k) ? 'Fikk ikke lastet bildet' : info[k].s)}</small></button>`;
+  const row = (k, attrs, sub, own) => `<${own ? 'label' : 'button type="button"'} class="hl-bgdd-row" ${attrs}><span class="hl-bgdd-th${own === 'plus' ? ' plus' : ''}"${own === 'plus' ? '' : ` style="background-image:${thumb(k)}"`}>${own === 'plus' ? '+' : mark(k)}</span><span class="hl-bgdd-tx"><span class="hl-bgdd-n">${esc(info[k].n)}</span><small>${esc(sub)}</small></span>${own === 'plus' && k === 'custom' ? '<input type="file" accept="image/*" hidden data-photo-up>' : ''}</${own ? 'label' : 'button'}>`;
+  const ownRow = custom
+    ? `<div class="hl-bgdd-pair">${row('custom', `role="menuitemradio" aria-checked="${cur === 'custom'}" data-photo="custom"`, cur === 'custom' ? 'Valgt' : 'Ditt opplastede bilde')}<label class="hl-bgdd-swap">Bytt<input type="file" accept="image/*" hidden data-photo-up></label></div>`
+    : row('custom', 'role="menuitem"', 'Last opp fra Bilder eller Filer', 'plus');
+  const gpRow = gp
+    ? row('gphoto', `role="menuitemradio" aria-checked="${cur === 'gphoto'}" data-photo="gphoto"`, info.gphoto.s)
+    : `<a class="hl-bgdd-row" role="menuitem" href="#/innstillinger/look/bg" data-bg-more><span class="hl-bgdd-th plus" aria-hidden="true">+</span><span class="hl-bgdd-tx"><span class="hl-bgdd-n">${esc(info.gphoto.n)}</span><small>Legg til en delt album-lenke</small></span></a>`;
+  const html87 = `<button type="button" class="hl-bgdd-btn" data-bgdd aria-haspopup="menu" aria-expanded="false">${esc(photoName(cur))} ▾</button>
+    <div class="hl-bgdd-menu" role="menu" aria-label="Bakgrunn"><div class="hl-bgdd-h"><span>BAKGRUNN</span><small>Oppdateres automatisk</small></div>
+      <div class="hl-bgdd-grid">${GRID.map(tile).join('')}</div><i class="hl-bgdd-sep" aria-hidden="true"></i>${ownRow}${gpRow}
       <a class="hl-bgdd-more" href="#/innstillinger/look/bg" data-bg-more>Flere valg …</a></div>`;
   // Prompt 87: paintPhoto() kalles ved hvert fanebytte; menyen i topplinjen tegnes bare på nytt når noe faktisk er endret.
-  if (host.__html87 !== html87) { host.innerHTML = html87; host.__html87 = html87; }
+  if (host.__html87 !== html87) {
+    const wasOpen = !!host.querySelector('.hl-bgdd-menu.open');
+    host.innerHTML = html87; host.__html87 = html87;
+    // Nye miniatyrer mens menyen er åpen: den nye menyen står åpen med en gang (ingen ny animasjon).
+    if (wasOpen && bgOpen) host.querySelector('.hl-bgdd-menu')?.classList.add('open');
+  }
+  placeBgMenu(host);
   // Miniatyrene lastes i bakgrunnen første gang menyen åpnes.
-  if (bgOpen) for (const [k] of rows) if (k !== 'none' && !cachedBg(k)) resolveBg(k).then(() => bgOpen && renderBgMenu());
+  if (bgOpen) for (const k of [...GRID, ...(custom ? ['custom'] : []), ...(gp ? ['gphoto'] : [])]) if (k !== 'none' && !cachedBg(k)) resolveBg(k).then(() => bgOpen && renderBgMenu());
+}
+/** Åpner og lukker med animasjon (klassen byttes på samme element), og plasserer menyen rett under knappen innenfor skjermen. */
+function placeBgMenu(host) {
+  const btn = host.querySelector('[data-bgdd]'), menu = host.querySelector('.hl-bgdd-menu');
+  if (!btn || !menu) return;
+  btn.setAttribute('aria-expanded', String(bgOpen));
+  if (bgOpen) {
+    const b = btn.getBoundingClientRect(), h = host.getBoundingClientRect(), vw = document.documentElement.clientWidth;
+    const w = Math.min(320, vw - 32), mid = b.left + b.width / 2;
+    const left = Math.max(16, Math.min(vw - 16 - w, mid - w / 2));
+    menu.style.width = `${w}px`;
+    menu.style.left = `${Math.round(left - h.left)}px`; menu.style.right = 'auto'; // lukket står den med right:0 (CSS), så den aldri gir sidelengs rulling
+    menu.style.top = `${Math.round(b.bottom - h.top + 12)}px`;
+    menu.style.setProperty('--bgdd-arrow', `${Math.round(mid - left)}px`);
+    if (!menu.classList.contains('open')) { void menu.offsetWidth; menu.classList.add('open'); }
+  } else menu.classList.remove('open');
 }
 
 export async function pickPhoto(k) {
@@ -153,7 +185,8 @@ export function bindPhoto() {
     if (e.target.closest('.pw-fail')) { forgetBg(bgState().type); paintPhoto(true); return; }
     if (bgOpen && host && !host.contains(e.target)) { bgOpen = false; renderBgMenu(); }
   });
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && bgOpen) { bgOpen = false; renderBgMenu(); } });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && bgOpen) { bgOpen = false; renderBgMenu(); document.querySelector('[data-bgdd]')?.focus(); } });
+  addEventListener('resize', () => { if (bgOpen) renderBgMenu(); }); // prompt 57: menyen står under knappen også etter rotasjon
   document.addEventListener('change', async (e) => {
     const inp = e.target.closest('[data-photo-up]');
     if (!inp?.files?.[0]) return;
