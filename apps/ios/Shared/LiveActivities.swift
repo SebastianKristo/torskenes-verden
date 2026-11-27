@@ -119,6 +119,18 @@ enum Live89 {
         }
     }
 
+    /// Prompt 57: serverens «fase» (ko | laster | komprimerer | ferdig | feilet) → queued | downloading | muxing | done | failed.
+    static func phase(_ fase: String) -> String {
+        switch fase {
+        case "ko": return "queued"
+        case "laster": return "downloading"
+        case "komprimerer": return "muxing"
+        case "ferdig": return "done"
+        case "feilet": return "failed"
+        default: return ""
+        }
+    }
+
     /// aktiv | pause | ferdig → active | paused | done.
     static func state(_ status: String) -> String {
         switch status {

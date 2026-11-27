@@ -407,6 +407,8 @@ struct LiveAktiviteterDTO: Codable, Sendable {
         let status: String
         let handlinger: [Handling]?
         let url: String?
+        /// Prompt 57: nedlastingens fase (ko | laster | komprimerer | ferdig | feilet), ellers nil.
+        let fase: String?
     }
 
     let aktiviteter: [Aktivitet]

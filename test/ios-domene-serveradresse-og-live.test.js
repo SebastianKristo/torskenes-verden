@@ -313,8 +313,10 @@ test('Live Activities: visningene etter fasiten (låseskjerm, kompakt, minimal, 
   // Utvidet: aldri bredere enn skjermen (ingen faste bredder over 326 − 24).
   for (const m of v.matchAll(/\.frame\((?:maxW|w)idth: (\d+)/g)) assert.ok(Number(m[1]) <= 302, m[0]);
   const w = code('FinansHubWidgets/Sources/PlatformLiveActivity.swift');
-  assert.match(w, /Live89Tile\(kind: ctx\.attributes\.kind, st: ctx\.state, size: 44\)/);
-  assert.match(w, /\.font\(\.system\(size: 26, weight: \.semibold\)\)\.monospacedDigit\(\)/);
+  // Prompt 57: flisen (36 pt), tittelen og verdien (26 pt) i én rad i center-regionen (Live89ExpandedRow).
+  assert.match(w, /Live89ExpandedRow\(kind: ctx\.attributes\.kind, st: ctx\.state\)/);
+  assert.match(v, /Live89Tile\(kind: kind, st: st, size: 36\)/);
+  assert.match(v, /\.font\(\.system\(size: 26, weight: \.semibold\)\)\.monospacedDigit\(\)/);
   assert.match(w, /Live89ExpandedBottom\(attr: ctx\.attributes, st: ctx\.state\)/);
   assert.match(w, /Live89Ring\(kind: ctx\.attributes\.kind, st: ctx\.state\)/);
   assert.match(w, /\.activityBackgroundTint\(Live89Look\.background\)/);
@@ -351,4 +353,44 @@ test('nye og endrede Swift-filer: klammebalanse, ingen tvungen utpakking, iOS 17
   // ActivityKit-koden i Shared er bak canImport (widgetene bygges også for Mac Catalyst-løse mål).
   const sh = raw('Shared/LiveActivities.swift');
   assert.ok(sh.indexOf('#if canImport(ActivityKit)\nenum Live89Sync') > 0);
+});
+
+test('Prompt 57: utvidet Dynamic Island for nedlasting – faser, ≤ 150 pt, knapper 34 pt i én rad, flis og tittel på linje', () => {
+  const v = code('FinansHubWidgets/Sources/LiveActivityWidgets.swift');
+  const w = code('FinansHubWidgets/Sources/PlatformLiveActivity.swift');
+  const st = code('Shared/PlatformIntents.swift');
+  const l = code('Shared/LiveActivities.swift');
+  // Fasen i ContentState, fra serverens «fase».
+  assert.match(st, /var phase: String = ""/);
+  assert.match(st, /phase = f1 \?\? Live89\.phase\(f2 \?\? ""\)/);
+  assert.match(st, /try c\.encode\(phase, forKey: \.phase\)/);
+  for (const [a, b] of [['ko', 'queued'], ['laster', 'downloading'], ['komprimerer', 'muxing'], ['ferdig', 'done'], ['feilet', 'failed']]) {
+    assert.match(l, new RegExp(`case "${a}": return "${b}"`));
+  }
+  // Flis og tittel i én rad, sentrert; leading/trailing er tomme for de fem aktivitetene.
+  const row = v.slice(v.indexOf('struct Live89ExpandedRow'), v.indexOf('struct Live89IslandButtons'));
+  assert.match(row, /HStack\(alignment: \.center, spacing: 10\)/);
+  assert.match(w, /if !Live89\.isNew\(ctx\.attributes\.kind\) \{\n\s+Plat51LiveIcon\(attr: ctx\.attributes, size: 34\)/);
+  // Bunnen: linje 4 pt, meta 13 pt på én linje, knapper 34 pt side om side; bunnen holdes lav (≤ 150 pt totalt).
+  const bottom = v.slice(v.indexOf('struct Live89ExpandedBottom'), v.indexOf('struct Live89ExpandedRow'));
+  assert.match(bottom, /Live89Line\(kind: attr\.kind, st: st, height: 4\)/);
+  assert.match(bottom, /Live89Meta\(kind: attr\.kind, st: st, size: 13\)/);
+  assert.match(bottom, /Live89IslandButtons\(attr: attr, st: st\)/);
+  assert.match(bottom, /\.frame\(maxHeight: 74\)/);
+  assert.match(v, /Text\(st\.meta\)\.lineLimit\(1\)/);
+  const btn = v.slice(v.indexOf('struct Live89IslandButtons'), v.indexOf('#endif', v.indexOf('struct Live89IslandButtons')));
+  assert.match(btn, /HStack\(spacing: 8\)/);
+  assert.match(btn, /\.buttonStyle\(\.borderedProminent\)\n\s+\.controlSize\(\.small\)\n\s+\.tint\(Color\.white\.opacity\(0\.14\)\)/);
+  assert.match(btn, /\.frame\(height: 34\)/);
+  assert.match(btn, /Label\(b\.title, systemImage: Live89IslandButtons\.symbol\(b\.id\)\)/);
+  assert.match(btn, /case "pause": return "pause\.fill"/);
+  // Faser: muxing uten prosent med ubestemt linje, done «✓ Ferdig», failed rød.
+  assert.match(v, /static func muxing\(_ st: Plat51Attributes\.ContentState\) -> Bool \{ st\.phase == "muxing" \}/);
+  assert.match(v, /\} else if Live89Look\.muxing\(st\) \{\n\s+muxing\(ac\)/);
+  assert.match(v, /ProgressView\(timerInterval: Live89Look\.until\(st\)/);
+  assert.match(v, /Text\("✓ " \+ \(st\.value\.isEmpty \? "Ferdig" : st\.value\)\)/);
+  assert.match(v, /failed\(st\) \? fail : accent\(kind\)/);
+  // Låseskjermen: samme faser, knappene i full bredde (40 pt) som før.
+  assert.match(v, /\.foregroundStyle\(Live89Look\.valueTint\(attr\.kind, st\)\)/);
+  assert.match(v, /if !st\.actions\.isEmpty \{ Live89Buttons\(attr: attr, st: st\) \}/);
 });
