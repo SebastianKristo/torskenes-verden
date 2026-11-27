@@ -42,9 +42,9 @@
 .tn-chip.off>.tn-ic,.tn-chip.off>.tn-nm,.tn-chip.off>.tn-dot{opacity:.55} /* «sist sett» beholder full kontrast (WCAG) */
 .tn-ic{flex:none;display:grid;place-items:center;width:32px;height:32px;border-radius:var(--ds-radius-full);background:var(--ds-surface-sunken);color:var(--ds-text-secondary)}
 .tn-ic.sm{width:26px;height:26px}.tn-ic.lg{width:40px;height:40px}
-.tn-nm{display:flex;flex-direction:column;min-width:0;flex:1}
+.tn-nm{display:flex;flex-direction:column;min-width:0;flex:1;overflow:hidden}
 .tn-nm b{font-weight:var(--ds-weight-medium);font-size:var(--ds-text-callout-size);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.tn-ip{font-size:var(--ds-text-caption-size);color:var(--ds-text-secondary)}
+.tn-ip{font-size:var(--ds-text-caption-size);color:var(--ds-text-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tn-lat{flex:none;font-size:var(--ds-text-footnote-size);color:var(--ds-text-primary)}
 .tn-lat.unk{color:var(--ds-text-secondary)}
 .tn-dot{flex:none;display:inline-block;width:8px;height:8px;border-radius:var(--ds-radius-full);background:var(--ds-text-tertiary)}
