@@ -37,6 +37,31 @@ Konfigurasjonen kommer fra to steder:
 | `PUID` / `PGID` | `1000` | Eier av `/data`. |
 | `CLOUDFLARE_TUNNEL_TOKEN` | – | Token for `cloudflared` (profil `tunnel`). |
 
+## Tailscale
+
+Tailnet på Nettverk (bare admin) leser tailnetet fra én av to kilder, valgt automatisk (`ts_mode`: `auto`, `localapi` eller `api`):
+
+1. **LocalAPI (anbefalt).** Kjør tailscale på verten eller i LXC-en, og monter socketen **lesende** i `docker-compose.yml`:
+
+   ```yaml
+   volumes:
+     - /var/run/tailscale:/var/run/tailscale:ro
+   ```
+
+   Ingen nøkkel trengs. Homelab bruker bare `GET /localapi/v0/status` og `POST /localapi/v0/ping` (latens). `TAILSCALE_SOCKET` overstyrer stien.
+2. **Tailscale-API-et (reserve).** Lag en OAuth-klient under Tailscale → Settings → OAuth clients med scope **`devices:core:read`** (bare lesing), eller en API-nøkkel. Lim inn under **Innstillinger → Tilkoblinger → Tailscale** (lagres kryptert på serveren og sendes aldri til nettleseren eller appene). Kallene går fra serveren til `api.tailscale.com`.
+
+| Innstilling | Miljøvariabel | Standard |
+|---|---|---|
+| Kilde (`ts_mode`) | `TAILSCALE_MODE` | `auto` |
+| OAuth-klient (`ts_oauth_id`, `ts_oauth_secret`) | `TAILSCALE_OAUTH_CLIENT_ID`, `TAILSCALE_OAUTH_CLIENT_SECRET` | – |
+| API-nøkkel (`ts_api_key`) | `TAILSCALE_API_KEY` | – |
+| Tailnet (`ts_tailnet`) | `TAILSCALE_TAILNET` | `-` (nøkkelens tailnet) |
+| Pingintervall i minutter (`ts_ping_min`) | – | `3` |
+| Varsler (`ts_varsler`) | – | `offline,nokkel,ny,derp` |
+
+Mangler både socket og nøkkel, svarer `/api/tailscale/*` 503 med «Fant ikke tailscaled.sock – mount /var/run/tailscale eller bruk API-nøkkel».
+
 ## Integrasjoner (Homelab)
 
 Alt her kan også settes i **Innstillinger → Integrasjoner**.

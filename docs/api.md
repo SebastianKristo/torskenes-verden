@@ -156,4 +156,5 @@ Godtar en sesjon eller et Bearer-token. Lesing krever `finance:read`, endring kr
 | Smarthjem | `GET/PUT /home/api/property`, `GET/POST /home/api/inventory`, `PATCH/DELETE /home/api/inventory/:id` |
 | Matplan | `GET /mat/api/week?start=`, `POST /mat/api/plan {scope,date}`, `PATCH /mat/api/day/:date`, `POST/DELETE /mat/api/meals`, `PUT /mat/api/cooks`, `PUT /mat/api/auto`, `POST /mat/api/hellofresh`, `POST /mat/api/shopping`, `POST /mat/api/shopping/:id/toggle`, `POST /mat/api/calendar/rotate` |
 | Kalender | `GET /mat/calendar.ics?key=…` (ingen innlogging, bare nøkkelen) |
+| Tailscale | `GET /api/tailscale/devices`, `GET /api/tailscale/devices/:id?range=24h\|7d\|30d`, `POST /api/tailscale/devices/:id/ping`, `PUT /api/tailscale/devices/:id/varsler`, `GET /api/tailscale/stats`, `GET /api/tailscale/test`, `GET/PUT /api/tailscale/visning`. Bare admin. Skjema: `shared/schemas/api/tailscale-*.schema.json` |
 | Domener | `GET/POST /domains/api/domains`, `DELETE /domains/api/domains/:id`, `GET /domains/api/:name/analytics?range=1h\|24h\|today\|7d\|30d\|90d\|1y`, `GET /domains/api/:name/live` |

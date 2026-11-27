@@ -163,3 +163,4 @@ Feilmeldinger, hint, hjelpetekster, Glimt-svar og varsler peker på sidene slik 
 | **Økonomi-backup** (SMB-veiviseren) | FinansHub-backup | |
 | **Homelab** (appen på telefonen, også i QR-innlogging) | Papir Finans | |
 | **Økonomi → Faste betalinger** (der trekkene endres) | Finans → Abonnementer | Kalender og Kalender-appen |
+| **Tailnet** (seksjonen på Nettverk og Mer → Tailnet i appene) | Tailscale-nettverket, VPN | «Tailscale» om tjenesten og tilkoblingen (Innstillinger → Tilkoblinger → Tailscale) |

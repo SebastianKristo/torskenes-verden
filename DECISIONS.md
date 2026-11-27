@@ -19,6 +19,7 @@ Kartleggingen står i [docs/opprydding/AUDIT.md](docs/opprydding/AUDIT.md), og h
   180 dager uten bruk, og eldre aliaser samlet og tellet før de kan fjernes.
 - **Plattform (Q24, Q25, Q28):** ny Android-signeringsnøkkel som bare ligger i GitHub-hemmelighetene (appene må avinstalleres én
   gang), enhetstester på iOS (XCTest) og Android (JUnit) mot `shared/testvektorer`, og Kalender for Mac krever macOS 14.
+- **Tailscale (prompt 57):** LocalAPI over den lesende monterte socketen først (ingen nøkkel, hele tailnetet sett fra serveren, og latens), Tailscale-API-et med OAuth-klient (`devices:core:read`) som reserve når socketen mangler. Bare lesing og ping, aldri endringer i tailnetet.
 
 ## Hosting: A – Docker-container på homelab bak Cloudflare Tunnel
 

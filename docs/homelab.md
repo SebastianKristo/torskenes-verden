@@ -93,3 +93,18 @@ Nyhetslinja («NYHETER») fra NRK og VG, hentet på serveren og cachet i 5 minut
 
 > [!NOTE]
 > På Cloudflares gratisplan dekker toppsider, enheter, henvisere og svartider bare de siste 24 timene, uansett hvilken periode du velger.
+
+## Nettverk og Tailnet
+
+**Nettverk** (`#/nettverk`) viser helsesjekken av tjenestene og lenkene. For administratorer står **Tailnet** (Tailscale) øverst:
+
+- **Stat-rad:** online av totalt, median latens (24 t), andel direkte (resten via DERP), trafikk i dag og antall vedlikeholdspunkter.
+- **Enheter:** søk på navn eller IP, filterpillene Alle, Servere, Datamaskiner, Mobil og Offline (med antall; mobil og nettbrett ligger bak Mobil), og gruppering etter tags eller eier. Online først, så navn. Maks 12 brikker, så «Vis alle N». Offline vises dempet med «sist sett 3 d», og ukjent latens som «ukjent».
+- **Enhetsdetalj** (popup): IPv4 og IPv6, MagicDNS, OS, klientversjon, tunnel, eier, tags, nøkkelutløp og trafikk, latens 24 t med median og p95, oppetidsstripe for 30 dager (oppe, delvis, nede), tjenestene i helsesjekken med 100.x-adresse eller MagicDNS-navn, og knappene **Ping nå**, **Kopier IP**, **Kopier SSH-kommando** (`ssh root@<magicdns>`) og **Åpne ↗**. Varslene for enheten slås av og på her.
+- **Vedlikehold:** nøkler som utløper innen 14 dager, klienter med oppdatering, avvikende klientversjon, exit-node i bruk og enheter frakoblet over 30 dager. **Trafikk i dag:** topp 5 (ned og opp).
+- **Oversikt:** flisen **Tailnet** (online/totalt, en donut per type, siste endring og en prikk når noe trenger tilsyn). Den kan flyttes og skjules som de andre.
+- **Glimt:** «hvilke maskiner er nede?», «hva er IP-en til unraid?» og «hvor lenge har hytta vært offline?» (bare lesing). **⌘K** finner enhetene.
+- **Appene:** Mer → **Tailnet** (iOS og Android) med liste, detalj, Ping nå, Kopier IP og Kopier SSH.
+- **Varsler** (til administratorene): en server er offline i over 10 min, en nøkkel utløper om 7 dager, en ny enhet har dukket opp, eller en enhet har gått via DERP i over en time.
+
+Kilden velges automatisk: **LocalAPI** når `/var/run/tailscale` er montert lesende, ellers **Tailscale-API-et** med OAuth-klient eller API-nøkkel (se [konfigurasjon](konfigurasjon.md#tailscale)). Homelab endrer aldri noe i tailnetet. Statistikken (en prøve per enhet hvert 5. minutt) lagres i SQLite og slettes etter 90 dager. Visningen (filter, søk, gruppering, åpen/lukket) lagres per bruker på serveren. Siden oppdateres via sanntid (`tailscale.node`), uten polling.
