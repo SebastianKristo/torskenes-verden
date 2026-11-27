@@ -465,6 +465,8 @@ private fun PaperApp45(
             Global47(vm) // prompt 47: standardadresser fra /api/config, ML Kit-kvitteringsarket
             // Prompt 44: «Logget inn som X · Gå ut», Logger og Studie-dokumenter (ui/Ui44.kt).
             Global44(vm)
+            // Glimt-statuspillen øverst under statuslinjen, over alt (også fullskjermsidene), aldri ved skann-knappen eller fanelinja.
+            GlimtStatusPill(vm, Modifier.align(Alignment.TopCenter))
         }
       }
     }

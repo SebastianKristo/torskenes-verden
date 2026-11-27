@@ -87,7 +87,8 @@ test('wiggle: vinkelen er State og leses i graphicsLayer (Hjem, Tilpass siden, V
 test('Glimt-orben og -merket: ringen er et ferdig lag som roteres (rememberInfiniteTransition + graphicsLayer)', () => {
   const o = code('ui/Glimt.kt');
   assert.match(o, /rememberInfiniteTransition\(label = "orb43"\)/);
-  assert.match(o, /Canvas\(Modifier\.matchParentSize\(\)\.graphicsLayer \{ rotationZ = deg \}\)/);
+  // Statuspillen (status = true) kan stå stille eller pulse; ellers roteres laget som før.
+  assert.match(o, /Canvas\(Modifier\.matchParentSize\(\)\.graphicsLayer \{ rotationZ = if \(spin\) deg else 0f; alpha = if \(pulse\) a else 1f \}\)/);
   assert.doesNotMatch(o, /rotate\(deg/);
   const m = code('ui/Glimt.kt');
   assert.match(m, /if \(!done\) Canvas\(Modifier\.matchParentSize\(\)\.graphicsLayer \{ rotationZ = if \(reduce\) 0f else rot \}\)/);

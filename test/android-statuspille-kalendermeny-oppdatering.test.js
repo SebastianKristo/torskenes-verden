@@ -95,3 +95,62 @@ test('Oppdatering: Liste viser bare egen spinner ved første lasting, og aldri e
   assert.match(page, /if \(vm\.txs == null && !vm\.txFailed && !vm\.pullRefreshing\) item \{[^\n]*CircularProgressIndicator/);
   assert.match(page, /else if \(vm\.txs == null && vm\.txFailed\) item \{[^\n]*"Kunne ikke hente transaksjonene\. Dra ned for å prøve igjen\."/);
 });
+
+/* ---------------- Glimt-statuspillen øverst ---------------- */
+
+test('Glimt-statuspillen: tilstanden (jobber, lagret, feil) ligger i skanningens ViewModel, også når arket er lukket', () => {
+  const ks = code(APP, 'KvitteringSkanning.kt');
+  assert.match(ks, /enum class GlimtStatusKind \{ WORKING, DONE, FAILED \}/);
+  assert.match(ks, /data class GlimtStatus\(val text: String, val kind: GlimtStatusKind\)/);
+  assert.match(ks, /val pill: StateFlow<GlimtStatus\?> = _pill\.asStateFlow\(\)/);
+  // Arket lukkes mens Glimt jobber → pillen viser jobben. Teksten følger fasen.
+  const close = block(ks, 'fun close()');
+  assert.match(close, /syncPill\(\)/);
+  assert.match(ks, /is ReceiptScanState48\.Uploading -> "Glimt kontrollerer kvitteringen …"/);
+  // Resultatet mens arket er lukket: lagret ✓ eller feil (blir stående), ikke lenger bare en melding.
+  const fin = block(ks, 'private fun finish(');
+  assert.match(fin, /GlimtStatus\("Kvittering lagret ✓", GlimtStatusKind\.DONE\)/);
+  assert.match(fin, /GlimtStatus\("Glimt fikk ikke lest kvitteringen", GlimtStatusKind\.FAILED\)/);
+  // Sveipet bort: jobben fortsetter, og resultatet kommer som melding som før.
+  assert.match(fin, /if \(pillDismissed\)/);
+  assert.match(block(ks, 'fun dismissPill()'), /pillDismissed = true/);
+  // Trykk: åpner kvitteringen som kontrolleres (arket med fremdrift, skjemaet eller feilen).
+  assert.match(block(ks, 'fun reopen()'), /_visible\.value = true/);
+});
+
+test('Glimt-statuspillen: øverst under statuslinjen, over alt innhold, aldri ved skann-knappen eller fanelinja', () => {
+  const paper = code(APP, 'ui/Paper.kt');
+  // I rotlaget (Papir-skallet), etter sidene og fullskjermlagene, så den overlever navigasjon og fanebytte.
+  assert.match(paper, /GlimtStatusPill\(vm, Modifier\.align\(Alignment\.TopCenter\)\)/);
+  assert.ok(paper.indexOf('GlimtStatusPill(vm') > paper.indexOf('PaperFab(vm'), 'over skann-knappen i z-rekkefølgen');
+  const ui = code(APP, 'ui/GlimtStatuspille.kt');
+  const pill = block(ui, 'internal fun BoxScope.GlimtStatusPill(');
+  assert.match(pill, /windowInsetsPadding\(WindowInsets\.statusBars\)\.padding\(top = 8\.dp, start = 16\.dp, end = 16\.dp\)/);
+  assert.doesNotMatch(pill, /BottomCenter|BottomEnd|navigationBars/);
+  // Utseende: mørk pille #1A1916, hvit tekst, 40 dp høy, full radius, én linje med «…».
+  assert.match(pill, /\.height\(40\.dp\)\.clip\(CircleShape\)\.background\(PILL_BG\)/);
+  assert.match(ui, /internal val PILL_BG = DsPalette\.PapirLys\.textPrimary/, 'token (blekket #1B1A17), ikke hex');
+  assert.match(pill, /maxLines = 1, overflow = TextOverflow\.Ellipsis/);
+  // Inn: glir ned + fade (0,25 s, spring). Ut: glir opp.
+  assert.match(pill, /slideInVertically\(spring\(/);
+  assert.match(pill, /slideOutVertically\(/);
+  // Trykk åpner, sveip opp skjuler.
+  assert.match(pill, /onClick = \{ vm\.scan48\.reopen\(\) \}/);
+  assert.match(pill, /if \(dy < -24\.dp\.toPx\(\)\) vm\.scan48\.dismissPill\(\)/);
+  // Ferdig: «Kvittering lagret ✓» i 1,5 s, så skjules pillen.
+  assert.match(pill, /delay\(1_500\)/);
+  // Glimt-logoen (regnbuering med rød stjerne, samme som Glimt-pillen og orben) i 22 dp, i stedet for en spinner.
+  assert.match(pill, /GlimtOrb43\(22\.dp, busy = working, status = true\)/);
+  assert.doesNotMatch(pill, /CircularProgressIndicator|LinearProgressIndicator/);
+});
+
+test('Glimt-logoen i statuspillen: roterer 1,6 s mens Glimt jobber, står stille ellers, puls når animasjoner er av', () => {
+  const g = code(APP, 'ui/Glimt.kt');
+  const orb = block(g, 'internal fun GlimtOrb43(');
+  assert.match(orb, /status: Boolean = false/);
+  assert.match(orb, /status && busy && !reduce -> 1600/);
+  assert.match(orb, /reduceMotion31\(\)/);
+  // «Reduser bevegelse»: ingen rotasjon, svak puls (opasitet 0,6–1) på ringen. Stjernen står alltid stille.
+  assert.match(orb, /animateFloat\(\.6f, 1f/);
+  assert.match(orb, /alpha = if \(pulse\) a else 1f/);
+});

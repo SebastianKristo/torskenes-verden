@@ -79,6 +79,11 @@ sealed interface ReceiptScanState48 {
     data class Error(val message: String, val retry: Boolean = true) : ReceiptScanState48
 }
 
+/** Glimt-statuspillen øverst i appen (ui/GlimtStatuspille.kt): Glimt jobber, kvitteringen er lagret, eller Glimt fikk ikke lest den. */
+enum class GlimtStatusKind { WORKING, DONE, FAILED }
+
+data class GlimtStatus(val text: String, val kind: GlimtStatusKind)
+
 internal fun amount48(s: String): Double? = s.replace("kr", "", true).replace(" ", "").replace(" ", "").replace("−", "-").replace(',', '.').trim().toDoubleOrNull()
 internal fun amountText48(v: Double?): String = if (v == null) "" else String.format(Locale("nb", "NO"), "%.2f", v)
 internal fun dateOk48(s: String) = Regex("^\\d{4}-\\d{2}-\\d{2}$").matches(s.trim()) && runCatching { java.time.LocalDate.parse(s.trim()) }.isSuccess
@@ -218,9 +223,31 @@ class ReceiptScanViewModel48(private val vm: AppViewModel) {
     private val _visible = MutableStateFlow(false)
     val visible: StateFlow<Boolean> = _visible.asStateFlow()
 
+    /**
+     * Statuspillen øverst (null = skjult). Vises når arket er lukket mens Glimt jobber, og med resultatet etterpå.
+     * Trykk åpner arket igjen ([reopen]); sveip opp skjuler den ([dismissPill]), og jobben fortsetter.
+     */
+    private val _pill = MutableStateFlow<GlimtStatus?>(null)
+    val pill: StateFlow<GlimtStatus?> = _pill.asStateFlow()
+    /** Pillen er sveipet bort under denne jobben: resultatet kommer da som melding, som før pillen fantes. */
+    private var pillDismissed = false
+
     private val repo = ReceiptRepository48(vm)
     private var job: Job? = null
     private var uri: Uri? = null
+
+    /** Teksten mens Glimt jobber, eller null når tilstanden ikke er en jobb. */
+    private fun workingText(s: ReceiptScanState48): String? = when (s) {
+        is ReceiptScanState48.Scanning -> s.note
+        is ReceiptScanState48.Uploading -> "Glimt kontrollerer kvitteringen …"
+        else -> null
+    }
+
+    /** Arket er lukket og Glimt jobber: pillen viser jobben (teksten følger fasen). */
+    private fun syncPill() {
+        if (_visible.value || pillDismissed) return
+        workingText(_state.value)?.let { _pill.value = GlimtStatus(it, GlimtStatusKind.WORKING) }
+    }
 
     /** Ett bilde fra Skann → ny vei. Flere filer, PDF og opplasting til en bolig går som før. */
     fun intercept(uris: List<Uri>): Boolean {
@@ -236,6 +263,8 @@ class ReceiptScanViewModel48(private val vm: AppViewModel) {
         uri = u
         vm.scanSheet = false // skannearket (Kamera/Bilder/Filer) lukkes, kvitteringsarket tar over
         _visible.value = true
+        _pill.value = null
+        pillDismissed = false
         val ocrOn = vm.flag(PREF_OCR_LOCAL47, false)
         _state.value = ReceiptScanState48.Scanning(if (ocrOn) "Leser teksten på telefonen …" else "Gjør klar bildet …")
         job = vm.scope48.launch {
@@ -265,6 +294,7 @@ class ReceiptScanViewModel48(private val vm: AppViewModel) {
             finish(ReceiptScanState48.Done("Venter på Wi-Fi", "Kvitteringen sendes til Glimt når telefonen er på Wi-Fi.", queued = true)); return
         }
         _state.value = ReceiptScanState48.Uploading(ocr != null, note)
+        syncPill()
         try {
             val r = repo.upload(parts, ocr != null)
             vm.reloadReceipts48()
@@ -284,16 +314,53 @@ class ReceiptScanViewModel48(private val vm: AppViewModel) {
         }
     }
 
-    /** Arket lukket under opplasting: si fra med en melding i stedet for å vise skjemaet. */
+    /**
+     * Arket lukket under opplasting: resultatet vises i statuspillen øverst. Lest → «Kvittering lagret ✓» (trykk åpner skjemaet),
+     * feil → «Glimt fikk ikke lest kvitteringen» til den trykkes eller sveipes bort. Lagt i kø / leses fortsatt → melding som før.
+     * Er pillen sveipet bort, kommer resultatet som melding.
+     */
     private fun finish(s: ReceiptScanState48) {
-        if (_visible.value) { _state.value = s; return }
-        vm.message = when (s) {
-            is ReceiptScanState48.Draft -> "Kvitteringen er lest (${s.result.label ?: "Glimt"}) og ligger under Til gjennomgang"
-            is ReceiptScanState48.Done -> s.text
-            is ReceiptScanState48.Error -> s.message
-            else -> null
+        if (_visible.value) { _state.value = s; _pill.value = null; return }
+        if (pillDismissed) {
+            vm.message = when (s) {
+                is ReceiptScanState48.Draft -> "Kvitteringen er lest (${s.result.label ?: "Glimt"}) og ligger under Til gjennomgang"
+                is ReceiptScanState48.Done -> s.text
+                is ReceiptScanState48.Error -> s.message
+                else -> null
+            }
+            _state.value = ReceiptScanState48.Idle
+            return
         }
-        _state.value = ReceiptScanState48.Idle
+        when (s) {
+            is ReceiptScanState48.Draft -> { _state.value = s; _pill.value = GlimtStatus("Kvittering lagret ✓", GlimtStatusKind.DONE) }
+            is ReceiptScanState48.Error -> { _state.value = s; _pill.value = GlimtStatus("Glimt fikk ikke lest kvitteringen", GlimtStatusKind.FAILED) }
+            else -> {
+                vm.message = (s as? ReceiptScanState48.Done)?.text
+                _pill.value = null
+                _state.value = ReceiptScanState48.Idle
+            }
+        }
+    }
+
+    /** Trykk på pillen: arket åpnes igjen med kvitteringen som kontrolleres (fremdrift, skjemaet eller feilen). */
+    fun reopen() {
+        if (_state.value == ReceiptScanState48.Idle) { _pill.value = null; return }
+        _pill.value = null
+        _visible.value = true
+    }
+
+    /** Sveip opp: pillen skjules, jobben fortsetter (resultatet kommer da som melding). Et ferdig resultat legges bort. */
+    fun dismissPill() {
+        _pill.value = null
+        pillDismissed = true
+        if (!_visible.value && workingText(_state.value) == null) _state.value = ReceiptScanState48.Idle
+    }
+
+    /** «Kvittering lagret ✓» har stått i 1,5 s: pillen skjules (kvitteringen ligger under Til gjennomgang). */
+    fun donePillShown() {
+        if (_pill.value?.kind != GlimtStatusKind.DONE) return
+        _pill.value = null
+        if (!_visible.value) _state.value = ReceiptScanState48.Idle
     }
 
     fun retry() { uri?.let { start(it) } }
@@ -333,7 +400,7 @@ class ReceiptScanViewModel48(private val vm: AppViewModel) {
     fun close() {
         _visible.value = false
         when (_state.value) {
-            is ReceiptScanState48.Scanning, is ReceiptScanState48.Uploading -> Unit
+            is ReceiptScanState48.Scanning, is ReceiptScanState48.Uploading -> syncPill()
             is ReceiptScanState48.Draft -> if (!(_state.value as ReceiptScanState48.Draft).saving) _state.value = ReceiptScanState48.Idle
             else -> _state.value = ReceiptScanState48.Idle
         }
