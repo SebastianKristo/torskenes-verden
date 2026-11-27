@@ -19,6 +19,9 @@ final class HealthSync {
         ("hr", "Puls", "waveform.path.ecg"),
         ("sleep", "Søvn", "bed.double"),
         ("activeKcal", "Aktive kalorier", "flame"),
+        // Prompt 57: trening (økter og distanse) og vekt deles hver for seg, av som standard.
+        ("workouts", "Trening", "figure.run"),
+        ("weight", "Vekt", "scalemass"),
         ("week", "Siste 7 dager", "calendar"),
     ]
     nonisolated static let taskId = "no.kristo.finanshub.health"
@@ -50,13 +53,13 @@ final class HealthSync {
         didSet { UserDefaults.standard.set(asked, forKey: "fh_health_asked") }
     }
     /// Samme standard som serveren (DEF_PREFS i server/familie/positions.js).
-    nonisolated static let defaultShare: [String: Bool] = ["steps": true, "restingHr": true, "hr": false, "sleep": true, "activeKcal": true, "week": true]
+    nonisolated static let defaultShare: [String: Bool] = ["steps": true, "restingHr": true, "hr": false, "sleep": true, "activeKcal": true, "workouts": false, "weight": false, "week": true]
     var available: Bool { HKHealthStore.isHealthDataAvailable() }
 
     var statusText: String {
-        if !master { return "Deling av helsedata er av. Ingenting sendes, og dataene dine er slettet fra serveren." }
+        if !master { return "Apple Helse er av. Ingenting sendes, og dataene dine er slettet fra serveren." }
         if let e = lastError { return "Kunne ikke sende: \(e)" }
-        if !share.values.contains(true) { return "Ingenting deles. Slå på det du vil at familien skal se. Bare et sammendrag sendes, aldri enkeltmålinger." }
+        if !share.values.contains(true) { return "Helsedataene dine vises bare for deg på Helse-siden. Ingenting deles med familien før du slår det på under." }
         guard let d = lastSent else { return "Sammendraget sendes omtrent hvert 15. minutt når iOS tillater det." }
         return "Sist sendt " + JS.fmt(d, Calendar.current.isDateInToday(d) ? "HH:mm" : "dd.MM HH:mm") + ". Sendes omtrent hvert 15. minutt."
     }
@@ -99,9 +102,10 @@ final class HealthSync {
         return out
     }
 
-    /// Alle typene appen kan lese (onboarding og «Be om tilgang»): skritt, puls, hvilepuls, søvn, aktive kalorier og treningsminutter.
+    /// Alle typene appen kan lese (onboarding og «Be om tilgang»): skritt, puls, hvilepuls, søvn, aktive kalorier og treningsminutter,
+    /// og for Helse-siden (prompt 57) distanse gått og løpt, treningsøkter og vekt (HelseData.readTypes).
     private func allReadTypes() -> Set<HKObjectType> {
-        var out = Set<HKObjectType>()
+        var out = HelseData.readTypes()
         let ids: [HKQuantityTypeIdentifier] = [.stepCount, .heartRate, .restingHeartRate, .activeEnergyBurned, .appleExerciseTime]
         for id in ids {
             if let t = HKObjectType.quantityType(forIdentifier: id) { out.insert(t) }
@@ -168,8 +172,10 @@ final class HealthSync {
         guard !api.base.isEmpty else { return }
         let off: [String: Any] = shareBody([:])
         _ = try? await api.callAt("/api", "PUT", "/family/me", json: ["shareHealth": off])
+        _ = try? await api.callAt("/api", "DELETE", "/helse", timeout: 20) // prompt 57: Helse-siden
         do {
             _ = try await api.callAt("/api", "DELETE", "/family/health/me", timeout: 20)
+            UserDefaults.standard.removeObject(forKey: AcctScope.key("fh_helse_full"))
             lastError = nil
         } catch let e as APIError where e.status == 404 || e.status == 405 {
             _ = try? await api.callAt("/api", "POST", "/family/health", json: ["date": isoDay(Date())], timeout: 20)
@@ -191,7 +197,8 @@ final class HealthSync {
 
     func requestAuth() async {
         guard available else { return }
-        let types = readTypes()
+        // Prompt 57: med hovedbryteren på leser appen alt til Helse-siden; delingen med familien filtreres på serveren.
+        let types = master ? allReadTypes() : readTypes()
         guard !types.isEmpty else { return }
         do {
             try await hk.requestAuthorization(toShare: [], read: types)
@@ -274,13 +281,33 @@ final class HealthSync {
     }
 
     func syncNow(_ api: API) async {
-        guard available, master, share.values.contains(true), !api.base.isEmpty else { return }
-        let body = await summary()
+        guard available, master, !api.base.isEmpty else { return }
         do {
-            _ = try await api.callAt("/api", "POST", "/family/health", json: body, timeout: 20)
+            // Familie-sammendraget bare når noe deles (serveren lagrer bare de delte feltene der).
+            if share.values.contains(true) {
+                let body = await summary()
+                _ = try await api.callAt("/api", "POST", "/family/health", json: body, timeout: 20)
+            }
+            // Prompt 57: Helse-siden (bare for brukeren selv). Eldre servere uten /api/helse (404) hoppes over.
+            await sendHelse(api)
             lastSent = Date()
             UserDefaults.standard.set(lastSent, forKey: AcctScope.key("fh_health_sent"))
             lastError = nil
+        } catch {
+            lastError = error.localizedDescription
+        }
+    }
+
+    /// POST /api/helse: første gang 30 dager (så måneden har data), deretter de siste 3 dagene (hele netter).
+    func sendHelse(_ api: API) async {
+        let key: String = AcctScope.key("fh_helse_full")
+        let full: Bool = UserDefaults.standard.bool(forKey: key)
+        let body: [String: Any] = await HelseData.body(days: full ? 3 : 30, source: "Apple Helse · \(UIDevice.current.model)")
+        do {
+            _ = try await api.callAt("/api", "POST", "/helse", json: body, timeout: 40)
+            UserDefaults.standard.set(true, forKey: key)
+        } catch let e as APIError where e.status == 404 || e.status == 405 {
+            return
         } catch {
             lastError = error.localizedDescription
         }

@@ -282,6 +282,11 @@ struct Fam50Health: Hashable, Identifiable {
     var charging: Bool
     var week: [Fam50Day]
     var weekText: String
+    /// Prompt 57: siste økt og vekt (serverens tekster), tomme når personen ikke deler dem.
+    var workoutText: String
+    var workoutSub: String
+    var weightText: String
+    var weightSub: String
 
     init(_ o: [String: Any]) {
         mini = Fam50Mini(o)
@@ -308,6 +313,12 @@ struct Fam50Health: Hashable, Identifiable {
         charging = JS.bool(t, "charging") ?? false
         week = JS.list(o, "week").map { Fam50Day($0) }
         weekText = JS.str(o, "weekText") ?? ""
+        let w: [String: Any]? = JS.dict(o, "workout")
+        workoutText = JS.str(w, "label") ?? ""
+        workoutSub = [JS.str(w, "dayText"), JS.str(w, "durationText"), JS.str(w, "distanceText")].compactMap { $0 }.joined(separator: " · ")
+        let v: [String: Any]? = JS.dict(o, "weight")
+        weightText = JS.str(v, "kgText") ?? ""
+        weightSub = JS.str(v, "changeText") ?? (JS.str(v, "dayText").map { "Målt " + $0 } ?? "")
     }
 }
 

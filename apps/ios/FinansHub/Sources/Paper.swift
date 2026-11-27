@@ -227,6 +227,7 @@ struct PaperShell: View {
         .feat51Host(p)
         // Prompt 76 (SKJIOS): Skjold Lab – deler, skuffer og skap i fullskjerm (Skjold76*.swift).
         .skjold76Host(p)
+        .helseHost(p) // prompt 57: Helse-siden
         // Prompt 52 (IOS52B): Ruter-avgangene forhåndshentes for alle stopp og bufres i App Group (DeparturesPrefetch.swift).
         .ruter52Prefetch(store)
         .task(id: store.account?.id) {

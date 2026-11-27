@@ -347,6 +347,9 @@ struct Fam50HealthDetail: View {
             Fam50Stat(k: "HVILEPULS", v: h.restingHr.map { String(Int($0)) + " bpm" } ?? "—", s: h.hr.map { "Puls nå " + String(Int($0)) } ?? "")
             Fam50Stat(k: "AKTIVE KALORIER", v: h.activeKcal.map { String(Int($0.rounded())) + " kcal" } ?? "—", s: "I dag")
             Fam50Stat(k: "BATTERI", v: h.battery.map { String(Int($0.rounded())) + " %" } ?? "—", s: h.battery == nil ? "" : (h.charging ? "Lader" : "Lader ikke"))
+            // Prompt 57: bare når personen deler trening og vekt.
+            if !h.workoutText.isEmpty { Fam50Stat(k: "SISTE ØKT", v: h.workoutText, s: h.workoutSub) }
+            if !h.weightText.isEmpty { Fam50Stat(k: "VEKT", v: h.weightText, s: h.weightSub) }
         }
     }
 
