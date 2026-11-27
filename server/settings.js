@@ -157,6 +157,16 @@ export const SCHEMA = [
     ['cf_token', 'Standard-token for Domener (Zone, DNS, Analytics, Registrar og Firewall Services: Read)', e('CLOUDFLARE_API_TOKEN'), true],
     ['cf_domain', 'Første domene (legges inn i Domener ved oppstart)', e('CLOUDFLARE_DOMAIN')],
   ]],
+  // Tailscale (server/tailscale/): LocalAPI-socketen først, Tailscale-API-et som reserve. Nøklene blir på serveren (kryptert).
+  ['Tailscale', { id: 'tailscale', domain: 'tailscale.com', help: 'Oversikt over tailnetet på Nettverk. Med /var/run/tailscale montert lesende brukes LocalAPI uten nøkkel; ellers en OAuth-klient (devices:core:read) eller en API-nøkkel.' }, [
+    ['ts_mode', 'Kilde (auto, localapi eller api)', e('TAILSCALE_MODE', 'auto')],
+    ['ts_oauth_id', 'OAuth-klient-ID', e('TAILSCALE_OAUTH_CLIENT_ID')],
+    ['ts_oauth_secret', 'OAuth-klienthemmelighet', e('TAILSCALE_OAUTH_CLIENT_SECRET'), true],
+    ['ts_api_key', 'API-nøkkel (i stedet for OAuth)', e('TAILSCALE_API_KEY'), true],
+    ['ts_tailnet', 'Tailnet (tom = standard)', e('TAILSCALE_TAILNET')],
+    ['ts_ping_min', 'Pingintervall i minutter', '3'],
+    ['ts_varsler', 'Varsler (offline, nokkel, ny, derp)', 'offline,nokkel,ny,derp'],
+  ]],
   ['Sporing', { id: 'tracking', scope: 'personal', domain: 'posten.no', help: 'Nøkler til transportørenes sporings-API. Uten nøkkel for en transportør brukes 17TRACK som reserve. Pakker kan spores uten nøkler, men da oppdateres ikke statusen automatisk.', guide: [
     ['Posten og Bring', 'Lag en gratis Mybring-bruker på mybring.com, og hent API-nøkkelen under Mybring → Innstillinger → API. Brukeren er e-postadressen din.'],
     ['PostNord', 'Nøkkelen er valgfri. Uten nøkkel hentes status fra PostNords offentlige sporingsside (uoffisielt), med ParcelsApp som reserve. Har du organisasjonsnummer, kan du lage en API-nøkkel for «Track and Trace» på developer.postnord.com.'],
@@ -408,6 +418,9 @@ const VALID = {
   ai_backend: (v) => /^(openwebui|ollama|auto)$/i.test(v), // prompt 44
   ai_think_direct: (v) => /^[01]$/.test(v),
   web_order: (v) => String(v).split(',').map((x) => x.trim()).filter(Boolean).every((x) => /^(openwebui|searxng|brave|ddg)$/.test(x)),
+  ts_mode: (v) => /^(auto|localapi|api)$/.test(v), ts_tailnet: (v) => /^[\w.@-]{1,120}$/.test(v), ts_ping_min: (v) => /^\d+$/.test(v) && +v >= 1 && +v <= 60,
+  ts_varsler: (v) => String(v).split(',').map((x) => x.trim()).filter(Boolean).every((x) => /^(offline|nokkel|ny|derp)$/.test(x)),
+  ts_oauth_id: (v) => /^[\w-]{4,200}$/.test(v),
   // Prompt 89 (SRV89): APNs-oppsettet.
   apns_team: (v) => /^[A-Z0-9]{10}$/.test(v), apns_key_id: (v) => /^[A-Z0-9]{10}$/.test(v),
   apns_bundle: (v) => /^[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)+$/.test(v) && v.length <= 155, apns_env: (v) => /^(sandbox|produksjon|production)$/i.test(v),

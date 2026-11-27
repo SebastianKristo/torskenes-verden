@@ -1,0 +1,27 @@
+{
+  "$comment": "Svar fra GET https://api.tailscale.com/api/v2/tailnet/-/devices?fields=all, forkortet og anonymisert: ingen ekte nøkler, adresser eller navn.",
+  "devices": [
+    {
+      "addresses": ["100.64.0.2", "fd7a:115c:a1e0::2"], "id": "11111111111111", "nodeId": "nUNRAID1CNTRL",
+      "user": "sebastian@example.com", "name": "unraid.tail1234.ts.net", "hostname": "unraid",
+      "clientVersion": "1.74.1-t1234567-g89abcdef", "updateAvailable": true, "os": "linux",
+      "created": "2026-01-04T10:00:00Z", "lastSeen": "2026-11-27T09:59:00Z", "connectedToControl": true,
+      "keyExpiryDisabled": false, "expires": "2026-12-01T10:00:00Z", "authorized": true, "isExternal": false,
+      "tags": ["tag:server"], "clientConnectivity": { "endpoints": ["192.168.1.40:41641"], "latency": { "Oslo": { "latencyMs": 3.2, "preferred": true } } }
+    },
+    {
+      "addresses": ["100.64.0.3"], "id": "22222222222222", "nodeId": "nHYTTA1CNTRL",
+      "user": "sebastian@example.com", "name": "hytta.tail1234.ts.net", "hostname": "hytta-pi",
+      "clientVersion": "1.76.6-t2d1d1b9b5-gb2e0a0b6a", "updateAvailable": false, "os": "linux",
+      "created": "2026-02-10T10:00:00Z", "lastSeen": "2026-11-24T18:30:00Z", "connectedToControl": false,
+      "keyExpiryDisabled": true, "expires": "0001-01-01T00:00:00Z", "authorized": true, "isExternal": false, "tags": ["tag:server"]
+    },
+    {
+      "addresses": ["100.64.0.4", "fd7a:115c:a1e0::4"], "id": "33333333333333", "nodeId": "nIPHONE1CNTRL",
+      "user": "ingrid@example.com", "name": "iphone-15.tail1234.ts.net", "hostname": "localhost",
+      "clientVersion": "1.76.6-t2d1d1b9b5-gb2e0a0b6a", "updateAvailable": false, "os": "iOS",
+      "created": "2026-03-01T10:00:00Z", "lastSeen": "2026-11-27T09:58:00Z",
+      "keyExpiryDisabled": false, "expires": "2026-11-30T10:00:00Z", "authorized": true, "isExternal": false, "tags": []
+    }
+  ]
+}
