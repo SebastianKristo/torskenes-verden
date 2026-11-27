@@ -14,7 +14,8 @@ struct Receipt48Host: ViewModifier {
 
     func body(content: Content) -> some View {
         content
-            .overlay(alignment: .bottom) { Receipt48Pill(p: p) }
+            // Prompt 57: Glimt-statuspillen øverst i skallet (aldri over Skann-knappen eller fanelinjen), GlimtStatuspille.swift.
+            .overlay(alignment: .top) { GlimtStatuspille() }
             .sheet(item: Binding<Rc48Result?>(get: { f.shown }, set: { (v: Rc48Result?) in if v == nil, f.shown != nil { f.close() } })) { (r: Rc48Result) in
                 Receipt48Sheet(result: r)
                     .environment(\.paper, p)
@@ -26,26 +27,6 @@ struct Receipt48Host: ViewModifier {
 
 extension View {
     func receipt48Host(_ p: PaperPalette) -> some View { modifier(Receipt48Host(p: p)) }
-}
-
-/// «Leser teksten på iPhonen …» / «Glimt kontrollerer kvitteringen …»
-struct Receipt48Pill: View {
-    let p: PaperPalette
-    @MainActor private var f: Receipt48Flow { Receipt48Flow.shared }
-
-    var body: some View {
-        if let s = f.status {
-            HStack(spacing: 8) {
-                ProgressView().tint(p.bg)
-                Text(s).font(PF.ui(13, .bold)).foregroundStyle(p.bg)
-            }
-            .padding(.horizontal, 16).frame(height: 40)
-            .background(p.ink, in: Capsule())
-            .padding(.bottom, 104)
-            .transition(.opacity)
-            .allowsHitTesting(false)
-        }
-    }
 }
 
 /* ---------- Skjemaet ---------- */

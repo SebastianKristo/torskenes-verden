@@ -29,6 +29,8 @@ struct Star43: Shape {
 struct Orb43: View {
     var size: CGFloat = 20
     var busy: Bool = false
+    /// Prompt 57: ringen står stille der den er (Glimt-statuspillen når Glimt er ferdig eller feilet).
+    var still: Bool = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var t0: Double = Date.timeIntervalSinceReferenceDate
     @State private var deg0: Double = 0
@@ -41,7 +43,7 @@ struct Orb43: View {
         let ring: CGFloat = Swift.max(2, size * 0.12)
         ZStack {
             Circle().fill(DS.fixed(.surface, stil: .papir, dark: false))
-            TimelineView(.animation(minimumInterval: nil, paused: reduceMotion)) { (ctx: TimelineViewDefaultContext) in
+            TimelineView(.animation(minimumInterval: nil, paused: reduceMotion || still)) { (ctx: TimelineViewDefaultContext) in
                 Orb43Ring(ring: ring)
                     .rotationEffect(.degrees(angle(ctx.date.timeIntervalSinceReferenceDate)))
             }
@@ -50,6 +52,7 @@ struct Orb43: View {
         .frame(width: size, height: size)
         .onAppear { t0 = Date.timeIntervalSinceReferenceDate; deg0 = 0; per = Orb43.period(busy) }
         .onChange(of: busy) { (_: Bool, now: Bool) in rebase(now) }
+        .onChange(of: still) { (_: Bool, now: Bool) in freeze(now) }
         .accessibilityHidden(true)
     }
 
@@ -57,7 +60,15 @@ struct Orb43: View {
 
     private func angle(_ t: Double) -> Double {
         if reduceMotion { return 0 }
+        if still { return deg0 }
         return Anim71.turn(t, per: per > 0 ? per : Orb43.period(busy), t0: t0, deg0: deg0)
+    }
+
+    /// Stopp (vinkelen der ringen er nå) eller start igjen fra samme vinkel.
+    private func freeze(_ on: Bool) {
+        let now: Double = Date.timeIntervalSinceReferenceDate
+        if on && !reduceMotion { deg0 = Anim71.turn(now, per: per > 0 ? per : Orb43.period(busy), t0: t0, deg0: deg0) }
+        t0 = now
     }
 
     /// Ny fart: start fra vinkelen ringen har nå.

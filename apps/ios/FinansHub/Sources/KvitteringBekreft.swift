@@ -18,8 +18,13 @@ struct Rc47Draft: Identifiable {
 final class Receipt47Flow {
     static let shared = Receipt47Flow()
 
-    /// «✦ Leser kvitteringen på iPhonen …»
-    var reading: Bool = false
+    /// «✦ Leser kvitteringen på iPhonen …» – vises i Glimt-statuspillen øverst (prompt 57, GlimtStatuspille.swift).
+    var reading: Bool = false {
+        didSet {
+            if reading { GlimtStatus.shared.jobber(Receipt47Flow.readingText) } else if oldValue { GlimtStatus.shared.stoppet() }
+        }
+    }
+    static let readingText: String = "✦ Leser kvitteringen på iPhonen …"
     /// Bekreftelsesarket.
     var draft: Rc47Draft? = nil
     private var waiting: [[UIImage]] = []
@@ -132,7 +137,7 @@ final class Receipt47Flow {
     }
 }
 
-/* ---------- Vertskap: arket og «Leser …»-pillen ---------- */
+/* ---------- Vertskap: arket ---------- */
 
 struct Receipt47Host: ViewModifier {
     @Environment(Store.self) private var store
@@ -141,27 +146,13 @@ struct Receipt47Host: ViewModifier {
 
     func body(content: Content) -> some View {
         content
-            .overlay(alignment: .bottom) { pill }
+            // Prompt 57: pillen er flyttet til Glimt-statuspillen øverst (GlimtStatuspille.swift, lagt på i receipt48Host).
             .sheet(item: Binding<Rc47Draft?>(get: { f.draft }, set: { (v: Rc47Draft?) in if v == nil, f.draft != nil { f.cancel(store) } })) { (d: Rc47Draft) in
                 Receipt47Sheet(draft: d)
                     .environment(\.paper, p)
                     .presentationDetents([.large])
                     .interactiveDismissDisabled(true)
             }
-    }
-
-    @ViewBuilder private var pill: some View {
-        if f.reading {
-            HStack(spacing: 8) {
-                ProgressView().tint(p.bg)
-                Text("✦ Leser kvitteringen på iPhonen …").font(PF.ui(13, .bold)).foregroundStyle(p.bg)
-            }
-            .padding(.horizontal, 16).frame(height: 40)
-            .background(p.ink, in: Capsule())
-            .padding(.bottom, 104)
-            .transition(.opacity)
-            .allowsHitTesting(false)
-        }
     }
 }
 
