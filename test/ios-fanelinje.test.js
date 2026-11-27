@@ -122,3 +122,15 @@ test('Papir-pillen: Hjem-knappen fra den gamle linja (1a–1d) er tilbake og fø
   // Med systemets fanelinje finnes ingen Hjem-knapp, så «‹ Oversikt» øverst skjules ikke.
   assert.match(code('NavHomeButton.swift'), /nav42BarShown, FanelinjeValg\.shared\.stil == \.papir else \{ return false \}/);
 });
+
+/* ---------- Prompt 57 (claude-code-ios-fanelinje.md): Papir-pillen ---------- */
+
+test('1) inaktive faner er hvite: token navInk (#ffffff) i alle stiler og moduser, ikke hex i appen', () => {
+  const tokens = JSON.parse(readFileSync(join(import.meta.dirname, '..', 'shared', 'design', 'tokens.json'), 'utf8'));
+  assert.equal(tokens.color.papir.lys.navInk, '#ffffff');
+  assert.equal(tokens.color.papir.mork.navInk, '#ffffff');
+  assert.equal(tokens.color.glass.mork.navInk, '#ffffff');
+  assert.match(code('PaperTheme.swift'), /let navInk: Color = c\(\.navInk\)/);
+  assert.doesNotMatch(raw('ThemeColors.swift'), /b3ada1/i);
+  assert.match(code('PapirFanelinje.swift'), /\.foregroundStyle\(on \? p\.navActInk : p\.navInk\)/);
+});

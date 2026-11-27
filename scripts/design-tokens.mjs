@@ -24,6 +24,7 @@ export const FARGER = [
   'focus', 'scrim',
   'surfaceField', 'surfaceChip', 'surfaceOverlay', 'lineSubtle',
   'info', 'onInfo', 'successSoft', 'warningSoft', 'dangerSoft',
+  'navInk',
 ];
 /** Tokenene som kan ha en egen verdi ved økt kontrast. */
 export const HOY_KONTRAST = ['textSecondary', 'textTertiary', 'line'];

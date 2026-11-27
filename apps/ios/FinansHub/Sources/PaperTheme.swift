@@ -65,7 +65,8 @@ extension PaperPalette {
         func light(_ f: DS.Farge) -> Color { DS.fixed(f, stil: stil, dark: false) }
         func darkC(_ f: DS.Farge) -> Color { DS.fixed(f, stil: stil, dark: true) }
         let nav: Color = dark ? c(.surfaceChip) : light(.textPrimary)
-        let navInk: Color = darkC(.textSecondary)
+        // Prompt 57: inaktive faner er hvite i lyst og mørkt tema (token navInk, før textSecondary i mørk modus).
+        let navInk: Color = c(.navInk)
         let navAct: Color = dark ? c(.textPrimary) : light(.surface)
         let navActInk: Color = dark ? c(.surface) : light(.textPrimary)
         let pop: Color = dark ? c(.surfaceChip) : c(.surface)

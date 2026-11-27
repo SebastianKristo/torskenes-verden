@@ -64,6 +64,7 @@ data class DsColors(
     val successSoft: Color,
     val warningSoft: Color,
     val dangerSoft: Color,
+    val navInk: Color,
     val category: DsCategoryColors,
 )
 
@@ -110,6 +111,7 @@ object DsPalette {
         successSoft = Color(0xFFE3EEE5),
         warningSoft = Color(0xFFF4E8CF),
         dangerSoft = Color(0xFFF6DFD8),
+        navInk = Color(0xFFFFFFFF),
         category = Category,
     )
 
@@ -141,6 +143,7 @@ object DsPalette {
         successSoft = Color(0x296FBF8F),
         warningSoft = Color(0x29E0A85A),
         dangerSoft = Color(0x29EC7A64),
+        navInk = Color(0xFFFFFFFF),
         category = Category,
     )
 
@@ -175,6 +178,7 @@ object DsPalette {
         successSoft = Color(0x296FBF8F),
         warningSoft = Color(0x29E0A85A),
         dangerSoft = Color(0x29EC7A64),
+        navInk = Color(0xFFFFFFFF),
         category = Category,
     )
 
