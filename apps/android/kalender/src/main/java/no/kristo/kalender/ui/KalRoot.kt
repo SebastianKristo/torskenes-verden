@@ -162,7 +162,7 @@ private fun KalApp(vm: KalVm, onBackToHomelab: () -> Unit) {
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize()) {
             Spacer(Modifier.windowInsetsTopHeight(WindowInsets.statusBars))
-            TopBar(vm, onBackToHomelab)
+            TopBar(vm)
             // Q34 (E-B12): «Slå sammen kalenderne: 6 → 4?» med ja/nei, til brukeren har svart.
             MigForslag(vm)
             // Visningen: sveip venstre/høyre bytter periode, sveip inn fra venstre kant (28 dp) åpner Kalendere.
@@ -232,7 +232,7 @@ private fun KalApp(vm: KalVm, onBackToHomelab: () -> Unit) {
         Sheet(vm.det != null && vm.nf == null, reduce) { DetailSheet(vm) }
         Sheet(vm.nf != null, reduce) { NewSheet(vm) }
         AnimatedVisibility(vm.cs, enter = if (reduce) fadeIn() else slideInHorizontally(tween(300, easing = EASE)) { -it }, exit = if (reduce) fadeOut() else slideOutHorizontally(tween(300, easing = EASE)) { -it }) {
-            Drawer(vm)
+            Drawer(vm, onBackToHomelab)
         }
         // Prompt 35: Innstillinger (fra bunnen av sidemenyen) glir inn fra høyre over alt.
         AnimatedVisibility(vm.setOn, enter = if (reduce) fadeIn() else slideInHorizontally(tween(280, easing = EASE)) { it }, exit = if (reduce) fadeOut() else slideOutHorizontally(tween(240, easing = EASE)) { it }) {
@@ -290,16 +290,11 @@ private fun header(v: String, A: LocalDate, sun: Boolean = false): Hd {
 }
 
 @Composable
-private fun TopBar(vm: KalVm, onBackToHomelab: () -> Unit) {
+private fun TopBar(vm: KalVm) {
     val k = LocalK.current
     val hd = header(vm.v, vm.a, vm.sun)
     Column(Modifier.fillMaxWidth().padding(start = 14.dp, end = 14.dp, top = 2.dp, bottom = 8.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        // Android: «◀ Homelab» når appen ble åpnet fra Homelab (iOS viser systemets tilbake-til-app selv).
-        if (vm.back) Row(Modifier.height(30.dp).clip(RoundedCornerShape(15.dp)).tap("Tilbake til Homelab", onClick = onBackToHomelab).padding(end = 8.dp),
-            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            Svg("M15 5l-7 7 7 7", 14.dp, k.ds.info, 2.6f)
-            Tx("Homelab", man(KType.subheadline, FontWeight.SemiBold, k.ds.info))
-        }
+        // Tilbake til Homelab ligger i sidemenyen (raden «Homelab» øverst), ikke som egen linje over tittelen.
         // Prompt 44: tittelen krymper aldri. Plassen hentes fra knappene: «I dag» blir kalender-ikonet med dagens tall, og er det
         // fortsatt for trangt (smal telefon, Fold lukket, delt skjerm), legges tittelen på egen rad over knappene. Målt på faktisk bredde.
         val tm = androidx.compose.ui.text.rememberTextMeasurer()

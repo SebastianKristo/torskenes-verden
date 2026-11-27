@@ -127,6 +127,8 @@ object Ic {
     const val SEARCH = "M11 4a7 7 0 1 0 0 14a7 7 0 1 0 0-14M20 20l-3.5-3.5"
     const val PLUS = "M12 5v14M5 12h14"
     const val UP = "M12 19V5M5 12l7-7 7 7"
+    /** Huset (Material «home» som strek): raden «Homelab» øverst i sidemenyen. */
+    const val HOME = "M4 11l8-7 8 7M6 9.5V20h4.5v-5.5h3V20H18V9.5"
     /** Lukk / fjern (Material «close»-formen som strek). */
     const val CLOSE = "M6 6l12 12M18 6L6 18"
     /** Prompt 35: tannhjulet (Innstillinger nederst i sidemenyen). */
