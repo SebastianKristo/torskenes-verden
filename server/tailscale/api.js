@@ -92,7 +92,7 @@ tailscaleApi.get('/devices/:id', async (c) => {
       device: d, facts: fakta(d, { traffic, firstSeen: S.forstSett(d.id), rangeLabel: RANGE_LABEL[range] }),
       history: { range, uptime, uptimeLabels: Object.fromEntries(Object.entries(uptime).map(([k, v]) => [k, prosent(v) ?? 'ukjent'])),
         latency: { ...lat, medianLabel: latensTekst(lat.median), p95Label: latensTekst(lat.p95) },
-        tunnel: { ...tunnel, label: tunnel.direkte == null ? 'ukjent' : `${prosent(tunnel.direkte)} direkte${tunnel.relay ? ` · DERP ${tunnel.relay}` : ''}` },
+        tunnel: { ...tunnel, label: tunnel.direkte == null ? 'tunnel ukjent' : `${prosent(tunnel.direkte)} direkte${tunnel.relay ? ` · DERP ${tunnel.relay}` : ''}` },
         traffic: { ...traffic, label: `↓ ${byteTekst(traffic.rx)} · ↑ ${byteTekst(traffic.tx)}` }, stripe: S.stripe30(d.id, now) },
       services: tjenesterFor(d, c.get('user')), canPing: !d.self && !!d.ip && d.online,
     }, 200, NO_STORE);

@@ -39,6 +39,7 @@ export const PAGES51 = [
   HL('studie', 'studie'),
   HL('vaer', 'vaer', { hide: ['.wxp-fx'] }), // skyene/nedbøren tegnes tilfeldig i et lerret
   HL('domener', 'domener'),
+  HL('nettverk', 'nettverk', { wait: '#tailnet .tn-chip' }), // prompt 57: Tailnet øverst (eksempeldata, bare admin)
   HL('rom', 'rom'),
   HL('bursdager', 'kalender/bursdager'),
   HL('smarthjem', 'hjem'),

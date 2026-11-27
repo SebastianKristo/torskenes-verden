@@ -168,5 +168,5 @@ export function vedlikehold(devices, selfVersion = null, now = Date.now()) {
   const versionMismatch = ref ? devices.filter((d) => d.clientVersion && d.clientVersion !== ref).map((d) => brief(d, { clientVersion: d.clientVersion, expected: ref })) : [];
   const exitNode = devices.filter((d) => d.exitNode).map((d) => brief(d));
   const offline30 = devices.filter((d) => !d.online && d.lastSeen && now - Date.parse(d.lastSeen) > 30 * DAY).map((d) => brief(d, { lastSeen: d.lastSeen }));
-  return { expiring, updates, versionMismatch, exitNode, offline30, referenceVersion: ref, count: expiring.length + updates.length + versionMismatch.length + offline30.length };
+  return { expiring, updates, versionMismatch, exitNode, offline30, referenceVersion: ref, count: expiring.length + updates.length + versionMismatch.length + exitNode.length + offline30.length };
 }

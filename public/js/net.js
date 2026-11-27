@@ -3,6 +3,11 @@ import { store, widget, card, refresh, errBox, on } from './store.js';
 import { tiles } from './dash.js';
 import { tabAllowed, tabLabel } from './profile.js';
 import { gruppert } from './moduler.js';
+import { tailnetSlot, mountTailnet } from './tailnet.js'; // Tailnet øverst (bare admin)
+
+const admin = () => store.me?.me?.role === 'admin';
+// Tailnet (Tailscale): seksjonen øverst på siden, over Homelab-helsen og lenkene. Fylles av tailnet.js.
+widget('n_tail', { cls: 'tn-host', render: () => tailnetSlot(), mounted: () => mountTailnet() });
 
 widget('n_lab', { render() {
   const h = store.data.health;
@@ -23,6 +28,7 @@ widget('n_ai', { render: () => group('På lokalnettet', links(true)) });
 
 export function render() {
   return `<div style="display:flex;flex-direction:column;gap:20px"><div class="page-title">Nett<b>verk</b> og lenker</div>
+    ${admin() ? card('n_tail') : ''}
     <div class="grid" data-dnd="net">${card('n_lab')}${card('n_news')}${card('n_ai')}</div></div>`;
 }
 

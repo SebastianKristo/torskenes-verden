@@ -28,16 +28,20 @@ const SETS = {
     ['d_upcoming', 'Kommer ut', 4, 0, ['d_upcoming']], ['p_links', 'Snarveier', 4, 4, ['d_links']], ['p_money', 'Penger', 4, 8, ['d_trading', 'd_eco'], true],
     ['d_media_hist', 'Mediehistorikk', 12, 0, ['d_media_hist']],
     ['p_wx', 'Vær', 4, 0], ['d_trading', 'Trading 212', 4, 4, ['d_trading']], ['d_media', 'Media', 4, 8, ['d_media']],
-    ['p_pk', 'Pakker', 4, 0], ['d_eco', 'Økonomi', 4, 4, ['d_eco']],
+    ['p_pk', 'Pakker', 4, 0], ['d_eco', 'Økonomi', 4, 4, ['d_eco']], ['p_tail', 'Tailnet', 4, 8],
   ],
   cur: [
     ['d_cal', 'Skolekalender', 4, 0, ['d_cal']], ['d_agenda', 'Agenda', 4, 4, ['d_agenda']], ['d_trading', 'Trading 212', 4, 8, ['d_trading']], ['d_energy', 'Energi', 4, 0, ['d_energy']],
     ['d_eco', 'Økonomi', 4, 4, ['d_eco']], ['d_links', 'Snarveier', 4, 8, ['d_links']], ['d_upcoming', 'Kommer ut', 4, 0, ['d_upcoming']], ['d_media', 'Media', 4, 4, ['d_media']],
-    ['d_media_hist', 'Mediehistorikk', 8, 0, ['d_media_hist']], ['d_pos', 'Posisjon · familie', 4, 8, ['d_pos']], ['d_bday', 'Bursdager · neste', 4, 0, ['d_bday']], ['d_kal', 'Kalender', 4, 4, ['d_kal']],
+    ['d_media_hist', 'Mediehistorikk', 8, 0, ['d_media_hist']], ['d_pos', 'Posisjon · familie', 4, 8, ['d_pos']], ['d_bday', 'Bursdager · neste', 4, 0, ['d_bday']], ['d_kal', 'Kalender', 4, 4, ['d_kal']], ['d_tail', 'Tailnet', 4, 8],
   ],
 };
+// Tailnet (Tailscale) er bare for administratorer: andre får den ikke i oppsettet eller i «+ Widget».
+const ADMIN_ONLY = new Set(['p_tail', 'd_tail']);
+const isAdmin = () => store.me?.me?.role === 'admin';
 const theme = () => (is2c() ? '2c' : 'cur');
-const META = () => Object.fromEntries(SETS[theme()].map(([id, n, w, x, hid, all]) => [id, { n, w, x, hid: hid ?? [], all: !!all }]));
+const setOf = () => SETS[theme()].filter(([id]) => !ADMIN_ONLY.has(id) || isAdmin());
+const META = () => Object.fromEntries(setOf().map(([id, n, w, x, hid, all]) => [id, { n, w, x, hid: hid ?? [], all: !!all }]));
 
 /* ---------------- Rutenett-matte (fra fasiten) ---------------- */
 const hit = (a, b) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
@@ -58,7 +62,7 @@ function defaults(cols) {
   // Standardoppsett: spaltene fra papiret (x/12 skalert), høyden følger innholdet (auto).
   const M = META(), out = [];
   const colY = {};
-  for (const [id, , w0, x0] of SETS[theme()]) {
+  for (const [id, , w0, x0] of setOf()) {
     const w = Math.max(Math.min(2, cols), Math.min(cols, Math.round((w0 * cols) / 12))), x = Math.max(0, Math.min(cols - w, Math.round((x0 * cols) / 12)));
     let y = 0; for (let k = x; k < x + w; k++) y = Math.max(y, colY[k] ?? 0); // brede widgets under alle spaltene de dekker
     out.push({ id, x, y, w, h: 4, auto: true, hidden: false });

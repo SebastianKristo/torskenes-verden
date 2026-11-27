@@ -1,0 +1,134 @@
+/* Nettverk: Tailnet (Tailscale) øverst på siden, og enhetsdetaljen i popupen (public/js/tailnet.js).
+   Bare designtokens (--ds-*), så Papir lys/mørk og Glass følger av seg selv. Grønn bare i statusprikkene. */
+
+.tn{display:flex;flex-direction:column;gap:var(--ds-space-lg);color:var(--ds-text-primary);min-width:0}
+.tn .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.tn-top{display:flex;justify-content:space-between;align-items:flex-end;gap:var(--ds-space-md)}
+.tn-over{font-family:var(--ds-font-serif);font-style:italic;font-size:var(--ds-text-subheadline-size);color:var(--ds-text-secondary)}
+.tn-title{font-family:var(--ds-font-serif);font-size:var(--ds-text-title2-size);line-height:var(--ds-text-title2-line);font-weight:var(--ds-weight-medium);margin:0}
+.tn-tog,.tn-link{border:1px solid var(--ds-line);background:transparent;color:var(--ds-text-secondary);border-radius:var(--ds-radius-full);padding:var(--ds-space-xs) var(--ds-space-md);font-size:var(--ds-text-footnote-size);cursor:pointer}
+.tn-link{padding:2px var(--ds-space-sm);min-height:28px;min-width:44px}
+.tn-err,.tn-empty{font-size:var(--ds-text-subheadline-size);color:var(--ds-text-secondary)}
+.tn-mono,.tn-ip,.tn-lat,.tn-k{font-family:var(--ds-font-mono)}
+
+/* Stat-rad: 5 kolonner med 2 px strek over */
+.tn-stats{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:var(--ds-space-lg)}
+.tn-stat{display:flex;flex-direction:column;gap:2px;border-top:2px solid var(--ds-text-primary);padding-top:var(--ds-space-sm);min-width:0}
+.tn-k{font-size:var(--ds-text-caption-size);letter-spacing:.08em;color:var(--ds-accent)}
+.tn-stat b{font-family:var(--ds-font-serif);font-weight:var(--ds-weight-regular);font-size:clamp(var(--ds-text-title2-size),3vw,calc(var(--ds-text-title2-size) * 1.36));line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tn-sub{font-size:var(--ds-text-footnote-size);color:var(--ds-text-secondary)}
+
+/* Verktøylinje: søk · filterpiller · Grupper */
+.tn-bar-tools{display:flex;align-items:center;gap:var(--ds-space-md);flex-wrap:wrap}
+.tn-search{display:flex;align-items:center;gap:var(--ds-space-sm);width:280px;max-width:100%;height:36px;padding:0 var(--ds-space-md);border:1px solid var(--ds-line);border-radius:var(--ds-radius-full);background:var(--ds-surface-field);color:var(--ds-text-secondary)}
+.tn-search input{flex:1;min-width:0;border:0;background:transparent;color:var(--ds-text-primary);font:inherit;font-size:var(--ds-text-callout-size);outline:none}
+.tn-search:focus-within{outline:2px solid var(--ds-focus);outline-offset:1px}
+.tn-pills{display:flex;gap:var(--ds-space-xs);flex-wrap:wrap}
+.tn-pill{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 var(--ds-space-md);border-radius:var(--ds-radius-full);border:1px solid var(--ds-line);background:transparent;color:var(--ds-text-primary);font-size:var(--ds-text-subheadline-size);cursor:pointer}
+.tn-pill span{font-family:var(--ds-font-mono);font-size:var(--ds-text-caption-size);color:var(--ds-text-secondary)}
+.tn-pill[aria-pressed=true]{background:var(--ds-text-primary);border-color:var(--ds-text-primary);color:var(--ds-surface)}
+.tn-pill[aria-pressed=true] span{color:inherit;opacity:.75}
+.tn-seg{display:flex;align-items:center;gap:2px;margin-left:auto;padding:2px;border:1px solid var(--ds-line);border-radius:var(--ds-radius-full);font-size:var(--ds-text-footnote-size)}
+.tn-seg>span{padding:0 var(--ds-space-sm);color:var(--ds-text-secondary)}
+.tn-seg button{height:28px;padding:0 var(--ds-space-md);border:0;border-radius:var(--ds-radius-full);background:transparent;color:var(--ds-text-secondary);cursor:pointer}
+.tn-seg button[aria-pressed=true]{background:var(--ds-surface-chip);color:var(--ds-text-primary)}
+
+/* Enhetsgrid og brikker */
+.tn-gh{font-family:var(--ds-font-mono);font-size:var(--ds-text-caption-size);letter-spacing:.08em;color:var(--ds-text-secondary);font-weight:var(--ds-weight-medium);margin:var(--ds-space-sm) 0 var(--ds-space-xs)}
+.tn-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:var(--ds-space-sm)}
+.tn-chip{display:flex;align-items:center;gap:var(--ds-space-sm);height:52px;padding:0 var(--ds-space-md) 0 10px;border-radius:var(--ds-radius-full);border:1px solid var(--ds-line);background:var(--ds-surface-raised);color:var(--ds-text-primary);text-align:left;min-width:0;cursor:pointer;transition:border-color var(--ds-motion-fast) var(--ds-ease-standard)}
+.tn-chip:hover{border-color:var(--ds-text-tertiary)}
+.tn-chip:focus-visible{outline:2px solid var(--ds-focus);outline-offset:2px}
+.tn-chip.off>.tn-ic,.tn-chip.off>.tn-nm,.tn-chip.off>.tn-dot{opacity:.55} /* «sist sett» beholder full kontrast (WCAG) */
+.tn-ic{flex:none;display:grid;place-items:center;width:32px;height:32px;border-radius:var(--ds-radius-full);background:var(--ds-surface-sunken);color:var(--ds-text-secondary)}
+.tn-ic.sm{width:26px;height:26px}.tn-ic.lg{width:40px;height:40px}
+.tn-nm{display:flex;flex-direction:column;min-width:0;flex:1}
+.tn-nm b{font-weight:var(--ds-weight-medium);font-size:var(--ds-text-callout-size);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tn-ip{font-size:var(--ds-text-caption-size);color:var(--ds-text-secondary)}
+.tn-lat{flex:none;font-size:var(--ds-text-footnote-size);color:var(--ds-text-primary)}
+.tn-lat.unk{color:var(--ds-text-secondary)}
+.tn-dot{flex:none;display:inline-block;width:8px;height:8px;border-radius:var(--ds-radius-full);background:var(--ds-text-tertiary)}
+.tn-dot.on{background:var(--ds-success)}
+.tn-more{align-self:flex-start;margin-top:var(--ds-space-sm);border:0;background:transparent;color:var(--ds-accent);font-size:var(--ds-text-subheadline-size);cursor:pointer;padding:0}
+
+/* Vedlikehold og Trafikk i dag, side om side */
+.tn-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:var(--ds-space-lg)}
+.tn-card{display:flex;flex-direction:column;gap:var(--ds-space-sm);padding:var(--ds-space-lg);border:1px solid var(--ds-line);border-radius:var(--ds-radius-lg);background:var(--ds-surface-raised);min-width:0}
+.tn-ct{display:flex;justify-content:space-between;align-items:baseline;gap:var(--ds-space-sm);margin:0;font-family:var(--ds-font-serif);font-size:var(--ds-text-headline-size);font-weight:var(--ds-weight-medium)}
+.tn-ct .tn-mono{font-size:var(--ds-text-footnote-size);color:var(--ds-text-secondary)}
+.tn-mrow{display:flex;align-items:center;gap:var(--ds-space-sm);padding:var(--ds-space-xs) 0;border-top:1px solid var(--ds-line-subtle)}
+.tn-mrow:first-of-type{border-top:0}
+.tn-mt{display:flex;flex-direction:column;flex:1;min-width:0;font-size:var(--ds-text-subheadline-size)}
+.tn-mt b{font-weight:var(--ds-weight-medium);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tn-mt .tn-mono{font-size:var(--ds-text-caption-size);color:var(--ds-text-secondary)}
+.tn-trow{display:grid;grid-template-columns:minmax(0,120px) 1fr auto;align-items:center;gap:var(--ds-space-sm);font-size:var(--ds-text-subheadline-size)}
+.tn-trow .tn-mono{font-size:var(--ds-text-caption-size);color:var(--ds-text-secondary)}
+.tn-tn{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tn-bar{display:flex;height:8px;border-radius:var(--ds-radius-full);overflow:hidden;background:var(--ds-surface-sunken)}
+.tn-bar i,.tn-leg i{display:block;height:100%}
+.tn-bar .dn,.tn-leg .dn{background:var(--ds-text-primary)}
+.tn-bar .up,.tn-leg .up{background:var(--ds-accent)}
+.tn-leg{display:flex;gap:var(--ds-space-md);font-size:var(--ds-text-caption-size);color:var(--ds-text-secondary)}
+.tn-leg span{display:flex;align-items:center;gap:var(--ds-space-xs)}.tn-leg i{width:10px;height:6px;border-radius:2px}
+
+/* Enhetsdetaljen i popupen (760 px) */
+.popup-box:has(.tn-pop){max-width:min(760px,calc(100vw - 32px));width:760px}
+.tn-pop{display:flex;flex-direction:column;gap:var(--ds-space-lg);color:var(--ds-text-primary)}
+.tn-ph{display:flex;align-items:center;gap:var(--ds-space-md)}
+.tn-ph>div{display:flex;flex-direction:column}
+.tn-ph b{font-family:var(--ds-font-serif);font-size:var(--ds-text-title3-size);font-weight:var(--ds-weight-medium)}
+.tn-ph span{display:flex;align-items:center;gap:6px;font-size:var(--ds-text-subheadline-size);color:var(--ds-text-secondary)}
+.tn-facts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--ds-space-sm) var(--ds-space-xl);margin:0}
+.tn-facts div{display:flex;justify-content:space-between;gap:var(--ds-space-sm);padding:var(--ds-space-xs) 0;border-bottom:1px solid var(--ds-line-subtle);min-width:0}
+.tn-facts dt{font-size:var(--ds-text-subheadline-size);color:var(--ds-text-secondary)}
+.tn-facts dd{margin:0;font-size:var(--ds-text-subheadline-size);text-align:right;overflow-wrap:anywhere}
+.tn-facts dd.tn-mono{font-size:var(--ds-text-footnote-size)}
+.tn-row2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--ds-space-lg)}
+.tn-box{display:flex;flex-direction:column;gap:var(--ds-space-xs);padding:var(--ds-space-md);border:1px solid var(--ds-line);border-radius:var(--ds-radius-md);min-width:0}
+.tn-spark{width:100%;height:44px;display:block}
+.tn-spark polyline{fill:none;stroke:var(--ds-text-primary);stroke-width:1.5;vector-effect:non-scaling-stroke}
+.tn-stripe{display:grid;grid-template-columns:repeat(30,minmax(0,1fr));gap:2px;height:28px}
+.tn-stripe i{border-radius:2px;background:var(--ds-line-subtle)}
+.tn-stripe .oppe{background:var(--ds-text-primary)}
+.tn-stripe .delvis{background:var(--ds-warning)}
+.tn-stripe .nede{background:var(--ds-accent)}
+.tn-svc{display:flex;gap:var(--ds-space-xs);flex-wrap:wrap}
+.tn-svcp{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 var(--ds-space-md);border:1px solid var(--ds-line);border-radius:var(--ds-radius-full);color:var(--ds-text-primary);text-decoration:none;font-size:var(--ds-text-subheadline-size)}
+.tn-acts{display:flex;align-items:center;gap:var(--ds-space-sm);flex-wrap:wrap}
+.tn-btn{display:inline-flex;align-items:center;height:36px;padding:0 var(--ds-space-lg);border-radius:var(--ds-radius-full);border:1px solid var(--ds-line);background:transparent;color:var(--ds-text-primary);font-size:var(--ds-text-subheadline-size);text-decoration:none;cursor:pointer}
+.tn-btn.pri{background:var(--ds-text-primary);border-color:var(--ds-text-primary);color:var(--ds-surface)}
+.tn-btn:disabled{opacity:.6;cursor:wait}
+.tn-pres{font-family:var(--ds-font-mono);font-size:var(--ds-text-footnote-size);color:var(--ds-text-secondary)}
+.tn-pres.ok{color:var(--ds-text-primary)}
+.tn-ssh{margin-left:auto;font-family:var(--ds-font-mono);font-size:var(--ds-text-footnote-size);color:var(--ds-text-secondary);overflow-wrap:anywhere}
+.tn-alerts{display:flex;flex-direction:column;gap:var(--ds-space-xs);margin:0;padding:var(--ds-space-md);border:1px solid var(--ds-line);border-radius:var(--ds-radius-md);font-size:var(--ds-text-subheadline-size)}
+.tn-alerts legend{padding:0 var(--ds-space-xs);color:var(--ds-text-secondary);font-size:var(--ds-text-footnote-size)}
+.tn-alerts label{display:flex;align-items:center;gap:var(--ds-space-sm)}
+
+@media (max-width: 900px){
+  .tn-stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .tn-seg{margin-left:0}
+}
+@media (max-width: 600px){
+  .tn-search{width:100%}
+  .tn-pills{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;max-width:100%}
+  .tn-facts,.tn-row2{grid-template-columns:1fr}
+  .tn-ssh{margin-left:0;width:100%}
+}
+@media (prefers-reduced-motion: reduce){.tn-chip{transition:none}}
+
+/* Hjem-flisen «Tailnet» (tailnet-flis.js): widget på web (p_tail / d_tail) og flis i PWA-en (w52ts) */
+.tnf{display:flex;flex-direction:column;gap:2px;color:inherit;text-decoration:none;min-width:0}
+.tnf-top{display:flex;align-items:center;justify-content:space-between;gap:var(--ds-space-sm)}
+.tnf-k{font-family:var(--ds-font-mono);font-size:var(--ds-text-caption-size);letter-spacing:.08em;color:var(--ds-text-secondary)}
+.tnf-warn{width:8px;height:8px;border-radius:var(--ds-radius-full);background:var(--ds-accent)}
+.tnf-v,.tnf-t52 .tnf-v{font-family:var(--ds-font-serif);font-weight:var(--ds-weight-regular);font-size:var(--ds-text-title2-size);line-height:var(--ds-text-title2-line)}
+.tnf-v span{font-size:var(--ds-text-headline-size);color:var(--ds-text-secondary)}
+.tnf-s{font-size:var(--ds-text-footnote-size);color:var(--ds-text-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tnf-ds{display:flex;flex-wrap:wrap;gap:var(--ds-space-sm);margin:var(--ds-space-xs) 0}
+.tnf-d{display:inline-flex;align-items:center;gap:var(--ds-space-xs);font-size:var(--ds-text-caption-size);color:var(--ds-text-secondary)}
+.tnf-d svg{width:18px;height:18px;transform:rotate(-90deg)}
+.tnf-d circle{fill:none;stroke-width:3}
+.tnf-d .bg{stroke:var(--ds-line)}
+.tnf-d .fg{stroke:var(--ds-text-primary)}
+.tnf-t52{gap:2px}

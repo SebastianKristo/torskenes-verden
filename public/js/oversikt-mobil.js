@@ -14,16 +14,17 @@ import { api, esc, haptic } from './util.js';
 import { store, card } from './store.js';
 import { hiddenWidgets, hiddenTabs } from './profile.js';
 import { ruterColorA11y } from './ruter-color.js'; // linjemerket med minst 4,5:1 kontrast
+import { flisHtml, loadFlis, onFlis, isAdminUser } from './tailnet-flis.js'; // Tailnet (bare admin)
 
 const T = { // id → [navn, bredde ('h' halv | 'f' full), høy]
   p_school: ['I dag på skolen', 'f'], d_cal: ['Skolekalender', 'f'],
   w52av: ['Avgang', 'h', 1], w52fin: ['Finans', 'h'], w52mat: ['Middag', 'h'], w52fam: ['Familie', 'h'], w52dom: ['Domener', 'h'],
-  w52news: ['Nyheter', 'f'], w52kal: ['Kalender', 'h'], w52bd: ['Bursdag', 'h'], w52bol: ['Bolig', 'h'], w52pr: ['Prøve', 'h'], w52hus: ['Gjøremål', 'h'], w52skj: ['Skjold Lab', 'h'], // prompt 76 (SKJWEB)
+  w52news: ['Nyheter', 'f'], w52kal: ['Kalender', 'h'], w52bd: ['Bursdag', 'h'], w52bol: ['Bolig', 'h'], w52pr: ['Prøve', 'h'], w52hus: ['Gjøremål', 'h'], w52skj: ['Skjold Lab', 'h'], w52ts: ['Tailnet', 'h'], // prompt 76 (SKJWEB) · Tailnet (bare admin)
   d_media: ['Media', 'f'], p_play: ['Spilles nå', 'f'], p_wx: ['Vær', 'f'], p_energy: ['Energi', 'f'], p_pk: ['Pakker', 'f'],
   p_money: ['Penger', 'f'], p_links: ['Snarveier', 'f'], d_upcoming: ['Kommer ut', 'f'], d_media_hist: ['Mediehistorikk', 'f'],
 };
 export const TILES52 = ['w52av', 'w52fin', 'w52mat', 'w52fam', 'w52dom'];
-const DEF_ORDER = ['p_school', 'd_cal', ...TILES52, 'w52news', 'w52kal', 'w52bd', 'w52bol', 'w52pr', 'w52hus', 'w52skj', 'd_media', 'p_play', 'p_wx', 'p_energy', 'p_pk', 'p_money', 'p_links', 'd_upcoming', 'd_media_hist'];
+const DEF_ORDER = ['p_school', 'd_cal', ...TILES52, 'w52news', 'w52kal', 'w52bd', 'w52bol', 'w52pr', 'w52hus', 'w52skj', 'w52ts', 'd_media', 'p_play', 'p_wx', 'p_energy', 'p_pk', 'p_money', 'p_links', 'd_upcoming', 'd_media_hist'];
 // Widgets som var skjult i profilen fra før → tilsvarende kort skjult.
 const OLD_HID = { d_cal: ['d_cal'], w52kal: ['d_kal'], w52bd: ['d_bday'], w52fam: ['d_pos'], p_energy: ['d_energy'], p_links: ['d_links'], d_media: ['d_media'], d_upcoming: ['d_upcoming'], d_media_hist: ['d_media_hist'], p_money: ['d_trading', 'd_eco'] };
 const LS = 'hl_home52';
@@ -40,6 +41,7 @@ function saved() {
 }
 function allowed(id) {
   if (id === 'w52dom') return !hiddenTabs().has('domener');
+  if (id === 'w52ts') return isAdminUser();
   if (id === 'd_media' || id === 'p_play') return !hiddenTabs().has('media');
   return true;
 }
@@ -89,6 +91,7 @@ export function loadHome52(redraw) {
     json('/api/tasks').then((d) => { H.data.tasks = d; }),
     json('/api/skjold/cabinets').then((d) => { H.data.skj = Array.isArray(d) ? d : d?.items ?? null; }), // prompt 76
     json('/api/skjold/parts?low=1&limit=1').then((d) => { H.data.skjLow = d?.total ?? null; }),
+    allowed('w52ts') ? Promise.resolve(loadFlis()) : null, // Tailnet: egen henting (tailnet-flis.js), tegnes når tallene kommer
   ]).finally(() => { H.loading = false; H.at = Date.now(); redraw?.(); });
 }
 export function store52Meta() {
@@ -160,7 +163,9 @@ function skjold() { // prompt 76 (SKJWEB): Skjold Lab – antall deler og lavt l
   const L = H.data.skj, n = L ? L.reduce((a, c) => a + (+c.counts?.parts || 0), 0) : null, low = H.data.skjLow;
   return tile('w52skj', 't52-card', '#/skjold', `${lab('SKJOLD LAB')}<b class="t52-v">${n ?? '–'}</b><span class="t52-s${low ? '' : ' ok'}">${L ? (low ? `● ${low} lavt lager` : `● ${n === 1 ? '1 del' : `${n} deler`} · ${L.length} skap`) : (H.at ? 'Søk etter deler' : 'Henter …')}</span>`);
 }
-const RENDER = { w52skj: skjold, w52av: avgang, w52fin: finans, w52mat: middag, w52fam: familie, w52dom: domener, w52news: news, w52kal: kalender, w52bd: bursdag, w52bol: bolig, w52pr: prove, w52hus: huske };
+const tailnet = () => tile('w52ts', 't52-card tnf-t52', '#/nettverk', flisHtml('t52-k'));
+onFlis(() => refreshTiles52());
+const RENDER = { w52ts: tailnet, w52skj: skjold, w52av: avgang, w52fin: finans, w52mat: middag, w52fam: familie, w52dom: domener, w52news: news, w52kal: kalender, w52bd: bursdag, w52bol: bolig, w52pr: prove, w52hus: huske };
 
 /* Prompt 70 (claude-code-widget-storrelse-mobil.md): størrelse per kort i redigering – håndtaket ↔ nede til høyre.
    Halv → full: dra mer enn 40 px (uansett retning). Full → halv: dra mer enn 40 px mot venstre. Trykk bytter.

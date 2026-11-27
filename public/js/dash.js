@@ -9,6 +9,7 @@ import './media.js';
 import './poscard.js';
 import './bdwidget.js';
 import './kalender.js';
+import { isAdminUser } from './tailnet-flis.js'; // Hjem-flisen Tailnet (p_tail / d_tail, bare admin)
 import { pkgLogo, pkgTitle, moreText } from './pkglogo.js';
 import { carousel, restoreCarousel, startPackages } from './weather-card.js';
 import { is2c, pwImg } from './hltheme.js'; // prompt 36: ingen kreditlinje over bildet (vises bare i Innstillinger → Bakgrunn)
@@ -415,13 +416,13 @@ function photoWindow(n) {
 
 // Prompt 36: PC/nettbrett: alle widgets i ett rutenett (dash-edit.js), samme widget-komponenter som før.
 function grid2c() {
-  const ids = ['p_school', 'd_cal', 'p_kal', 'p_energy', 'p_wx', 'p_pk', 'p_pos', 'p_bday', 'p_play', 'p_money', 'p_links', 'd_upcoming', 'd_media', 'd_media_hist', 'd_trading', 'd_eco'];
+  const ids = ['p_school', 'd_cal', 'p_kal', 'p_energy', 'p_wx', 'p_pk', 'p_pos', 'p_bday', 'p_play', 'p_money', 'p_links', 'd_upcoming', 'd_media', 'd_media_hist', 'd_trading', 'd_eco', ...(isAdminUser() ? ['p_tail'] : [])];
   const bodies = Object.fromEntries(ids.map((id) => [id, card(id)]));
   bodies.p_trips = `<section class="p-sec">${lab('AVGANGER')}<div id="trips" class="p-trips">${renderTrips()}</div></section>`;
   return gridHtml(bodies);
 }
 function gridCur() {
-  const ids = ['d_cal', 'd_agenda', 'd_trading', 'd_energy', 'd_eco', 'd_links', 'd_upcoming', 'd_media', 'd_media_hist', 'd_pos', 'd_bday', 'd_kal'];
+  const ids = ['d_cal', 'd_agenda', 'd_trading', 'd_energy', 'd_eco', 'd_links', 'd_upcoming', 'd_media', 'd_media_hist', 'd_pos', 'd_bday', 'd_kal', ...(isAdminUser() ? ['d_tail'] : [])];
   return gridHtml(Object.fromEntries(ids.map((id) => [id, card(id)])));
 }
 

@@ -116,7 +116,7 @@ test('vedlikehold: utløpende nøkler, oppdateringer, avvikende versjon, exit-no
   assert.deepEqual(v.versionMismatch.map((x) => [x.name, x.expected]), [['unraid', '1.76.6']]);
   assert.deepEqual(v.exitNode.map((x) => x.name), ['mac']);
   assert.deepEqual(v.offline30.map((x) => x.name), ['ipad']);
-  assert.equal(v.count, 2 + 1 + 1 + 1);
+  assert.equal(v.count, 2 + 1 + 1 + 1 + 1);
   // Uten self (API-kilden): den vanligste versjonen er referansen.
   assert.equal(S.vedlikehold(list, null, NOW).referenceVersion, '1.76.6');
 });
