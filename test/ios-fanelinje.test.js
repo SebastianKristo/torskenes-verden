@@ -171,3 +171,28 @@ test('5) Skann-knappen blir, 12 pt over den øverste linjen og 16 pt fra kanten'
   assert.match(s, /let fabBottom: CGFloat = DS\.Space\.md \+ \(section \? ShellMetrics\.sectionBarHeight : 0\)/);
   assert.match(s, /PaperFab\(tap: fabTap, hold: fabHold\)\n\s+\.padding\(\.trailing, wide \? 24 : 16\)/);
 });
+
+/* ---------- Prompt 57 (claude-code-okonomi-fanelinje-ios.md, 1a): Økonomi-fanene som glass-pille ---------- */
+
+test('Økonomi-fanene: glass-pille over hovedlinjen, hvit tekst, «Transaksj.», ingen sliders og ingen flate bak', () => {
+  const s = code('AppShell.swift');
+  const i = s.indexOf('struct ShellSectionBar: View');
+  const bar = s.slice(i, s.indexOf('\nstruct ', i + 10));
+  assert.doesNotMatch(bar, /slider\.horizontal\.3/);
+  assert.doesNotMatch(bar, /\.pickerStyle\(\.segmented\)/);
+  assert.doesNotMatch(bar, /\.background\(\.bar\)/);
+  assert.doesNotMatch(bar, /#[0-9a-fA-F]{6}\b|Color\(hex/);
+  assert.match(bar, /DS\.fixed\(\.textPrimary, stil: \.papir, dark: false\)\.opacity\(0\.62\)/);
+  assert.match(bar, /\.background\(\.ultraThinMaterial, in: Capsule\(\)\)/);
+  assert.match(bar, /on \? DS\.fixed\(\.textPrimary, stil: \.papir, dark: false\) : p\.navInk/);
+  assert.match(bar, /\.frame\(height: 32\)/);
+  assert.match(bar, /title == "Transaksjoner" \? "Transaksj\." : title/);
+  assert.match(bar, /\.accessibilityLabel\(t\.title\)/);
+  // Hold inne = rediger fanene (samme ark), og klikket etterpå navigerer ikke.
+  assert.match(bar, /LongPressGesture\(minimumDuration: 0\.5\)/);
+  assert.match(bar, /Nav26\.shared\.markHold\(\)/);
+  assert.match(bar, /Nav26\.shared\.consumeHold\(\)/);
+  assert.match(bar, /FinNav26\.shared\.editing = true/);
+  // Innholdet ruller under linjene (pillen ligger i safe area-innsettet, uten bakgrunn).
+  assert.match(code('Paper.swift'), /\.safeAreaInset\(edge: \.bottom, spacing: 0\) \{\n\s+if section \{ ShellSectionBar\(\) \}/);
+});
