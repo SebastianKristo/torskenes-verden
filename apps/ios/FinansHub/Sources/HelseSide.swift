@@ -160,7 +160,7 @@ struct HelseSide: View {
                 }
                 .padding(.horizontal, 16).padding(.bottom, 32)
             }
-            .refreshable {
+            .oppfrisk("HelseSide") {
                 await HealthSync.shared.syncNow(store.api)
                 m.data = [:]
                 await m.load(store, force: true)
