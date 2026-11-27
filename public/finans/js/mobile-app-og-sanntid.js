@@ -487,7 +487,7 @@ export async function homeUpload(files) {
     if (!r || r.status === 404) { legacy = true; return bolUpload(id, files); }
     flash((await r.json().catch(() => null))?.error ?? `Feil ${r.status}`);
   }
-  if (ok) { flash(`${ok} kvittering${ok > 1 ? 'er' : ''} lagt i boligen ✓ · ✦ AI leser i bakgrunnen`); await bolLoad(String(id)); BO.tab = 'kv'; draw(); }
+  if (ok) { flash(`✦ Lagt i boligen · Glimt leser ${ok > 1 ? `${ok} kvitteringer` : 'kvitteringen'} …`); await bolLoad(String(id)); BO.tab = 'kv'; draw(); }
 }
 
 /* ---------- Dra for å oppdatere (fra toppen, 70 px) ---------- */

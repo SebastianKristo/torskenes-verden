@@ -388,7 +388,7 @@ export async function modBind(e, t) {
     for (const f of files) fd.append('file', f);
     const r = await api(`/folders/${encodeURIComponent(tgt)}/receipts`, { method: 'POST', body: fd });
     const n = r.jobs?.length ?? files.length;
-    flash(`${n} kvittering${n === 1 ? '' : 'er'} leses · ✦ AI velger kategori`);
+    flash(`✦ Glimt leser ${n === 1 ? 'kvitteringen' : `${n} kvitteringer`} og velger kategori …`);
     // Følg med til AI-en er ferdig, så havner kvitteringen i listen.
     const poll = async (i) => { if (i > 20 || m.screen !== 'dir') return; D.dir[from] = await api(`/folders/${encodeURIComponent(from)}`).catch(() => D.dir[from]); draw(); const jobs = await api('/receipts/jobs').catch(() => []); if (jobs.some((j) => (r.jobs ?? []).some((y) => y.id === j.id) && ['pending', 'processing'].includes(j.status))) setTimeout(() => poll(i + 1), 2500); };
     setTimeout(() => poll(0), 2500);
