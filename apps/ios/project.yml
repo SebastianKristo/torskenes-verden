@@ -100,9 +100,9 @@ targets:
         INFOPLIST_KEY_NSMicrophoneUsageDescription: "Homelab bruker mikrofonen til tale til tekst. Lyden sendes bare til serveren i huset og lagres ikke."
         INFOPLIST_KEY_NSSpeechRecognitionUsageDescription: "Talen din gjøres om til tekst på norsk i Chat."
         INFOPLIST_KEY_NSMotionUsageDescription: "Aktivitet (går, sykler, kjører) vises for familien sammen med posisjonen din."
-        INFOPLIST_KEY_NSHealthShareUsageDescription: "Appen leser skritt, puls, søvn og aktivitet for å vise dem i Familie."
+        INFOPLIST_KEY_NSHealthShareUsageDescription: "Appen leser skritt, distanse, puls, søvn, treningsøkter og vekt for å vise dem på Helse-siden din. Familien ser bare det du velger å dele."
         # Appen skriver ikke til Helse, men teksten må finnes hvis en senere versjon gjør det (ellers krasj ved forespørsel).
-        INFOPLIST_KEY_NSHealthUpdateUsageDescription: "Appen skriver ikke til Apple Health. Den leser bare det du velger å dele i Familie."
+        INFOPLIST_KEY_NSHealthUpdateUsageDescription: "Appen skriver ikke til Apple Health. Den leser bare helsedataene til Helse-siden din og det du velger å dele i Familie."
     info:
       path: FinansHub/Info.plist
       properties:
@@ -117,8 +117,8 @@ targets:
         NSLocationAlwaysAndWhenInUseUsageDescription: "Med «Alltid» oppdateres posisjonen din for familien også når appen er lukket, og du får varsler når noen kommer til eller forlater en sone."
         NSLocationAlwaysUsageDescription: "Med «Alltid» oppdateres posisjonen din for familien også når appen er lukket."
         NSMotionUsageDescription: "Aktivitet (går, sykler, kjører) vises for familien sammen med posisjonen din."
-        NSHealthShareUsageDescription: "Appen leser skritt, puls, søvn og aktivitet for å vise dem i Familie."
-        NSHealthUpdateUsageDescription: "Appen skriver ikke til Apple Health. Den leser bare det du velger å dele i Familie."
+        NSHealthShareUsageDescription: "Appen leser skritt, distanse, puls, søvn, treningsøkter og vekt for å vise dem på Helse-siden din. Familien ser bare det du velger å dele."
+        NSHealthUpdateUsageDescription: "Appen skriver ikke til Apple Health. Den leser bare helsedataene til Helse-siden din og det du velger å dele i Familie."
         # Prompt 85: delingsarket tilbyr «Arkiver bilde» for bildefiler (Chat50Attach.shareImage, ShareSheet). Uten denne
         # teksten avslutter iOS appen i det brukeren trykker på valget.
         NSPhotoLibraryAddUsageDescription: "Homelab lagrer bilder i Bilder når du velger «Arkiver bilde» i delingsarket."

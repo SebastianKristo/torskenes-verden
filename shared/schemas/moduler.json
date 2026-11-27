@@ -37,6 +37,13 @@
       "undersider": []
     },
     {
+      "id": "helse", "navn": "Helse", "gruppe": "idag",
+      "ikon": { "tegn": "♥", "sf": "heart.text.square", "material": "monitor_heart" },
+      "plattformer": ["web", "ios"], "adminOnly": false,
+      "rute": "#/helse", "aliaser": ["#/health", "#/minhelse"],
+      "undersider": []
+    },
+    {
       "id": "smarthjem", "navn": "Smarthjem", "gruppe": "hjemme",
       "ikon": { "tegn": "⌂", "sf": "house", "material": "home" },
       "plattformer": ["web"], "adminOnly": false,

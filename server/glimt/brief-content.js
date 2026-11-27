@@ -33,6 +33,7 @@ export const CATALOG73 = [
   ['abo', 'Prøveperioder', 'Fra Abonnementer', true, null, 'trials'],
   ['bibel', 'Bibelvers', 'Dagens vers', true, null, 'bible'],
   ['familie', 'Familie', 'De som deler posisjon', true, null, 'family'],
+  ['helse', 'Helse', 'Søvn i natt og skritt i dag (bare dine tall)', true, null, 'health'], // prompt 57
   ['skole', 'Skole og jobb', 'Prøver og frister neste 7 dager', true, null, 'school'],
   ['bursdager', 'Bursdager', 'Neste bursdager', true, null, 'birthdays'],
   ['nordlys', 'Nordlys i natt', 'Når Kp er høy nok', true, null, 'aurora'],

@@ -11,7 +11,8 @@ import { broadcast } from '../realtime.js';
 const NO_STORE = { 'Cache-Control': 'no-store' };
 const body = async (c) => { const b = await c.req.json().catch(() => ({})); return b && typeof b === 'object' && !Array.isArray(b) ? b : {}; };
 
-const HEALTH_SHARE = { steps: true, restingHr: true, hr: false, sleep: true, activeKcal: true, week: true };
+// Trening og vekt (prompt 57) slås aldri på herfra; personen velger dem selv i Familie.
+const HEALTH_SHARE = { steps: true, restingHr: true, hr: false, sleep: true, activeKcal: true, week: true, workouts: false, weight: false };
 export function shareOf51(u) {
   const p = kv.get(u, 'family_prefs', {}) ?? {};
   const s = kv.get(u, 'share51', {}) ?? {};

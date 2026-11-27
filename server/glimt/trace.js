@@ -35,10 +35,11 @@ export function startTrace47(user, text, { module = 'home' } = {}) {
         // Prompt 59 (del 4): cache-effekten for den faste prefiksen – prompt_eval_count/prompt_eval_duration og andel gjenbrukt.
         prompt: promptStats59(c) });
     },
-    tool(a) { tr.tools.push({ tool: a.tool, status: a.status, args: a.args ?? {}, result: clip(a.result ?? a.error ?? null, 700) }); },
+    // Prompt 57: helsetall lagres ikke i tracen (verken resultatet eller svaret).
+    tool(a) { const helse = String(a.tool).startsWith('health.'); if (helse) tr.health = true; tr.tools.push({ tool: a.tool, status: a.status, args: a.args ?? {}, result: helse ? '[helse – ikke lagret]' : clip(a.result ?? a.error ?? null, 700) }); },
     norm(x) { tr.normalized.push(x); },
     save(out = {}) {
-      tr.reply = clip(out.reply ?? out.text ?? '', 1200);
+      tr.reply = tr.health ? '[helse – ikke lagret]' : clip(out.reply ?? out.text ?? '', 1200);
       tr.engine = out.engine ?? tr.engine; tr.model = out.model ?? tr.model;
       tr.totalMs = Date.now() - t0;
       try {

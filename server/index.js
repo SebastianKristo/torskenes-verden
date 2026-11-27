@@ -50,6 +50,7 @@ import { bearerFallthrough46 } from './auth/bearer-fallthrough.js'; // prompt 46
 import { pages40Api } from './system/app-pages.js'; // alle sider i Mer (fanelinja)
 import { mai17Api } from './glimt/mai17.js'; // 17. mai (program, design-bryter, hurra)
 import { mountFamilie, startFamilie, hlPage41 } from './familie/index.js'; // Familie: /api/family, /api/kart, /api/famcal51, /api/hjemlys (+ /api/velfremme)
+import { mountHelse } from './helse/index.js'; // Helse: brukerens egne helsedata (/api/helse)
 import { mountFinans, mountFinansAliases, mountTrialWidgets, mountSubsCalendar, registerLegacyReceipts, legacyReceiptOwner } from './finans/index.js'; // Økonomi: /finans/api, Boliger-aliasene, prøveperiode-widgets og kalenderen «Abonnementer»
 import { widgets43Api } from './widgets/index.js'; // /api/widgets/media og /catalog
 import { aiImport45Api } from './ai/import.js'; // AI-import (Claude · ChatGPT · Gemini)
@@ -556,6 +557,7 @@ app.route('/api/icons', iconsApi); // Ikoner (prompt 23): Iconify-søk, SVG cach
 // Kartfliser (prompt 20): /tiles/:style/:z/:x/:y.png og /api/config/map, sesjon eller app-token (header eller ?token=).
 app.route('/', tilesApi);
 mountLive89(app); // prompt 89 (SRV89): /api/live/aktiviteter, /handling, /innstillinger, /tokens
+mountHelse(app); // server/helse/: GET/POST/DELETE /api/helse (bare egne data)
 mountFamilie(app); // server/familie/: sonevarsler, Kart, familiekalender, Steder/Folk/Helse/Sjekk inn, posisjon og Vel fremme
 mountGjoremal(app); // server/gjoremal/: /api/tasks (synk-raden, listerekkefølge, Glimt-logg, Huskeliste) og /api/huske
 mountModuler(app); // server/moduler/: GET /api/moduler (sesjon eller app-token)

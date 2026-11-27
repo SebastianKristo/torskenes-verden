@@ -52,6 +52,10 @@ enum More44Rows {
         out.append(More28Row(id: "studie", name: ml.navn("studie", "Studie"), sub: Study44.shared.merSub, icon: ml.ikon("studie", "graduationcap")) { Study44.shared.show() })
         // Prompt 76 (SKJIOS): Skjold Lab – sorteringssystem for deler (Skjold76*.swift).
         out.append(More28Row(id: "skjold", name: ml.navn("skjold", "Skjold Lab"), sub: Skjold76.shared.merSub, icon: "cabinet") { Skjold76.shared.show() })
+        // Prompt 57: egen Helse-side (søvn, trening, vekt og trender), bare for brukeren selv.
+        if ml.har("helse") {
+            out.append(More28Row(id: "helse", name: ml.navn("helse", "Helse"), sub: "Søvn, trening, vekt og trender", icon: ml.ikon("helse", "heart.text.square")) { HelseModell.shared.show() })
+        }
         out.append(More28Row(id: "finans", name: ml.navn("finans", "Økonomi"), sub: "Oversikt, transaksjoner, budsjett og faste betalinger", icon: ml.ikon("finans", "creditcard")) { store.paperMainTab("finans") })
         out.append(More28Row(id: "abo", name: "Faste betalinger", sub: subsSub(store), icon: "arrow.triangle.2.circlepath") { store.paperGo("abo") })
         if Bible37Model.shared.enabled {

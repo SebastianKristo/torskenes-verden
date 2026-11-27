@@ -43,6 +43,8 @@ export const PAGES51 = [
   HL('rom', 'rom'),
   HL('bursdager', 'kalender/bursdager'),
   HL('smarthjem', 'hjem'),
+  HL('helse', 'helse'), // prompt 57: egen Helse-side (eksempeldata)
+  HL('helse-maned', 'helse/maned'),
   // Mer på mobil (bunnmenyen): alle sidene og Snarveier (E-B6). Logoene hentes ikke, så forbokstavene (plassholderne) måles.
   { ...HL('mer', 'mer'), nologo: true },
   SET('utseende', 'look'),

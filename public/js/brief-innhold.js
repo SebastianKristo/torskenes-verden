@@ -15,14 +15,14 @@ export const CAT73 = [
   ['kveld', 'Nytt i kveld', 'Nye episoder og filmer fra Media', 1], ['nyheter', 'Nyheter', 'Sammendrag fra Nyheter', 1], ['pakker', 'Pakker', 'Sporing på vei', 0],
   ['homelab', 'Homelab-status', 'Varsler fra serveren', 0], ['domener', 'Domener og SSL', 'Utløper snart', 0],
   ['klaer', 'Klær i dag', 'Hva du bør ha på deg, fra Vær', 1], ['abo', 'Prøveperioder', 'Fra Abonnementer', 1], ['bibel', 'Bibelvers', 'Dagens vers', 1],
-  ['familie', 'Familie', 'De som deler posisjon', 1], ['skole', 'Skole og jobb', 'Prøver og frister neste 7 dager', 1], ['bursdager', 'Bursdager', 'Neste bursdager', 1],
+  ['familie', 'Familie', 'De som deler posisjon', 1], ['helse', 'Helse', 'Søvn i natt og skritt i dag (bare dine tall)', 1], ['skole', 'Skole og jobb', 'Prøver og frister neste 7 dager', 1], ['bursdager', 'Bursdager', 'Neste bursdager', 1],
   ['nordlys', 'Nordlys i natt', 'Når Kp er høy nok', 1], ['aksjer', 'Aksjer', 'Porteføljen fra Økonomi', 0],
 ];
 /** Nøkkel → id i /api/brief52. */
 export const B52_73 = { fokus: 'focus', gjore: 'todo', reise: 'trip', regn: 'bills', kveld: 'tonight', homelab: 'homelab', domener: 'domains', klaer: 'clothes', aksjer: 'stocks' };
 const KEY_OF = Object.fromEntries(Object.entries(B52_73).map(([k, v]) => [v, k]));
 /** Kortets høyde i ferdig form (skjelettet tar samme plass). */
-const H73 = { vaer: 280, kal: 150, fokus: 190, gjore: 230, reise: 180, regn: 250, kveld: 146, nyheter: 760, pakker: 150, homelab: 200, domener: 200, klaer: 150, abo: 160, bibel: 260, familie: 120, skole: 160, bursdager: 140, nordlys: 100, aksjer: 130 };
+const H73 = { vaer: 280, kal: 150, fokus: 190, gjore: 230, reise: 180, regn: 250, kveld: 146, nyheter: 760, pakker: 150, homelab: 200, domener: 200, klaer: 150, abo: 160, bibel: 260, familie: 120, helse: 150, skole: 160, bursdager: 140, nordlys: 100, aksjer: 130 };
 const TIMEOUT = 6000, PREFETCH = 5 * 60_000;
 // Stilene ligger i pages/oversikt.css og pages/innstillinger.css (lastes i app.html).
 

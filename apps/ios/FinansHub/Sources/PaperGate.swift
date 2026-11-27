@@ -242,7 +242,7 @@ struct PaperOnboardingView: View {
             toggle("Posisjon", "Del hvor du er med familien i Familie", $loc, p)
             if HKHealthStore.isHealthDataAvailable() {
                 Rectangle().fill(p.line).frame(height: 1)
-                toggle("Apple Health", "Skritt, puls, søvn og aktivitet i Familie", $health, p)
+                toggle("Apple Health", "Søvn, skritt, trening og vekt på Helse-siden. Familien ser bare det du deler", $health, p)
             }
         }
         .background(p.card, in: RoundedRectangle(cornerRadius: 20, style: .continuous))

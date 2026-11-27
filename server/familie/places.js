@@ -16,6 +16,7 @@ import { schoolPlaceOf50, ruterPlaceEvents50 } from '../reise/ruter.js';
 import { dtf } from '../intl-format.js'; // gjenbrukte Intl.DateTimeFormat
 import { registerJob } from '../jobs/index.js';
 import { osloDate } from '../dates/oslo.js';
+import { delingHelse } from '../helse/index.js'; // prompt 57: søvn i natt, siste økt og vekt når personen deler dem
 
 const MIN = 60_000, HOUR = 3_600_000, DAY = 86_400_000;
 const FRESH = 15 * MIN;
@@ -213,12 +214,13 @@ const DAYS = ['sø', 'ma', 'ti', 'on', 'to', 'fr', 'lø'];
 const DEFAULT_GOAL = 10_000;
 const goalOf = (id) => { const g = Number(kv.get(id, 'family_goal50', DEFAULT_GOAL)); return Number.isFinite(g) && g >= 1000 ? g : DEFAULT_GOAL; };
 const sleepText = (min) => (min == null ? null : `${Math.floor(min / 60)} t ${String(Math.round(min % 60)).padStart(2, '0')} m`);
-const SHARE_LABEL = { steps: 'skritt', sleep: 'søvn', restingHr: 'hvilepuls', hr: 'puls', activeKcal: 'aktive kalorier' };
+const SHARE_LABEL = { steps: 'skritt', sleep: 'søvn', restingHr: 'hvilepuls', hr: 'puls', activeKcal: 'aktive kalorier', workouts: 'trening', weight: 'vekt' };
+const ALL_SHARE = { steps: true, restingHr: true, hr: true, sleep: true, activeKcal: true, week: true, workouts: true, weight: true };
 
 function shareOf(v, id) {
-  if (id === v) return { shared: true, share: { steps: true, restingHr: true, hr: true, sleep: true, activeKcal: true, week: true } };
+  if (id === v) return { shared: true, share: ALL_SHARE };
   const p = F.everyone(v).find((x) => x.id === id);
-  if (p?.mock) return { shared: F.canSee(v, id), share: { steps: true, restingHr: true, hr: true, sleep: true, activeKcal: true, week: true } };
+  if (p?.mock) return { shared: F.canSee(v, id), share: ALL_SHARE };
   const pr = F.prefsOf(id);
   const share = pr.shareHealth;
   return { shared: pr.sharing === 'on' && Object.entries(share).some(([k, x]) => k !== 'week' && x), share };
@@ -264,6 +266,8 @@ export function health50(v, id, { now = Date.now(), members = F.members(v) } = {
       sleepMin, sleepText: sleepText(sleepMin), bedtime: bed, wake, sleepRange: bed && wake ? `${bed}–${wake}` : null,
       restingHr: pick(t, 'restingHr', 'resting_hr'), hr: pick(t, 'hr', 'hr'), activeKcal: pick(t, 'activeKcal', 'active_kcal'), battery, charging: m?.last?.charging ?? null,
     },
+    // Prompt 57: søvn med stadier (deles med «sleep»), siste økt og distanse («workouts») og vekt («weight») fra server/helse/.
+    ...(() => { const x = delingHelse(id, share, { now }); return { sleepNight: x?.sleep ?? null, workout: x?.workout ?? null, distanceText: x?.distanceText ?? null, weight: x?.weight ?? null }; })(),
     week, weekAvg: avg != null ? Math.round(avg) : null, weekHit: hit, weekText: avg != null ? `Snitt denne uken: ${fmtInt(avg)} · nådd målet ${hit} av 7 dager` : null,
     updatedAt: rows.length ? new Date(Math.max(...rows.map((r) => r.updated ?? 0))).toISOString() : null,
   };

@@ -421,7 +421,7 @@ test('Finans-modellvalg: GET /api/ai/routing?scope=finans gir alltid 4 rader med
 
 test('brief: cards i /api/glimt/settings (rekkefølge + av/på), validering, og kortene i /api/brief', async () => {
   const g = (await A('/api/glimt/settings')).body;
-  assert.deepEqual(g.cards.map((x) => x.id), ['weather', 'calendar', 'todos', 'dinner', 'trials', 'packages', 'family', 'school', 'birthdays', 'aurora', 'news', 'bible']);
+  assert.deepEqual(g.cards.map((x) => x.id), ['weather', 'calendar', 'todos', 'dinner', 'trials', 'packages', 'family', 'health', 'school', 'birthdays', 'aurora', 'news', 'bible']);
   assert.ok(g.cards.every((x) => x.on === true && x.label));
   assert.equal(g.auroraNotify, true);
   assert.equal((await A('/api/glimt/settings', 'PUT', { cards: [{ id: 'ukjent', on: true }] })).status, 400);
@@ -430,13 +430,13 @@ test('brief: cards i /api/glimt/settings (rekkefølge + av/på), validering, og 
   const p = await A('/api/glimt/settings', 'PUT', { cards: [{ id: 'aurora', on: true }, { id: 'family', on: false }, 'packages'], auroraNotify: false });
   assert.equal(p.status, 200, p.text);
   assert.deepEqual(p.body.cards.slice(0, 3).map((x) => [x.id, x.on]), [['aurora', true], ['family', false], ['packages', true]]);
-  assert.equal(p.body.cards.length, 12, 'manglende kort legges til');
+  assert.equal(p.body.cards.length, 13, 'manglende kort legges til');
   assert.equal(p.body.auroraNotify, false);
   const b = (await A('/api/brief?kind=evening')).body;
   assert.equal(b.family, null, 'av = null');
   assert.deepEqual(b.cards.slice(0, 2).map((x) => x.id), ['aurora', 'family']);
   // Tilbake til standard.
-  await A('/api/glimt/settings', 'PUT', { cards: ['weather', 'calendar', 'todos', 'dinner', 'trials', 'packages', 'family', 'school', 'birthdays', 'aurora', 'news', 'bible'], auroraNotify: true });
+  await A('/api/glimt/settings', 'PUT', { cards: ['weather', 'calendar', 'todos', 'dinner', 'trials', 'packages', 'family', 'health', 'school', 'birthdays', 'aurora', 'news', 'bible'], auroraNotify: true });
   const b2 = (await A('/api/brief?kind=evening')).body;
   assert.ok(b2.weather !== undefined && b2.summary, 'de gamle feltene er der fortsatt');
   // Pakker (egne)

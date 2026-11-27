@@ -258,7 +258,7 @@ function delingPanel() {
   const p = F.d.fam?.me;
   if (!p) return `<div class="f50-card f50-empty">${F.err.fam ? esc(F.err.fam) : 'Laster …'}</div>`;
   const seg = (k, opts) => `<div class="f50-seg">${opts.map(([v, t]) => `<button type="button" aria-pressed="${p[k] === v}" data-f50="pref" data-k="${k}" data-v="${v}">${t}</button>`).join('')}</div>`;
-  const hs = [['steps', 'Skritt'], ['restingHr', 'Hvilepuls'], ['hr', 'Puls'], ['sleep', 'Søvn'], ['activeKcal', 'Aktive kalorier'], ['week', 'Siste 7 dager']];
+  const hs = [['steps', 'Skritt'], ['restingHr', 'Hvilepuls'], ['hr', 'Puls'], ['sleep', 'Søvn'], ['activeKcal', 'Aktive kalorier'], ['workouts', 'Trening'], ['weight', 'Vekt'], ['week', 'Siste 7 dager']]; // prompt 57: Trening og Vekt, av som standard
   return `<div class="f50-card f50-deling"><b>Min deling</b><span class="f50-mut">${p.sharing === 'on' ? 'Familien ser hvor du er' : p.sharing === 'paused' ? 'Pauset · de andre ser at du har pauset' : 'Av · ingen ser posisjonen din'}</span>
     ${seg('sharing', [['on', 'Deler'], ['paused', 'Pause'], ['off', 'Av']])}${seg('precision', [['exact', 'Nøyaktig'], ['approx', 'Omtrentlig (~1 km)']])}
     <span class="f50-lab sm">HELSE JEG DELER</span><div class="f50-chips">${hs.map(([k, t]) => `<button type="button" class="f50-chip" aria-pressed="${!!p.shareHealth?.[k]}" data-f50="hshare" data-k="${k}">${t}</button>`).join('')}</div></div>`;
@@ -419,7 +419,17 @@ function helsepView(id = F.v.id) {
       ${h.self ? `<div class="f50-goal"><span class="f50-mut">Mitt skrittmål</span><input type="number" min="1000" max="100000" step="500" value="${goal}" data-f50in="goal" aria-label="Skrittmål"></div>` : ''}
     </div>
     <div class="f50-stats pad">${stat('SØVN I NATT', T.sleepText, T.sleepRange ?? '')}${stat('HVILEPULS', T.restingHr != null ? `${T.restingHr} bpm` : null, T.hr != null ? `Puls nå ${T.hr}` : '')}${stat('AKTIVE KALORIER', T.activeKcal != null ? `${nf(T.activeKcal)} kcal` : null, 'I dag')}${stat('BATTERI', T.battery != null ? `${Math.round(T.battery)} %` : null, T.battery == null ? '' : T.charging ? 'Lader' : 'Lader ikke')}</div>
+    ${helse57(h)}
     <div class="f50-shline"><span class="f50-grow">${esc(h.shareText ?? '')}</span>${btn('data-f50="deling2"', esc(h.shareAction?.label ?? 'Deling ›'), 'f50-inl b')}</div>`;
+}
+
+/** Prompt 57: søvn med stadier, siste økt og vekt – bare når personen deler dem (serveren sender null ellers). */
+function helse57(h) {
+  const n = h.sleepNight, w = h.workout, v = h.weight;
+  if (!n && !w && !v && !h.distanceText) return '';
+  const stat = (k, val, sub) => `<div class="f50-stat"><span class="f50-k">${esc(k)}</span><b>${esc(val ?? '—')}</b><span>${esc(sub ?? '')}</span></div>`;
+  const stages = n?.stages?.length ? n.stages.map((x) => `${x.label} ${x.text}`).join(' · ') : (n?.range ?? '');
+  return `<div class="f50-stats pad">${n ? stat(n.dayText === 'i natt' ? 'SØVN I NATT' : 'SISTE NATT', n.asleepText, stages) : ''}${w ? stat('SISTE ØKT', w.label, [w.dayText, w.durationText, w.distanceText].filter(Boolean).join(' · ')) : ''}${h.distanceText ? stat('DISTANSE I DAG', h.distanceText, 'Gått og løpt') : ''}${v ? stat('VEKT', v.kgText, v.changeText ?? `Målt ${v.dayText}`) : ''}</div>`;
 }
 
 /* ---------------- 6 · Sjekk inn ---------------- */

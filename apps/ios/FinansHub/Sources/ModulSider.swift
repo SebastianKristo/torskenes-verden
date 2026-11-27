@@ -27,6 +27,7 @@ enum ModulSider {
         "skjold": "skjold",
         "domener": "domener",
         "tailnet": "tailnet",
+        "helse": "helse", // prompt 57: Helse-siden (HelseSide.swift), åpnes i fullskjerm
     ]
 
     /// Eldre nøkler for samme modul (fanelinja, Mer, serverens tabBar) → modul-id.

@@ -14,6 +14,7 @@ import { broadcast } from '../realtime.js';
 import { dtf } from '../intl-format.js'; // gjenbrukte Intl.DateTimeFormat
 import { registerJob } from '../jobs/index.js';
 import { osloDate } from '../dates/oslo.js';
+import { slettHelse } from '../helse/index.js';
 
 const MOCK = process.env.MOCK_DATA === '1';
 const DAY = 86_400_000;
@@ -55,7 +56,8 @@ if (!db.prepare('PRAGMA table_info(family_zone)').all().some((c) => c.name === '
   db.exec('ALTER TABLE family_zone ADD COLUMN icon TEXT');
 }
 
-const HEALTH_KEYS = ['steps', 'restingHr', 'hr', 'sleep', 'activeKcal', 'week'];
+// Prompt 57: trening (økter og distanse) og vekt deles hver for seg, av som standard. Dataene ligger i server/helse/.
+const HEALTH_KEYS = ['steps', 'restingHr', 'hr', 'sleep', 'activeKcal', 'week', 'workouts', 'weight'];
 const ACTIVITIES = ['still', 'walking', 'running', 'cycling', 'driving'];
 const COLOR = /^#[0-9a-f]{6}$/i;
 // Soneikoner (claude-code-familie-design.md): nøkkel → SF Symbol / Material Symbol i appene.
@@ -125,7 +127,7 @@ function inPlace(p, z, factor = 1) {
 /* ---------------- Innstillinger per bruker ---------------- */
 
 // Prompt 21: deling er av som standard, og ingen helsetyper deles før brukeren selv slår dem på.
-const DEF_PREFS = { sharing: 'off', precision: 'exact', shareHealth: { steps: false, restingHr: false, hr: false, sleep: false, activeKcal: false, week: false } };
+const DEF_PREFS = { sharing: 'off', precision: 'exact', shareHealth: { steps: false, restingHr: false, hr: false, sleep: false, activeKcal: false, week: false, workouts: false, weight: false } };
 // Før prompt 21 var standarden «på» med de fleste helsetypene delt, og PUT /me lagret hele objektet (også standardverdiene)
 // selv når brukeren bare byttet farge. Lagret «on» og helsetyper lik den gamle standarden kan derfor ikke skilles fra en kopi
 // av standarden, og settes til av (én gang). Eksplisitte valg som avviker fra den gamle standarden (pause, av, omtrentlig,
@@ -822,11 +824,8 @@ api.post('/health', async (c) => {
   return c.json({ ok: true, stored: rows.length, health: healthOut(me, Object.fromEntries(HEALTH_KEYS.map((k) => [k, true]))) });
 });
 
-// Hovedbryteren for helse slått av i appen: slett alle egne helsedata.
-api.delete('/health/me', (c) => {
-  const n = q('DELETE FROM family_health WHERE user=?').run(c.get('user')).changes;
-  return c.json({ ok: true, deleted: n });
-});
+// Hovedbryteren for helse slått av i appen: slett alle egne helsedata (Familie-sammendraget og Helse-siden, prompt 57).
+api.delete('/health/me', (c) => c.json({ ok: true, deleted: slettHelse(c.get('user')) }));
 
 api.get('/positions', async (c) => {
   const me = c.get('user');

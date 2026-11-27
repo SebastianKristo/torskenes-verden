@@ -22,7 +22,9 @@
      "restingHr": "",
      "sleep": "",
      "steps": "",
-     "week": ""
+     "week": "",
+     "weight": "",
+     "workouts": ""
     },
     "sharing": "",
     "userId": ""
@@ -88,7 +90,9 @@
      "restingHr": "",
      "sleep": "",
      "steps": "",
-     "week": ""
+     "week": "",
+     "weight": "",
+     "workouts": ""
     },
     "sharing": "",
     "userId": ""
@@ -477,6 +481,7 @@
      "color": "",
      "date": "",
      "device": "",
+     "distanceText": "",
      "initials": "",
      "mock": "",
      "name": "",
@@ -487,6 +492,7 @@
      "shared": "",
      "shares": "{}",
      "short": "",
+     "sleepNight": "{}",
      "sourceText": "",
      "text": "",
      "today": "{}",
@@ -495,7 +501,9 @@
      "week": "[]",
      "weekAvg": "",
      "weekHit": "",
-     "weekText": ""
+     "weekText": "",
+     "weight": "{}",
+     "workout": "{}"
     }
    ],
    "summary": "",
@@ -509,6 +517,7 @@
      "color": "",
      "date": "",
      "device": "",
+     "distanceText": "",
      "initials": "",
      "mock": "",
      "name": "",
@@ -519,6 +528,7 @@
      "shared": "",
      "shares": "{}",
      "short": "",
+     "sleepNight": "{}",
      "sourceText": "",
      "text": "",
      "today": "{}",
@@ -527,7 +537,9 @@
      "week": "[]",
      "weekAvg": "",
      "weekHit": "",
-     "weekText": ""
+     "weekText": "",
+     "weight": "{}",
+     "workout": "{}"
     }
    ],
    "summary": "",

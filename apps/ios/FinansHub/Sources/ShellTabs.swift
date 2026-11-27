@@ -183,6 +183,7 @@ extension Store {
         case "studie": Study44.shared.show()
         case "skjold": Skjold76.shared.show()
         case "tailnet": Tailnet.shared.show() // prompt 57: bare admin
+        case "helse": HelseModell.shared.show() // prompt 57
         default: paperGo(id)
         }
     }

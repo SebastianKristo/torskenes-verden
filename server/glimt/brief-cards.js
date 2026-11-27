@@ -8,6 +8,7 @@
 //   school:{label:'NESTE 7 DAGER', items:[{id, title, kind:'prove'|'frist'|'mote', date, time, room, daysLeft, color, red, deepLink}]}
 //          Studie/Jobb-kalenderen, rød ved ≤ 4 dager
 //   birthdays:{label:'NESTE', items:[{id, name, age, date, dateLabel, text:'Fyller 12 · tir 23. okt', daysLeft, red, color, avatarUrl}]}   30 dager
+//   health:{label:'Helse', text, sleepText, sleepRange, stepsText, steps, sleepAvgText}   bare egne tall (prompt 57), null uten helsedata
 //   aurora:{show, kp, cloud, best:'22–01', text, level:'GODE'|'MULIGE', label:'KP 4 · GODE SJANSER', source, updatedAt}
 //          show bare i kvelds- og nattbrief og når Kp ≥ 3 (NOAA SWPC Kp-prognose + MET skydekke; mock med MOCK_DATA=1)
 // POST /api/brief/gift {name, date:'YYYY-MM-DD'} → 201 {ok, created:true, item} | 200 {ok, created:false, item} (finnes fra før)
@@ -17,6 +18,7 @@ import { db, kv } from '../db.js';
 import { config } from '../config.js';
 import { packagesFor } from '../sporing/shipments.js';
 import { positions } from '../familie/positions.js';
+import { helseBrief } from '../helse/index.js'; // prompt 57: søvn og skritt (egne tall, ingen AI)
 import { listFor as birthdaysOf } from '../kalender/birthdays.js';
 import { eventsFor } from '../kalender/events.js';
 import { fagKey, subjectColor } from '../kalender/subjects.js';
@@ -207,7 +209,10 @@ export async function brief38Cards(u, kind, t = Date.now()) {
     on('school') ? schoolPart(u, today, t) : null,
     on('aurora') ? auroraPart(u, kind, t).catch(() => null) : null,
   ]);
-  return { cards, packages: on('packages') ? packagesPart(u, today) : null, family, school, birthdays: on('birthdays') ? birthdaysPart(u, today) : null, aurora };
+  // Prompt 57: «Du sov 7 t 12 m i natt og har gått 4 210 skritt i dag.» Bare brukerens egne tall, aldri med i AI-oppsummeringen.
+  let health = null;
+  if (on('health')) { try { health = helseBrief(u, t); } catch { health = null; } }
+  return { cards, packages: on('packages') ? packagesPart(u, today) : null, family, health, school, birthdays: on('birthdays') ? birthdaysPart(u, today) : null, aurora };
 }
 
 /* ---------------- Gave til … i Gjøremål ---------------- */

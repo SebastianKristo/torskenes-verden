@@ -32,7 +32,7 @@ export const INTENT_TOOLS47 = {
   schedule_delete: ['schedule.delete', 'schedule.update'],
   parts_find: ['skjold.find'], // prompt 76: Skjold Lab
   chat: ['chat.answer'],
-  app: ['app.answer', 'nav.open', 'skjold.find'],
+  app: ['app.answer', 'nav.open', 'skjold.find', 'health.get'], // prompt 57: health.get = egne helsetall
 };
 const INTENT_OF_TOOL47 = Object.fromEntries(Object.entries(INTENT_TOOLS47).flatMap(([i, ts]) => ts.map((t) => [t, i])));
 export const intentOfTool47 = (t) => INTENT_OF_TOOL47[t] ?? null;
@@ -57,6 +57,7 @@ const TOOL_LINES47 = {
   'subscriptions.trial': '{service, date} a subscription or free trial must be cancelled by a date.',
   'memory.save': '{subject, object} remember a fact the user states about someone/something ("Nina er frisøren min" → subject "Nina", object "frisør").',
   'web.search': '{query} current facts that may have changed: people in office, news, prices, results, events.',
+  'health.get': '{what:"sleep"|"steps"|"workout"|"weight"|"summary", when:"i dag"|"i går"|"uke"} the user\'s OWN health numbers from Apple Health (sleep, steps, last workout, weight). Read only.',
   'media.episode': '{title, pick:"latest"|"next", season, episode} TV episodes in Sonarr ("last ned siste episode av X").',
   'schedule.create': '{what, when, condition} a recurring or scheduled task ("hver morgen kl. 7", "den 1. hver måned", "hver fredag kl. 16") or an alert with a condition ("si fra hvis …"). what = the request to run each time, in Norwegian; when and condition = the user\'s raw words. Never evaluate the condition. The app asks for confirmation.',
   'schedule.list': '{} list the user\'s scheduled tasks ("faste oppgaver") and briefs.',

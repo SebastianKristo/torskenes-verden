@@ -143,6 +143,12 @@
       "schema": "api/tailscale-stats.schema.json",
       "auth": "session|token",
       "admin": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/helse",
+      "schema": "api/helse.schema.json",
+      "auth": "session|token"
     }
   ]
 }

@@ -21,6 +21,7 @@ import { parsePeriod45, todayOslo45, nowMinOslo45, longDate45, relDate45, addDay
 import { personalityOf, quipFor } from './personality.js';
 import { nowLine47 } from './context.js';
 import { SENTENCES46, FAIL_TEXT46 } from './tools-weather-subs.js'; // prompt 46: vær, abonnementer, faste utgifter, avslutningsfrist
+import { helseSporsmal57 } from './tools-helse.js'; // prompt 57: health.get (egne helsetall, svaret lages av tallene)
 import { weatherCompare46 } from './weather.js';
 import { installTaskHooks46 } from '../gjoremal/glimt-wording.js';
 import { installPosterDecorator46 } from './calendar.js';
@@ -363,7 +364,8 @@ async function pipeline(user, text, opts) {
   if (r61) { out.traceId = tr?.id ?? null; try { out = finish61(user, r61, { plan: { ...plan, calls: ownedCalls }, out }); } catch (e) { console.warn('[recipes61] registrering:', String(e?.message ?? e).slice(0, 160)); } } // prompt 61
   logChoice(user, { module: opts.module, intent: out.intent, tools: out.actions.map((x) => x.tool), statuses: out.cached ? out.actions.map(() => 'cache') : out.actions.map((x) => x.status), engine: out.engine, ms: out.ms, len: text.length });
   if (tr) { for (const a of out.actions) tr.tool(a); tr.step('verktøy og svar'); tr.save(out); out.traceId = tr.id; }
-  if (!opts.preview && !out.ask) rememberTurn47(user, text, out.reply);
+  // Prompt 57: helsetallene går ikke inn i samtalehistorikken (som planleggeren ser), bare at det var et helsesvar.
+  if (!opts.preview && !out.ask) rememberTurn47(user, text, out.actions?.some((a) => String(a.tool).startsWith('health.')) ? '[svar med egne helsetall]' : out.reply);
   return out;
 }
 
@@ -384,6 +386,9 @@ export function fastPath47(text, { module = 'home', legacyIntent = null } = {}) 
   if (legacyIntent === 'memory.add' && !/\?\s*$/.test(t)) return P('app.answer', { topic: 'memory' }, 'minne');
   if (NAV_RE47.test(t)) return P('app.answer', { topic: 'nav' }, 'navigasjon');
   if (module === 'tasks' && (TASKS_CMD47.test(t) || t.includes('\n'))) return P('app.answer', { topic: 'tasks37' }, 'gjøremål');
+  // 5. Prompt 57: egne helsespørsmål («hvor mye sov jeg?», «hva veier jeg?») går rett til health.get, uten modell.
+  const h57 = helseSporsmal57(t);
+  if (h57) return { ...P('health.get', h57, 'helse'), module: 'health' };
   // 4. Media: «last ned/hent siste|neste episode av X», «last ned S09E06 av X» (verbet først, hele setningen er kommandoen).
   const ep = /^(?:kan\s+du\s+)?(?:last\s+ned|hent|søk\s+etter)\s/i.test(t) ? parseEpisodeAsk43(t) : null;
   if (ep) return { ...P('media.episode', { title: ep.title, pick: ep.pick, season: ep.season ?? null, episode: ep.episode ?? null }, 'media'), module: 'media' };

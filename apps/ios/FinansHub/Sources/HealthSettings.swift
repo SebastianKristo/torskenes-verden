@@ -23,9 +23,14 @@ final class HealthObserver20 {
         lock.lock()
         defer { lock.unlock() }
         guard queries.isEmpty else { return }
+        // Prompt 57: også søvn, treningsøkter, vekt og distanse (Helse-siden), så nye målinger kommer fram uten at appen åpnes.
+        var types: [HKSampleType] = []
         let ids: [HKQuantityTypeIdentifier] = [.stepCount, .heartRate]
         for id in ids {
-            guard let type = HKObjectType.quantityType(forIdentifier: id) else { continue }
+            if let t = HKObjectType.quantityType(forIdentifier: id) { types.append(t) }
+        }
+        types.append(contentsOf: HelseData.observedTypes())
+        for type in types {
             let query = HKObserverQuery(sampleType: type, predicate: nil) { _, done, error in
                 if error != nil {
                     done()
@@ -64,6 +69,9 @@ struct HealthGroup20: Identifiable {
         HealthGroup20(id: "puls", name: "Puls og hvilepuls", icon: "heart", keys: ["hr", "restingHr"]),
         HealthGroup20(id: "sovn", name: "Søvn", icon: "bed.double", keys: ["sleep"]),
         HealthGroup20(id: "akt", name: "Aktivitet og trening", icon: "flame", keys: ["activeKcal"]),
+        // Prompt 57: av som standard.
+        HealthGroup20(id: "trening", name: "Treningsøkter og distanse", icon: "figure.run", keys: ["workouts"]),
+        HealthGroup20(id: "vekt", name: "Vekt", icon: "scalemass", keys: ["weight"]),
         HealthGroup20(id: "uke", name: "Siste 7 dager", icon: "calendar", keys: ["week"]),
     ]
 }
@@ -165,7 +173,7 @@ struct HealthPosSettings20: View {
         VStack(alignment: .leading, spacing: 4) {
             PLabel(text: "Apple Health").padding(.leading, 4).padding(.top, 6)
             masterCard
-            PLabel(text: "Datatyper").padding(.leading, 4).padding(.top, 14)
+            PLabel(text: "Deles med familien").padding(.leading, 4).padding(.top, 14)
             typesCard
             PLabel(text: "Posisjon").padding(.leading, 4).padding(.top, 14)
             HealthLocationCard20(tick: tick)
@@ -182,7 +190,7 @@ struct HealthPosSettings20: View {
                 Text("Apple Health finnes ikke på denne enheten (iPad eller simulator).").font(PF.ui(13)).foregroundStyle(p.mut)
                     .frame(maxWidth: .infinity, alignment: .leading).padding(14)
             } else {
-                HealthToggleRow20(title: "Del helsedata", sub: h.statusText, icon: "heart.text.square", on: h.master) {
+                HealthToggleRow20(title: "Bruk Apple Helse", sub: h.statusText, icon: "heart.text.square", on: h.master) {
                     h.setMaster(!h.master, store)
                 }
                 HealthDivider20()
@@ -192,6 +200,11 @@ struct HealthPosSettings20: View {
                         await h.requestAll()
                         await h.syncNow(store.api)
                     }
+                }
+                HealthDivider20()
+                // Prompt 57: egen Helse-side med søvn, trening, vekt og trender (bare for deg).
+                HealthLinkRow20(title: "Åpne Helse", sub: "Søvn, trening, vekt og trender. Bare du ser dem.", icon: "heart.text.square") {
+                    HelseModell.shared.show()
                 }
                 if let why = HealthDiag25.problem(lastError: h.lastError) {
                     HealthDivider20()
