@@ -8,7 +8,7 @@ må fornyes hver 7. dag.
 |---|---|---|---|
 | **Homelab** | `FinansHub` | `no.kristo.finanshub` | `FinansHubWidgets` (`no.kristo.finanshub.widgets`), og klokka `HomelabWatch` (`no.kristo.finanshub.watchkitapp`) inni appen |
 | **Kalender** | `Kalender` | `no.kristo.kalender` | `KalenderWidgets` (`no.kristo.kalender.widgets`) |
-| **Kalender for Mac** | `KalenderMac` | `no.kristo.kalender.mac` | `KalenderMacWidgets` (`no.kristo.kalender.mac.widgets`) |
+| **Kalender for Mac** | `KalenderMac` | `no.kristo.kalender` i TestFlight (universelt kjøp), `no.kristo.kalender.mac` i DMG-en | `KalenderMacWidgets` (`no.kristo.kalender.widgets` i TestFlight) |
 
 Den usignerte IPA-en og DMG-en i Releases (`release.yml`) lages som før.
 
@@ -23,7 +23,7 @@ Logg inn på [developer.apple.com/account](https://developer.apple.com/account).
 1. **Team ID:** under Membership details. Ti tegn, f.eks. `AB12CD34EF`. Dette blir `IOS_TEAM_ID`.
 2. **App Group:** Certificates, IDs & Profiles → Identifiers → **+** → App Groups. Identifier
    `group.no.kristo.finanshub`. Gruppen deles av begge appene og widgetene (innlogging, widgetdata og Nøkkelringen).
-3. **App ID-er:** Identifiers → **+** → App IDs → App, med «Explicit» bundle-id. Lag sju:
+3. **App ID-er:** Identifiers → **+** → App IDs → App, med «Explicit» bundle-id. Lag fem (App ID-ene gjelder både iOS og macOS):
 
    | Bundle-id | Capabilities |
    |---|---|
@@ -32,8 +32,6 @@ Logg inn på [developer.apple.com/account](https://developer.apple.com/account).
    | `no.kristo.finanshub.watchkitapp` (plattform watchOS) | ingen |
    | `no.kristo.kalender` | **App Groups** (`group.no.kristo.finanshub`) |
    | `no.kristo.kalender.widgets` | **App Groups** (`group.no.kristo.finanshub`) |
-   | `no.kristo.kalender.mac` (plattform macOS) | **App Groups** (`<Team-ID>.group.no.kristo.kalender`) |
-   | `no.kristo.kalender.mac.widgets` (plattform macOS) | **App Groups** (samme) |
 
    Xcode kan registrere App ID-ene selv første gang, men App Group-tilknytningen er sikrest å gjøre for hånd.
    Rettighetene appene får, står i `apps/ios/project.yml` (`entitlements`). Push, Communication Notifications, delt
@@ -74,7 +72,7 @@ Logg inn på [appstoreconnect.apple.com](https://appstoreconnect.apple.com).
 1. **Appene:** Apper → **+** → Ny app, plattform iOS. Lag én for hver:
    - Navn «Homelab» (eller et ledig navn), bundle-id `no.kristo.finanshub`, SKU f.eks. `homelab`.
    - Navn «Kalender» (eller et ledig navn), bundle-id `no.kristo.kalender`, SKU f.eks. `kalender`.
-   - **Mac:** Ny app med plattform **macOS**, navn f.eks. «Kalender for Mac», bundle-id `no.kristo.kalender.mac`, SKU f.eks. `kalender-mac`. Den har en annen bundle-id enn iPhone-appen og blir derfor en egen app.
+   - **Mac:** legg til plattformen **macOS** i den samme appen som Kalender for iPhone (universelt kjøp, f.eks. «Skjold Kalender» med iOS og macOS). TestFlight-jobben gir Mac-appen de samme bundle-id-ene som iPhone-appen (`no.kristo.kalender` og `no.kristo.kalender.widgets`), så builden havner under macOS i den appen. DMG-en i Releases beholder `no.kristo.kalender.mac`. Fra Xcode: sett Product Bundle Identifier på KalenderMac og KalenderMacWidgets til de samme før du arkiverer.
 
    Navnet i App Store Connect må være unikt i hele App Store. Navnet på hjemskjermen kommer fra appen og er uendret.
 2. **API-nøkkel:** Brukere og tilgang → Integrasjoner → App Store Connect API → Teamnøkler → **+**.

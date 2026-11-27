@@ -149,7 +149,10 @@ test('Push i TestFlight-bygget: aps-environment bare for Homelab, bare i TestFli
 test('Kalender for Mac i TestFlight: egen app i matrisen, sandkassen uten unntak, oppdatereren av og App Group med team', () => {
   const wf = readFileSync(join(ROOT, '.github/workflows/testflight.yml'), 'utf8');
   assert.match(wf, /options: \[alle, homelab, kalender, kalender-mac\]/);
-  assert.match(wf, /"scheme": "KalenderMac", "bundle": "no\.kristo\.kalender\.mac", "widget": "KalenderMacWidgets", "mal": "generic\/platform=macOS"/);
+  assert.match(wf, /"scheme": "KalenderMac", "bundle": "no\.kristo\.kalender", "widget": "KalenderMacWidgets", "mal": "generic\/platform=macOS"/);
+  // Universelt kjøp: samme bundle-id-er som iPhone-appen i TestFlight-bygget.
+  assert.ok(wf.includes(String.raw`PRODUCT_BUNDLE_IDENTIFIER = no\.kristo\.kalender\.mac\.widgets;/PRODUCT_BUNDLE_IDENTIFIER = no.kristo.kalender.widgets;`));
+  assert.ok(wf.includes(String.raw`PRODUCT_BUNDLE_IDENTIFIER = no\.kristo\.kalender\.mac;/PRODUCT_BUNDLE_IDENTIFIER = no.kristo.kalender;`));
   assert.match(wf, /"plugins": "Contents\/PlugIns", "mac": true/);
   assert.match(wf, /Delete :com\.apple\.security\.temporary-exception\.files\.absolute-path\.read-write/);
   assert.match(wf, /Delete :com\.apple\.security\.temporary-exception\.files\.absolute-path\.read-only/);
