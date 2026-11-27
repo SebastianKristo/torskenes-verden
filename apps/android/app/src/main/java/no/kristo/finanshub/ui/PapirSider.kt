@@ -215,7 +215,10 @@ internal fun PaperList(vm: AppViewModel, navBottom: Dp) {
                 (listOf("Alle", "Til gjennomgang") + cats).forEach { c -> PChip(c, cat == c) { cat = c } }
             }
         }
-        if (vm.txs == null) item { Box(Modifier.fillMaxWidth().padding(30.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = p.ink) } }
+        // Egen spinner bare ved første lasting, aldri samtidig med dra-for-å-oppdatere, og aldri for alltid etter en feil.
+        if (vm.txs == null && !vm.txFailed && !vm.pullRefreshing) item { Box(Modifier.fillMaxWidth().padding(30.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = p.ink) } }
+        else if (vm.txs == null && vm.txFailed) item { Text("Kunne ikke hente transaksjonene. Dra ned for å prøve igjen.", color = p.mut, fontSize = 13.sp, modifier = Modifier.padding(8.dp)) }
+        else if (vm.txs == null) Unit
         else if (list.isEmpty()) item { Text("Ingen transaksjoner passer søket.", color = p.mut, fontSize = 13.sp, modifier = Modifier.padding(8.dp)) }
         // Prompt 43 (claude-code-finans-liste-maned-topp.md): gruppert per måned med rød mono-etikett, «Netto …» og 2 dp strek i ink (sticky).
         val months43 = list.groupBy { it.date.take(7) }.entries.sortedByDescending { it.key }

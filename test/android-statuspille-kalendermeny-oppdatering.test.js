@@ -70,3 +70,28 @@ test('Kalender: tilbake-gesten lukker menyen først, ellers tar systemet tilbake
   assert.match(act, /setContent \{ KalRoot\(vm, onBackToHomelab = ::backToHomelab\) \}/);
   assert.match(block(act, 'private fun backToHomelab('), /moveTaskToBack\(true\)/);
 });
+
+/* ---------------- Dra for å oppdatere: én indikator, alltid ferdig ---------------- */
+
+test('Oppdatering: én lastefunksjon, ny dra avbryter den gamle, og indikatoren stopper senest etter 15 s', () => {
+  const vm = code(APP, 'AppViewModel.kt');
+  const f = block(vm, 'fun pullRefresh()');
+  assert.match(f, /pullJob\?\.cancel\(\)/, 'ny oppdatering tar over for den gamle');
+  assert.match(f, /pullJob = work/);
+  assert.match(f, /withTimeoutOrNull\(REFRESH_TIMEOUT_MS\) \{ work\.join\(\) \}/, 'venter på selve lastingen, med tidsgrense');
+  assert.match(f, /finally \{ pullRefreshing = false \}/, 'nullstilles alltid');
+  assert.match(f, /message = "Kunne ikke oppdatere"/, 'feil eller tidsavbrudd: liten melding, gamle data står');
+  assert.match(vm, /const val REFRESH_TIMEOUT_MS = 15_000L/);
+  // Avbrudd (ny oppdatering tok over) er ikke en feil.
+  assert.match(f, /if \(e !is CancellationException\) failed = true/);
+});
+
+test('Oppdatering: Liste viser bare egen spinner ved første lasting, og aldri en evig spinner etter en feil', () => {
+  const vm = code(APP, 'AppViewModel.kt');
+  const l = block(vm, 'suspend fun loadTx()');
+  assert.match(l, /txFailed = false/);
+  assert.match(l, /catch \(e: CancellationException\) \{ throw e \} catch \(e: Exception\) \{ txFailed = true; throw e \}/);
+  const page = code(APP, 'ui/PapirSider.kt');
+  assert.match(page, /if \(vm\.txs == null && !vm\.txFailed && !vm\.pullRefreshing\) item \{[^\n]*CircularProgressIndicator/);
+  assert.match(page, /else if \(vm\.txs == null && vm\.txFailed\) item \{[^\n]*"Kunne ikke hente transaksjonene\. Dra ned for å prøve igjen\."/);
+});
