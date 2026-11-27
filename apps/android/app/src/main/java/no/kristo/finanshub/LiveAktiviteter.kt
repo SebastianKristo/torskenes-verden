@@ -62,7 +62,7 @@ data class Akt89(
     val id: String, val type: String, val tittel: String, val undertittel: String, val verdi: String, val progress: Double?,
     val segAntall: Int, val segFerdig: Int, val meta: String, val start: String?, val slutt: String?, val status: String,
     val handlinger: List<Pair<String, String>>, val url: String?,
-    /** Nedlasting: queued | downloading | muxing | done | failed (Regel89.PHASES). null = serveren sender ingen fase. */
+    /** Nedlasting: ko | laster | komprimerer | ferdig | feilet (som serveren) (Regel89.PHASES). null = serveren sender ingen fase. */
     val fase: String? = null,
 )
 

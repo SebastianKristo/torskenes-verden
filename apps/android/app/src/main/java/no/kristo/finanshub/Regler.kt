@@ -147,12 +147,12 @@ object Regel89 {
      * Fasene for en nedlasting (feltet «fase» fra serveren): i kø, laster ned, komprimerer (setter sammen), ferdig og feilet.
      * Ukjent eller manglende fase = null (eldre server): da vises verdien og fremdriften som før.
      */
-    val PHASES = setOf("queued", "downloading", "muxing", "done", "failed")
+    val PHASES = setOf("ko", "laster", "komprimerer", "ferdig", "feilet")
 
     fun phase(raw: String?): String? = raw?.trim()?.takeIf { it in PHASES }
 
     /** I kø og under komprimering finnes ingen prosent: linja er ubestemt, og prosenttallet vises ikke. */
-    fun indeterminate(phase: String?): Boolean = phase == "queued" || phase == "muxing"
+    fun indeterminate(phase: String?): Boolean = phase == "ko" || phase == "komprimerer"
 
     /** Fremdriften som vises (0–100). null når fasen ikke har prosent, eller serveren ikke har noen. */
     fun shownPct(p: Double?, phase: String?): Int? = if (indeterminate(phase)) null else pct(p)
@@ -163,7 +163,7 @@ object Regel89 {
      */
     fun chip(verdi: String, status: String, phase: String? = null): String = when {
         status == "pause" -> "Pauset"
-        phase == "muxing" -> "Komprimerer"
+        phase == "komprimerer" -> "Komprimerer"
         else -> verdi.trim()
     }.take(12)
 
