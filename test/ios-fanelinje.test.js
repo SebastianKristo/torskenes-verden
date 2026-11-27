@@ -102,7 +102,7 @@ test('Papir-pillen: Hjem-knappen fra den gamle linja (1a–1d) er tilbake og fø
   assert.match(pill, /if nh == "1c" && i == mid \{ PapirHjemMidt\(\) \}/);
   // 1a–1c: Oversikt-fanen vises ikke i pillen, men står i skallet (samme fanekilde og stakk).
   assert.match(pill, /hjemknapp == "1a" \|\| hjemknapp == "1b" \|\| hjemknapp == "1c"/);
-  assert.match(code('AppShell.swift'), /PapirModulRutenett\(over: pillHoyde\)/);
+  assert.match(code('AppShell.swift'), /PapirModulRutenett\(over: over\)/);
   // Knappene navigerer med den gamle logikken (NavHomeButton.swift).
   for (const v of ['PapirHjemRund', 'PapirHjemForst', 'PapirHjemMidt']) {
     const i = nh.indexOf(`struct ${v}: View`);
@@ -133,4 +133,18 @@ test('1) inaktive faner er hvite: token navInk (#ffffff) i alle stiler og moduse
   assert.match(code('PaperTheme.swift'), /let navInk: Color = c\(\.navInk\)/);
   assert.doesNotMatch(raw('ThemeColors.swift'), /b3ada1/i);
   assert.match(code('PapirFanelinje.swift'), /\.foregroundStyle\(on \? p\.navActInk : p\.navInk\)/);
+});
+
+test('2) pillen står like over home-indikatoren: safe area legges ikke til to ganger', () => {
+  const pill = code('PapirFanelinje.swift');
+  assert.match(pill, /static func bunn\(_ safe: CGFloat\) -> CGFloat \{ Swift\.max\(12, safe - 8\) \}/);
+  // Ingen egen bunnpolstring i pillen (avstanden settes i skallet).
+  assert.doesNotMatch(pill, /\.padding\(\.bottom, DS\.Space\.xs\)/);
+  const shell = code('AppShell.swift');
+  assert.match(shell, /\.padding\(\.bottom, PapirFanelinje\.bunn\(safeBunn\)\)/);
+  assert.match(shell, /\.ignoresSafeArea\(\.container, edges: \.bottom\)/);
+  // Sidene får pillen + bunnavstanden som luft, minus safe area-en de allerede har.
+  assert.match(shell, /let over: CGFloat = Swift\.max\(0, pillHoyde - safeBunn\)/);
+  assert.match(shell, /\.environment\(\\\.shellKlassiskHoyde, pill \? over : 0\)/);
+  assert.match(shell, /PapirModulRutenett\(over: over\)/);
 });

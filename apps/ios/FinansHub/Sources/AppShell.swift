@@ -153,6 +153,10 @@ struct AppTabs<Page: View>: View {
         // Innstillinger → Utseende → Fanelinje: Papir-pillen i stedet for systemets linje (bare kompakt bredde).
         let klassisk: Bool = FanelinjeValg.shared.klassisk(regular: regular)
         let pill: Bool = klassisk && store.shellTabBarShown
+        // Prompt 57: pillen står like over home-indikatoren (safe area legges ikke til to ganger). Høyden sidene får som
+        // luft er pillen + bunnavstanden, minus safe area-en sidene allerede har.
+        let safeBunn: CGFloat = PapirFanelinje.safeBunn
+        let over: CGFloat = Swift.max(0, pillHoyde - safeBunn)
         Group {
             if #available(iOS 18.0, *) {
                 ShellTabView18(tabs: tabs, selection: sel, current: cur, page: page)
@@ -177,15 +181,17 @@ struct AppTabs<Page: View>: View {
         .overlay(alignment: .bottom) {
             // Hjem-knapp 1d: rutenettet med Oversikt og modulene rett over pillen (PapirHjemknapp.swift).
             if pill && NavHome42.shared.value == "1d" && NavHome42.shared.modPick {
-                PapirModulRutenett(over: pillHoyde)
+                PapirModulRutenett(over: over)
             }
         }
         .overlay(alignment: .bottom) {
             if pill {
                 PapirFanelinje(tabs: tabs, current: cur) { (id: String) in ShellTabs.select(id, store, current: cur) }
+                    .padding(.bottom, PapirFanelinje.bunn(safeBunn))
                     .background(GeometryReader { (g: GeometryProxy) in
                         Color.clear.preference(key: PapirFanelinjeHoydeKey.self, value: g.size.height)
                     })
+                    .ignoresSafeArea(.container, edges: .bottom)
                     .transition(.opacity)
             }
         }
@@ -193,7 +199,7 @@ struct AppTabs<Page: View>: View {
             if h > 0 && abs(h - pillHoyde) > 0.5 { pillHoyde = h }
         }
         .environment(\.shellKlassiskFanelinje, klassisk)
-        .environment(\.shellKlassiskHoyde, pill ? pillHoyde : 0)
+        .environment(\.shellKlassiskHoyde, pill ? over : 0)
     }
 }
 
