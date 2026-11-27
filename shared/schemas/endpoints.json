@@ -122,6 +122,12 @@
       "path": "/api/moduler",
       "schema": "api/moduler.schema.json",
       "auth": "session|token"
+    },
+    {
+      "method": "GET",
+      "path": "/api/helse",
+      "schema": "api/helse.schema.json",
+      "auth": "session|token"
     }
   ]
 }

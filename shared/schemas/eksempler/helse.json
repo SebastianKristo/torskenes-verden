@@ -1,0 +1,293 @@
+{
+  "date": "2026-11-16",
+  "periode": "uke",
+  "days": 7,
+  "from": "2026-11-10",
+  "to": "2026-11-16",
+  "empty": false,
+  "updatedAt": "2026-11-16T07:51:00.000Z",
+  "today": {
+    "steps": 4210,
+    "stepsText": "4 210",
+    "distanceM": 3115,
+    "distanceText": "3,1 km",
+    "activeKcal": 357,
+    "activeKcalText": "357 kcal",
+    "exerciseMin": 51,
+    "exerciseText": "51 min",
+    "restingHr": 59
+  },
+  "sleep": {
+    "tonight": {
+      "night": "2026-11-16",
+      "dayText": "i natt",
+      "bedtime": "23:17",
+      "asleepAt": "23:36",
+      "wakeAt": "06:47",
+      "range": "23:36–06:47",
+      "asleepMin": 413,
+      "asleepText": "6 t 53 m",
+      "inBedMin": 450,
+      "inBedText": "7 t 30 m",
+      "stages": [
+        {
+          "key": "deep",
+          "label": "Dyp",
+          "min": 62,
+          "text": "1 t 02 m"
+        },
+        {
+          "key": "core",
+          "label": "Kjerne",
+          "min": 260,
+          "text": "4 t 20 m"
+        },
+        {
+          "key": "rem",
+          "label": "REM",
+          "min": 91,
+          "text": "1 t 31 m"
+        },
+        {
+          "key": "awake",
+          "label": "Våken",
+          "min": 18,
+          "text": "18 m"
+        }
+      ]
+    },
+    "last": {
+      "night": "2026-11-16",
+      "dayText": "i natt",
+      "bedtime": "23:17",
+      "asleepAt": "23:36",
+      "wakeAt": "06:47",
+      "range": "23:36–06:47",
+      "asleepMin": 413,
+      "asleepText": "6 t 53 m",
+      "inBedMin": 450,
+      "inBedText": "7 t 30 m",
+      "stages": [
+        {
+          "key": "deep",
+          "label": "Dyp",
+          "min": 62,
+          "text": "1 t 02 m"
+        },
+        {
+          "key": "core",
+          "label": "Kjerne",
+          "min": 260,
+          "text": "4 t 20 m"
+        },
+        {
+          "key": "rem",
+          "label": "REM",
+          "min": 91,
+          "text": "1 t 31 m"
+        },
+        {
+          "key": "awake",
+          "label": "Våken",
+          "min": 18,
+          "text": "18 m"
+        }
+      ]
+    },
+    "avg7Min": 429,
+    "avg7Text": "7 t 09 m",
+    "avg7Nights": 7
+  },
+  "workouts": {
+    "last": {
+      "id": "mock-2026-11-15",
+      "type": "running",
+      "label": "Løping",
+      "date": "2026-11-15",
+      "dayText": "i går",
+      "start": "17:30",
+      "startAt": "2026-11-15T16:30:00.000Z",
+      "durationMin": 48,
+      "durationText": "48 min",
+      "kcal": 432,
+      "kcalText": "432 kcal",
+      "distanceM": 8160,
+      "distanceText": "8,2 km"
+    },
+    "items": [
+      {
+        "id": "mock-2026-11-15",
+        "type": "running",
+        "label": "Løping",
+        "date": "2026-11-15",
+        "dayText": "i går",
+        "start": "17:30",
+        "startAt": "2026-11-15T16:30:00.000Z",
+        "durationMin": 48,
+        "durationText": "48 min",
+        "kcal": 432,
+        "kcalText": "432 kcal",
+        "distanceM": 8160,
+        "distanceText": "8,2 km"
+      },
+      {
+        "id": "mock-2026-11-12",
+        "type": "strength",
+        "label": "Styrketrening",
+        "date": "2026-11-12",
+        "dayText": "torsdag",
+        "start": "17:30",
+        "startAt": "2026-11-12T16:30:00.000Z",
+        "durationMin": 45,
+        "durationText": "45 min",
+        "kcal": 405,
+        "kcalText": "405 kcal",
+        "distanceM": null,
+        "distanceText": null
+      }
+    ],
+    "count": 2,
+    "totalMin": 93,
+    "totalText": "2 økter · 1 t 33 min"
+  },
+  "weight": {
+    "kg": 81.7,
+    "kgText": "81,7 kg",
+    "date": "2026-11-16",
+    "dayText": "i dag",
+    "dateText": "16.11.2026",
+    "change": null,
+    "direction": null,
+    "changeText": null,
+    "serie": [
+      {
+        "date": "2026-11-16",
+        "value": 81.7
+      }
+    ]
+  },
+  "trends": [
+    {
+      "key": "steps",
+      "label": "Skritt",
+      "unit": "skritt",
+      "serie": [
+        {
+          "date": "2026-11-10",
+          "value": 10309
+        },
+        {
+          "date": "2026-11-11",
+          "value": 5462
+        },
+        {
+          "date": "2026-11-12",
+          "value": 6422
+        },
+        {
+          "date": "2026-11-13",
+          "value": 8475
+        }
+      ],
+      "days": 7,
+      "avg": 7971.6,
+      "avgText": "7 972",
+      "prevAvg": 7601.3,
+      "changePct": 5,
+      "direction": "opp",
+      "changeText": "↑ +5 % mot perioden før"
+    },
+    {
+      "key": "sleep",
+      "label": "Søvn",
+      "unit": "min",
+      "serie": [
+        {
+          "date": "2026-11-10",
+          "value": 447
+        },
+        {
+          "date": "2026-11-11",
+          "value": 406
+        },
+        {
+          "date": "2026-11-12",
+          "value": 416
+        },
+        {
+          "date": "2026-11-13",
+          "value": 485
+        }
+      ],
+      "days": 7,
+      "avg": 429.4,
+      "avgText": "7 t 09 m",
+      "prevAvg": 459.6,
+      "changePct": -7,
+      "direction": "ned",
+      "changeText": "↓ −7 % mot perioden før"
+    },
+    {
+      "key": "distance",
+      "label": "Distanse gått og løpt",
+      "unit": "m",
+      "serie": [
+        {
+          "date": "2026-11-10",
+          "value": 7629
+        },
+        {
+          "date": "2026-11-11",
+          "value": 4042
+        },
+        {
+          "date": "2026-11-12",
+          "value": 4752
+        },
+        {
+          "date": "2026-11-13",
+          "value": 6272
+        }
+      ],
+      "days": 7,
+      "avg": 5899,
+      "avgText": "5,9 km",
+      "prevAvg": 5625,
+      "changePct": 5,
+      "direction": "opp",
+      "changeText": "↑ +5 % mot perioden før"
+    },
+    {
+      "key": "activeKcal",
+      "label": "Aktiv energi",
+      "unit": "kcal",
+      "serie": [
+        {
+          "date": "2026-11-10",
+          "value": 553
+        },
+        {
+          "date": "2026-11-11",
+          "value": 294
+        },
+        {
+          "date": "2026-11-12",
+          "value": 354
+        },
+        {
+          "date": "2026-11-13",
+          "value": 455
+        }
+      ],
+      "days": 7,
+      "avg": 449.1,
+      "avgText": "449 kcal",
+      "prevAvg": 413.3,
+      "changePct": 9,
+      "direction": "opp",
+      "changeText": "↑ +9 % mot perioden før"
+    }
+  ],
+  "summary": "Du sov 6 t 53 m i natt og har gått 4 210 skritt i dag.",
+  "mock": true
+}

@@ -1,0 +1,682 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "api/helse.schema.json",
+  "title": "Helse (egne data)",
+  "description": "Brukerens egen Helse-side: søvn i natt og snitt siste 7 netter, skritt og distanse i dag, økter, vekt og trender for perioden (uke = 7 dager, maned = 30). Alt er regnet ut på serveren (server/helse/regler.js) i Oslo-tid; klientene viser tekstfeltene. Bare brukerens egne data. ?periode=uke|maned.",
+  "x-endpoint": "GET /api/helse",
+  "type": "object",
+  "required": [
+    "date",
+    "periode",
+    "days",
+    "from",
+    "to",
+    "empty",
+    "today",
+    "sleep",
+    "workouts",
+    "weight",
+    "trends",
+    "summary"
+  ],
+  "properties": {
+    "date": {
+      "$ref": "../common/types.schema.json#/$defs/date"
+    },
+    "periode": {
+      "enum": [
+        "uke",
+        "maned"
+      ]
+    },
+    "days": {
+      "type": "integer"
+    },
+    "from": {
+      "$ref": "../common/types.schema.json#/$defs/date"
+    },
+    "to": {
+      "$ref": "../common/types.schema.json#/$defs/date"
+    },
+    "empty": {
+      "type": "boolean",
+      "description": "true når det ikke finnes helsedata ennå"
+    },
+    "mock": {
+      "type": "boolean"
+    },
+    "updatedAt": {
+      "anyOf": [
+        {
+          "$ref": "../common/types.schema.json#/$defs/timestamp"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "today": {
+      "type": "object",
+      "required": [
+        "steps",
+        "stepsText",
+        "distanceM",
+        "distanceText"
+      ],
+      "properties": {
+        "steps": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "stepsText": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "distanceM": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "distanceText": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "activeKcal": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "activeKcalText": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "exerciseMin": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "exerciseText": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "restingHr": {
+          "type": [
+            "number",
+            "null"
+          ]
+        }
+      }
+    },
+    "sleep": {
+      "type": "object",
+      "required": [
+        "tonight",
+        "last",
+        "avg7Min",
+        "avg7Text",
+        "avg7Nights"
+      ],
+      "properties": {
+        "tonight": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "required": [
+            "night",
+            "dayText",
+            "asleepMin",
+            "asleepText",
+            "stages"
+          ],
+          "properties": {
+            "night": {
+              "$ref": "../common/types.schema.json#/$defs/date",
+              "description": "Datoen man våknet (Oslo)"
+            },
+            "dayText": {
+              "type": "string",
+              "description": "«i natt», «natt til i går» …"
+            },
+            "bedtime": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "asleepAt": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "wakeAt": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "range": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "asleepMin": {
+              "type": "integer"
+            },
+            "asleepText": {
+              "type": "string"
+            },
+            "inBedMin": {
+              "type": [
+                "integer",
+                "null"
+              ]
+            },
+            "inBedText": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "stages": {
+              "type": "array",
+              "description": "Tom når klokka ikke har målt stadier",
+              "items": {
+                "type": "object",
+                "required": [
+                  "key",
+                  "label",
+                  "min",
+                  "text"
+                ],
+                "properties": {
+                  "key": {
+                    "enum": [
+                      "deep",
+                      "core",
+                      "rem",
+                      "awake"
+                    ]
+                  },
+                  "label": {
+                    "type": "string"
+                  },
+                  "min": {
+                    "type": "integer"
+                  },
+                  "text": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "last": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "required": [
+            "night",
+            "dayText",
+            "asleepMin",
+            "asleepText",
+            "stages"
+          ],
+          "properties": {
+            "night": {
+              "$ref": "../common/types.schema.json#/$defs/date",
+              "description": "Datoen man våknet (Oslo)"
+            },
+            "dayText": {
+              "type": "string",
+              "description": "«i natt», «natt til i går» …"
+            },
+            "bedtime": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "asleepAt": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "wakeAt": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "range": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "asleepMin": {
+              "type": "integer"
+            },
+            "asleepText": {
+              "type": "string"
+            },
+            "inBedMin": {
+              "type": [
+                "integer",
+                "null"
+              ]
+            },
+            "inBedText": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "stages": {
+              "type": "array",
+              "description": "Tom når klokka ikke har målt stadier",
+              "items": {
+                "type": "object",
+                "required": [
+                  "key",
+                  "label",
+                  "min",
+                  "text"
+                ],
+                "properties": {
+                  "key": {
+                    "enum": [
+                      "deep",
+                      "core",
+                      "rem",
+                      "awake"
+                    ]
+                  },
+                  "label": {
+                    "type": "string"
+                  },
+                  "min": {
+                    "type": "integer"
+                  },
+                  "text": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "avg7Min": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "avg7Text": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "avg7Nights": {
+          "type": "integer"
+        }
+      }
+    },
+    "workouts": {
+      "type": "object",
+      "required": [
+        "last",
+        "items",
+        "count",
+        "totalText"
+      ],
+      "properties": {
+        "last": {
+          "anyOf": [
+            {
+              "type": "object",
+              "required": [
+                "id",
+                "type",
+                "label",
+                "date",
+                "dayText",
+                "durationMin",
+                "durationText"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "type": {
+                  "type": "string"
+                },
+                "label": {
+                  "type": "string",
+                  "description": "Norsk navn på økttypen"
+                },
+                "date": {
+                  "$ref": "../common/types.schema.json#/$defs/date"
+                },
+                "dayText": {
+                  "type": "string"
+                },
+                "start": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "startAt": {
+                  "$ref": "../common/types.schema.json#/$defs/timestamp"
+                },
+                "durationMin": {
+                  "type": "integer"
+                },
+                "durationText": {
+                  "type": "string"
+                },
+                "kcal": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ]
+                },
+                "kcalText": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "distanceM": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ]
+                },
+                "distanceText": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              }
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "type",
+              "label",
+              "date",
+              "dayText",
+              "durationMin",
+              "durationText"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "type": {
+                "type": "string"
+              },
+              "label": {
+                "type": "string",
+                "description": "Norsk navn på økttypen"
+              },
+              "date": {
+                "$ref": "../common/types.schema.json#/$defs/date"
+              },
+              "dayText": {
+                "type": "string"
+              },
+              "start": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "startAt": {
+                "$ref": "../common/types.schema.json#/$defs/timestamp"
+              },
+              "durationMin": {
+                "type": "integer"
+              },
+              "durationText": {
+                "type": "string"
+              },
+              "kcal": {
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              },
+              "kcalText": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "distanceM": {
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              },
+              "distanceText": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            }
+          }
+        },
+        "count": {
+          "type": "integer"
+        },
+        "totalMin": {
+          "type": "integer"
+        },
+        "totalText": {
+          "type": "string"
+        }
+      }
+    },
+    "weight": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "required": [
+        "kg",
+        "kgText",
+        "date",
+        "dayText",
+        "direction",
+        "serie"
+      ],
+      "properties": {
+        "kg": {
+          "type": "number"
+        },
+        "kgText": {
+          "type": "string"
+        },
+        "date": {
+          "$ref": "../common/types.schema.json#/$defs/date"
+        },
+        "dayText": {
+          "type": "string"
+        },
+        "dateText": {
+          "type": "string"
+        },
+        "change": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "direction": {
+          "enum": [
+            "opp",
+            "ned",
+            "flat",
+            null
+          ]
+        },
+        "changeText": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "serie": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "date",
+              "value"
+            ],
+            "properties": {
+              "date": {
+                "$ref": "../common/types.schema.json#/$defs/date"
+              },
+              "value": {
+                "type": "number"
+              }
+            }
+          }
+        }
+      }
+    },
+    "trends": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "key",
+          "label",
+          "serie",
+          "avg",
+          "avgText",
+          "direction"
+        ],
+        "properties": {
+          "key": {
+            "enum": [
+              "steps",
+              "sleep",
+              "distance",
+              "activeKcal",
+              "exercise",
+              "restingHr"
+            ]
+          },
+          "label": {
+            "type": "string"
+          },
+          "unit": {
+            "type": "string"
+          },
+          "serie": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "date",
+                "value"
+              ],
+              "properties": {
+                "date": {
+                  "$ref": "../common/types.schema.json#/$defs/date"
+                },
+                "value": {
+                  "type": [
+                    "number",
+                    "null"
+                  ]
+                }
+              }
+            }
+          },
+          "days": {
+            "type": "integer"
+          },
+          "avg": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "avgText": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "prevAvg": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "changePct": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "direction": {
+            "enum": [
+              "opp",
+              "ned",
+              "flat",
+              null
+            ]
+          },
+          "changeText": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      }
+    },
+    "summary": {
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  }
+}

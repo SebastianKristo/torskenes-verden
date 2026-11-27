@@ -91,6 +91,23 @@ Klientene viser det serveren sender og regner ikke selv (fasit i `shared/testvek
 - **Bolig «brukt»** (`GET /finans/api/folders/:id`): `spent`, `pending: {count, amount, text:'venter: X kr'}`, `months[].spent`/`.pending`, `kpi.spentByMonth[]`, `kpi.budgetLeft` (fra `spent`) og `kpi.over`. Poster til gjennomgang og kvitteringer som leses, er ikke «brukt» (Q21).
 - **Helligdager og merkedager:** `GET /api/dates/holidays` og kalenderen «Helligdager» (`type` på hendelsen).
 
+## Helse (`/api/helse`, sesjon eller app-token)
+
+Brukerens egne helsedata fra Apple Helse til Helse-siden, Glimt og Brief. Bare for brukeren selv; andre i husstanden ser bare
+det personen deler i Familie (`shareHealth` i `PUT /api/family/me`: `steps`, `restingHr`, `hr`, `sleep`, `activeKcal`, `week`,
+`workouts`, `weight`, de to siste nye og av som standard). Kontrakt: `shared/schemas/api/helse.schema.json`, eksempel i
+`shared/schemas/eksempler/helse.json`. Helsedata logges ikke og sendes aldri til eksterne AI-tjenester. Beholdes i 400 dager.
+
+| Metode | Sti | Beskrivelse |
+|---|---|---|
+| GET | `/api/helse?periode=uke\|maned` | Helse-siden: `today` (skritt, distanse, energi, treningstid), `sleep` (`tonight`, `last`, `avg7Text`), `workouts` (`last`, `items`, `totalText`), `weight` (`kgText`, `changeText`, `serie`), `trends[]` (`serie`, `avgText`, `changeText`, `direction`) og `summary` |
+| POST | `/api/helse` | Fra appen: `{source?, days:[{date, steps, distanceM, activeKcal, exerciseMin, restingHr}], sleep:[{start, end, stage}], workouts:[{id, type, start, end, durationMin?, kcal?, distanceM?}], weight:[{at, kg}]}` → `{ok, stored}`. `stage`: `inBed`, `asleep`, `awake`, `core`, `deep`, `rem`. Hele netter sendes, serveren regner ut nettene på nytt |
+| DELETE | `/api/helse` | Sletter alle egne helsedata (også Familie-sammendraget). `DELETE /api/family/health/me` gjør det samme |
+
+Reglene (serveren): en søvnmåling hører til natten den slutter i, fra kl. 18 dagen før til kl. 18 (Oslo). «I natt» er natten som
+sluttet i dag. Overlappende målinger (klokke og telefon) telles én gang. Trendene sammenligner snittet i perioden med perioden før
+(«flat» under ±3 %). Vekt: siste måling og endringen siden første måling i perioden. Flere enheter: høyeste dagssum per felt.
+
 ## Moduler (`GET /api/moduler`, sesjon eller app-token)
 
 Én modulliste for web, iOS, Android og klokka (E-ia §4 og Q1–Q12). Kilden er
