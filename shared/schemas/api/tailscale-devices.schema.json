@@ -1,0 +1,99 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "api/tailscale-devices.schema.json",
+  "title": "Tailnet: enhetene",
+  "description": "Den normaliserte enhetslisten fra Tailscale (LocalAPI eller Tailscale-API-et), med antall, filtre, grupper og ferdige tekster. Bare administratorer. Ingen nøkler i svaret.",
+  "x-endpoint": "GET /api/tailscale/devices",
+  "type": "object",
+  "required": ["source", "updatedAt", "counts", "filters", "groups", "devices"],
+  "properties": {
+    "source": { "enum": ["localapi", "api", "demo"], "description": "Hvilken kilde listen kom fra" },
+    "updatedAt": { "$ref": "../common/types.schema.json#/$defs/timestamp" },
+    "tailnet": { "type": ["string", "null"] },
+    "magicDns": { "type": ["string", "null"] },
+    "stale": { "type": "boolean", "description": "Kilden svarte ikke; dette er siste gode liste" },
+    "counts": { "$ref": "#/$defs/counts" },
+    "filters": {
+      "type": "array",
+      "description": "Filterpillene i rekkefølge (Alle viser ikke mobil og nettbrett; de ligger bak Mobil)",
+      "items": {
+        "type": "object",
+        "required": ["id", "navn", "count"],
+        "properties": {
+          "id": { "enum": ["alle", "servere", "datamaskiner", "mobil", "offline"] },
+          "navn": { "type": "string" },
+          "count": { "type": "integer", "minimum": 0 },
+          "kinds": { "type": "array", "items": { "$ref": "#/$defs/kind" } },
+          "offline": { "type": "boolean" }
+        }
+      }
+    },
+    "groups": {
+      "type": "object",
+      "required": ["tags", "eier"],
+      "properties": { "tags": { "$ref": "#/$defs/groupList" }, "eier": { "$ref": "#/$defs/groupList" } }
+    },
+    "devices": { "type": "array", "items": { "$ref": "#/$defs/device" } },
+    "lastChange": {
+      "anyOf": [{ "type": "null" }, { "type": "object", "required": ["id", "name", "online", "at"], "properties": { "id": { "type": "string" }, "name": { "type": "string" }, "online": { "type": "boolean" }, "at": { "$ref": "../common/types.schema.json#/$defs/timestamp" } } }]
+    },
+    "view": {
+      "type": "object",
+      "description": "Brukerens lagrede visning (GET/PUT /api/tailscale/visning)",
+      "required": ["filter", "q", "group", "open"],
+      "properties": { "filter": { "type": "string" }, "q": { "type": "string" }, "group": { "enum": ["ingen", "tags", "eier"] }, "open": { "type": "boolean" }, "showAll": { "type": "boolean" } }
+    }
+  },
+  "$defs": {
+    "kind": { "enum": ["server", "desktop", "laptop", "mobile", "tablet", "iot"] },
+    "groupList": {
+      "type": "array",
+      "items": { "type": "object", "required": ["id", "navn", "ids"], "properties": { "id": { "type": "string" }, "navn": { "type": "string" }, "ids": { "type": "array", "items": { "type": "string" } } } }
+    },
+    "counts": {
+      "type": "object",
+      "required": ["total", "online", "offline", "kinds"],
+      "properties": {
+        "total": { "type": "integer", "minimum": 0 },
+        "online": { "type": "integer", "minimum": 0 },
+        "offline": { "type": "integer", "minimum": 0 },
+        "kinds": { "type": "object", "additionalProperties": { "type": "object", "required": ["total", "online"], "properties": { "total": { "type": "integer" }, "online": { "type": "integer" } } } }
+      }
+    },
+    "device": {
+      "type": "object",
+      "required": ["id", "name", "host", "dns", "ip", "ipv6", "os", "kind", "user", "tags", "online", "lastSeen", "self", "exitNode", "tunnel", "latencyMs", "rx", "tx", "clientVersion", "updateAvailable", "keyExpiry", "expiresInDays", "icon", "kindLabel", "latencyLabel", "statusLabel", "expiresLabel", "ssh"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "description": "Stabil node-id (samme fra LocalAPI og API-et)" },
+        "name": { "type": "string", "minLength": 1, "description": "MagicDNS-navnet uten domene, ellers vertsnavnet" },
+        "host": { "type": "string" },
+        "dns": { "type": "string", "description": "MagicDNS (unraid.tail1234.ts.net), uten punktum til slutt" },
+        "ip": { "type": ["string", "null"], "description": "IPv4 i tailnetet (100.x)" },
+        "ipv6": { "type": ["string", "null"] },
+        "os": { "type": "string" },
+        "kind": { "$ref": "#/$defs/kind" },
+        "user": { "type": ["string", "null"] },
+        "tags": { "type": "array", "items": { "type": "string" } },
+        "online": { "type": "boolean" },
+        "lastSeen": { "anyOf": [{ "type": "null" }, { "$ref": "../common/types.schema.json#/$defs/timestamp" }], "description": "null når enheten er online" },
+        "self": { "type": "boolean", "description": "Maskinen Homelab kjører på (bare LocalAPI)" },
+        "exitNode": { "type": "boolean" },
+        "tunnel": { "anyOf": [{ "type": "null" }, { "type": "string", "pattern": "^(direkte|derp:[a-z0-9-]+)$" }] },
+        "latencyMs": { "type": ["number", "null"], "description": "null = ukjent (vis latencyLabel)" },
+        "rx": { "type": "integer", "minimum": 0 },
+        "tx": { "type": "integer", "minimum": 0 },
+        "clientVersion": { "type": ["string", "null"] },
+        "updateAvailable": { "type": ["boolean", "null"] },
+        "keyExpiry": { "anyOf": [{ "type": "null" }, { "$ref": "../common/types.schema.json#/$defs/timestamp" }] },
+        "expiresInDays": { "type": ["integer", "null"] },
+        "icon": { "type": "string", "description": "Lucide-navn (server, monitor, laptop, smartphone, tablet, cpu)" },
+        "kindLabel": { "type": "string" },
+        "latencyLabel": { "type": "string", "description": "«2 ms», «ukjent» eller «sist sett 3 d»" },
+        "statusLabel": { "type": "string" },
+        "tunnelLabel": { "type": ["string", "null"] },
+        "expiresLabel": { "type": "string" },
+        "ssh": { "type": "string", "description": "ssh root@<magicdns>" }
+      }
+    }
+  }
+}

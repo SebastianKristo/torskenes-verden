@@ -1,0 +1,117 @@
+{
+  "device": {
+    "id": "nUNRAIDCNTRL",
+    "name": "unraid",
+    "host": "unraid",
+    "dns": "unraid.tail-demo.ts.net",
+    "ip": "100.101.0.2",
+    "ipv6": "fd7a:115c:a1e0::2",
+    "os": "linux",
+    "kind": "server",
+    "user": "sebastian@example.com",
+    "tags": [
+      "tag:server"
+    ],
+    "online": true,
+    "lastSeen": null,
+    "self": false,
+    "exitNode": false,
+    "tunnel": "direkte",
+    "latencyMs": null,
+    "rx": 7940000,
+    "tx": 2350000,
+    "clientVersion": null,
+    "updateAvailable": null,
+    "keyExpiry": "2026-12-26T08:00:00.000Z",
+    "expiresInDays": 40,
+    "icon": "server",
+    "kindLabel": "Server",
+    "latencyLabel": "ukjent",
+    "statusLabel": "Online",
+    "tunnelLabel": "Direkte",
+    "expiresLabel": "om 40 dager",
+    "ssh": "ssh root@unraid.tail-demo.ts.net"
+  },
+  "facts": [
+    {
+      "label": "IPv4",
+      "value": "100.101.0.2",
+      "mono": true
+    },
+    {
+      "label": "IPv6",
+      "value": "fd7a:115c:a1e0::2",
+      "mono": true
+    },
+    {
+      "label": "MagicDNS",
+      "value": "unraid.tail-demo.ts.net",
+      "mono": true
+    },
+    {
+      "label": "OS",
+      "value": "linux",
+      "mono": false
+    }
+  ],
+  "history": {
+    "range": "24h",
+    "uptime": {
+      "24h": null,
+      "7d": null,
+      "30d": null
+    },
+    "uptimeLabels": {
+      "24h": "ukjent",
+      "7d": "ukjent",
+      "30d": "ukjent"
+    },
+    "latency": {
+      "median": null,
+      "p95": null,
+      "spark": [
+        null,
+        null,
+        null,
+        null
+      ],
+      "medianLabel": "ukjent",
+      "p95Label": "ukjent"
+    },
+    "tunnel": {
+      "direkte": null,
+      "derp": null,
+      "relay": null,
+      "label": "ukjent"
+    },
+    "traffic": {
+      "rx": 0,
+      "tx": 0,
+      "label": "↓ 0 B · ↑ 0 B"
+    },
+    "stripe": [
+      {
+        "date": "2026-10-18",
+        "state": null,
+        "uptime": null
+      },
+      {
+        "date": "2026-10-19",
+        "state": null,
+        "uptime": null
+      },
+      {
+        "date": "2026-10-20",
+        "state": null,
+        "uptime": null
+      },
+      {
+        "date": "2026-10-21",
+        "state": null,
+        "uptime": null
+      }
+    ]
+  },
+  "services": [],
+  "canPing": true
+}

@@ -1,0 +1,134 @@
+{
+  "source": "demo",
+  "updatedAt": "2026-11-16T08:00:00.000Z",
+  "counts": {
+    "total": 11,
+    "online": 8,
+    "offline": 3,
+    "kinds": {
+      "server": {
+        "total": 5,
+        "online": 4
+      },
+      "desktop": {
+        "total": 1,
+        "online": 1
+      },
+      "laptop": {
+        "total": 1,
+        "online": 1
+      },
+      "mobile": {
+        "total": 2,
+        "online": 1
+      },
+      "tablet": {
+        "total": 1,
+        "online": 0
+      },
+      "iot": {
+        "total": 1,
+        "online": 1
+      }
+    }
+  },
+  "latency": {
+    "median": null,
+    "label": "ukjent"
+  },
+  "direct": {
+    "share": null,
+    "label": "ukjent"
+  },
+  "traffic": {
+    "today": {
+      "rx": 0,
+      "tx": 0,
+      "label": "0 B"
+    },
+    "top": [],
+    "perDay": [
+      {
+        "date": "2026-11-10",
+        "rx": 0,
+        "tx": 0
+      },
+      {
+        "date": "2026-11-11",
+        "rx": 0,
+        "tx": 0
+      },
+      {
+        "date": "2026-11-12",
+        "rx": 0,
+        "tx": 0
+      },
+      {
+        "date": "2026-11-13",
+        "rx": 0,
+        "tx": 0
+      }
+    ]
+  },
+  "newDevices7d": [],
+  "maintenance": {
+    "expiring": [
+      {
+        "id": "nPIHOLECNTRL",
+        "name": "pihole",
+        "expiresInDays": 6,
+        "keyExpiry": "2026-11-22T08:00:00.000Z"
+      },
+      {
+        "id": "nIPHONECNTRL",
+        "name": "iphone-15",
+        "expiresInDays": 12,
+        "keyExpiry": "2026-11-28T08:00:00.000Z"
+      }
+    ],
+    "updates": [],
+    "versionMismatch": [],
+    "exitNode": [
+      {
+        "id": "nMBPCNTRL",
+        "name": "sebastians-macbook-pro"
+      }
+    ],
+    "offline30": [
+      {
+        "id": "nIPADCNTRL",
+        "name": "ingrids-ipad",
+        "lastSeen": "2026-10-02T08:00:00.000Z"
+      }
+    ],
+    "referenceVersion": "1.76.6",
+    "count": 3
+  },
+  "lastChange": null,
+  "tiles": [
+    {
+      "id": "online",
+      "label": "ONLINE",
+      "value": "8/11",
+      "sub": "3 offline"
+    },
+    {
+      "id": "latency",
+      "label": "MEDIAN LATENS",
+      "value": "ukjent",
+      "sub": "siste 24 t"
+    },
+    {
+      "id": "direct",
+      "label": "DIREKTE",
+      "value": "ukjent",
+      "sub": "resten via DERP"
+    },
+    {
+      "id": "traffic",
+      "label": "TRAFIKK I DAG",
+      "value": "0 B",
+      "sub": "↓ 0 B · ↑ 0 B"
+    }
+  ]
+}

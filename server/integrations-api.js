@@ -35,6 +35,7 @@ import { clearCache } from './cache.js';
 import { testOpenWebui } from './ai/chat/routes.js';
 import { testNrk } from './media/nrk.js'; // NRK-nedlaster
 import { testYubal } from './media/yubal.js'; // Musikk (yubal)
+import { testTailscale } from './tailscale/kilde.js'; // Tailscale: LocalAPI eller API
 import { testApns89 } from './apns.js'; // prompt 89 (SRV89): Apple Push for Live Activities
 import { mediaTest43, mediaHookPath43 } from './media/arr.js'; // prompt 43: Test tilkobling og webhook-token for MEDIA
 
@@ -223,6 +224,16 @@ export const INTEGRATIONS = [
     F('cf_token', 'API-token (Zone, DNS, Analytics: Read)', 'secret', cfgStore('cf_token', true), { required: true }),
     F('cf_domain', 'Første domene', 'text', cfgStore('cf_domain')),
   ] },
+  // Tailscale: LocalAPI-socketen (montert lesende) brukes uten nøkkel; ellers OAuth-klient eller API-nøkkel, kryptert på serveren.
+  { id: 'tailscale', name: 'Tailscale', group: 'Nettverk', scope: S, test: () => testTailscale(), fields: [
+    F('ts_mode', 'Kilde (auto, localapi eller api)', 'text', cfgStore('ts_mode'), { help: 'auto: LocalAPI når /var/run/tailscale er montert, ellers API-et.' }),
+    F('ts_oauth_id', 'OAuth-klient-ID', 'text', cfgStore('ts_oauth_id'), { help: 'Tailscale → Settings → OAuth clients, med scope devices:core:read.' }),
+    F('ts_oauth_secret', 'OAuth-klienthemmelighet', 'secret', cfgStore('ts_oauth_secret', true), { help: 'Lagres kryptert og vises aldri igjen.' }),
+    F('ts_api_key', 'API-nøkkel (i stedet for OAuth)', 'secret', cfgStore('ts_api_key', true), { help: 'Tailscale → Settings → Keys. Utløper etter høyst 90 dager.' }),
+    F('ts_tailnet', 'Tailnet (valgfri)', 'text', cfgStore('ts_tailnet'), { help: 'Tom = standard tailnet for nøkkelen.' }),
+    F('ts_ping_min', 'Pingintervall (minutter)', 'text', cfgStore('ts_ping_min'), { help: 'Latens måles i bakgrunnen for online-enheter som ikke er mobil. Standard 3.' }),
+    F('ts_varsler', 'Varsler (offline, nokkel, ny, derp)', 'text', cfgStore('ts_varsler'), { help: 'Kommaliste. Hver enhet kan i tillegg slås av i enhetsdetaljen.' }),
+  ] },
   { id: 'met', name: 'MET / Yr', group: 'Generelt', scope: S, test: viaGroup('Vær (MET/Yr)'), fields: [
     F('wx_place', 'Sted', 'text', cfgStore('wx_place'), { required: true }),
     F('wx_lat', 'Breddegrad', 'text', cfgStore('wx_lat'), { required: true }),
@@ -262,6 +273,7 @@ const META = {
   calendar: ['Informasjon', '31', '#4285F4', 'Timeplan fra skolens iCal', 'calendar'],
   google: ['Informasjon', '31', '#4285F4', 'OAuth-klient for Google Kalender', 'google'],
   cloudflare: ['Informasjon', 'CF', '#F38020', 'Domener, trafikk og oppetid', 'cloudflare'],
+  tailscale: ['Nettverk', 'TS', '#242424', 'Tailnet: enheter, latens og oppetid', 'tailscale'],
   met: ['Informasjon', 'Yr', '#1f8fd6', 'Værvarsel', 'weather'],
   map: ['Informasjon', '◎', '#3f7a6e', 'Kartverket, MapTiler og Stadia', 'map'],
   plex: ['Annet', 'P', '#e5a00d', 'Mediaserver', 'plex'],
@@ -290,6 +302,12 @@ const OWN_GUIDE = {
   finn: [['Varsler', 'Lagre søk på Finn med varsel til e-posten, og la et filter flytte Finn-e-postene til en egen mappe.'], ['Mappen', 'Skriv navnet på mappen (samme e-postkonto som Kvitteringer).']],
   ai: [['Gemini', 'Gå til aistudio.google.com → Get API key og lag en nøkkel. Gratisnivået holder for vanlig bruk.'], ['Groq (valgfritt)', 'console.groq.com → API Keys.'], ['Ollama (valgfritt)', 'Adressen til din egen Ollama-server, for eksempel http://192.168.1.30:11434.']],
   icons: [['Ingen nøkkel', 'Ikonene hentes fra Iconify og lagres på serveren. Test henter ett ikon.']],
+  tailscale: [
+    ['LocalAPI (anbefalt)', 'Kjører tailscale på verten eller i LXC-en, monter socketen lesende i docker-compose.yml. Da trengs ingen nøkkel.', 'volumes:\n  - /var/run/tailscale:/var/run/tailscale:ro'],
+    ['Eller: OAuth-klient', 'Tailscale → Settings → OAuth clients → Generate. Kryss bare av devices:core:read (lesing). Lim inn klient-ID og hemmelighet.'],
+    ['Eller: API-nøkkel', 'Tailscale → Settings → Keys → Generate API key. Nøkkelen utløper, så OAuth-klienten er enklere over tid.'],
+    ['Test', 'Testen leser enhetslisten og viser hvor mange som er online. Homelab endrer aldri noe i tailnetet.'],
+  ],
   // Prompt 43: MEDIA-gruppen (claude-code-integrasjoner-media.md).
   sonarr: [
     ['Finn API-nøkkelen', 'I Sonarr: Settings → General → Security → API Key. Kopier nøkkelen.'],

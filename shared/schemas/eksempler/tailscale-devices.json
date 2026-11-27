@@ -1,0 +1,269 @@
+{
+  "source": "demo",
+  "updatedAt": "2026-11-16T08:00:00.000Z",
+  "tailnet": "demo@example.com",
+  "magicDns": "tail-demo.ts.net",
+  "counts": {
+    "total": 11,
+    "online": 8,
+    "offline": 3,
+    "kinds": {
+      "server": {
+        "total": 5,
+        "online": 4
+      },
+      "desktop": {
+        "total": 1,
+        "online": 1
+      },
+      "laptop": {
+        "total": 1,
+        "online": 1
+      },
+      "mobile": {
+        "total": 2,
+        "online": 1
+      },
+      "tablet": {
+        "total": 1,
+        "online": 0
+      },
+      "iot": {
+        "total": 1,
+        "online": 1
+      }
+    }
+  },
+  "filters": [
+    {
+      "id": "alle",
+      "navn": "Alle",
+      "kinds": [
+        "server",
+        "desktop",
+        "laptop",
+        "iot"
+      ],
+      "count": 8
+    },
+    {
+      "id": "servere",
+      "navn": "Servere",
+      "kinds": [
+        "server",
+        "iot"
+      ],
+      "count": 6
+    },
+    {
+      "id": "datamaskiner",
+      "navn": "Datamaskiner",
+      "kinds": [
+        "desktop",
+        "laptop"
+      ],
+      "count": 2
+    },
+    {
+      "id": "mobil",
+      "navn": "Mobil",
+      "kinds": [
+        "mobile",
+        "tablet"
+      ],
+      "count": 3
+    }
+  ],
+  "groups": {
+    "tags": [
+      {
+        "id": "tag:iot",
+        "navn": "tag:iot",
+        "ids": [
+          "nHACNTRL"
+        ]
+      },
+      {
+        "id": "tag:server",
+        "navn": "tag:server",
+        "ids": [
+          "nHOMELABCNTRL",
+          "nPIHOLECNTRL",
+          "nPROXMOXCNTRL",
+          "nUNRAIDCNTRL"
+        ]
+      },
+      {
+        "id": "uten tag",
+        "navn": "uten tag",
+        "ids": [
+          "nIPHONECNTRL",
+          "nMBPCNTRL",
+          "nSTUECNTRL",
+          "nIPADCNTRL"
+        ]
+      }
+    ],
+    "eier": [
+      {
+        "id": "ingrid@example.com",
+        "navn": "ingrid@example.com",
+        "ids": [
+          "nIPHONECNTRL",
+          "nIPADCNTRL",
+          "nPIXELCNTRL"
+        ]
+      },
+      {
+        "id": "sebastian@example.com",
+        "navn": "sebastian@example.com",
+        "ids": [
+          "nHACNTRL",
+          "nHOMELABCNTRL",
+          "nPIHOLECNTRL",
+          "nPROXMOXCNTRL"
+        ]
+      }
+    ]
+  },
+  "devices": [
+    {
+      "id": "nHACNTRL",
+      "name": "homeassistant",
+      "host": "homeassistant",
+      "dns": "homeassistant.tail-demo.ts.net",
+      "ip": "100.101.0.6",
+      "ipv6": "fd7a:115c:a1e0::6",
+      "os": "linux",
+      "kind": "iot",
+      "user": "sebastian@example.com",
+      "tags": [
+        "tag:iot"
+      ],
+      "online": true,
+      "lastSeen": null,
+      "self": false,
+      "exitNode": false,
+      "tunnel": "direkte",
+      "latencyMs": null,
+      "rx": 37300000,
+      "tx": 10790000,
+      "clientVersion": null,
+      "updateAvailable": null,
+      "keyExpiry": null,
+      "expiresInDays": null,
+      "icon": "cpu",
+      "kindLabel": "Smarthus",
+      "latencyLabel": "ukjent",
+      "statusLabel": "Online",
+      "tunnelLabel": "Direkte",
+      "expiresLabel": "av",
+      "ssh": "ssh root@homeassistant.tail-demo.ts.net"
+    },
+    {
+      "id": "nHOMELABCNTRL",
+      "name": "homelab",
+      "host": "homelab",
+      "dns": "homelab.tail-demo.ts.net",
+      "ip": "100.101.0.1",
+      "ipv6": "fd7a:115c:a1e0::1",
+      "os": "linux",
+      "kind": "server",
+      "user": "sebastian@example.com",
+      "tags": [
+        "tag:server"
+      ],
+      "online": true,
+      "lastSeen": null,
+      "self": true,
+      "exitNode": false,
+      "tunnel": null,
+      "latencyMs": null,
+      "rx": 0,
+      "tx": 0,
+      "clientVersion": "1.76.6",
+      "updateAvailable": null,
+      "keyExpiry": "2027-06-04T08:00:00.000Z",
+      "expiresInDays": 200,
+      "icon": "server",
+      "kindLabel": "Server",
+      "latencyLabel": "ukjent",
+      "statusLabel": "Denne serveren",
+      "tunnelLabel": "ukjent",
+      "expiresLabel": "om 200 dager",
+      "ssh": "ssh root@homelab.tail-demo.ts.net"
+    },
+    {
+      "id": "nIPHONECNTRL",
+      "name": "iphone-15",
+      "host": "localhost",
+      "dns": "iphone-15.tail-demo.ts.net",
+      "ip": "100.101.0.9",
+      "ipv6": "fd7a:115c:a1e0::9",
+      "os": "iOS",
+      "kind": "mobile",
+      "user": "ingrid@example.com",
+      "tags": [],
+      "online": true,
+      "lastSeen": null,
+      "self": false,
+      "exitNode": false,
+      "tunnel": "derp:ams",
+      "latencyMs": null,
+      "rx": 59320000,
+      "tx": 17120000,
+      "clientVersion": null,
+      "updateAvailable": null,
+      "keyExpiry": "2026-11-28T08:00:00.000Z",
+      "expiresInDays": 12,
+      "icon": "smartphone",
+      "kindLabel": "Mobil",
+      "latencyLabel": "ukjent",
+      "statusLabel": "Online",
+      "tunnelLabel": "DERP · ams",
+      "expiresLabel": "om 12 dager",
+      "ssh": "ssh root@iphone-15.tail-demo.ts.net"
+    },
+    {
+      "id": "nPIHOLECNTRL",
+      "name": "pihole",
+      "host": "pihole",
+      "dns": "pihole.tail-demo.ts.net",
+      "ip": "100.101.0.4",
+      "ipv6": "fd7a:115c:a1e0::4",
+      "os": "linux",
+      "kind": "server",
+      "user": "sebastian@example.com",
+      "tags": [
+        "tag:server"
+      ],
+      "online": true,
+      "lastSeen": null,
+      "self": false,
+      "exitNode": false,
+      "tunnel": "direkte",
+      "latencyMs": null,
+      "rx": 22620000,
+      "tx": 6570000,
+      "clientVersion": null,
+      "updateAvailable": null,
+      "keyExpiry": "2026-11-22T08:00:00.000Z",
+      "expiresInDays": 6,
+      "icon": "server",
+      "kindLabel": "Server",
+      "latencyLabel": "ukjent",
+      "statusLabel": "Online",
+      "tunnelLabel": "Direkte",
+      "expiresLabel": "om 6 dager",
+      "ssh": "ssh root@pihole.tail-demo.ts.net"
+    }
+  ],
+  "lastChange": null,
+  "view": {
+    "filter": "alle",
+    "q": "",
+    "group": "ingen",
+    "open": true,
+    "showAll": false
+  }
+}

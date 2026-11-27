@@ -78,6 +78,7 @@ import { mountModuler } from './moduler/index.js'; // Moduler: GET /api/moduler,
 import { mountReise } from './reise/index.js'; // Reise: /api/ruter (Min reise, skolesoner, «forlot skolen»)
 import { mountRom, startRom } from './rom/index.js'; // Rom: /api/space og /api/rom (APOD, Mars, satellitter)
 import { mountDomener } from './domener/index.js'; // Domener: statistikk, Glimt-oppsummering og Google Search Console
+import { mountTailscale } from './tailscale/index.js'; // Tailscale: tailnetet på Nettverk, Hjem-flis, Glimt og varsler (bare admin)
 import { companionsOf } from './kalender/calendars.js'; // companion-tokens (Kalender) i /api/me/devices
 import { osloDate } from './dates/oslo.js';
 if (process.env.MOCK_DATA === '1' && !fhDb.prepare('SELECT 1 FROM fh_transactions LIMIT 1').get()) (await import('./finans/demo.js')).loadDemo();
@@ -593,6 +594,7 @@ startMem63();
 // /api/glimt og /api/assist (etter de andre /api/glimt/*-rutene over, så de spesifikke rutene svarer først)
 mountGlimt(app);
 mountChat(app); // server/ai/: Claude-importen (/api/chat/import) og Chat (/api/chat), sesjon eller app-token
+mountTailscale(app); // server/tailscale/: /api/tailscale/* (bare admin, økt eller app-token)
 mountDomener(app); // server/domener/: domene-pillen, /api/domains (Glimt, Search Console), /api/gsc og /domains/api (bare admin)
 app.route('/api', dashboardLayoutApi); // /dashboard/layout (før mobileApi); /weather/places/summary ligger i mountVaer
 mountBibel(app); // server/bibel/: /api/bible – dagens bibelvers (bare med modulen)

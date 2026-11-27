@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "api/tailscale-device.schema.json",
+  "title": "Tailnet: én enhet",
+  "description": "Enhetsdetaljen: enheten, faktarutenettet, historikk (oppetid 24 t/7 d/30 d, latens med sparkline, tunnel, trafikk, oppetidsstripe for 30 dager), tjenester i Nettverk som hører til enheten, og varslene per enhet. ?range=24h|7d|30d gjelder trafikk og tunnel.",
+  "x-endpoint": "GET /api/tailscale/devices/:id",
+  "type": "object",
+  "required": ["device", "facts", "history", "services", "canPing"],
+  "properties": {
+    "device": { "$ref": "tailscale-devices.schema.json#/$defs/device" },
+    "facts": {
+      "type": "array",
+      "items": { "type": "object", "required": ["label", "value"], "properties": { "label": { "type": "string" }, "value": { "type": "string" }, "mono": { "type": "boolean" } } }
+    },
+    "history": {
+      "type": "object",
+      "required": ["range", "uptime", "latency", "tunnel", "traffic", "stripe"],
+      "properties": {
+        "range": { "enum": ["24h", "7d", "30d"] },
+        "uptime": {
+          "type": "object", "required": ["24h", "7d", "30d"],
+          "properties": { "24h": { "type": ["number", "null"] }, "7d": { "type": ["number", "null"] }, "30d": { "type": ["number", "null"] } }
+        },
+        "uptimeLabels": { "type": "object", "additionalProperties": { "type": "string" } },
+        "latency": {
+          "type": "object", "required": ["median", "p95", "spark"],
+          "properties": {
+            "median": { "type": ["number", "null"] }, "p95": { "type": ["number", "null"] },
+            "spark": { "type": "array", "items": { "type": ["number", "null"] }, "description": "24 verdier: median per time de siste 24 timene, eldst først (eksempelet er forkortet)" },
+            "medianLabel": { "type": "string" }, "p95Label": { "type": "string" }
+          }
+        },
+        "tunnel": {
+          "type": "object", "required": ["direkte", "derp", "relay"],
+          "properties": { "direkte": { "type": ["number", "null"] }, "derp": { "type": ["number", "null"] }, "relay": { "type": ["string", "null"] }, "label": { "type": "string" } }
+        },
+        "traffic": { "type": "object", "required": ["rx", "tx"], "properties": { "rx": { "type": "integer" }, "tx": { "type": "integer" }, "label": { "type": "string" } } },
+        "stripe": {
+          "type": "array", "description": "30 dager, eldst først (eksempelet er forkortet). oppe = ≥ 99 % online, delvis, nede, null = ingen prøver",
+          "items": {
+            "type": "object", "required": ["date", "state"],
+            "properties": { "date": { "$ref": "../common/types.schema.json#/$defs/date" }, "state": { "enum": ["oppe", "delvis", "nede", null] }, "uptime": { "type": ["number", "null"] } }
+          }
+        }
+      }
+    },
+    "services": {
+      "type": "array",
+      "items": { "type": "object", "required": ["name", "url"], "properties": { "name": { "type": "string" }, "url": { "type": "string" }, "up": { "type": ["boolean", "null"] } } }
+    },
+    "alerts": {
+      "type": "object",
+      "description": "Varslene for enheten (av/på), PUT /api/tailscale/devices/:id/varsler",
+      "properties": { "offline": { "type": "boolean" }, "nokkel": { "type": "boolean" }, "ny": { "type": "boolean" }, "derp": { "type": "boolean" } }
+    },
+    "canPing": { "type": "boolean" }
+  }
+}

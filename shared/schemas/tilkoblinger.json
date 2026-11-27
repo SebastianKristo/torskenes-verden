@@ -45,6 +45,7 @@
     "ailocal": "ai",
     "apns": "varsler",
     "cloudflare": "nettverk",
+    "tailscale": "nettverk",
     "met": "generelt",
     "weather": "generelt",
     "map": "generelt",

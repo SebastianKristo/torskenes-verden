@@ -122,6 +122,27 @@
       "path": "/api/moduler",
       "schema": "api/moduler.schema.json",
       "auth": "session|token"
+    },
+    {
+      "method": "GET",
+      "path": "/api/tailscale/devices",
+      "schema": "api/tailscale-devices.schema.json",
+      "auth": "session|token",
+      "admin": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/tailscale/devices/nUNRAIDCNTRL",
+      "schema": "api/tailscale-device.schema.json",
+      "auth": "session|token",
+      "admin": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/tailscale/stats",
+      "schema": "api/tailscale-stats.schema.json",
+      "auth": "session|token",
+      "admin": true
     }
   ]
 }

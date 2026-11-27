@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "api/tailscale-stats.schema.json",
+  "title": "Tailnet: statistikk",
+  "description": "Tall for hele tailnetet: stat-raden (tiles), median latens, andel direkte, trafikk i dag med toppliste og per dag, nye enheter siste 7 d og vedlikeholdslistene. Bare administratorer.",
+  "x-endpoint": "GET /api/tailscale/stats",
+  "type": "object",
+  "required": ["source", "counts", "latency", "direct", "traffic", "newDevices7d", "maintenance", "tiles"],
+  "properties": {
+    "source": { "enum": ["localapi", "api", "demo"] },
+    "updatedAt": { "$ref": "../common/types.schema.json#/$defs/timestamp" },
+    "counts": { "$ref": "tailscale-devices.schema.json#/$defs/counts" },
+    "latency": { "type": "object", "required": ["median", "label"], "properties": { "median": { "type": ["number", "null"] }, "label": { "type": "string" } } },
+    "direct": { "type": "object", "required": ["share", "label"], "properties": { "share": { "type": ["number", "null"] }, "label": { "type": "string" } } },
+    "traffic": {
+      "type": "object",
+      "required": ["today", "top", "perDay"],
+      "properties": {
+        "today": { "type": "object", "required": ["rx", "tx", "label"], "properties": { "rx": { "type": "integer" }, "tx": { "type": "integer" }, "label": { "type": "string" } } },
+        "top": { "type": "array", "maxItems": 5, "items": { "type": "object", "required": ["id", "name", "rx", "tx"], "properties": { "id": { "type": "string" }, "name": { "type": "string" }, "rx": { "type": "integer" }, "tx": { "type": "integer" }, "label": { "type": "string" } } } },
+        "perDay": { "type": "array", "items": { "type": "object", "required": ["date", "rx", "tx"], "properties": { "date": { "$ref": "../common/types.schema.json#/$defs/date" }, "rx": { "type": "integer" }, "tx": { "type": "integer" } } } }
+      }
+    },
+    "newDevices7d": { "type": "array", "items": { "type": "object", "required": ["id", "firstSeen"], "properties": { "id": { "type": "string" }, "name": { "type": ["string", "null"] }, "firstSeen": { "$ref": "../common/types.schema.json#/$defs/timestamp" } } } },
+    "maintenance": {
+      "type": "object",
+      "required": ["expiring", "updates", "versionMismatch", "exitNode", "offline30", "count"],
+      "properties": {
+        "expiring": { "$ref": "#/$defs/items" }, "updates": { "$ref": "#/$defs/items" }, "versionMismatch": { "$ref": "#/$defs/items" },
+        "exitNode": { "$ref": "#/$defs/items" }, "offline30": { "$ref": "#/$defs/items" },
+        "referenceVersion": { "type": ["string", "null"] }, "count": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "lastChange": { "type": ["object", "null"] },
+    "tiles": {
+      "type": "array", "description": "Stat-raden i fast rekkefølge: online, latency, direct, traffic, maintenance (eksempelet er forkortet)",
+      "items": { "type": "object", "required": ["id", "label", "value", "sub"], "properties": { "id": { "enum": ["online", "latency", "direct", "traffic", "maintenance"] }, "label": { "type": "string" }, "value": { "type": "string" }, "sub": { "type": "string" } } }
+    }
+  },
+  "$defs": {
+    "items": { "type": "array", "items": { "type": "object", "required": ["id", "name"], "properties": { "id": { "type": "string" }, "name": { "type": "string" } } } }
+  }
+}

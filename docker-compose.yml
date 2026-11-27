@@ -19,6 +19,10 @@ services:
       # Monter mediemappa (samme disk som papirkurven) og sett MEDFAM51_TRASH_DIR og MEDFAM51_PATH_MAP i .env. Uten dette slettes
       # filene via Sonarr/Radarr etter 24 t angrefrist.
       # - /srv/media:/media
+      # Tailscale (Nettverk → Tailnet): kjører tailscale på verten eller i LXC-en, gir socketen LocalAPI uten nøkkel. Bare lesende
+      # (:ro); Homelab leser status og pinger, og endrer aldri noe i tailnetet. Uten den brukes Tailscale-API-et (OAuth-klient
+      # med devices:core:read i Innstillinger → Tilkoblinger → Tailscale).
+      # - /var/run/tailscale:/var/run/tailscale:ro
     ports:
       - "${BIND_ADDR:-127.0.0.1}:${HOST_PORT:-3000}:3000"   # BIND_ADDR=0.0.0.0 for LAN-tilgang
     # Prompt 45: os når Docker-proxyen (homelab-docker) på det interne nettet docker-api. os får aldri selve socketen.
