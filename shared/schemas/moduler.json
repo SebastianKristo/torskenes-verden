@@ -120,6 +120,13 @@
       "undersider": []
     },
     {
+      "id": "tailnet", "navn": "Tailnet", "gruppe": "drift",
+      "ikon": { "tegn": "⌁", "sf": "point.3.connected.trianglepath.dotted", "material": "hub" },
+      "plattformer": ["ios", "android"], "adminOnly": true,
+      "rute": null, "aliaser": [],
+      "undersider": []
+    },
+    {
       "id": "media", "navn": "Media", "gruppe": "fritid", "tilgang": "media",
       "ikon": { "tegn": "▶", "sf": "play.rectangle", "material": "play_circle" },
       "plattformer": ["web", "ios", "android"], "adminOnly": false,

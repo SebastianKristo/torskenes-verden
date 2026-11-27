@@ -154,6 +154,8 @@ internal fun PaperMore24(vm: AppViewModel, navBottom: Dp, barSpace: Dp) {
                 // Q4: Faste betalinger (Abonnementer, Faste utgifter og Planlagte trekk) i Økonomi.
                 row("abo", "Faste betalinger", "Abonnementer, faste utgifter og planlagte trekk") { vm.openFaste("abonnementer") }
             }
+            // Prompt 57: Tailnet (Tailscale) – bare admin (adminOnly i modullisten), rett før Media.
+            "tailnet" -> row("tailnet", m.navn, TailnetTilstand.merSub) { vm.openTailnet() }
             "media" -> if ("media" !in inBar) row("media", m.navn, "Sonarr, Radarr, qBittorrent og Prowlarr") { vm.openMedia43() } // prompt 43
             // Q10: Nyheter er én modul (Nyhetsleser er en del av den). Nøkkelen «rss» beholdes for lagret rekkefølge.
             "nyheter" -> if ("nyheter" !in inBar) row("rss", m.navn, "Nyhetslinje og RSS med AI-sammendrag") { vm.openNews() }
@@ -168,6 +170,8 @@ internal fun PaperMore24(vm: AppViewModel, navBottom: Dp, barSpace: Dp) {
     }
     // Prompt 37: én gangs migrering – Gjøremål var skjult i Mer-oppsettet; vis den (brukeren kan skjule den igjen selv).
     androidx.compose.runtime.LaunchedEffect(vm.account?.id) { vm.loadBible37(); kotlinx.coroutines.delay(2500); vm.merHuske37(); vm.mediaMigrate43() } // prompt 43: papir_mer_media_v2
+    // Prompt 57: undertekst «Tailscale · 12 av 16 enheter online» (bare når modulen finnes, dvs. for admin).
+    androidx.compose.runtime.LaunchedEffect(vm.account?.id) { if (Moduler.har("tailnet") && !TailnetTilstand.loaded) vm.loadTailnet() }
     MerList28(vm, rows, navBottom, barSpace)
 }
 

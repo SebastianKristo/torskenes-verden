@@ -26,6 +26,10 @@ enum More44Rows {
         out.append(More28Row(id: "tkart", name: "Kart", sub: "Reise · holdeplasser, sanntid og soner", icon: "map") { Kart46.shared.show(store) })
         out.append(More28Row(id: "brief", name: ml.navn("brief", "Brief"), sub: Brief36Model.shared.merSub, icon: ml.ikon("brief", "sun.horizon")) { Brief34Model.shared.show() })
         out.append(More28Row(id: "chat", name: ml.navn("chat", "Chat"), sub: "Ollama lokalt, Gemini og Groq", icon: "bubble.left.and.bubble.right") { store.openChat() })
+        // Prompt 57: Tailnet (Tailscale) – bare admin (modulen er adminOnly i modullisten), rett før Media.
+        if ml.har("tailnet") {
+            out.append(More28Row(id: "tailnet", name: ml.navn("tailnet", "Tailnet"), sub: Tailnet.shared.merSub, icon: ml.ikon("tailnet", "point.3.connected.trianglepath.dotted")) { Tailnet.shared.show() })
+        }
         if Media43.shared.allowed {
             out.append(More28Row(id: "media", name: ml.navn("media", "Media"), sub: mediaSub, icon: ml.ikon("media", "play.rectangle")) { Media43.shared.show() })
             // Prompt 51 (IOSFEAT51): «Hva skal vi se i kveld?», Fortsett, Undertekster og Lagring (Kveld51*.swift).
@@ -85,6 +89,7 @@ enum More44Rows {
         if FamilyModel.shared.members.isEmpty { await FamilyModel.shared.load(store) }
         if Study44.shared.docs.isEmpty { await Study44.shared.load(store) }
         if Skjold76.shared.cabinets.isEmpty { await Skjold76.shared.loadCabinets(store) }
+        if ModulListe.shared.har("tailnet") && !Tailnet.shared.loaded { await Tailnet.shared.load(store) }
     }
 
     /* ---------- Undertekster ---------- */

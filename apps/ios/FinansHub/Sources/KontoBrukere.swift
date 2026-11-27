@@ -493,6 +493,7 @@ struct Hosts44: ViewModifier {
         content
             .logs44Host(p)
             .study44Host(p)
+            .tailnetHost(p)
             .konto44Host(p)
     }
 }

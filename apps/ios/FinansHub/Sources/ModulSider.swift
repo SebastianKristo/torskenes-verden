@@ -26,6 +26,7 @@ enum ModulSider {
         "bibel": "bibel",
         "skjold": "skjold",
         "domener": "domener",
+        "tailnet": "tailnet",
     ]
 
     /// Eldre nøkler for samme modul (fanelinja, Mer, serverens tabBar) → modul-id.

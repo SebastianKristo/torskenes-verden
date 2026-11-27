@@ -370,6 +370,7 @@ internal fun BoxScope.Global44(vm: AppViewModel) {
     val t = vm.p44
     if (t.logsOpen) LoggerScreen44(vm)
     if (t.studyOpen) StudyScreen44(vm)
+    if (TailnetTilstand.open) TailnetSide(vm) // prompt 57: Mer → Tailnet (bare admin)
     AsStripe44(vm, Modifier.align(Alignment.TopCenter))
     t.asToast?.let { msg ->
         LaunchedEffect(msg) { delay(4500); t.asToast = null }
