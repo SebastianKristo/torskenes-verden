@@ -222,7 +222,7 @@ struct PaperOnboardingView: View {
 
     @ViewBuilder private func backgrounds(_ p: PaperPalette) -> some View {
         PLabel(text: "Bakgrunn på Oversikt")
-        let list: [(String, String, String)] = [("cur", "Nåværende", "Mørk gradient"), ("oslo", "Oslo", "Bilde av Oslo"), ("weather", "Vær nå", "Følger været"), ("planets", "Planeter", "Ny planet hver dag (NASA)")]
+        let list: [(String, String, String)] = [("weather", "Vær nå", "Følger været"), ("planets", "Planeter", "Ny planet hver dag (NASA)"), ("oslo", "Oslo", "Bilde av Oslo"), ("cur", "Gradient", "Mørk gradient")]
         ForEach(list, id: \.0) { k in
             optionRow(k.1, k.2, [Color(hex: "#4a5a6a"), Color(hex: "#1d242c")], store.photo == k.0, p) { store.setPhoto(k.0) }
         }

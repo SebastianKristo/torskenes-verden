@@ -41,6 +41,7 @@ Når du finner et begrep som mangler eller brukes ulikt, legg det til her i samm
 | Media-fanene **Nå**, **Kommer**, **Bibliotek**, **Nedlastinger**, **Kilder** (NRK og Musikk) | Oversikt (i Media), Kalender (i Media) | «Kommer» er det som kommer ut snart. `#/media/kalender` virker fortsatt |
 | **I kveld** | Hva skal vi se i kveld? (som fanenavn) | |
 | **Domener / Sporing** (mellomrom rundt skråstrek) | Domener/Sporing | Likt på alle plattformer |
+| Bakgrunnene på Oversikt: **Vær nå**, **Planeter**, **Oslo**, **Gradient**, **Eget bilde**, **Google Photos-album** | Nåværende (om gradienten) | Prompt 57: de automatiske først, «Gradient» er den mørke gradienten uten bilde |
 
 ## Kalender
 
