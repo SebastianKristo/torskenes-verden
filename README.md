@@ -288,6 +288,8 @@ MOCK_DATA=1 npm run dev        # http://localhost:3000, eksempeldata
 
 Siste versjon ligger alltid under [Releases](https://github.com/SebastianKristo/torskenes-verden/releases). Filene heter fortsatt `FinansHub-…`, men på hjemskjermen heter appen **Homelab**.
 
+**TestFlight (iPhone og iPad):** med et betalt Apple Developer-medlemskap kan Homelab og Kalender lastes opp til TestFlight fra GitHub Actions, uten sideloading. Oppsettet står i [docs/testflight.md](docs/testflight.md).
+
 > [!TIP]
 > **Kalender i appen (iPhone):** Homelab-appen har hele Kalender-appen inni seg. Det er nyttig når du sideloader med SideStore og gratis Apple-ID, som bare har plass til tre apper. Bryteren ligger under Innstillinger → «Kalender i appen» og er på fra start. Siri-snarveier og oppdatering i bakgrunnen finnes bare i den frittstående Kalender-appen.
 

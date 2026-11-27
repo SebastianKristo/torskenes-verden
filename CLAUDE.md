@@ -103,6 +103,7 @@ Detaljer i [docs/sikkerhet.md](docs/sikkerhet.md). Disse brytes aldri:
 - **Mobilappene:** push en tag (`vX.Y.Z`) eller kjør **Actions → Release** med `version`-input (`.github/workflows/release.yml`). APK og IPA legges i en GitHub Release.
 - Android krever hemmelighetene `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS` og `ANDROID_KEY_PASSWORD`. Uten dem stopper releasen før noe bygges. Se [docs/android-signering.md](docs/android-signering.md).
 - iOS-signering er valgfri (`IOS_CERT_P12_BASE64`, `IOS_CERT_PASSWORD`, `IOS_PROFILE_BASE64`, `IOS_TEAM_ID`). Uten dem lages en usignert IPA.
+- **TestFlight:** Actions → **TestFlight** (eller tag `v*`) laster opp Homelab og Kalender med `ASC_KEY_ID`, `ASC_ISSUER_ID`, `ASC_KEY_P8_BASE64` og `IOS_TEAM_ID`. Se [docs/testflight.md](docs/testflight.md).
 
 **CHANGELOG-formatet** (nyeste øverst, norsk, skrevet for brukeren):
 
