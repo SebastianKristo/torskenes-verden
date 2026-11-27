@@ -459,6 +459,16 @@
       }
     ]
   },
+  "health": {
+    "label": "Helse",
+    "text": "Du sov 6 t 53 m i natt og har gått 4 210 skritt i dag.",
+    "sleepText": "6 t 53 m",
+    "sleepRange": "23:36–06:47",
+    "stepsText": "4 210",
+    "steps": 4210,
+    "sleepAvgText": "7 t 09 m",
+    "mock": true
+  },
   "school": {
     "label": "NESTE 7 DAGER",
     "items": []

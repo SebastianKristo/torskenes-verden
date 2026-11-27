@@ -5,6 +5,7 @@
 //   school:{items:[{title, kind, date, daysLeft, color, red}]}                      (7 dager, Studie/Jobb)
 //   birthdays:{items:[{name, age, date, daysLeft}]} + POST /api/brief/gift {name, date}
 //   aurora:{kp, cloud, best, text, show}                                            (bare kveld/natt, Kp ≥ 3)
+//   health:{text, sleepText, sleepRange, stepsText, sleepAvgText}                  (prompt 57, bare egne tall)
 // Rekkefølge og av/på: Innstillinger → Glimt → Brief (GET/PUT /api/glimt/settings cards:[{id, on}]). Mangler et felt, vises ikke kortet.
 import { esc } from './util.js';
 
@@ -20,11 +21,11 @@ const items = (x) => (Array.isArray(x?.items) ? x.items : Array.isArray(x) ? x :
 export const CARDS38 = [
   ['vaer', 'Vær', ['vaer', 'weather', 'wx']], ['bibel', 'Bibelvers', ['bibel', 'bible', 'bv']], ['huske', 'Gjøremål', ['huske', 'todos', 'tasks', 'gjoremal']],
   ['kal', 'Kalender', ['kal', 'calendar', 'kalender']], ['abo', 'Abonnementer', ['abo', 'trials', 'subs', 'abonnement']],
-  ['pakker', 'Pakker', ['pakker', 'packages', 'pk', 'pak']], ['familie', 'Familie', ['familie', 'family', 'fam']], ['skole', 'Skole og jobb', ['skole', 'school', 'sk', 'sko']],
+  ['pakker', 'Pakker', ['pakker', 'packages', 'pk', 'pak']], ['familie', 'Familie', ['familie', 'family', 'fam']], ['helse', 'Helse', ['helse', 'health']], ['skole', 'Skole og jobb', ['skole', 'school', 'sk', 'sko']],
   ['bursdager', 'Bursdager', ['bursdager', 'birthdays', 'bd', 'bur']], ['nordlys', 'Nordlys i natt', ['nordlys', 'aurora', 'nl', 'nor']], ['nyh', 'Nyheter', ['nyh', 'news', 'nyheter']],
 ];
 /** Serverens id (cards38.js: weather, calendar, todos, trials, packages, family, school, birthdays, aurora, news, bible). */
-const SRV = { vaer: 'weather', kal: 'calendar', huske: 'todos', abo: 'trials', pakker: 'packages', familie: 'family', skole: 'school', bursdager: 'birthdays', nordlys: 'aurora', nyh: 'news', bibel: 'bible' };
+const SRV = { vaer: 'weather', kal: 'calendar', huske: 'todos', abo: 'trials', pakker: 'packages', familie: 'family', helse: 'health', skole: 'school', bursdager: 'birthdays', nordlys: 'aurora', nyh: 'news', bibel: 'bible' };
 export const toSrv38 = (L) => L.map((c) => ({ id: SRV[c.id] ?? c.id, on: c.on }));
 const idOf = (raw) => CARDS38.find((c) => c[2].includes(String(raw ?? '').toLowerCase()))?.[0] ?? null;
 /** [{id, on}] i brukerens rekkefølge, med nye kort lagt til på standardplassen. */
@@ -76,10 +77,17 @@ function nordlys(a) {
   return `<section data-gb="nor" class="gb38-nl">${head('Nordlys i natt', a.label || (a.kp >= 4 ? 'GODE SJANSER' : 'MULIG'))}<span class="gb38-nlt">${esc(a.text || 'Glimt følger med på nordlysvarselet for deg.')}</span>
     <div class="gb38-nls">${st.map(([k, v]) => `<div><span>${k}</span><b>${esc(v)}</b></div>`).join('')}</div><span class="gb38-nlsrc">${esc(a.source || 'NOAA SWPC · MET Norge')}</span></section>`;
 }
+// Prompt 57: søvn i natt og skritt i dag (serverens tekst og tall, ingen utregning her).
+function helse(h) {
+  if (!h || (!h.text && !h.sleepText && !h.stepsText)) return '';
+  const st = [['SØVN I NATT', h.sleepText || '–'], ['SKRITT I DAG', h.stepsText || '–'], ['SNITT 7 NETTER', h.sleepAvgText || '–']];
+  return `<section data-gb="hel" class="gb-box gb38-c">${head('Helse', h.sleepRange || '')}${h.text ? `<button type="button" class="gb38-r" data-gb38-go="#/helse"><span class="gb38-m"><b>${esc(h.text)}</b></span></button>` : ''}
+    <div class="gb38-nls">${st.map(([k, v]) => `<div><span>${k}</span><b>${esc(v)}</b></div>`).join('')}</div></section>`;
+}
 /** html per kort-id for briefen (tom streng når data mangler). */
 export function briefCards38(d) {
   const x = d ?? {};
-  return { pakker: pakker(x.packages), familie: familie(x.family), skole: skole(x.school), bursdager: bursdager(x.birthdays), nordlys: nordlys(x.aurora) };
+  return { pakker: pakker(x.packages), familie: familie(x.family), helse: helse(x.health), skole: skole(x.school), bursdager: bursdager(x.birthdays), nordlys: nordlys(x.aurora) };
 }
 /** «+ Gave til X i Gjøremål»: POST /api/brief/gift {name, date} (legger «Kjøp gave til X» i Mine to dager før, #gave). */
 export async function giftAdd38(name, date, btn) {

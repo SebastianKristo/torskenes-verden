@@ -92,6 +92,15 @@ IP-en leses fra tilkoblingen, eller fra `CF-Connecting-IP` bak Cloudflare. Den l
   tjenestene eksponeres aldri; bare serveren snakker med dem.
 - **Finansdata forlater aldri huset:** kvitteringer og finansdata sendes aldri til sky-motorer.
 
+## Helsedata (prompt 57)
+
+- **Bare for brukeren selv:** `/api/helse` (søvn, skritt, trening, vekt) gir bare egne data. Andre i husstanden ser bare det
+  personen har slått på i Familie (`shareHealth`, per kategori; Trening og Vekt er av som standard).
+- **Aldri til eksterne AI-tjenester:** Glimt svarer på helsespørsmål med verktøyet `health.get`, og svaret lages av tallene på
+  serveren uten modell. Planleggeren er alltid lokal og ser bare spørsmålet. Tallene lagres ikke i Glimt-tracen, svar-cachen eller
+  samtalehistorikken, og Brief-kortet «Helse» er ikke med i AI-oppsummeringen.
+- **Logges ikke.** Hovedbryteren av i appen (eller `DELETE /api/helse`) sletter alle egne helsedata. Data eldre enn 400 dager slettes.
+
 ## iOS-appene
 
 - **Tokens i Nøkkelringen:** kontotokenet, Kalender-økta og enhetsnøkkelen ligger i Nøkkelringen med App Group-en som

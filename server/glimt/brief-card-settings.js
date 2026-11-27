@@ -4,8 +4,9 @@
 import { kv } from '../db.js';
 
 /** Alle kortene i standard rekkefølge. De nye (prompt 38) ligger etter Abonnementer og før Nyheter. */
-export const CARD_IDS = ['weather', 'calendar', 'todos', 'dinner', 'trials', 'packages', 'family', 'school', 'birthdays', 'aurora', 'news', 'bible'];
-export const CARD_LABELS = { weather: 'Vær', calendar: 'Kalender', todos: 'Gjøremål', dinner: 'Middag', trials: 'Abonnementer', packages: 'Pakker', family: 'Familie',
+// Prompt 57: «health» (søvn i natt og skritt i dag, bare egne tall) etter Familie.
+export const CARD_IDS = ['weather', 'calendar', 'todos', 'dinner', 'trials', 'packages', 'family', 'health', 'school', 'birthdays', 'aurora', 'news', 'bible'];
+export const CARD_LABELS = { weather: 'Vær', calendar: 'Kalender', todos: 'Gjøremål', dinner: 'Middag', trials: 'Abonnementer', packages: 'Pakker', family: 'Familie', health: 'Helse',
   school: 'Skole og jobb', birthdays: 'Bursdager', aurora: 'Nordlys i natt', news: 'Nyheter', bible: 'Bibelvers' };
 
 /** [{id, on, label}] i brukerens rekkefølge. Kort som mangler i det lagrede (nye kort) legges til sist i standardrekkefølge, på. */
