@@ -143,8 +143,29 @@ object Regel89 {
         return l.take(ferdig.coerceIn(0, l.size)).sum()
     }
 
-    /** Brikken i statuslinja (setShortCriticalText): verdien («62 %», «24:10», «25 min», «4 stopp», «Levert»), «Pauset» på pause. */
-    fun chip(verdi: String, status: String): String = (if (status == "pause") "Pauset" else verdi.trim()).take(12)
+    /**
+     * Fasene for en nedlasting (feltet «fase» fra serveren): i kø, laster ned, komprimerer (setter sammen), ferdig og feilet.
+     * Ukjent eller manglende fase = null (eldre server): da vises verdien og fremdriften som før.
+     */
+    val PHASES = setOf("ko", "laster", "komprimerer", "ferdig", "feilet")
+
+    fun phase(raw: String?): String? = raw?.trim()?.takeIf { it in PHASES }
+
+    /** I kø og under komprimering finnes ingen prosent: linja er ubestemt, og prosenttallet vises ikke. */
+    fun indeterminate(phase: String?): Boolean = phase == "ko" || phase == "komprimerer"
+
+    /** Fremdriften som vises (0–100). null når fasen ikke har prosent, eller serveren ikke har noen. */
+    fun shownPct(p: Double?, phase: String?): Int? = if (indeterminate(phase)) null else pct(p)
+
+    /**
+     * Brikken i statuslinja (setShortCriticalText): verdien («62 %», «24:10», «25 min», «4 stopp», «Levert»), «Pauset» på pause.
+     * Under komprimering står det «Komprimerer», aldri en prosent som gjelder nedlastingen.
+     */
+    fun chip(verdi: String, status: String, phase: String? = null): String = when {
+        status == "pause" -> "Pauset"
+        phase == "komprimerer" -> "Komprimerer"
+        else -> verdi.trim()
+    }.take(12)
 
     /** Aktive aktiviteter (ikke ferdig) gjør at appen fortsetter å polle. */
     fun active(status: String): Boolean = status == "aktiv" || status == "pause"

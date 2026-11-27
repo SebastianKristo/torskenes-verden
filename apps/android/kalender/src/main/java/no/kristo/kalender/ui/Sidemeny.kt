@@ -81,7 +81,7 @@ import no.kristo.kalender.icalOk35
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun Drawer(vm: KalVm) {
+fun Drawer(vm: KalVm, onBackToHomelab: () -> Unit) {
     val k = LocalK.current
     val w = LocalConfiguration.current.screenWidthDp.dp
     val T = no.kristo.kalender.today()
@@ -101,6 +101,8 @@ fun Drawer(vm: KalVm) {
                 // Går helt til toppen (dekker statuslinjen); innholdet starter under kamerahullet.
                 Spacer(Modifier.windowInsetsTopHeight(WindowInsets.statusBars))
                 Spacer(Modifier.height(8.dp))
+                // Åpnet fra Homelab-appen: «Homelab» øverst, før alt annet. Åpnet direkte (egen app, widget, varsel): ingen rad.
+                if (vm.back) HomelabRow() { vm.cs = false; onBackToHomelab() }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Tx("Kalendere", news(KType.title2, k.ink), Modifier.weight(1f))
                     InkPill("Ferdig", { Hap.dismiss(); vm.cs = false; vm.calEd = false; vm.pickC = null })
@@ -286,5 +288,25 @@ private fun Input35(v: String, on: (String) -> Unit, hint: String, url: Boolean)
         if (v.isEmpty()) Tx(hint, st.copy(color = k.mut2))
         BasicTextField(v, on, Modifier.fillMaxWidth().semantics { contentDescription = hint }, textStyle = st, singleLine = true, cursorBrush = SolidColor(Red),
             keyboardOptions = KeyboardOptions(keyboardType = if (url) KeyboardType.Uri else KeyboardType.Text, autoCorrectEnabled = !url))
+    }
+}
+
+/**
+ * «Homelab» øverst i sidemenyen: tilbake til Homelab-appen der man var. Samme radstil som Innstillinger nederst
+ * (34 dp ikonbrikke, fet tittel og undertekst) og en tynn linje under, så kommer kalenderne.
+ */
+@Composable
+private fun HomelabRow(onClick: () -> Unit) {
+    val k = LocalK.current
+    Row(
+        Modifier.fillMaxWidth().tap("Tilbake til Homelab", onClick = onClick)
+            .drawBehind { drawLine(k.line2, Offset(0f, size.height), Offset(size.width, size.height), 1.dp.toPx()) }.padding(top = 4.dp, bottom = 14.dp),
+        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Box(Modifier.size(34.dp).clip(RoundedCornerShape(10.dp)).background(k.chip), contentAlignment = Alignment.Center) { Svg(Ic.HOME, 17.dp, k.ink, 2.1f) }
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(1.dp)) {
+            Tx("Homelab", man(KType.callout, FontWeight.Bold, k.ink))
+            Tx("Tilbake til appen", man(KType.footnote, FontWeight.Medium, k.mut))
+        }
     }
 }

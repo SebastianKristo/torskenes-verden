@@ -40,7 +40,7 @@ test('E-B12/Q34 Kalender-appen: forslaget «Slå sammen kalenderne: N → 4?» v
   assert.match(inn, /tap\("Slå sammen kalenderne"\) \{ st\.mergeMig\(\) \}/);
   assert.match(inn, /tap\("Ikke nå"\) \{ st\.dismissMig\(\) \}/);
   // Forslaget står øverst i kalenderen, ikke bare inne i Kalendere-siden.
-  assert.match(strip(raw(join(KAL, 'ui/KalRoot.kt'))), /TopBar\(vm, onBackToHomelab\)\s*MigForslag\(vm\)/);
+  assert.match(strip(raw(join(KAL, 'ui/KalRoot.kt'))), /TopBar\(vm\)\s*MigForslag\(vm\)/);
 });
 
 test('P85 F: AppViewModel lagrer valgt side og søkeutkast i SavedStateHandle, og henter dem etter prosessdød', () => {

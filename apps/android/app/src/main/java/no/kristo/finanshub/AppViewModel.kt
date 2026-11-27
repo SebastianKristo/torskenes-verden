@@ -54,6 +54,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.sync.withLock
 import no.kristo.finanshub.ui.Privacy
 import no.kristo.finanshub.ui.loadFaste
@@ -572,7 +574,7 @@ class AppViewModel(app: Application, private val lagret: SavedStateHandle) : And
     }
 
     private fun clearData() {
-        boot = null; summary = null; me = null; txs = null; receipts = null; jobs = emptyList(); selectedTx = null; selectedReceipt = null
+        boot = null; summary = null; me = null; txs = null; txFailed = false; receipts = null; jobs = emptyList(); selectedTx = null; selectedReceipt = null
         mat.nullstill(); subs = null; folders = null; folder = null; finn = null; tokens = null; domener.nullstill()
         mobileHome = null; homeError = null; history = emptyList(); suggestions = emptyList(); todayMeal = null; domainToday = null; avatar = null
         ai = null; aiHistory = emptyList(); editing = null; original = null; detail = null; detailTx = null
@@ -849,12 +851,19 @@ class AppViewModel(app: Application, private val lagret: SavedStateHandle) : And
         return tilbakestabel.tilbake()
     }
 
+    /** Første lasting av Liste feilet (txs er fortsatt null): vis en melding i stedet for en spinner som aldri stopper. */
+    var txFailed by mutableStateOf(false)
+        private set
+
     suspend fun loadTx() {
         val p = buildList {
             if (query.isNotBlank()) add("q=" + URLEncoder.encode(query, "UTF-8"))
             if (filter.isNotBlank()) add("type=$filter")
         }.joinToString("&")
-        txs = parseTxList(api.get("/transactions?$p"))
+        try {
+            txs = parseTxList(api.get("/transactions?$p"))
+            txFailed = false
+        } catch (e: CancellationException) { throw e } catch (e: Exception) { txFailed = true; throw e }
     }
 
     fun search() = launch { loadTx() }
@@ -3468,19 +3477,37 @@ class AppViewModel(app: Application, private val lagret: SavedStateHandle) : And
     // Dra for å oppdatere (fra toppen når siden står øverst): henter siden på nytt.
     var pullRefreshing by mutableStateOf(false)
         private set
+    /** Lastingen bak den siste dra-for-å-oppdatere. En ny dra avbryter den (bare én lasting om gangen). */
+    private var pullJob: kotlinx.coroutines.Job? = null
+
+    /**
+     * Én lastefunksjon for dra-for-å-oppdatere. Indikatoren venter på selve lastingen, men aldri mer enn [REFRESH_TIMEOUT_MS]:
+     * da stopper den uansett, de gamle dataene står, og «Kunne ikke oppdatere» vises. Lister tømmes aldri.
+     * pullRefreshing nullstilles alltid (finally), også ved feil, avbrudd og når appen har vært i bakgrunnen.
+     */
     fun pullRefresh() {
         if (pullRefreshing) return
         pullRefreshing = true
         Haptics.tap()
+        pullJob?.cancel()
+        var failed = false
+        val s = screen
+        val work = viewModelScope.launch {
+            fun miss(e: Throwable) { if (e !is CancellationException) failed = true }
+            // Sporing: be serveren sjekke status hos fraktselskapene først (prompt 22). Eldre server (404): bare last på nytt.
+            if (s == Screen.Tracking) runCatching { sporing.sjekkHosFrakt() }
+            runCatching { loadFor(s) }.onFailure { miss(it) }
+            if (s == Screen.Homelab) { runCatching { loadHome() }.onFailure { miss(it) }; loadHomeExtras() }
+            if (tasksOpen) loadTasksNow()
+            if (familyOpen) loadFamily()
+        }
+        pullJob = work
         viewModelScope.launch {
             try {
-                // Sporing: be serveren sjekke status hos fraktselskapene først (prompt 22). Eldre server (404): bare last på nytt.
-                if (screen == Screen.Tracking) runCatching { sporing.sjekkHosFrakt() }
-                runCatching { loadFor(screen) }
-                if (screen == Screen.Homelab) { runCatching { loadHome() }; loadHomeExtras() }
-                if (tasksOpen) loadTasksNow()
-                if (familyOpen) loadFamily()
-            } finally { delay(350); pullRefreshing = false }
+                val done = withTimeoutOrNull(REFRESH_TIMEOUT_MS) { work.join() } != null
+                if ((!done || failed) && pullJob === work) message = "Kunne ikke oppdatere"
+                if (done && !failed) delay(350)
+            } finally { pullRefreshing = false }
         }
     }
 
@@ -3901,6 +3928,9 @@ class AppViewModel(app: Application, private val lagret: SavedStateHandle) : And
 
 /** P85 F: nøkkelen i SavedStateHandle for valgt side og søkeutkast. */
 private const val NAV_LAGRET = "navigasjon"
+
+/** Dra for å oppdatere: indikatoren stopper senest etter 15 s (claude-code-refresh-fiks.md). */
+internal const val REFRESH_TIMEOUT_MS = 15_000L
 
 /** Prompt 85: meldingen når en delt/valgt fil ikke kan leses fra telefonen. */
 internal const val UNREADABLE85 = "Fikk ikke lest filen. Prøv å dele den på nytt."

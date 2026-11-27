@@ -538,13 +538,24 @@ private val ORB43 = listOf(Color(0xFFB23A2A), Color(0xFFE8794A), Color(0xFFF2C14
 internal val GLIMT_RED43 = Color(0xFFB23A2A)
 
 @Composable
-internal fun GlimtOrb43(size: Dp, busy: Boolean = false, modifier: Modifier = Modifier) {
+internal fun GlimtOrb43(size: Dp, busy: Boolean = false, modifier: Modifier = Modifier, status: Boolean = false) {
+    // [status]: Glimt-statuspillen (ui/GlimtStatuspille.kt). Ringen går én omdreining per 1,6 s mens Glimt jobber og står stille
+    // når den er ferdig eller feilet. «Reduser bevegelse» / animasjoner av: ingen rotasjon, en svak puls (opasitet 0,6–1) på ringen.
+    val reduce = reduceMotion31()
     val tr = rememberInfiniteTransition(label = "orb43")
-    val deg by tr.animateFloat(0f, 360f, infiniteRepeatable(tween(if (busy) 1400 else 9000, easing = LinearEasing)), label = "orb43r")
+    val ms = when {
+        status && busy && !reduce -> 1600
+        busy -> 1400
+        else -> 9000
+    }
+    val spin = !status || (busy && !reduce)
+    val pulse = status && busy && reduce
+    val deg by tr.animateFloat(0f, 360f, infiniteRepeatable(tween(ms, easing = LinearEasing)), label = "orb43r")
+    val a by tr.animateFloat(.6f, 1f, infiniteRepeatable(tween(900, easing = LinearEasing), RepeatMode.Reverse), label = "orb43p")
     // Prompt 71: fargeringen er et ferdig lag som roteres (graphicsLayer.rotationZ rundt midten = rotate() i tegningen før);
     // innsiden og stjernen står stille og tegnes ikke på nytt hvert bilde.
     Box(modifier.size(size)) {
-    Canvas(Modifier.matchParentSize().graphicsLayer { rotationZ = deg }) {
+    Canvas(Modifier.matchParentSize().graphicsLayer { rotationZ = if (spin) deg else 0f; alpha = if (pulse) a else 1f }) {
         val c = Offset(this.size.width / 2, this.size.height / 2)
         drawCircle(Brush.sweepGradient(ORB43, c), this.size.minDimension / 2, c)
     }

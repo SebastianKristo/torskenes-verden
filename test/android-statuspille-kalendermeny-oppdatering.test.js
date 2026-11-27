@@ -1,0 +1,156 @@
+// Android: Glimt-statuspillen øverst, «Homelab» i Kalender-menyen og dra-for-å-oppdatere som alltid blir ferdig.
+// Instruksene: design_handoff_homelab/prompts/prompt-57-pakke/claude-code-glimt-statuspille.md,
+// claude-code-kalender-homelab-i-meny.md og claude-code-refresh-fiks.md (iOS-feilen, sjekket og rettet på Android).
+// Kildesjekker (ingen Android SDK her – CI «Mobilapper» er fasit).
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
+const AND = join(ROOT, 'apps/android');
+const APP = join(AND, 'app/src/main/java/no/kristo/finanshub');
+const KAL = join(AND, 'kalender/src/main/java/no/kristo/kalender');
+const strip = (s) => s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1');
+const code = (...p) => strip(readFileSync(join(...p), 'utf8'));
+
+function block(src, start) {
+  const i = src.indexOf(start);
+  assert.ok(i >= 0, `fant ikke «${start}»`);
+  let d = 0;
+  for (let k = src.indexOf('{', i); k < src.length; k++) {
+    if (src[k] === '{') d++;
+    else if (src[k] === '}' && --d === 0) return src.slice(i, k + 1);
+  }
+  assert.fail('ubalanserte klammer');
+}
+
+/* ---------------- Kalender: «Homelab» i hamburgermenyen ---------------- */
+
+test('Kalender: ingen «‹ Homelab»-linje i headeren, i noen visning', () => {
+  const root = code(KAL, 'ui/KalRoot.kt');
+  const top = block(root, 'private fun TopBar(');
+  assert.match(top, /^private fun TopBar\(vm: KalVm\)/, 'TopBar tar ikke lenger imot tilbake-handlingen');
+  assert.doesNotMatch(top, /vm\.back/);
+  assert.doesNotMatch(top, /Tilbake til Homelab/);
+  assert.doesNotMatch(top, /"Homelab"/);
+  assert.match(root, /TopBar\(vm\)\s*MigForslag\(vm\)/);
+});
+
+test('Kalender: raden «Homelab» øverst i menyen, bare når Kalender er åpnet fra Homelab', () => {
+  const root = code(KAL, 'ui/KalRoot.kt');
+  assert.match(root, /Drawer\(vm, onBackToHomelab\)/);
+  const menu = code(KAL, 'ui/Sidemeny.kt');
+  const d = block(menu, 'fun Drawer(');
+  assert.match(d, /^fun Drawer\(vm: KalVm, onBackToHomelab: \(\) -> Unit\)/);
+  // Øverst: rett under statuslinjen, før tittelen «Kalendere» og lista.
+  const iRow = d.indexOf('if (vm.back) HomelabRow(');
+  assert.ok(iRow > 0, 'raden vises bare med vm.back (åpnet fra Homelab)');
+  assert.ok(iRow > d.indexOf('WindowInsets.statusBars') && iRow < d.indexOf('Tx("Kalendere"'), 'raden står øverst');
+  // Trykk lukker menyen og går tilbake til Homelab.
+  assert.match(d, /HomelabRow\(\) \{ vm\.cs = false; onBackToHomelab\(\) \}/);
+  const row = block(menu, 'private fun HomelabRow(');
+  // Samme radstil som Innstillinger nederst: 34 dp ikonbrikke, callout fet tittel, footnote undertekst, tynn linje under.
+  assert.match(row, /Svg\(Ic\.HOME, 17\.dp, k\.ink, 2\.1f\)/);
+  assert.match(row, /Modifier\.size\(34\.dp\)\.clip\(RoundedCornerShape\(10\.dp\)\)\.background\(k\.chip\)/);
+  assert.match(row, /Tx\("Homelab", man\(KType\.callout, FontWeight\.Bold, k\.ink\)\)/);
+  assert.match(row, /Tx\("Tilbake til appen", man\(KType\.footnote, FontWeight\.Medium, k\.mut\)\)/);
+  assert.match(row, /tap\("Tilbake til Homelab", onClick = onClick\)/);
+  assert.match(row, /drawLine\(k\.line2, Offset\(0f, size\.height\), Offset\(size\.width, size\.height\)/);
+  assert.match(code(KAL, 'ui/KalCommon.kt'), /const val HOME = "/);
+});
+
+test('Kalender: tilbake-gesten lukker menyen først, ellers tar systemet tilbake til Homelab som før', () => {
+  const root = code(KAL, 'ui/KalRoot.kt');
+  assert.match(root, /Tilbakesteg\("sidemeny", \{ vm\.cs \}\) \{ vm\.cs = false \}/);
+  assert.match(root, /PredictiveBackHandler\(stabel\.aktivt\(\) != null\)/);
+  // «Tilbake til Homelab» henter fram Homelab-oppgaven og legger Kalender bak (uendret).
+  const act = code(KAL, 'MainActivity.kt');
+  assert.match(act, /setContent \{ KalRoot\(vm, onBackToHomelab = ::backToHomelab\) \}/);
+  assert.match(block(act, 'private fun backToHomelab('), /moveTaskToBack\(true\)/);
+});
+
+/* ---------------- Dra for å oppdatere: én indikator, alltid ferdig ---------------- */
+
+test('Oppdatering: én lastefunksjon, ny dra avbryter den gamle, og indikatoren stopper senest etter 15 s', () => {
+  const vm = code(APP, 'AppViewModel.kt');
+  const f = block(vm, 'fun pullRefresh()');
+  assert.match(f, /pullJob\?\.cancel\(\)/, 'ny oppdatering tar over for den gamle');
+  assert.match(f, /pullJob = work/);
+  assert.match(f, /withTimeoutOrNull\(REFRESH_TIMEOUT_MS\) \{ work\.join\(\) \}/, 'venter på selve lastingen, med tidsgrense');
+  assert.match(f, /finally \{ pullRefreshing = false \}/, 'nullstilles alltid');
+  assert.match(f, /message = "Kunne ikke oppdatere"/, 'feil eller tidsavbrudd: liten melding, gamle data står');
+  assert.match(vm, /const val REFRESH_TIMEOUT_MS = 15_000L/);
+  // Avbrudd (ny oppdatering tok over) er ikke en feil.
+  assert.match(f, /if \(e !is CancellationException\) failed = true/);
+});
+
+test('Oppdatering: Liste viser bare egen spinner ved første lasting, og aldri en evig spinner etter en feil', () => {
+  const vm = code(APP, 'AppViewModel.kt');
+  const l = block(vm, 'suspend fun loadTx()');
+  assert.match(l, /txFailed = false/);
+  assert.match(l, /catch \(e: CancellationException\) \{ throw e \} catch \(e: Exception\) \{ txFailed = true; throw e \}/);
+  const page = code(APP, 'ui/PapirSider.kt');
+  assert.match(page, /if \(vm\.txs == null && !vm\.txFailed && !vm\.pullRefreshing\) item \{[^\n]*CircularProgressIndicator/);
+  assert.match(page, /else if \(vm\.txs == null && vm\.txFailed\) item \{[^\n]*"Kunne ikke hente transaksjonene\. Dra ned for å prøve igjen\."/);
+});
+
+/* ---------------- Glimt-statuspillen øverst ---------------- */
+
+test('Glimt-statuspillen: tilstanden (jobber, lagret, feil) ligger i skanningens ViewModel, også når arket er lukket', () => {
+  const ks = code(APP, 'KvitteringSkanning.kt');
+  assert.match(ks, /enum class GlimtStatusKind \{ WORKING, DONE, FAILED \}/);
+  assert.match(ks, /data class GlimtStatus\(val text: String, val kind: GlimtStatusKind\)/);
+  assert.match(ks, /val pill: StateFlow<GlimtStatus\?> = _pill\.asStateFlow\(\)/);
+  // Arket lukkes mens Glimt jobber → pillen viser jobben. Teksten følger fasen.
+  const close = block(ks, 'fun close()');
+  assert.match(close, /syncPill\(\)/);
+  assert.match(ks, /is ReceiptScanState48\.Uploading -> "Glimt kontrollerer kvitteringen …"/);
+  // Resultatet mens arket er lukket: lagret ✓ eller feil (blir stående), ikke lenger bare en melding.
+  const fin = block(ks, 'private fun finish(');
+  assert.match(fin, /GlimtStatus\("Kvittering lagret ✓", GlimtStatusKind\.DONE\)/);
+  assert.match(fin, /GlimtStatus\("Glimt fikk ikke lest kvitteringen", GlimtStatusKind\.FAILED\)/);
+  // Sveipet bort: jobben fortsetter, og resultatet kommer som melding som før.
+  assert.match(fin, /if \(pillDismissed\)/);
+  assert.match(block(ks, 'fun dismissPill()'), /pillDismissed = true/);
+  // Trykk: åpner kvitteringen som kontrolleres (arket med fremdrift, skjemaet eller feilen).
+  assert.match(block(ks, 'fun reopen()'), /_visible\.value = true/);
+});
+
+test('Glimt-statuspillen: øverst under statuslinjen, over alt innhold, aldri ved skann-knappen eller fanelinja', () => {
+  const paper = code(APP, 'ui/Paper.kt');
+  // I rotlaget (Papir-skallet), etter sidene og fullskjermlagene, så den overlever navigasjon og fanebytte.
+  assert.match(paper, /GlimtStatusPill\(vm, Modifier\.align\(Alignment\.TopCenter\)\)/);
+  assert.ok(paper.indexOf('GlimtStatusPill(vm') > paper.indexOf('PaperFab(vm'), 'over skann-knappen i z-rekkefølgen');
+  const ui = code(APP, 'ui/GlimtStatuspille.kt');
+  const pill = block(ui, 'internal fun BoxScope.GlimtStatusPill(');
+  assert.match(pill, /windowInsetsPadding\(WindowInsets\.statusBars\)\.padding\(top = 8\.dp, start = 16\.dp, end = 16\.dp\)/);
+  assert.doesNotMatch(pill, /BottomCenter|BottomEnd|navigationBars/);
+  // Utseende: mørk pille #1A1916, hvit tekst, 40 dp høy, full radius, én linje med «…».
+  assert.match(pill, /\.height\(40\.dp\)\.clip\(CircleShape\)\.background\(PILL_BG\)/);
+  assert.match(ui, /internal val PILL_BG = DsPalette\.PapirLys\.textPrimary/, 'token (blekket #1B1A17), ikke hex');
+  assert.match(pill, /maxLines = 1, overflow = TextOverflow\.Ellipsis/);
+  // Inn: glir ned + fade (0,25 s, spring). Ut: glir opp.
+  assert.match(pill, /slideInVertically\(spring\(/);
+  assert.match(pill, /slideOutVertically\(/);
+  // Trykk åpner, sveip opp skjuler.
+  assert.match(pill, /onClick = \{ vm\.scan48\.reopen\(\) \}/);
+  assert.match(pill, /if \(dy < -24\.dp\.toPx\(\)\) vm\.scan48\.dismissPill\(\)/);
+  // Ferdig: «Kvittering lagret ✓» i 1,5 s, så skjules pillen.
+  assert.match(pill, /delay\(1_500\)/);
+  // Glimt-logoen (regnbuering med rød stjerne, samme som Glimt-pillen og orben) i 22 dp, i stedet for en spinner.
+  assert.match(pill, /GlimtOrb43\(22\.dp, busy = working, status = true\)/);
+  assert.doesNotMatch(pill, /CircularProgressIndicator|LinearProgressIndicator/);
+});
+
+test('Glimt-logoen i statuspillen: roterer 1,6 s mens Glimt jobber, står stille ellers, puls når animasjoner er av', () => {
+  const g = code(APP, 'ui/Glimt.kt');
+  const orb = block(g, 'internal fun GlimtOrb43(');
+  assert.match(orb, /status: Boolean = false/);
+  assert.match(orb, /status && busy && !reduce -> 1600/);
+  assert.match(orb, /reduceMotion31\(\)/);
+  // «Reduser bevegelse»: ingen rotasjon, svak puls (opasitet 0,6–1) på ringen. Stjernen står alltid stille.
+  assert.match(orb, /animateFloat\(\.6f, 1f/);
+  assert.match(orb, /alpha = if \(pulse\) a else 1f/);
+});
