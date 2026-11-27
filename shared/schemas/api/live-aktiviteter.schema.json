@@ -73,6 +73,21 @@
           "status": {
             "type": "string"
           },
+          "fase": {
+            "description": "Prompt 57: fasen til en nedlasting (iOS ContentState.phase). ko | laster | komprimerer | ferdig | feilet. null for andre typer. Under «komprimerer» er verdi «Komprimerer» og progress null (ingen prosent).",
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "ko",
+              "laster",
+              "komprimerer",
+              "ferdig",
+              "feilet",
+              null
+            ]
+          },
           "handlinger": {
             "type": "array",
             "items": {

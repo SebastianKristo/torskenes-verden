@@ -53,7 +53,7 @@ const I = as(await cookie('ingrid', 'ingridPassord123'));
 const K = as(await cookie('kari', 'kariPassord1234'));
 const NONE = as(null);
 
-const KEYS = ['id', 'type', 'tittel', 'undertittel', 'verdi', 'progress', 'segmenter', 'meta', 'start', 'slutt', 'status', 'handlinger', 'url'];
+const KEYS = ['id', 'type', 'tittel', 'undertittel', 'verdi', 'progress', 'segmenter', 'meta', 'start', 'slutt', 'status', 'handlinger', 'url', 'fase'];
 function checkShape(a) {
   assert.deepEqual(Object.keys(a).sort(), [...KEYS].sort(), `nøklene i ${a.id}`);
   assert.match(a.id, /^[a-z0-9:_-]{1,80}$/);
@@ -61,6 +61,8 @@ function checkShape(a) {
   assert.ok(['aktiv', 'pause', 'ferdig'].includes(a.status));
   assert.ok(a.progress === null || (a.progress >= 0 && a.progress <= 1), `progress ${a.progress}`);
   if (a.type !== 'pakke') assert.equal(a.segmenter, null);
+  // Prompt 57: fasen for nedlastinger (ko | laster | komprimerer | ferdig | feilet), null for de andre typene.
+  if (a.type === 'nedlasting') assert.ok(L.FASER89.includes(a.fase), `fase ${a.fase}`); else assert.equal(a.fase, null);
   for (const k of ['tittel', 'undertittel', 'verdi', 'meta', 'url']) assert.equal(typeof a[k], 'string');
   for (const k of ['start', 'slutt']) assert.ok(a[k] === null || !Number.isNaN(Date.parse(a[k])));
   for (const h of a.handlinger) { assert.ok(L.HANDLINGER89.includes(h.id)); assert.equal(typeof h.tittel, 'string'); }
@@ -370,5 +372,50 @@ test('NRK-jobb: kjører → pause (avbryt i nrk-dl) → fortsett (igjen); tokene
     assert.equal(f.status, 200); assert.equal(f.body.aktivitet.status, 'aktiv');
     assert.ok(kall.includes('POST /api/jobber/a1b2c3d4e5f6/igjen'));
     assert.equal((await K('/api/live/handling', 'POST', { id: j.id, handling: 'pause' })).status, 404, 'uten Media-tilgang');
+  } finally { nrk._setFetchNrk(null); updateConfig({ nrk_url: null, nrk_token: null }, OWNER); L._resetLive89(); }
+});
+
+test('Prompt 57: NRK-nedlasting har fase – komprimerer uten prosent, meta gjentar aldri tittelen, feilet med «Prøv igjen»', async () => {
+  const nrk = await import('../server/media/nrk.js');
+  updateConfig({ nrk_url: 'http://nrk.p57:8020', nrk_token: 'nrk-hemmelig-57' }, OWNER);
+  let job = { id: 'c1b2c3d4e5f6', url: 'https://tv.nrk.no/program/dagsrevyen', type: 'tv', status: 'kjorer', tittel: 'Dagsrevyen - I dag', melding: 'Laster ned Dagsrevyen - I dag', prosent: 62.4, eta: 120, opprettet: 100 };
+  nrk._setFetchNrk(async (url) => {
+    const P = new URL(url).pathname;
+    if (P === '/api/jobber') return new Response(JSON.stringify({ jobber: [job], folger: [] }), { headers: { 'content-type': 'application/json' } });
+    return new Response('{"ok":true}');
+  });
+  const hent = async () => { L._resetHits89(); L._resetNrkCache89(); const r = await A('/api/live/aktiviteter'); assert.equal(r.status, 200, r.text); return r.body.aktiviteter.find((x) => x.id === 'nedlasting:nrk:c1b2c3d4e5f6'); };
+  try {
+    L._resetLive89();
+    let a = await hent();
+    checkShape(a);
+    assert.equal(a.fase, 'laster'); assert.equal(a.verdi, '62 %'); assert.equal(a.progress, 0.624);
+    assert.ok(!a.meta.includes('Dagsrevyen'), `meta gjentar tittelen: ${a.meta}`);
+    // Komprimerer: ingen prosent (verdien og linja gjaldt nedlastingen), meta sier fasen og ca. tid.
+    job = { ...job, melding: 'Komprimerer Dagsrevyen - I dag · Frykter spredning', prosent: 0, eta: 60 };
+    nrk._setFetchNrk(async (url) => (new URL(url).pathname === '/api/jobber'
+      ? new Response(JSON.stringify({ jobber: [job], folger: [] }), { headers: { 'content-type': 'application/json' } }) : new Response('{"ok":true}')));
+    a = await hent();
+    checkShape(a);
+    assert.equal(a.fase, 'komprimerer'); assert.equal(a.verdi, 'Komprimerer'); assert.equal(a.progress, null);
+    assert.equal(a.meta, 'Komprimerer · ca. 1 min');
+    assert.doesNotMatch(a.verdi, /%/);
+    assert.deepEqual(a.handlinger.map((h) => h.id), ['pause']);
+    // Feilet (etter at den har kjørt): «Feilet» med «Prøv igjen» (fortsett = igjen i nrk-dl).
+    job = { ...job, status: 'feil', melding: 'ffmpeg feilet' };
+    a = await hent();
+    assert.ok(a, 'feilet jobb vises');
+    checkShape(a);
+    assert.equal(a.fase, 'feilet'); assert.equal(a.verdi, 'Feilet'); assert.equal(a.status, 'pause');
+    assert.deepEqual(a.handlinger, [{ id: 'fortsett', tittel: 'Prøv igjen' }]);
+    // Ferdig.
+    job = { ...job, status: 'kjorer', melding: 'Laster ned', prosent: 99 };
+    await hent();
+    job = { ...job, status: 'ferdig', melding: 'Ferdig' };
+    a = await hent();
+    checkShape(a);
+    assert.equal(a.fase, 'ferdig'); assert.equal(a.verdi, 'Ferdig');
+    // content-state i APNs har fasen.
+    assert.equal(L.contentState89(a).fase, 'ferdig');
   } finally { nrk._setFetchNrk(null); updateConfig({ nrk_url: null, nrk_token: null }, OWNER); L._resetLive89(); }
 });
