@@ -102,7 +102,7 @@ test('Papir-pillen: Hjem-knappen fra den gamle linja (1a–1d) er tilbake og fø
   assert.match(pill, /if nh == "1c" && i == mid \{ PapirHjemMidt\(\) \}/);
   // 1a–1c: Oversikt-fanen vises ikke i pillen, men står i skallet (samme fanekilde og stakk).
   assert.match(pill, /hjemknapp == "1a" \|\| hjemknapp == "1b" \|\| hjemknapp == "1c"/);
-  assert.match(code('AppShell.swift'), /PapirModulRutenett\(over: pillHoyde\)/);
+  assert.match(code('AppShell.swift'), /PapirModulRutenett\(over: over\)/);
   // Knappene navigerer med den gamle logikken (NavHomeButton.swift).
   for (const v of ['PapirHjemRund', 'PapirHjemForst', 'PapirHjemMidt']) {
     const i = nh.indexOf(`struct ${v}: View`);
@@ -121,4 +121,78 @@ test('Papir-pillen: Hjem-knappen fra den gamle linja (1a–1d) er tilbake og fø
   for (const m of nh.matchAll(/minWidth: (\d+), minHeight: (\d+)/g)) assert.ok(+m[1] >= 44 && +m[2] >= 44, m[0]);
   // Med systemets fanelinje finnes ingen Hjem-knapp, så «‹ Oversikt» øverst skjules ikke.
   assert.match(code('NavHomeButton.swift'), /nav42BarShown, FanelinjeValg\.shared\.stil == \.papir else \{ return false \}/);
+});
+
+/* ---------- Prompt 57 (claude-code-ios-fanelinje.md): Papir-pillen ---------- */
+
+test('1) inaktive faner er hvite: token navInk (#ffffff) i alle stiler og moduser, ikke hex i appen', () => {
+  const tokens = JSON.parse(readFileSync(join(import.meta.dirname, '..', 'shared', 'design', 'tokens.json'), 'utf8'));
+  assert.equal(tokens.color.papir.lys.navInk, '#ffffff');
+  assert.equal(tokens.color.papir.mork.navInk, '#ffffff');
+  assert.equal(tokens.color.glass.mork.navInk, '#ffffff');
+  assert.match(code('PaperTheme.swift'), /let navInk: Color = c\(\.navInk\)/);
+  assert.doesNotMatch(raw('ThemeColors.swift'), /b3ada1/i);
+  assert.match(code('PapirFanelinje.swift'), /\.foregroundStyle\(on \? p\.navActInk : p\.navInk\)/);
+});
+
+test('2) pillen står like over home-indikatoren: safe area legges ikke til to ganger', () => {
+  const pill = code('PapirFanelinje.swift');
+  assert.match(pill, /static func bunn\(_ safe: CGFloat\) -> CGFloat \{ Swift\.max\(12, safe - 8\) \}/);
+  // Ingen egen bunnpolstring i pillen (avstanden settes i skallet).
+  assert.doesNotMatch(pill, /\.padding\(\.bottom, DS\.Space\.xs\)/);
+  const shell = code('AppShell.swift');
+  assert.match(shell, /\.padding\(\.bottom, PapirFanelinje\.bunn\(safeBunn\)\)/);
+  assert.match(shell, /\.ignoresSafeArea\(\.container, edges: \.bottom\)/);
+  // Sidene får pillen + bunnavstanden som luft, minus safe area-en de allerede har.
+  assert.match(shell, /let over: CGFloat = Swift\.max\(0, pillHoyde - safeBunn\)/);
+  assert.match(shell, /\.environment\(\\\.shellKlassiskHoyde, pill \? over : 0\)/);
+  assert.match(shell, /PapirModulRutenett\(over: over\)/);
+});
+
+test('3) ingen merke med antall kvitteringer på Økonomi-fanen (begge fanelinjene)', () => {
+  const tabs = code('ShellTabs.swift');
+  const i = tabs.indexOf('static func badge(');
+  const blokk = tabs.slice(i, tabs.indexOf('\n    }\n', i));
+  assert.doesNotMatch(blokk, /reviewCount|review\.count|"finans"/);
+  assert.match(blokk, /return 0/);
+});
+
+test('4) valgt fane: ikon og navn side om side (8 pt), inaktive bare navn', () => {
+  const s = code('PapirFanelinje.swift');
+  assert.match(s, /let showIcon: Bool = style != "text" \|\| on/);
+  assert.match(s, /let ikonStil: DS\.Tekst = showLabel && !on \? \.callout : \.headline/);
+  assert.match(s, /HStack\(spacing: DS\.Space\.sm\)/);
+  assert.match(s, /\.layoutPriority\(on && style != "icons" \? 1 : 0\)/);
+  assert.match(code('Store.swift'), /forKey: "fh_nav_style25"\) \?\? "text"/);
+});
+
+test('5) Skann-knappen blir, 12 pt over den øverste linjen og 16 pt fra kanten', () => {
+  const s = code('Paper.swift');
+  assert.match(s, /let fabBottom: CGFloat = DS\.Space\.md \+ \(section \? ShellMetrics\.sectionBarHeight : 0\)/);
+  assert.match(s, /PaperFab\(tap: fabTap, hold: fabHold\)\n\s+\.padding\(\.trailing, wide \? 24 : 16\)/);
+});
+
+/* ---------- Prompt 57 (claude-code-okonomi-fanelinje-ios.md, 1a): Økonomi-fanene som glass-pille ---------- */
+
+test('Økonomi-fanene: glass-pille over hovedlinjen, hvit tekst, «Transaksj.», ingen sliders og ingen flate bak', () => {
+  const s = code('AppShell.swift');
+  const i = s.indexOf('struct ShellSectionBar: View');
+  const bar = s.slice(i, s.indexOf('\nstruct ', i + 10));
+  assert.doesNotMatch(bar, /slider\.horizontal\.3/);
+  assert.doesNotMatch(bar, /\.pickerStyle\(\.segmented\)/);
+  assert.doesNotMatch(bar, /\.background\(\.bar\)/);
+  assert.doesNotMatch(bar, /#[0-9a-fA-F]{6}\b|Color\(hex/);
+  assert.match(bar, /DS\.fixed\(\.textPrimary, stil: \.papir, dark: false\)\.opacity\(0\.62\)/);
+  assert.match(bar, /\.background\(\.ultraThinMaterial, in: Capsule\(\)\)/);
+  assert.match(bar, /on \? DS\.fixed\(\.textPrimary, stil: \.papir, dark: false\) : p\.navInk/);
+  assert.match(bar, /\.frame\(height: 32\)/);
+  assert.match(bar, /title == "Transaksjoner" \? "Transaksj\." : title/);
+  assert.match(bar, /\.accessibilityLabel\(t\.title\)/);
+  // Hold inne = rediger fanene (samme ark), og klikket etterpå navigerer ikke.
+  assert.match(bar, /LongPressGesture\(minimumDuration: 0\.5\)/);
+  assert.match(bar, /Nav26\.shared\.markHold\(\)/);
+  assert.match(bar, /Nav26\.shared\.consumeHold\(\)/);
+  assert.match(bar, /FinNav26\.shared\.editing = true/);
+  // Innholdet ruller under linjene (pillen ligger i safe area-innsettet, uten bakgrunn).
+  assert.match(code('Paper.swift'), /\.safeAreaInset\(edge: \.bottom, spacing: 0\) \{\n\s+if section \{ ShellSectionBar\(\) \}/);
 });

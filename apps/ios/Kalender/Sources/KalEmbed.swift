@@ -30,6 +30,9 @@ final class KalEmbed84 {
     var notify: Bool = false
     /// Q26: Homelabs widget-forhåndsvisninger (iPhone, Android, Samsung) i Oversikt → Widgets. nil i Kalender-appen.
     var widgetPreview: (@MainActor () -> AnyView)? = nil
+    /// Prompt 57: «Homelab» øverst i sidemenyen (☰) går tilbake til Homelab-appen. Settes bare når Kalender er åpnet fra
+    /// Homelab (ikke fra en widget eller et varsel), ellers nil – også alltid nil i den frittstående Kalender-appen.
+    var tilbake: (@MainActor () -> Void)? = nil
 
     /// Tema på Kalender-fullskjermen. «System» følger telefonen (skjermens stil), ikke Homelabs eget tema.
     func apply(_ style: UIUserInterfaceStyle) {

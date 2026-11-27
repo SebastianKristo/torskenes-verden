@@ -68,8 +68,8 @@ struct API {
         return try APIClient.decode(type, from: d)
     }
 
-    func get<T: Decodable>(_ path: String, as: T.Type = T.self) async throws -> T {
-        try JSONDecoder().decode(T.self, from: try await send(URLRequest(url: url(path))))
+    func get<T: Decodable>(_ path: String, as: T.Type = T.self, timeout: TimeInterval = 30) async throws -> T {
+        try JSONDecoder().decode(T.self, from: try await send(URLRequest(url: url(path)), timeout: timeout))
     }
 
     @discardableResult

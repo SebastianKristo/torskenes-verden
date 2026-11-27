@@ -57,6 +57,7 @@ Da kan verdien endres ett sted, og mørk modus, glass og økt kontrast får hver
 | `successSoft` | `#e3eee5` | `rgba(111,191,143,0.16)` | `rgba(111,191,143,0.16)` | Svakt fyll bak OK-brikker (tekst: `textPrimary` eller `success`) |
 | `warningSoft` | `#f4e8cf` | `rgba(224,168,90,0.16)` | `rgba(224,168,90,0.16)` | Svakt fyll bak advarsler |
 | `dangerSoft` | `#f6dfd8` | `rgba(236,122,100,0.16)` | `rgba(236,122,100,0.16)` | Svakt fyll bak feil og «slett» |
+| `navInk` | `#ffffff` | `#ffffff` | `#ffffff` | Tekst og ikon på inaktive faner i den flytende fanelinjen (mørk pille i begge moduser) |
 
 Merk: `warning` i Papir lys har 4,0:1 mot `surface`. Bruk den som ikon, fyll (med `onWarning`) eller stor tekst, ikke som liten tekst.
 

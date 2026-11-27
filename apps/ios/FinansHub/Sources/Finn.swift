@@ -187,7 +187,7 @@ struct FinnView: View {
             .padding(.horizontal, 18).padding(.bottom, 110)
         }
         .scrollDismissesKeyboard(.interactively)
-        .refreshable { try? await store.loadFinn() }
+        .oppfrisk("Finn.1") { try? await store.loadFinn() }
     }
 }
 
@@ -355,7 +355,7 @@ private struct FinnDealView: View {
             }
             .padding(.horizontal, 18).padding(.top, 6).padding(.bottom, 110)
         }
-        .refreshable { await store.loadFinnDetail() }
+        .oppfrisk("Finn.2") { await store.loadFinnDetail() }
         .onChange(of: photoItems) { _, items in
             guard !items.isEmpty else { return }
             Task {

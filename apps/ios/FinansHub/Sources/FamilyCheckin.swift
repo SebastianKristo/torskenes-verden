@@ -58,7 +58,7 @@ struct Fam50CheckinTab: View {
             .padding(.bottom, 24)
         }
         .scrollIndicators(.hidden)
-        .refreshable { await m.refreshSuggestion(store) }
+        .oppfrisk("FamilyCheckin.1") { await m.refreshSuggestion(store) }
         .task {
             await m.refreshSuggestion(store)
             d.defaults(m.recipients)
@@ -372,7 +372,7 @@ struct Fam50Sent: View {
             .padding(.bottom, 24)
         }
         .scrollIndicators(.hidden)
-        .refreshable { await m.loadCheckin(store) }
+        .oppfrisk("FamilyCheckin.2") { await m.loadCheckin(store) }
     }
 }
 

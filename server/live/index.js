@@ -45,6 +45,8 @@ export const ID_RE89 = /^[a-z0-9:_-]{1,80}$/;
 export const HANDLINGER89 = ['pause', 'fortsett', 'stopp', 'rute', 'utsett'];
 export const ACCENT89 = { nedlasting: '#5ac8fa', backup: '#30d158', spiller: '#ffb340', avtale: '#ff6a4d', pakke: '#bf8cff' };
 export const ATTR_TYPE89 = 'Plat51Attributes';
+/** Prompt 57: fasen til en nedlasting (iOS ContentState.phase: queued | downloading | muxing | done | failed). null for andre typer. */
+export const FASER89 = ['ko', 'laster', 'komprimerer', 'ferdig', 'feilet'];
 const DONE_MS = 15 * 60_000, PKG_DONE_MS = 30 * 60_000, SOON_MS = 60 * 60_000, SNOOZE_MS = 5 * 60_000, THROTTLE_MS = 5000;
 const URL = { nedlasting: 'homelab://media/ned', backup: 'homelab://innstillinger/backup', spiller: 'homelab://media/avspilling', avtale: 'homelab://kalender', pakke: 'homelab://sporing' };
 
@@ -61,8 +63,17 @@ const join = (...xs) => xs.filter((x) => x != null && x !== '').join(' · ');
 function akt(type, o) {
   return { id: o.id, type, tittel: String(o.tittel ?? '').slice(0, 120), undertittel: String(o.undertittel ?? '').slice(0, 160), verdi: String(o.verdi ?? '').slice(0, 24),
     progress: o.progress == null ? null : clamp01(o.progress), segmenter: type === 'pakke' && o.segmenter ? o.segmenter : null, meta: String(o.meta ?? '').slice(0, 160),
-    start: o.start ?? null, slutt: o.slutt ?? null, status: o.status ?? 'aktiv', handlinger: o.handlinger ?? [], url: o.url ?? URL[type] };
+    start: o.start ?? null, slutt: o.slutt ?? null, status: o.status ?? 'aktiv', handlinger: o.handlinger ?? [], url: o.url ?? URL[type],
+    fase: type === 'nedlasting' && FASER89.includes(o.fase) ? o.fase : null };
 }
+/** Prompt 57: meta-raden gjentar aldri tittelen («Komprimerer Dagsrevyen - I dag · …» → «Komprimerer · …»). */
+export function utenTittel89(meta, tittel) {
+  const m = String(meta ?? ''), t = String(tittel ?? '').trim();
+  if (!t || !m.includes(t)) return m;
+  return m.split(t).join('').replace(/\s*·\s*·\s*/g, ' · ').replace(/\s{2,}/g, ' ').replace(/^\s*·\s*|\s*·\s*$/g, '').trim();
+}
+/** «ca. 1 min» / «ca. 3 min» fra sekunder (minst 1 min). */
+const caMin = (sek) => (Number.isFinite(+sek) && +sek > 0 ? `ca. ${Math.max(1, Math.round(+sek / 60))} min` : null);
 
 /* ---------------- Innstillinger (per bruker) ---------------- */
 
@@ -84,7 +95,7 @@ function setPrefs89(u, b) {
 /* ---------------- Kildene ---------------- */
 
 // NRK-jobber pauset herfra (avbryt i nrk-dl) vises som «pause» med Fortsett (igjen) i 6 t. Ferdige vises 15 min etter at vi så dem kjøre.
-const nrkPaused = new Map(), nrkRan = new Map(), nrkDone = new Map(), qbPaused = new Map(); // qbPaused: torrenter pauset herfra beholder plassen sin
+const nrkPaused = new Map(), nrkRan = new Map(), nrkDone = new Map(), nrkFail = new Map(), qbPaused = new Map(); // qbPaused: torrenter pauset herfra beholder plassen sin
 let nrkCache = null;
 async function nrkJobs(now) {
   if (!nrkConf().on) return [];
@@ -111,7 +122,8 @@ async function downloads(u, now) {
       const eta = status === 'aktiv' && Number.isFinite(t.eta) && t.eta > 0 && t.eta < 8640000 ? now + t.eta * 1000 : null;
       out.push({ ref: { kind: 'qb', hash: String(t.hash).toLowerCase() }, a: akt('nedlasting', {
         id: `nedlasting:qb:${slug(t.hash, 64)}`, tittel: t.title, undertittel: join(t.code && t.code !== 'Film' ? t.code : null, kilde, queued ? `${queued} i kø` : null),
-        verdi: status === 'ferdig' ? 'Ferdig' : pct(t.progress), progress: status === 'ferdig' ? 1 : t.progress / 100, meta: status === 'ferdig' ? 'Lastet ned' : t.statusText,
+        fase: status === 'ferdig' ? 'ferdig' : 'laster',
+        verdi: status === 'ferdig' ? 'Ferdig' : pct(t.progress), progress: status === 'ferdig' ? 1 : t.progress / 100, meta: status === 'ferdig' ? 'Lastet ned' : utenTittel89(t.statusText, t.title),
         start: t.addedAt ?? null, slutt: iso(eta), status, handlinger: status === 'aktiv' ? [H('pause', 'Pause')] : status === 'pause' ? [H('fortsett', 'Fortsett')] : [] }) });
     }
   }
@@ -122,17 +134,29 @@ async function downloads(u, now) {
   for (const j of jobs) {
     if (j.status === 'kjorer') nrkRan.set(j.id, now);
     if (j.status === 'ferdig' && nrkRan.has(j.id) && !nrkDone.has(j.id)) nrkDone.set(j.id, now);
+    // Prompt 57: en jobb som feilet etter at vi så den kjøre, vises i 15 min som «Feilet» med «Prøv igjen».
+    if (j.status === 'feil' && nrkRan.has(j.id) && !nrkFail.has(j.id)) nrkFail.set(j.id, now);
     const done = j.status === 'ferdig' && nrkDone.has(j.id) && now - nrkDone.get(j.id) < DONE_MS;
+    const failed = j.status === 'feil' && nrkFail.has(j.id) && now - nrkFail.get(j.id) < DONE_MS;
     const paused = j.status === 'avbrutt' && nrkPaused.has(j.id);
-    if (!(j.status === 'kjorer' || done || paused) || n >= 2) continue;
+    if (!(j.status === 'kjorer' || done || paused || failed) || n >= 2) continue;
     n++;
     const p = Math.max(0, Math.min(100, Number(j.prosent) || 0));
-    const status = done ? 'ferdig' : paused ? 'pause' : 'aktiv';
+    const status = done ? 'ferdig' : paused || failed ? 'pause' : 'aktiv';
+    const tittel = j.tittel || 'NRK';
+    // Prompt 57: under komprimering gjelder ikke prosenten nedlastingen – ingen prosent og ubestemt linje.
+    const komp = status === 'aktiv' && /^komprimerer/i.test(String(j.melding ?? ''));
+    const fase = done ? 'ferdig' : failed ? 'feilet' : komp ? 'komprimerer' : 'laster';
     const eta = status === 'aktiv' && Number.isFinite(+j.eta) && +j.eta > 0 ? now + +j.eta * 1000 : null;
+    const meta = failed ? utenTittel89(String(j.melding ?? 'Feilet'), tittel).slice(0, 160) || 'Feilet'
+      : status === 'pause' ? 'Pauset'
+        : komp ? join('Komprimerer', caMin(j.eta))
+          : utenTittel89(String(j.melding ?? ''), tittel).slice(0, 160);
     out.push({ ref: { kind: 'nrk', id: j.id }, a: akt('nedlasting', {
-      id: `nedlasting:nrk:${j.id}`, tittel: j.tittel || 'NRK', undertittel: join(j.av ? `${j.nr ?? 1} av ${j.av}` : null, 'NRK', ko ? `${ko} i kø` : null),
-      verdi: status === 'ferdig' ? 'Ferdig' : pct(p), progress: status === 'ferdig' ? 1 : p / 100, meta: status === 'pause' ? 'Pauset' : String(j.melding ?? '').slice(0, 160),
-      start: iso((+j.opprettet || 0) * 1000), slutt: iso(eta), status, handlinger: status === 'aktiv' ? [H('pause', 'Pause')] : status === 'pause' ? [H('fortsett', 'Fortsett')] : [] }) });
+      id: `nedlasting:nrk:${j.id}`, tittel, undertittel: join(j.av ? `${j.nr ?? 1} av ${j.av}` : null, 'NRK', ko ? `${ko} i kø` : null), fase,
+      verdi: done ? 'Ferdig' : failed ? 'Feilet' : komp ? 'Komprimerer' : pct(p), progress: done ? 1 : failed || komp ? null : p / 100, meta,
+      start: iso((+j.opprettet || 0) * 1000), slutt: iso(eta), status,
+      handlinger: failed ? [H('fortsett', 'Prøv igjen')] : status === 'aktiv' ? [H('pause', 'Pause')] : status === 'pause' ? [H('fortsett', 'Fortsett')] : [] }) });
   }
   return out;
 }
@@ -226,7 +250,9 @@ function packages(u, now) {
 const cache = new Map();
 const invalidate = (u) => { cache.delete(u); };
 export const _resetHits89 = () => { hits.clear(); cache.clear(); };
-export const _resetLive89 = () => { cache.clear(); nrkPaused.clear(); qbPaused.clear(); nrkRan.clear(); nrkDone.clear(); nrkCache = null; hits.clear(); };
+/** Test: les NRK-jobbene på nytt (beholder hva vi har sett kjøre, ferdig og feilet). */
+export const _resetNrkCache89 = () => { nrkCache = null; cache.clear(); };
+export const _resetLive89 = () => { cache.clear(); nrkPaused.clear(); qbPaused.clear(); nrkRan.clear(); nrkDone.clear(); nrkFail.clear(); nrkCache = null; hits.clear(); };
 /** → [{a: Akt, ref}] for brukeren, bare typene brukeren har slått på. */
 export async function liveItems89(u, { now = Date.now(), fresh = false } = {}) {
   const hit = cache.get(u);
@@ -273,7 +299,7 @@ export async function handling89(u, b = {}, { now = Date.now() } = {}) {
     if (r.kind === 'qb') { await torrentAction43(r.hash, h === 'pause' ? 'pause' : 'resume'); if (h === 'pause') qbPaused.set(r.hash, now); else qbPaused.delete(r.hash); return { ok: true, aktivitet: await again() }; }
     if (r.kind === 'nrk') {
       await nrkKall(`/api/jobber/${r.id}/${h === 'pause' ? 'avbryt' : 'igjen'}`, { method: 'POST' });
-      if (h === 'pause') nrkPaused.set(r.id, now); else nrkPaused.delete(r.id);
+      if (h === 'pause') nrkPaused.set(r.id, now); else { nrkPaused.delete(r.id); nrkFail.delete(r.id); }
       nrkCache = null;
       return { ok: true, aktivitet: await again() };
     }
@@ -332,12 +358,12 @@ export function contentState89(a) {
   const endAt = a.slutt ? unix(Date.parse(a.slutt)) : 0;
   return { title: a.tittel, sub: a.undertittel, endAt, progress: a.progress ?? -1, state: PLAT_STATE[a.status] ?? 'active', value: a.verdi,
     id: a.id, type: a.type, tittel: a.tittel, undertittel: a.undertittel, verdi: a.verdi, segmenter: a.segmenter, meta: a.meta, start: a.start, slutt: a.slutt,
-    startAt: a.start ? unix(Date.parse(a.start)) : 0, status: a.status, handlinger: a.handlinger, url: a.url };
+    startAt: a.start ? unix(Date.parse(a.start)) : 0, status: a.status, handlinger: a.handlinger, url: a.url, fase: a.fase ?? null };
 }
 export const attributes89 = (a) => ({ kind: a.type, key: a.id, color: ACCENT89[a.type], id: a.id, type: a.type });
 /** Hva som teller som «endring». Tid som tikker i appen (spiller, avtale) sender ikke push hvert sekund. */
 function hashOf(a) {
-  const base = { s: a.status, t: a.tittel, u: a.undertittel, h: a.handlinger.map((x) => x.id), seg: a.segmenter };
+  const base = { s: a.status, t: a.tittel, u: a.undertittel, h: a.handlinger.map((x) => x.id), seg: a.segmenter, f: a.fase ?? null };
   if (a.type === 'spiller') Object.assign(base, { st: a.start ? Math.round(Date.parse(a.start) / 30_000) : null });
   else if (a.type === 'avtale') Object.assign(base, { sl: a.slutt, m: a.meta });
   else Object.assign(base, { v: a.verdi, p: a.progress, m: a.meta, sl: a.slutt ? Math.round(Date.parse(a.slutt) / 60_000) : null });

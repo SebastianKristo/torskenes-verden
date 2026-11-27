@@ -325,7 +325,7 @@ struct Skj82ProjectsSheet: View {
             .padding(16)
         }
         .background(p.bg.ignoresSafeArea())
-        .refreshable { await k.load(store) }
+        .oppfrisk("SkjoldProjectsViews.1") { await k.load(store) }
         .task { await k.load(store) }
     }
 
@@ -435,7 +435,7 @@ struct Skj82ProjectSheet: View {
             .padding(16)
         }
         .background(p.bg.ignoresSafeArea())
-        .refreshable { await k.loadProject(id, store) }
+        .oppfrisk("SkjoldProjectsViews.2") { await k.loadProject(id, store) }
         .task { await k.loadProject(id, store) }
         .alert("Gi nytt navn", isPresented: $renaming) {
             TextField("Navn", text: $newName)

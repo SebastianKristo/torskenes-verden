@@ -358,7 +358,7 @@ struct News73SavedList: View {
         }
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
-        .refreshable { await News73Model.shared.load(store) }
+        .oppfrisk("NewsSaved") { await News73Model.shared.load(store) }
     }
 
     private func filtered(_ all: [News73Item]) -> [News73Item] {

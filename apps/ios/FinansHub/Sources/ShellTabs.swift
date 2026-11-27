@@ -242,12 +242,12 @@ enum ShellTabs {
         return out
     }
 
-    /// Merket på en fane, fra det serveren har sendt. Økonomi: kvitteringer til gjennomgang (samme tall som Økonomi → Mer).
+    /// Merket på en fane, fra det serveren har sendt.
+    /// Prompt 57 (claude-code-ios-fanelinje.md, punkt 3): Økonomi har ikke lenger merket med kvitteringer til gjennomgang
+    /// (det presset navnet ned til «Øko…»). Antallet står fortsatt inne i Økonomi og på Økonomi-kortet på Oversikt.
+    /// Ingen fane har merke nå; mekanismen står, så et nytt merke kan legges til her.
     @MainActor static func badge(_ id: String, _ store: Store) -> Int {
         switch id {
-        case "finans":
-            let n: Int = store.reviewCount ?? store.summary?.review.count ?? store.boot?.reviewCount ?? 0
-            return Swift.max(0, n)
         default:
             return 0
         }

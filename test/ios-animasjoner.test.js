@@ -61,7 +61,8 @@ test('evig repeatForever er alltid avgrenset til én egenskap (ikke .animation(�
 
 test('orb: TimelineView(.animation) i full takt, ferdig ringlag med drawingGroup, Reduser bevegelse', () => {
   const o = code(FH + 'OkonomiListe.swift');
-  assert.match(o, /TimelineView\(\.animation\(minimumInterval: nil, paused: reduceMotion\)\)/);
+  // Prompt 57: også på pause når ringen står stille (Glimt-statuspillen ferdig/feilet).
+  assert.match(o, /TimelineView\(\.animation\(minimumInterval: nil, paused: reduceMotion \|\| still\)\)/);
   assert.match(o, /struct Orb43Ring: View[\s\S]*?\.drawingGroup\(\)/);
   assert.doesNotMatch(o, /@State private var spin/);
   const g = code(FH + 'GlimtMark.swift');

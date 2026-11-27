@@ -10,8 +10,8 @@ import UIKit
    speiler rute-nøkkelen (Store.shellPageKey) inn i stakken: ny side = push, tilbakeknapp i siden = pop, og systemets sveip
    tilbake kaller sidens egen tilbake-handling (ShellRouter.back). Bare øverste side tegnes levende; sidene under viser
    skjermbildet fra ShellHistory (som før), så sveipet viser riktig side bak.
- – Fanelinja skifter ikke innhold per seksjon: Finans, Domener, Abonnement og Familie har sine faner i en segmentert velger
-   nederst på siden (ShellSectionBar).
+ – Fanelinja skifter ikke innhold per seksjon: Finans, Domener, Abonnement og Familie har sine faner i en glass-pille
+   over hovedlinjen (ShellSectionBar, prompt 57).
  – Nye skjermer (bølge 2) kan bruke systemets navigasjonslinje med .shellSystemNavigationBar() og .navigationTitle(…).
  – Innstillinger → Utseende → Fanelinje (FanelinjeValg.swift): «Papir (klassisk)» skjuler systemets fanelinje i kompakt bredde
    og viser den flytende Papir-pillen (PapirFanelinje.swift) over den samme TabView-en. Fanene, valget, stakkene og merkene
@@ -20,7 +20,7 @@ import UIKit
 /// Plassen sidene tidligere holdt av til den egne skinnen på iPad (108 pt). Sidekolonnen i NavigationSplitView tar nå sin egen plass.
 enum ShellMetrics {
     static let railInset: CGFloat = 0
-    /// Høyden på segmentvelgeren for seksjonsfanene (ShellSectionBar), for knapper som ligger over den.
+    /// Høyden seksjonsfanene (ShellSectionBar) tar over hovedlinjen: pillen (40) + 8 pt luft, for knapper som ligger over den.
     static let sectionBarHeight: CGFloat = 48
 }
 
@@ -153,6 +153,10 @@ struct AppTabs<Page: View>: View {
         // Innstillinger → Utseende → Fanelinje: Papir-pillen i stedet for systemets linje (bare kompakt bredde).
         let klassisk: Bool = FanelinjeValg.shared.klassisk(regular: regular)
         let pill: Bool = klassisk && store.shellTabBarShown
+        // Prompt 57: pillen står like over home-indikatoren (safe area legges ikke til to ganger). Høyden sidene får som
+        // luft er pillen + bunnavstanden, minus safe area-en sidene allerede har.
+        let safeBunn: CGFloat = PapirFanelinje.safeBunn
+        let over: CGFloat = Swift.max(0, pillHoyde - safeBunn)
         Group {
             if #available(iOS 18.0, *) {
                 ShellTabView18(tabs: tabs, selection: sel, current: cur, page: page)
@@ -177,15 +181,17 @@ struct AppTabs<Page: View>: View {
         .overlay(alignment: .bottom) {
             // Hjem-knapp 1d: rutenettet med Oversikt og modulene rett over pillen (PapirHjemknapp.swift).
             if pill && NavHome42.shared.value == "1d" && NavHome42.shared.modPick {
-                PapirModulRutenett(over: pillHoyde)
+                PapirModulRutenett(over: over)
             }
         }
         .overlay(alignment: .bottom) {
             if pill {
                 PapirFanelinje(tabs: tabs, current: cur) { (id: String) in ShellTabs.select(id, store, current: cur) }
+                    .padding(.bottom, PapirFanelinje.bunn(safeBunn))
                     .background(GeometryReader { (g: GeometryProxy) in
                         Color.clear.preference(key: PapirFanelinjeHoydeKey.self, value: g.size.height)
                     })
+                    .ignoresSafeArea(.container, edges: .bottom)
                     .transition(.opacity)
             }
         }
@@ -193,7 +199,7 @@ struct AppTabs<Page: View>: View {
             if h > 0 && abs(h - pillHoyde) > 0.5 { pillHoyde = h }
         }
         .environment(\.shellKlassiskFanelinje, klassisk)
-        .environment(\.shellKlassiskHoyde, pill ? pillHoyde : 0)
+        .environment(\.shellKlassiskHoyde, pill ? over : 0)
     }
 }
 
@@ -322,7 +328,7 @@ struct ShellPageView<Page: View>: View {
 
 /* ---------- Seksjonsfanene (Finans, Domener, Abonnement, Familie) ---------- */
 
-/// Segmentert velger nederst på siden for fanene i en seksjon. Samme valg og samme redigering som den gamle seksjonslinja
+/// Glass-pillen over hovedlinjen for fanene i en seksjon. Samme valg og samme redigering som den gamle seksjonslinja
 /// (NavTabEditor.swift, FinNav26.swift), men fanelinja nederst er den samme overalt (Q33).
 struct ShellSectionBar: View {
     @Environment(Store.self) private var store
@@ -365,21 +371,58 @@ struct ShellSectionBar: View {
     var body: some View {
         let list: [ShellTab] = items
         let cur: String = current
-        HStack(spacing: 8) {
-            Picker("Seksjon", selection: Binding<String>(get: { cur }, set: { (v: String) in tap(v, current: cur) })) {
-                ForEach(list) { (t: ShellTab) in Text(t.title).tag(t.id) }
-            }
-            .pickerStyle(.segmented)
-            Button(action: edit) {
-                Image(systemName: "slider.horizontal.3").frame(width: 44, height: 44).contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .foregroundStyle(p.mut)
-            .accessibilityLabel("Rediger fanene")
+        // Prompt 57 (claude-code-okonomi-fanelinje-ios.md, 1a): fanene er en glass-pille over hovedlinjen, i samme stil som
+        // den (mørk glass, hvit tekst, lys pille på valgt fane). Ingen flate bak og ingen sliders-knapp: innholdet ruller
+        // under linjene, og fanene redigeres ved å holde inne (samme ark som før).
+        HStack(spacing: 0) {
+            ForEach(list) { (t: ShellTab) in fane(t, on: t.id == cur, current: cur) }
         }
-        .padding(.horizontal, 12)
+        .padding(.horizontal, 4)
+        .background(ShellSectionBar.glass, in: Capsule())
+        .background(.ultraThinMaterial, in: Capsule())
+        .shadow(color: Color.black.opacity(0.5), radius: 11, y: 10)
+        .simultaneousGesture(LongPressGesture(minimumDuration: 0.5).onEnded { (_: Bool) in hold() })
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Seksjonsfaner")
+        .accessibilityAction(named: Text("Rediger fanene")) { edit() }
+        .padding(.horizontal, DS.Space.md)
         .frame(height: ShellMetrics.sectionBarHeight)
-        .background(.bar)
+    }
+
+    /// Mørk glass som hovedlinjen: blekket fra lys Papir (#1b1a17) med 62 % dekning over materialet.
+    static var glass: Color { DS.fixed(.textPrimary, stil: .papir, dark: false).opacity(0.62) }
+
+    /// «Transaksjoner» får ikke plass ved siden av de andre: «Transaksj.» (ikke «Transa…»). VoiceOver leser hele navnet.
+    nonisolated static func kortNavn(_ title: String) -> String {
+        title == "Transaksjoner" ? "Transaksj." : title
+    }
+
+    private func fane(_ t: ShellTab, on: Bool, current: String) -> some View {
+        Button {
+            if Nav26.shared.consumeHold() { return }
+            tap(t.id, current: current)
+        } label: {
+            Text(ShellSectionBar.kortNavn(t.title))
+                .font(.ds(.footnote, custom: PF.uiName(.semibold)))
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+                .foregroundStyle(on ? DS.fixed(.textPrimary, stil: .papir, dark: false) : p.navInk)
+                .padding(.horizontal, 10)
+                .frame(maxWidth: .infinity)
+                .frame(height: 32)
+                .background(on ? DS.fixed(.surface, stil: .papir, dark: false) : Color.clear, in: Capsule())
+                .padding(.vertical, 4)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(t.title)
+        .accessibilityAddTraits(on ? [.isButton, .isSelected] : .isButton)
+    }
+
+    /// Hold inne: «Rediger fanene» (velg, flytt, fjern og legg til), og klikket når fingeren slippes navigerer ikke.
+    private func hold() {
+        Nav26.shared.markHold()
+        edit()
     }
 
     private func edit() {

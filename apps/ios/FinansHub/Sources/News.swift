@@ -40,7 +40,7 @@ struct NewsReaderView: View {
                     }
                     .padding(.horizontal, 18).padding(.top, 16).padding(.bottom, 40)
                 }
-                .refreshable { await store.loadNews() }
+                .oppfrisk("News") { await store.loadNews() }
             }
         }
         .background(p.bg.ignoresSafeArea())

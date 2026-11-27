@@ -48,7 +48,7 @@ struct DomainsView: View {
             .padding(.horizontal, 18).padding(.bottom, 30)
         }
         .tint(.domPink)
-        .refreshable { store.reloadDomain() }
+        .oppfrisk("Domains") { store.reloadDomain() }
     }
 
     private var picker: some View {

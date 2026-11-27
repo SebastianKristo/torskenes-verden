@@ -31,26 +31,22 @@ struct Plat51LiveWidget: Widget {
             }
         } dynamicIsland: { (ctx: ActivityViewContext<Plat51Attributes>) in
             DynamicIsland {
+                // Prompt 57 (claude-code-live-activities.md, «Fiks: utvidet Dynamic Island»): flisen (36 pt), tittelen og
+                // verdien står i én rad i center-regionen, sentrert mot hverandre (HStack(alignment: .center)). Før lå
+                // flisen i leading-regionen høyt oppe ved kameraet, og tittelen startet lavere.
                 DynamicIslandExpandedRegion(.leading) {
-                    if Live89.isNew(ctx.attributes.kind) {
-                        Live89Tile(kind: ctx.attributes.kind, st: ctx.state, size: 44).padding(.leading, 2)
-                    } else {
+                    if !Live89.isNew(ctx.attributes.kind) {
                         Plat51LiveIcon(attr: ctx.attributes, size: 34).padding(.leading, 4)
                     }
                 }
                 DynamicIslandExpandedRegion(.trailing) {
-                    if Live89.isNew(ctx.attributes.kind) {
-                        Live89Value(kind: ctx.attributes.kind, st: ctx.state)
-                            .font(.system(size: 26, weight: .semibold)).monospacedDigit()
-                            .foregroundStyle(Live89Look.accent(ctx.attributes.kind))
-                            .frame(maxWidth: 110, alignment: .trailing).padding(.trailing, 2)
-                    } else {
+                    if !Live89.isNew(ctx.attributes.kind) {
                         Plat51LiveValue(attr: ctx.attributes, st: ctx.state).font(.system(size: 22, weight: .semibold)).monospacedDigit().padding(.trailing, 4)
                     }
                 }
                 DynamicIslandExpandedRegion(.center) {
                     if Live89.isNew(ctx.attributes.kind) {
-                        Live89ExpandedCenter(st: ctx.state)
+                        Live89ExpandedRow(kind: ctx.attributes.kind, st: ctx.state)
                     } else {
                         VStack(alignment: .leading, spacing: 1) {
                             Text(ctx.state.title).font(.system(size: 15, weight: .semibold)).lineLimit(1)
@@ -160,6 +156,8 @@ struct Plat51LiveValue: View {
 struct Plat51LiveBar: View {
     let progress: Double
     let tint: Color
+    /// Prompt 57: 4 pt i utvidet Dynamic Island, ellers 6 pt.
+    var height: CGFloat = 6
     var body: some View {
         GeometryReader { (g: GeometryProxy) in
             ZStack(alignment: .leading) {
@@ -167,7 +165,7 @@ struct Plat51LiveBar: View {
                 Capsule().fill(tint).frame(width: Swift.max(6, g.size.width * CGFloat(Swift.min(1, Swift.max(0, progress)))))
             }
         }
-        .frame(height: 6)
+        .frame(height: height)
         .accessibilityHidden(true)
     }
 }

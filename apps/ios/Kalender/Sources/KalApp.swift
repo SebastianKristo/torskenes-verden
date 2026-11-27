@@ -340,7 +340,8 @@ struct KalRoot: View {
             if abs(v.translation.width) > 12 || abs(v.translation.height) > 12 { KalSwipe44.mark() }
             let dx: CGFloat = v.translation.width
             let dy: CGFloat = v.translation.height
-            if v.startLocation.x < 28 && dx > 50 && abs(dx) > abs(dy) {
+            // Prompt 57: åpnet fra Homelab går kant-sveipet tilbake til Homelab (Kal84Root), så det åpner ikke menyen her.
+            if v.startLocation.x < 28 && dx > 50 && abs(dx) > abs(dy) && KalEmbed84.shared.tilbake == nil {
                 KalHaptic.tap()
                 // Prompt 42: på iPad glir sidepanelet inn i stedet for sidemenyen.
                 withAnimation(.timingCurve(0.2, 0.8, 0.2, 1, duration: 0.3)) {

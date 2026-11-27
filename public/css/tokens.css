@@ -103,6 +103,7 @@
   --ds-success-soft: #e3eee5;
   --ds-warning-soft: #f4e8cf;
   --ds-danger-soft: #f6dfd8;
+  --ds-nav-ink: #ffffff;
   --ds-font-sans: Manrope, system-ui, sans-serif;
   --ds-font-serif: Newsreader, Georgia, serif;
   --ds-font-mono: 'IBM Plex Mono', ui-monospace, monospace;
@@ -139,6 +140,7 @@
   --ds-success-soft: rgba(111, 191, 143, 0.16);
   --ds-warning-soft: rgba(224, 168, 90, 0.16);
   --ds-danger-soft: rgba(236, 122, 100, 0.16);
+  --ds-nav-ink: #ffffff;
   --ds-font-sans: Outfit, system-ui, sans-serif;
   --ds-font-serif: Newsreader, Georgia, serif;
   --ds-font-mono: 'JetBrains Mono', ui-monospace, monospace;
@@ -175,6 +177,7 @@
   --ds-success-soft: rgba(111, 191, 143, 0.16);
   --ds-warning-soft: rgba(224, 168, 90, 0.16);
   --ds-danger-soft: rgba(236, 122, 100, 0.16);
+  --ds-nav-ink: #ffffff;
   --ds-font-sans: Manrope, system-ui, sans-serif;
   --ds-font-serif: Newsreader, Georgia, serif;
   --ds-font-mono: 'IBM Plex Mono', ui-monospace, monospace;
@@ -211,6 +214,7 @@
     --ds-success-soft: rgba(111, 191, 143, 0.16);
     --ds-warning-soft: rgba(224, 168, 90, 0.16);
     --ds-danger-soft: rgba(236, 122, 100, 0.16);
+    --ds-nav-ink: #ffffff;
     --ds-font-sans: Manrope, system-ui, sans-serif;
     --ds-font-serif: Newsreader, Georgia, serif;
     --ds-font-mono: 'IBM Plex Mono', ui-monospace, monospace;

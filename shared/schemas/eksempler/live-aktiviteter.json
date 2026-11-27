@@ -18,7 +18,8 @@
           "tittel": "Pause"
         }
       ],
-      "url": "homelab://media/ned"
+      "url": "homelab://media/ned",
+      "fase": "laster"
     },
     {
       "id": "nedlasting:qb:4160d568f9ff2770d02d12ebef2a97e16461ead1",
@@ -38,7 +39,8 @@
           "tittel": "Pause"
         }
       ],
-      "url": "homelab://media/ned"
+      "url": "homelab://media/ned",
+      "fase": "laster"
     },
     {
       "id": "nedlasting:qb:1742667849802a8e3ebee7758dd5cc9164133953",
@@ -58,7 +60,8 @@
           "tittel": "Pause"
         }
       ],
-      "url": "homelab://media/ned"
+      "url": "homelab://media/ned",
+      "fase": "laster"
     },
     {
       "id": "spiller:demo-0",
@@ -82,7 +85,8 @@
           "tittel": "Stopp"
         }
       ],
-      "url": "homelab://media/avspilling"
+      "url": "homelab://media/avspilling",
+      "fase": null
     }
   ],
   "oppdatert": "2026-11-16T08:00:00.000Z"

@@ -173,7 +173,7 @@ struct Fam50HealthList: View {
             .padding(.bottom, 24)
         }
         .scrollIndicators(.hidden)
-        .refreshable { await m.loadHealth(store) }
+        .oppfrisk("FamilyHealth.1") { await m.loadHealth(store) }
         .task { if m.health.isEmpty { await m.loadHealth(store) } }
     }
 }
@@ -263,7 +263,7 @@ struct Fam50HealthPerson: View {
             .padding(.bottom, 24)
         }
         .scrollIndicators(.hidden)
-        .refreshable { await m.loadHealth(store) }
+        .oppfrisk("FamilyHealth.2") { await m.loadHealth(store) }
     }
 
     private var topRow: some View {

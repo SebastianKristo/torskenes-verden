@@ -454,7 +454,7 @@ struct TrackingView: View {
             .padding(.horizontal, 18).padding(.bottom, 110)
         }
         .scrollDismissesKeyboard(.interactively)
-        .refreshable { await store.reloadModule() }
+        .oppfrisk("Tracking") { await store.reloadModule() }
         .onAppear { LocalNotify.ask() }
     }
 

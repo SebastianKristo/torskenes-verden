@@ -307,7 +307,7 @@ struct Fam50Folk: View {
             .padding(.bottom, 24)
         }
         .scrollIndicators(.hidden)
-        .refreshable { await m.loadAll(store) }
+        .oppfrisk("FamilyPage") { await m.loadAll(store) }
         .confirmationDialog("Legg til", isPresented: $plusMenu, titleVisibility: .hidden) {
             Button("Nytt sted") { FamilyModel.shared.tab = "soner"; Fam50Nav.shared.stack = [.nyttSted("annet")] }
             Button("Deling og familie") { store.paperGo("innst-fam") }

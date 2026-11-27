@@ -144,7 +144,7 @@ struct Media43Page: View {
                         }
                         .padding(.horizontal, wide ? 24 : 16).padding(.top, 6).padding(.bottom, 40)
                     }
-                    .refreshable {
+                    .oppfrisk("MediaPage") {
                         // Prompt 87: NRK-fanen har egne data (NrkModel.swift).
                         // Prompt 88: Musikk har også egne data (MusikkModel.swift).
                         if m.tab == "musikk" { await Musikk88.shared.load(store, full: true); return }

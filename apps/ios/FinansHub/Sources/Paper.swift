@@ -151,7 +151,7 @@ struct PaperShell: View {
             .onChange(of: wide) { (_: Bool, v: Bool) in Layout45.shared.set(v) }
         }
         .environment(\.paper, p)
-        .animation(.easeOut(duration: 0.16), value: store.paperBgOpen)
+        .animation(PaperBgMenu.anim, value: store.paperBgOpen)
         .animation(.easeOut(duration: 0.2), value: store.paperHint)
         .sheet(isPresented: Binding(get: { store.paperScanOpen }, set: { store.paperScanOpen = $0 })) {
             PaperScanSheet(scan: scan, recipe: store.paperTab == "mat") { store.paperScanOpen = false }
@@ -265,7 +265,9 @@ struct PaperShell: View {
         let kb28: Bool = g.safeAreaInsets.bottom > 120
         // Skanneknappen: alle sider med fanelinje, unntatt Aksjer, Familie og Domener (Glimt ligger i domenekortet, prompt 43).
         let fab: Bool = showBar && store.paperTab != "familie" && !store.nav23NoScan && !store.paperInDomains
-        let fabBottom: CGFloat = 14 + (section ? ShellMetrics.sectionBarHeight : 0)
+        // Prompt 57 (claude-code-ios-fanelinje.md, punkt 5): Skann-knappen blir, og står 12 pt over den øverste linjen
+        // (hovedlinjen, eller Økonomi-fanene over den), aldri oppå eller bak dem.
+        let fabBottom: CGFloat = DS.Space.md + (section ? ShellMetrics.sectionBarHeight : 0)
         let fp: PaperPalette = store.finPalette22(p)
         ZStack(alignment: .bottom) {
             p.bg.ignoresSafeArea()
@@ -307,14 +309,16 @@ struct PaperShell: View {
         .overlay(alignment: .bottomTrailing) {
             if fab {
                 PaperFab(tap: fabTap, hold: fabHold)
-                    .padding(.trailing, wide ? 24 : 18)
+                    .padding(.trailing, wide ? 24 : 16)
                     .padding(.bottom, fabBottom)
             }
         }
         .overlay(alignment: .topTrailing) {
             // Prompt 29: samme bakgrunnsmeny fra pillen i toppen av Innstillinger.
-            if store.paperBgOpen && (store.paperTab == "hjem" || store.paperTab == "innst") && !store.newsOpen && store.dishSel == nil && store.paperClassic == nil {
-                PaperBgMenu(top: g.safeAreaInsets.top + 62)
+            // Prompt 57: menyen henger under knappen og vokser ut fra den (åpen/lukket styres inne i PaperBgMenu, så
+            // overgangen virker begge veier).
+            if (store.paperTab == "hjem" || store.paperTab == "innst") && !store.newsOpen && store.dishSel == nil && store.paperClassic == nil {
+                PaperBgMenu()
             }
         }
         .overlay(alignment: .top) {
@@ -539,42 +543,107 @@ struct PaperScanSheet: View {
 }
 
 /* ---------------- Bakgrunnsvelgeren (egen nedtrekksmeny) ---------------- */
+// Prompt 57 (claude-code-bakgrunnsvelger.md): menyen vokser ut fra «Vær nå ▾» og henger rett under knappen, med en liten pil
+// opp mot den. Skala .6 → 1 og opasitet 0 → 1 fra midten av knappen (260 ms, cubic-bezier(.2,.9,.25,1.12)), lukkes motsatt
+// vei. Bredde min(320, skjerm − 32), radius 24, padding 12. Innhold: «BAKGRUNN» / «Oppdateres automatisk», 2×2 store
+// forhåndsvisninger (Vær nå, Planeter, Oslo, Gradient – de automatiske først; «Nåværende» heter nå «Gradient»), valgt med
+// dobbel ring og grønt ✓ (rødt «!» når bildet ikke lastet), skillelinje, «Eget bilde» og «Google Photos-album».
 
-/// Papirfarget panel under bakgrunnspillen: miniatyr, navn, undertekst og ✓, og «+ Eget bilde» nederst.
-/// Lukkes ved trykk utenfor. Ikke systemets Menu/contextMenu.
+/// Hvor knappen «Vær nå ▾» står (globale koordinater), målt i toppbildet (PaperHero), så menyen kan henge under den.
+@MainActor
+@Observable
+final class BakgrunnKnapp {
+    static let shared: BakgrunnKnapp = BakgrunnKnapp()
+    var ramme: CGRect = .zero
+}
+
+struct BakgrunnKnappKey: PreferenceKey {
+    static let defaultValue: CGRect = .zero
+    static func reduce(value: inout CGRect, nextValue: () -> CGRect) {
+        let n: CGRect = nextValue()
+        if n != .zero { value = n }
+    }
+}
+
+/// Papirfarget panel under bakgrunnspillen. Lukkes ved trykk utenfor eller når noe velges. Ikke systemets Menu/contextMenu.
 struct PaperBgMenu: View {
     @Environment(Store.self) private var store
     @Environment(\.paper) private var p
-    let top: CGFloat
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var item: PhotosPickerItem?
 
-    private let kinds: [(String, String)] = [("cur", "Nåværende"), ("oslo", "Oslo"), ("weather", "Vær nå"), ("planets", "Planeter")]
+    /// Rekkefølgen i rutenettet: de automatiske først.
+    static let kinds: [(String, String)] = [("weather", "Vær nå"), ("planets", "Planeter"), ("oslo", "Oslo"), ("cur", "Gradient")]
+    static let anim: Animation = .timingCurve(0.2, 0.9, 0.25, 1.12, duration: 0.26)
 
     var body: some View {
-        ZStack(alignment: .topTrailing) {
-            Color.black.opacity(0.001)
-                .ignoresSafeArea()
-                .onTapGesture { store.paperBgOpen = false }
-            panel
-                .padding(.top, top)
-                .padding(.trailing, 22)
-                .transition(.opacity.combined(with: .scale(scale: 0.96, anchor: .topTrailing)))
+        GeometryReader { (geo: GeometryProxy) in
+            let o: CGPoint = geo.frame(in: .global).origin
+            let k: CGRect = BakgrunnKnapp.shared.ramme
+            let w: CGFloat = Swift.min(320, geo.size.width - 32)
+            // Høyrekanten følger knappen, men menyen holder seg 16 pt innenfor skjermen.
+            let left: CGFloat = Swift.min(Swift.max(16, k.maxX - o.x - w + 8), geo.size.width - 16 - w)
+            let top: CGFloat = k == .zero ? 120 : k.maxY - o.y + 10
+            let pil: CGFloat = Swift.min(Swift.max(24, (k == .zero ? left + w - 60 : k.midX - o.x) - left), w - 24)
+            ZStack(alignment: .topLeading) {
+                if store.paperBgOpen {
+                    Color.black.opacity(0.001)
+                        .ignoresSafeArea()
+                        .onTapGesture { lukk() }
+                        .accessibilityHidden(true)
+                        .transition(.opacity)
+                    // Plassert med justeringslinjer (ikke padding/offset), så skalaen i overgangen går ut fra knappen.
+                    PaperBgPanel(width: w, pil: pil, item: $item, pick: pick)
+                        .alignmentGuide(.leading) { (_: ViewDimensions) in -left }
+                        .alignmentGuide(.top) { (_: ViewDimensions) in -top }
+                        .transition(reduceMotion ? AnyTransition.opacity
+                                    : AnyTransition.scale(scale: 0.6, anchor: UnitPoint(x: pil / w, y: 0)).combined(with: .opacity))
+                }
+            }
         }
         .onChange(of: item) { _, it in
             guard let it else { return }
             Task {
                 if let d = try? await it.loadTransferable(type: Data.self), let img = UIImage(data: d) { store.uploadPhoto(img) }
                 item = nil
-                store.paperBgOpen = false
+                lukk()
             }
         }
     }
 
-    private var panel: some View {
-        VStack(spacing: 2) {
-            ForEach(kinds, id: \.0) { k in row(k.0, k.1) }
-            if store.photo == "custom" { row("custom", "Eget bilde") }
-            Rectangle().fill(p.line).frame(height: 1).padding(.horizontal, 8).padding(.vertical, 2)
+    private func lukk() {
+        withAnimation(PaperBgMenu.anim) { store.paperBgOpen = false }
+    }
+
+    private func pick(_ kind: String) {
+        Haptics.shared.select()
+        if store.photo == kind && store.photoFailed { store.retryPhoto(); return }
+        store.setPhoto(kind)
+        lukk()
+    }
+}
+
+/// Selve panelet: pil, overskrift, 2×2-rutenett og radene for eget bilde og Google Photos.
+private struct PaperBgPanel: View {
+    @Environment(Store.self) private var store
+    @Environment(\.paper) private var p
+    let width: CGFloat
+    let pil: CGFloat
+    @Binding var item: PhotosPickerItem?
+    let pick: (String) -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .firstTextBaseline) {
+                Text("BAKGRUNN").font(PF.mono(10.5)).tracking(1.2).foregroundStyle(p.mut)
+                Spacer(minLength: 8)
+                Text("Oppdateres automatisk").font(PF.ui(11.5, .medium)).foregroundStyle(p.mut)
+            }
+            .padding(.horizontal, 2)
+            LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 12) {
+                ForEach(PaperBgMenu.kinds, id: \.0) { (k: (String, String)) in tile(k.0, k.1) }
+            }
+            Rectangle().fill(p.line).frame(height: 1).padding(.vertical, 2)
             PhotosPicker(selection: $item, matching: .images) {
                 HStack(spacing: 10) {
                     Image(systemName: "plus").accessibilityHidden(true).font(PF.ui(15, .semibold)).foregroundStyle(p.mut)
@@ -582,53 +651,73 @@ struct PaperBgMenu: View {
                         .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(p.mut, style: StrokeStyle(lineWidth: 1.5, dash: [3, 3])))
                     Text("Eget bilde").font(PF.ui(14, .semibold)).foregroundStyle(p.ink)
                     Spacer()
+                    if store.photo == "custom" { Image(systemName: "checkmark").accessibilityLabel("Valgt").font(PF.ui(13, .bold)).foregroundStyle(p.pos) }
                 }
                 .padding(.horizontal, 10).frame(height: 44)
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            // Prompt 46: Google Photos-album under «Eget bilde» (BackgroundGooglePhotos.swift).
+            // Prompt 46: Google Photos-album under «Eget bilde» (BackgroundGooglePhotos.swift), med lenkeskjemaet som før.
             GPhoto46Row()
         }
-        .padding(6)
-        .frame(width: 236)
-        .background(p.pop, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-        .shadow(color: .black.opacity(0.45), radius: 20, y: 16)
+        .padding(12)
+        .frame(width: width)
+        .background(p.pop, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .overlay(alignment: .topLeading) {
+            PaperBgPil()
+                .fill(p.pop)
+                .frame(width: 18, height: 9)
+                .offset(x: pil - 9, y: -8)
+                .accessibilityHidden(true)
+        }
+        .shadow(color: Color.black.opacity(0.5), radius: 25, y: 24)
     }
 
-    private func row(_ kind: String, _ name: String) -> some View {
-        let sel = store.photo == kind
+    private func tile(_ kind: String, _ name: String) -> some View {
+        let sel: Bool = store.photo == kind
+        let feil: Bool = sel && store.photoFailed
         return Button { pick(kind) } label: {
-            HStack(spacing: 10) {
+            VStack(alignment: .leading, spacing: 4) {
                 thumb(kind)
-                VStack(alignment: .leading, spacing: 1) {
-                    Text(name).font(PF.ui(14, .semibold)).foregroundStyle(p.ink)
-                    Text(subtitle(kind, sel)).font(PF.ui(11.5, .medium)).foregroundStyle(sel && store.photoFailed ? p.lab : p.mut).lineLimit(2)
-                }
-                Spacer(minLength: 4)
-                if sel { Image(systemName: "checkmark").accessibilityLabel("Valgt").font(PF.ui(13, .bold)).foregroundStyle(p.pos) }
+                    .frame(height: 78)
+                    .frame(maxWidth: .infinity)
+                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    // Valgt: dobbel ring (papirfargen som luft, så blekket).
+                    .padding(3)
+                    .overlay(RoundedRectangle(cornerRadius: 17, style: .continuous).strokeBorder(sel ? p.ink : Color.clear, lineWidth: 2))
+                    .overlay(alignment: .topTrailing) {
+                        if sel { merke(feil).offset(x: 4, y: -4) }
+                    }
+                Text(name).font(PF.ui(13.5, .bold)).foregroundStyle(p.ink).lineLimit(1).padding(.horizontal, 3)
+                Text(PaperBgPanel.subtitle(kind, feil: feil, weather: store.weatherWord))
+                    .font(PF.ui(11.5, .medium)).foregroundStyle(feil ? p.lab : p.mut)
+                    .lineLimit(2).fixedSize(horizontal: false, vertical: true)
+                    .padding(.horizontal, 3)
             }
-            .padding(.horizontal, 10).frame(minHeight: 50)
-            .background(sel ? p.popSel : Color.clear, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .accessibilityAddTraits(sel ? .isSelected : [])
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(sel ? [.isButton, .isSelected] : .isButton)
     }
 
-    private func pick(_ kind: String) {
-        Haptics.shared.select()
-        if store.photo == kind && store.photoFailed { store.retryPhoto(); return }
-        store.setPhoto(kind)
-        store.paperBgOpen = false
+    /// Grønt ✓ (valgt), eller rødt «!» når bildet ikke lastet.
+    private func merke(_ feil: Bool) -> some View {
+        Image(systemName: feil ? "exclamationmark" : "checkmark")
+            .font(PF.ui(11, .bold))
+            .foregroundStyle(DS.fixed(.onSuccess, stil: .papir, dark: false))
+            .frame(width: 22, height: 22)
+            .background(feil ? p.lab : p.pos, in: Circle())
+            .overlay(Circle().strokeBorder(p.pop, lineWidth: 2))
+            .accessibilityLabel(feil ? "Bildet lastet ikke" : "Valgt")
     }
 
-    private func subtitle(_ kind: String, _ sel: Bool) -> String {
-        if sel && store.photoFailed { return "Fikk ikke lastet bildet · trykk for å prøve igjen" }
+    static func subtitle(_ kind: String, feil: Bool, weather: String) -> String {
+        if feil { return "Fikk ikke lastet bildet · trykk for å prøve igjen" }
         switch kind {
         case "cur": return "Mørk gradient"
         case "oslo": return "Bilde av Oslo"
-        case "weather": return "Følger været nå · \(store.weatherWord)"
+        case "weather": return "Følger været nå · \(weather)"
         case "planets": return "Ny planet hver dag (NASA)"
         default: return "Ditt bilde"
         }
@@ -640,8 +729,18 @@ struct PaperBgMenu: View {
             LinearGradient(colors: [Color(hex: "#4a5a6a"), Color(hex: "#1d242c")], startPoint: .top, endPoint: .bottom)
             if let img, kind != "cur" { Image(uiImage: img).resizable().scaledToFill() }
         }
-        .frame(width: 30, height: 30)
-        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+    }
+}
+
+/// Pila øverst på menyen, mot knappen.
+struct PaperBgPil: Shape {
+    func path(in r: CGRect) -> Path {
+        var path: Path = Path()
+        path.move(to: CGPoint(x: r.minX, y: r.maxY))
+        path.addQuadCurve(to: CGPoint(x: r.midX, y: r.minY), control: CGPoint(x: r.midX - r.width * 0.18, y: r.minY + r.height * 0.1))
+        path.addQuadCurve(to: CGPoint(x: r.maxX, y: r.maxY), control: CGPoint(x: r.midX + r.width * 0.18, y: r.minY + r.height * 0.1))
+        path.closeSubpath()
+        return path
     }
 }
 
@@ -787,7 +886,7 @@ struct PaperPage: View {
             // Prompt 28: pillene i redigeringsmodus ligger over listen, utenfor scroll-innholdet (WiggleMode.swift).
             .edit28Layer(p)
             .overlay(alignment: .top) { Mer30Pills() }
-            .refreshable { await refresh() }
+            .oppfrisk("Paper") { await refresh() }
             // Prompt 26: nytt trykk på aktiv fane på roten scroller til toppen (NavRoute.swift).
             .onChange(of: Nav26.shared.topTick) { _, _ in
                 withAnimation(.easeOut(duration: 0.3)) { proxy.scrollTo("nav26top", anchor: .top) }
@@ -860,7 +959,7 @@ struct PaperPage: View {
     private func refresh() async {
         switch store.paperTab {
         case "finans", "fmer": await store.loadPaperFinance(force: true); await store.loadPaperFinance15()
-        case "fliste": try? await store.loadTx()
+        case "fliste": await store.reloadTx()
         case "finn": try? await store.loadFinn()
         case "abo": try? await store.loadSubs(); await FasteBetalingerModell.shared.last(store)
         case "mat": try? await store.loadWeek(); await store.loadMatExtras()
@@ -947,7 +1046,7 @@ struct PaperHero: View {
 
     private var bgName: String {
         switch store.photo {
-        case "cur": "Nåværende"
+        case "cur": "Gradient"
         case "weather": "Vær nå"
         case "planets": "Planeter"
         case "custom": "Eget bilde"
@@ -974,6 +1073,13 @@ struct PaperHero: View {
             if (home || store.paperTab == "innst") && !store.paperInFinance {
                 pill(bgName + " ▾") { store.paperBgOpen.toggle(); Haptics.shared.select() }
                     .accessibilityLabel("Bakgrunn: \(bgName)")
+                    // Prompt 57: menyen henger rett under knappen (PaperBgMenu).
+                    .background(GeometryReader { (g: GeometryProxy) in
+                        Color.clear.preference(key: BakgrunnKnappKey.self, value: g.frame(in: .global))
+                    })
+                    .onPreferenceChange(BakgrunnKnappKey.self) { (r: CGRect) in
+                        if r != .zero && BakgrunnKnapp.shared.ramme != r { BakgrunnKnapp.shared.ramme = r }
+                    }
             }
             // Prompt 37: profilbildet øverst åpner Innstillinger (oversikten), ikke Konto. Konto nås fra profilkortet der.
             Button { store.paperGo("innst") } label: {

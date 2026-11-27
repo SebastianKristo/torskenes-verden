@@ -52,6 +52,7 @@ enum DS {
         case successSoft
         case warningSoft
         case dangerSoft
+        case navInk
 
         fileprivate var assetSuffix: String {
             switch self {
@@ -81,6 +82,7 @@ enum DS {
             case .successSoft: return "SuccessSoft"
             case .warningSoft: return "WarningSoft"
             case .dangerSoft: return "DangerSoft"
+            case .navInk: return "NavInk"
             }
         }
     }

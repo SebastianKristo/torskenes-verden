@@ -62,6 +62,8 @@ extension Store {
         if Users68.isLink(page, sub) { paperGo(Users68.key); return }
         // Prompt 67: finanshub://faste-oppgaver, glimt-husker, kvalitet/run/<id> og kvalitet/uke/<uke> (deepLink i push fra serveren).
         if ["faste-oppgaver", "glimt-husker", "kvalitet"].contains(page), let go = G67Nav.page("/" + page + url.path) { G67Nav.open(go, self); return }
+        // Prompt 57: fra en widget (ikke fra Homelab selv) – ingen «Homelab»-rad i Kalenders meny.
+        if page == "kalender" || page == "calendar" { Kal84Host.shared.direkte() }
         if (page == "kalender" || page == "calendar") && KalLink33.forward(url) { return }
         if page == "kalender" || page == "calendar" { KalenderData.shared.openLink(url, self); return }
         // Prompt 42: bare Papir (de klassiske dyplenkene er slettet).

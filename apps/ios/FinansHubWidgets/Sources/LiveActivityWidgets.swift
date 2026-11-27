@@ -14,7 +14,15 @@ import ActivityKit
  – Utvidet: leading ikonflis 44 pt, center tittel/undertittel, trailing stor verdi 26 pt, bottom linje + meta + knapper. Ingen faste
    bredder – systemet gir skjermbredde − 2×12 pt; høyden holdes under 160 pt.
  – StandBy / Alltid på (isLuminanceReduced): svart bakgrunn, tittel og stor verdi (64 pt), ingen knapper.
- – Tid tikker uten push: Text(timerInterval:) og ProgressView(timerInterval:) for spiller (posisjon) og avtale (tid igjen). */
+ – Tid tikker uten push: Text(timerInterval:) og ProgressView(timerInterval:) for spiller (posisjon) og avtale (tid igjen).
+ Prompt 57 («Fiks: utvidet Dynamic Island for NRK-nedlasting»): Pause-knappen ble kuttet (over 160 pt), flisen og tittelen sto
+ ikke på linje, «0 %» vistes mens den komprimerte, og meta-raden gjentok tittelen. Nå:
+ – Utvidet: én rad i center (flis 36 pt · tittel/undertittel · verdi), sentrert mot hverandre. Bunnen: linje 4 pt, én meta-linje
+   (13 pt, lineLimit 1) og knappene i én rad, 34 pt (borderedProminent, small, hvit 14 %), ikon + tekst. Mål: ≤ 150 pt.
+ – Fasene (ContentState.phase): downloading = «62 %» og linje = fremdrift; muxing = «Komprimerer» uten prosent og ubestemt linje
+   (ProgressView(timerInterval:) mot estimert slutt); done = «✓ Ferdig»; failed = rød «Feilet» med «Prøv igjen».
+ – Meta-raden gjentar aldri tittelen (serveren lager teksten, server/live/index.js). Låseskjermen følger samme oppsett med
+   knapper i full bredde (40 pt). */
 
 #if canImport(ActivityKit)
 enum Live89Look {
@@ -24,6 +32,16 @@ enum Live89Look {
     static let track: Color = Color.white.opacity(0.14)
 
     static func paused(_ st: Plat51Attributes.ContentState) -> Bool { st.state == "paused" }
+    /// Prompt 57: nedlastingen komprimerer / setter sammen (ingen prosent).
+    static func muxing(_ st: Plat51Attributes.ContentState) -> Bool { st.phase == "muxing" }
+    static func failed(_ st: Plat51Attributes.ContentState) -> Bool { st.phase == "failed" }
+    /// Rød for «Feilet» (systemets røde, som i varsler).
+    static let fail: Color = Color.red
+
+    /// Verdien i aksent, eller rød når nedlastingen feilet.
+    static func valueTint(_ kind: String, _ st: Plat51Attributes.ContentState) -> Color {
+        failed(st) ? fail : accent(kind)
+    }
 
     /// Tikker posisjonen / nedtellingen akkurat nå?
     static func ticking(_ kind: String, _ st: Plat51Attributes.ContentState) -> Bool {
@@ -73,6 +91,9 @@ struct Live89Value: View {
         if kind == "spiller" && Live89Look.ticking(kind, st) {
             Text(timerInterval: st.startDate...st.endDate, countsDown: false)
                 .multilineTextAlignment(.trailing)
+        } else if st.phase == "done" {
+            // Prompt 57: «✓ Ferdig».
+            Text("✓ " + (st.value.isEmpty ? "Ferdig" : st.value)).lineLimit(1).minimumScaleFactor(0.6)
         } else {
             Text(st.value).lineLimit(1).minimumScaleFactor(0.6)
         }
@@ -94,10 +115,11 @@ struct Live89BigValue: View {
     }
 }
 
-/// Fremdriftslinje 6 pt (pakke: segmenter).
+/// Fremdriftslinje 6 pt (pakke: segmenter). Prompt 57: 4 pt i utvidet Dynamic Island, ubestemt mens den komprimerer.
 struct Live89Line: View {
     let kind: String
     let st: Plat51Attributes.ContentState
+    var height: CGFloat = 6
 
     var body: some View {
         let ac: Color = Live89Look.accent(kind)
@@ -108,10 +130,25 @@ struct Live89Line: View {
                 }
             }
             .accessibilityHidden(true)
+        } else if Live89Look.muxing(st) {
+            muxing(ac)
+        } else if Live89Look.failed(st) {
+            Capsule().fill(Live89Look.fail.opacity(0.5)).frame(height: height).accessibilityHidden(true)
         } else if Live89Look.ticking(kind, st) {
             timed(ac)
         } else if st.progress >= 0 {
-            Plat51LiveBar(progress: st.progress, tint: Live89Look.paused(st) ? ac.opacity(0.5) : ac)
+            Plat51LiveBar(progress: st.progress, tint: Live89Look.paused(st) ? ac.opacity(0.5) : ac, height: height)
+        }
+    }
+
+    /// Ubestemt: fylles mot estimert slutt når serveren har den, ellers en dempet linje (ingen prosent).
+    @ViewBuilder private func muxing(_ ac: Color) -> some View {
+        if st.endAt > Date().timeIntervalSince1970 {
+            ProgressView(timerInterval: Live89Look.until(st), countsDown: false, label: { EmptyView() }, currentValueLabel: { EmptyView() })
+                .progressViewStyle(.linear).tint(ac).frame(height: height)
+                .accessibilityHidden(true)
+        } else {
+            Capsule().fill(ac.opacity(0.35)).frame(height: height).accessibilityHidden(true)
         }
     }
 
@@ -168,6 +205,7 @@ struct Live89Ring: View {
 struct Live89Meta: View {
     let kind: String
     let st: Plat51Attributes.ContentState
+    var size: CGFloat = 12.5
 
     var body: some View {
         HStack(spacing: 8) {
@@ -177,7 +215,7 @@ struct Live89Meta: View {
                 Text(timerInterval: Live89Look.until(st), countsDown: true).multilineTextAlignment(.trailing).frame(maxWidth: 70, alignment: .trailing)
             }
         }
-        .font(.system(size: 12.5))
+        .font(.system(size: size))
         .monospacedDigit()
         .foregroundStyle(Live89Look.secondary)
     }
@@ -246,7 +284,7 @@ struct Live89Lock: View {
                 Spacer(minLength: 6)
                 Live89Value(kind: attr.kind, st: st)
                     .font(.system(size: 22, weight: .semibold)).monospacedDigit()
-                    .foregroundStyle(Live89Look.accent(attr.kind))
+                    .foregroundStyle(Live89Look.valueTint(attr.kind, st))
                     .frame(maxWidth: 96, alignment: .trailing)
             }
             .accessibilityElement(children: .ignore)
@@ -281,33 +319,93 @@ struct Live89Lock: View {
     }
 }
 
-/// Utvidet: bunnen (linje, meta og knapper).
+/// Utvidet: bunnen – linje 4 pt, én meta-linje (13 pt) og knappene i én rad (34 pt). Til sammen ≤ 150 pt med raden over.
 struct Live89ExpandedBottom: View {
     let attr: Plat51Attributes
     let st: Plat51Attributes.ContentState
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Live89Line(kind: attr.kind, st: st)
-            if !st.meta.isEmpty { Live89Meta(kind: attr.kind, st: st) }
-            if !st.actions.isEmpty { Live89Buttons(attr: attr, st: st) }
+        VStack(alignment: .leading, spacing: 6) {
+            Live89Line(kind: attr.kind, st: st, height: 4)
+            if !st.meta.isEmpty { Live89Meta(kind: attr.kind, st: st, size: 13) }
+            if !st.actions.isEmpty { Live89IslandButtons(attr: attr, st: st) }
         }
         .foregroundStyle(Color.white)
         .padding(.horizontal, 4)
-        .frame(maxHeight: 96)
+        .frame(maxHeight: 74)
     }
 }
 
-struct Live89ExpandedCenter: View {
+/// Utvidet: flis (36 pt), tittel/undertittel og verdien i én rad, sentrert mot hverandre.
+struct Live89ExpandedRow: View {
+    let kind: String
     let st: Plat51Attributes.ContentState
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 1) {
-            Text(st.title).font(.system(size: 16, weight: .semibold)).lineLimit(1)
-            Text(st.sub).font(.system(size: 13)).foregroundStyle(Live89Look.secondary).lineLimit(1)
+        HStack(alignment: .center, spacing: 10) {
+            Live89Tile(kind: kind, st: st, size: 36)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(st.title).font(.system(size: 16, weight: .semibold)).lineLimit(1)
+                Text(st.sub).font(.system(size: 13)).foregroundStyle(Live89Look.secondary).lineLimit(1)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            Live89Value(kind: kind, st: st)
+                .font(.system(size: 26, weight: .semibold)).monospacedDigit()
+                .foregroundStyle(Live89Look.valueTint(kind, st))
+                .frame(maxWidth: 110, alignment: .trailing)
         }
         .foregroundStyle(Color.white)
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 4)
+    }
+}
+
+/// Knappene i utvidet øy: én rad, side om side (aldri stablet), 34 pt, ikon + tekst («⏸ Pause»).
+struct Live89IslandButtons: View {
+    let attr: Plat51Attributes
+    let st: Plat51Attributes.ContentState
+
+    var body: some View {
+        HStack(spacing: 8) {
+            ForEach(st.actions.prefix(2), id: \.id) { (b: Live89Btn) in
+                button(b)
+            }
+        }
+        .frame(height: 34)
+    }
+
+    @ViewBuilder private func button(_ b: Live89Btn) -> some View {
+        if b.id == "rute" {
+            Link(destination: Live89.routeLink(attr.key)) {
+                label(b)
+                    .frame(height: 34)
+                    .background(Color.white.opacity(0.14), in: Capsule())
+            }
+        } else {
+            Button(intent: Live89ActionIntent(id: attr.key, handling: b.id)) { label(b) }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.small)
+                .tint(Color.white.opacity(0.14))
+                .frame(height: 34)
+        }
+    }
+
+    private func label(_ b: Live89Btn) -> some View {
+        Label(b.title, systemImage: Live89IslandButtons.symbol(b.id))
+            .font(.system(size: 14, weight: .semibold))
+            .foregroundStyle(Color.white)
+            .lineLimit(1)
+            .frame(maxWidth: .infinity)
+    }
+
+    static func symbol(_ id: String) -> String {
+        switch id {
+        case "pause": return "pause.fill"
+        case "fortsett": return "play.fill"
+        case "stopp": return "stop.fill"
+        case "rute": return "map.fill"
+        case "utsett": return "clock.arrow.circlepath"
+        default: return "circle"
+        }
     }
 }
 #endif

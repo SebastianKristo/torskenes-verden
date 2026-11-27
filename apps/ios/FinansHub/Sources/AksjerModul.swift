@@ -225,7 +225,7 @@ struct StocksMobileView: View {
             }
             .padding(.horizontal, 18).padding(.bottom, 110)
         }
-        .refreshable { await store.reloadModule() }
+        .oppfrisk("AksjerModul") { await store.reloadModule() }
     }
 
     private func statusLine(_ x: StocksX, _ th: StockTheme) -> some View {

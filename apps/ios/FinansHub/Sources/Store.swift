@@ -153,6 +153,8 @@ final class Store {
     var summary: Summary?
     var me: Me?
     var txs: [Tx]?
+    /// Prompt 57: siste lasting av Transaksjoner feilet (eller tok over 15 s).
+    var txFeil: Bool = false
     var receipts: [Receipt]?
     var query = ""
     var filter = ""
@@ -522,6 +524,8 @@ final class Store {
     /// Bare etter at appen har vært i bakgrunnen (Face ID-dialogen gjør den bare inaktiv, så avbryt gir ingen løkke).
     func didBecomeActive() {
         takePendingScan()
+        // Prompt 57: en oppdatering som har stått i over 15 s (appen var i bakgrunnen), startes på nytt.
+        Oppfrisking.shared.blittAktiv()
         guard let at = backgroundAt else { return }
         backgroundAt = nil
         if hideAmounts { Privacy.shared.hidden = true }
@@ -832,6 +836,8 @@ final class Store {
         module = nil
         menuOpen = false
         detail = nil
+        // Prompt 57: Transaksjoner går via den ene lastefunksjonen (reloadTx), ikke i parallell med listen.
+        if t == .list { Task { await self.reloadTx() }; return }
         run { try await self.loadTab(t) }
     }
 
@@ -904,9 +910,26 @@ final class Store {
         var q: [String] = []
         if !query.isEmpty, let e = query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) { q.append("q=\(e)") }
         if !filter.isEmpty { q.append("type=\(filter)") }
-        txs = (try await api.get("/transactions?" + q.joined(separator: "&"), as: TxPage.self)).items
+        // Prompt 57: 15 s tidsavbrudd, så en lasting aldri henger (claude-code-refresh-fiks.md).
+        txs = (try await api.get("/transactions?" + q.joined(separator: "&"), as: TxPage.self, timeout: Oppfrisking.tidsavbrudd)).items
     }
-    func search() { run { try await self.loadTx() } }
+    /// Prompt 57: Transaksjoner lastes bare ett sted om gangen (fanebytte, søk, listen og pull-to-refresh). En ny lasting
+    /// avbryter den forrige. Ved feil står de gamle radene; uten rader viser listen «Kunne ikke laste» (txFeil).
+    func reloadTx() async {
+        _ = await Oppfrisking.shared.kjor("fliste") {
+            do {
+                try await self.loadTx()
+                self.txFeil = false
+            } catch let e where Oppfrisking.erAvbrutt(e) {
+                // Ny lasting tar over.
+            } catch {
+                self.txFeil = true
+                if self.txs != nil { self.message = "Kunne ikke oppdatere" }
+            }
+        }
+        if txs == nil { txFeil = true }
+    }
+    func search() { Task { await self.reloadTx() } }
 
     func loadReceipts() async throws {
         let list: [Receipt] = try await api.get("/receipts?status=queue")

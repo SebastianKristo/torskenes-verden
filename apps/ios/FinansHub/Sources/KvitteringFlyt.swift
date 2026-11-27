@@ -44,8 +44,12 @@ final class Receipt48Flow {
     /// «Tolk kvitteringer på iPhone» (Foundation Models) – samme bryter som i prompt 47 (av som standard). Krever OCR-bryteren.
     static var parseEnabled: Bool { Receipt47.enabled && ocrEnabled }
 
-    /// Teksten i pillen nederst («Leser teksten på iPhonen …»), nil = skjult.
-    var status: String? = nil
+    /// Teksten i Glimt-statuspillen øverst («Leser teksten på iPhonen …»), nil = skjult (prompt 57, GlimtStatuspille.swift).
+    var status: String? = nil {
+        didSet {
+            if let s = status { GlimtStatus.shared.jobber(s) } else if oldValue != nil { GlimtStatus.shared.stoppet() }
+        }
+    }
     /// Skjemaet som vises nå.
     var shown: Rc48Result? = nil
     private var ready: [Rc48Result] = []
@@ -128,6 +132,7 @@ final class Receipt48Flow {
             let d: Data = try await store.api.upload("/receipts/scan", parts: parts, timeout: 180)
             let res: Rc48ScanResponse = try JSONDecoder().decode(Rc48ScanResponse.self, from: d)
             status = nil
+            GlimtStatus.shared.ferdig()
             await present(Rc48Result(image: image, response: res, draft: nil, categories: categories), store)
         } catch let e as APIError where e.status == 0 && e.code == "timeout" {
             // Kjeden fullføres på serveren selv om appen gir opp å vente – ikke legg den i køen (da blir den dobbel).
@@ -137,9 +142,11 @@ final class Receipt48Flow {
             await offline(image, ocrJson, parseJson, parse, categories, store, error: e.message)
         } catch let e as APIError {
             status = nil
+            GlimtStatus.shared.feilet()
             store.flash(e.message)
         } catch is DecodingError {
             status = nil
+            GlimtStatus.shared.ferdig()
             store.flash("Kvitteringen er lagret · åpne den under Kvitteringer")
         } catch {
             await offline(image, ocrJson, parseJson, parse, categories, store, error: error.localizedDescription)

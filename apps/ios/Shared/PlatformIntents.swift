@@ -50,6 +50,9 @@ struct Plat51Attributes: ActivityAttributes {
         var actions: [Live89Btn] = []
         /// Dyplenke i appen («homelab://media/ned»).
         var url: String = ""
+        /// Prompt 57: fasen til en nedlasting – queued | downloading | muxing | done | failed («» = ukjent/annen type).
+        /// Fra serverens «fase» (ko | laster | komprimerer | ferdig | feilet). Under muxing viser verdien ingen prosent.
+        var phase: String = ""
 
         init(title: String, sub: String, endAt: Double = 0, progress: Double = -1, state: String = "active", value: String = "") {
             self.title = title
@@ -65,8 +68,8 @@ struct Plat51Attributes: ActivityAttributes {
 
         /// Egne nøkler + feltene fra API-et (Akt), så serveren kan sende aktiviteten slik den er i APNs «content-state».
         enum CodingKeys: String, CodingKey {
-            case title, sub, endAt, progress, state, value, meta, startAt, segTotal, segDone, actions, url
-            case tittel, undertittel, verdi, status, start, slutt, segmenter, handlinger
+            case title, sub, endAt, progress, state, value, meta, startAt, segTotal, segDone, actions, url, phase
+            case tittel, undertittel, verdi, status, start, slutt, segmenter, handlinger, fase
         }
 
         init(from decoder: Decoder) throws {
@@ -101,6 +104,9 @@ struct Plat51Attributes: ActivityAttributes {
             let b1: [Live89Btn]? = try? c.decode([Live89Btn].self, forKey: .actions)
             let b2: [Live89Btn]? = try? c.decode([Live89Btn].self, forKey: .handlinger)
             actions = (b1 ?? b2 ?? []).filter { (b: Live89Btn) -> Bool in Live89.actionIds.contains(b.id) }
+            let f1: String? = try? c.decode(String.self, forKey: .phase)
+            let f2: String? = try? c.decode(String.self, forKey: .fase)
+            phase = f1 ?? Live89.phase(f2 ?? "")
         }
 
         func encode(to encoder: Encoder) throws {
@@ -117,6 +123,7 @@ struct Plat51Attributes: ActivityAttributes {
             try c.encode(segDone, forKey: .segDone)
             try c.encode(actions, forKey: .actions)
             try c.encode(url, forKey: .url)
+            try c.encode(phase, forKey: .phase)
         }
     }
 

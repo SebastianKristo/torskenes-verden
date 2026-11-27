@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 /* ---------------- Papir (klassisk): den flytende fanelinja nederst ----------------
  Hentet tilbake fra PaperTabBar (Paper.swift før Fase 4, 641a80e) som et valg i Innstillinger → Utseende → Fanelinje
@@ -54,8 +55,19 @@ struct PapirFanelinje: View {
         }
         .padding(.horizontal, DS.Space.md)
         .padding(.top, DS.Space.xs)
-        .padding(.bottom, DS.Space.xs)
     }
+
+    /// Prompt 57 (claude-code-ios-fanelinje.md, punkt 2): safe area nederst (home-indikatoren) fra nøkkelvinduet.
+    /// Pillen ligger utenfor safe area-en og får denne avstanden selv, så den ikke legges til to ganger.
+    @MainActor static var safeBunn: CGFloat {
+        let scene: UIWindowScene? = UIApplication.shared.connectedScenes.compactMap { (s: UIScene) -> UIWindowScene? in s as? UIWindowScene }.first
+        let win: UIWindow? = scene?.windows.first(where: { (w: UIWindow) -> Bool in w.isKeyWindow }) ?? scene?.windows.first
+        return win?.safeAreaInsets.bottom ?? 0
+    }
+
+    /// Avstanden fra skjermkanten nederst: max(12, safe area − 8), som på web (bottom: max(12px, env(safe-area-inset-bottom) − 8px)).
+    /// På iPhone med Face ID (34 pt) står pillen like over home-indikatoren; uten home-indikator 12 pt fra kanten.
+    nonisolated static func bunn(_ safe: CGFloat) -> CGFloat { Swift.max(12, safe - 8) }
 
     /// Fanene pillen viser: med Hjem-knapp 1a–1c uten Oversikt (knappen tar plassen). Skallet beholder fanen, så valget,
     /// stakken og dyplenkene er de samme som i systemets fanelinje.
@@ -103,8 +115,10 @@ struct PapirFaneEtikett: View {
         let showIcon: Bool = style != "text" || on
         let showLabel: Bool = style == "text" || (style == "icons_active_label" && on)
         let expand: Bool = style == "icons" || !on
-        let ikonStil: DS.Tekst = showLabel ? .callout : .headline
-        HStack(spacing: 7) {
+        // Prompt 57 (punkt 4): den valgte fanen viser ikon og navn side om side, ikonet ≈ 20 pt (headline, følger Dynamic
+        // Type) med 8 pt luft. Inaktive faner viser bare navnet (stilen «Tekst», standard), i hvitt (navInk).
+        let ikonStil: DS.Tekst = showLabel && !on ? .callout : .headline
+        HStack(spacing: DS.Space.sm) {
             if showIcon {
                 Image(systemName: tab.symbol)
                     .font(Font.ds(ikonStil))
