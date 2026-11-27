@@ -61,7 +61,7 @@ jobs:
           # produkt = navnet på .app-en i arkivet, plugins = der widgeten ligger i appen.
           HOMELAB='{"navn": "Homelab", "scheme": "FinansHub", "bundle": "no.kristo.finanshub", "widget": "FinansHubWidgets", "mal": "generic/platform=iOS", "produkt": "FinansHub", "plugins": "PlugIns", "mac": false}'
           KALENDER='{"navn": "Kalender", "scheme": "Kalender", "bundle": "no.kristo.kalender", "widget": "KalenderWidgets", "mal": "generic/platform=iOS", "produkt": "Kalender", "plugins": "PlugIns", "mac": false}'
-          KALMAC='{"navn": "Kalender for Mac", "scheme": "KalenderMac", "bundle": "no.kristo.kalender.mac", "widget": "KalenderMacWidgets", "mal": "generic/platform=macOS", "produkt": "Kalender", "plugins": "Contents/PlugIns", "mac": true}'
+          KALMAC='{"navn": "Kalender for Mac", "scheme": "KalenderMac", "bundle": "no.kristo.kalender", "widget": "KalenderMacWidgets", "mal": "generic/platform=macOS", "produkt": "Kalender", "plugins": "Contents/PlugIns", "mac": true}'
           case "$VALG" in
             homelab) APPER="[$HOMELAB]" ;;
             kalender) APPER="[$KALENDER]" ;;
@@ -143,6 +143,12 @@ jobs:
         # App Group-en for skrivebords-widgetene slås på her (den krever Team ID og ligger derfor ikke i project.yml).
         if: matrix.mac
         run: |
+          # Universelt kjøp: Mac-appen ligger i samme app i App Store Connect som iPhone-appen (Skjold Kalender), så den
+          # får de samme bundle-id-ene her. DMG-en i Releases beholder no.kristo.kalender.mac(.widgets).
+          P=FinansHub.xcodeproj/project.pbxproj
+          sed -i '' -e 's/PRODUCT_BUNDLE_IDENTIFIER = no\.kristo\.kalender\.mac\.widgets;/PRODUCT_BUNDLE_IDENTIFIER = no.kristo.kalender.widgets;/' \
+                    -e 's/PRODUCT_BUNDLE_IDENTIFIER = no\.kristo\.kalender\.mac;/PRODUCT_BUNDLE_IDENTIFIER = no.kristo.kalender;/' "$P"
+          ! grep -q "no\.kristo\.kalender\.mac" "$P" || { echo "::error::Fant fortsatt no.kristo.kalender.mac i prosjektet"; exit 1; }
           E=KalenderMac/KalenderMac.entitlements
           /usr/libexec/PlistBuddy -c "Delete :com.apple.security.temporary-exception.files.absolute-path.read-write" "$E" || true
           /usr/libexec/PlistBuddy -c "Delete :com.apple.security.temporary-exception.files.absolute-path.read-only" "$E" || true
