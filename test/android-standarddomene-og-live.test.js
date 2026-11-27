@@ -221,7 +221,12 @@ function clean(raw) {
 }
 const segLengths = (n) => { n = Math.max(0, Math.min(10, n)); if (!n) return []; const b = Math.floor(100 / n); return Array.from({ length: n }, (_, i) => (i === n - 1 ? 100 - b * (n - 1) : b)); };
 const segProgress = (n, f) => { const l = segLengths(n); return l.slice(0, Math.max(0, Math.min(f, l.length))).reduce((a, b) => a + b, 0); };
-const chip = (v, st) => (st === 'pause' ? 'Pauset' : v.trim()).slice(0, 12);
+const PHASES = ['queued', 'downloading', 'muxing', 'done', 'failed'];
+const phase = (raw) => (raw != null && PHASES.includes(raw.trim()) ? raw.trim() : null);
+const indeterminate = (f) => f === 'queued' || f === 'muxing';
+const pct = (p) => (p == null || !Number.isFinite(p) ? null : Math.round(Math.max(0, Math.min(1, p)) * 100));
+const shownPct = (p, f) => (indeterminate(f) ? null : pct(p));
+const chip = (v, st, f = null) => (st === 'pause' ? 'Pauset' : f === 'muxing' ? 'Komprimerer' : v.trim()).slice(0, 12);
 const active = (st) => st === 'aktiv' || st === 'pause';
 function intervalMs(items) {
   const a = items.filter(([, st]) => active(st));
@@ -260,7 +265,7 @@ test('rene regler: migrering, validering, segmenter, brikke, intervall og dyplen
   // Kotlin-kilden har de samme reglene.
   const r = code(APP, 'Regler.kt');
   assert.match(r, /if \(act\.any \{ \(it\.first == "nedlasting" \|\| it\.first == "backup"\) && it\.second == "aktiv" \}\) 5_000L else 30_000L/);
-  assert.match(r, /if \(status == "pause"\) "Pauset" else verdi\.trim\(\)\)\.take\(12\)/);
+  assert.match(r, /status == "pause" -> "Pauset"\s*phase == "muxing" -> "Komprimerer"\s*else -> verdi\.trim\(\)\s*\}\.take\(12\)/);
   assert.match(r, /if \(type == "pakke"\) 30 \* 60_000L else 15 \* 60_000L/);
   assert.match(r, /url\.startsWith\("https:\/\/"\) \|\| url\.startsWith\("geo:"\)/);
 });
@@ -272,4 +277,33 @@ test('farger og symboler fra fasiten (Live Activities.dc.html)', () => {
   }
   assert.ok(r.includes('"M12 4v11M7.5 10.5L12 15l4.5-4.5M5 19.5h14"'));
   assert.ok(r.includes('"M4 8l8-4 8 4v8.5l-8 4-8-4zM4 8l8 4 8-4M12 12v8.5"'));
+});
+
+test('Live Updates: fasene for nedlasting (queued | downloading | muxing | done | failed) – «Komprimerer» uten prosent', () => {
+  // Rene regler (speilet fra Regler.kt).
+  assert.equal(phase('muxing'), 'muxing');
+  assert.equal(phase(' downloading '), 'downloading');
+  assert.equal(phase('komprimerer'), null, 'ukjent fase = som før');
+  assert.equal(phase(null), null);
+  assert.equal(shownPct(0, 'muxing'), null, 'ingen «0 %» mens den komprimerer');
+  assert.equal(shownPct(0.62, 'queued'), null);
+  assert.equal(shownPct(0.62, 'downloading'), 62);
+  assert.equal(shownPct(0.62, null), 62, 'eldre server uten fase: som før');
+  assert.equal(chip('0 %', 'aktiv', 'muxing'), 'Komprimerer');
+  assert.equal(chip('0 %', 'pause', 'muxing'), 'Pauset');
+  assert.equal(chip('62 %', 'aktiv', 'downloading'), '62 %');
+  const r = code(APP, 'Regler.kt');
+  assert.match(r, /val PHASES = setOf\("queued", "downloading", "muxing", "done", "failed"\)/);
+  assert.match(r, /fun indeterminate\(phase: String\?\): Boolean = phase == "queued" \|\| phase == "muxing"/);
+  assert.match(r, /fun shownPct\(p: Double\?, phase: String\?\): Int\? = if \(indeterminate\(phase\)\) null else pct\(p\)/);
+  // Varselet: fasen leses fra «fase», brikken og prosenten følger den, og linja er ubestemt i kø / under komprimering.
+  const k = code(APP, 'LiveAktiviteter.kt');
+  assert.match(k, /Regel89\.phase\(o\.s89\("fase"\)\)/);
+  const b = block(k, 'fun build(ctx: Context, a: Akt89');
+  assert.match(b, /Regel89\.chip\(a\.verdi, a\.status, a\.fase\)/);
+  assert.match(b, /val pct = Regel89\.shownPct\(a\.progress, a\.fase\)/);
+  assert.match(b, /else if \(Regel89\.indeterminate\(a\.fase\)\) b\.setProgress\(0, 0, true\)/);
+  const ps = block(k, 'private fun progressStyle36(');
+  assert.match(ps, /if \(unknown\) cls\.getMethod\("setProgressIndeterminate", Boolean::class\.javaPrimitiveType\)\.invoke\(style, true\)/);
+  assert.match(ps, /if \(lengths\.isEmpty\(\) && pct == null && !unknown\) return false/);
 });

@@ -62,6 +62,8 @@ data class Akt89(
     val id: String, val type: String, val tittel: String, val undertittel: String, val verdi: String, val progress: Double?,
     val segAntall: Int, val segFerdig: Int, val meta: String, val start: String?, val slutt: String?, val status: String,
     val handlinger: List<Pair<String, String>>, val url: String?,
+    /** Nedlasting: queued | downloading | muxing | done | failed (Regel89.PHASES). null = serveren sender ingen fase. */
+    val fase: String? = null,
 )
 
 private fun JSONObject.s89(k: String): String? = if (!has(k) || isNull(k)) null else optString(k).takeIf { it.isNotBlank() }
@@ -84,6 +86,7 @@ fun parseAkt89(o: JSONObject): Akt89? {
     return Akt89(
         id, type, o.s89("tittel") ?: Regel89.label(type), o.s89("undertittel").orEmpty(), o.s89("verdi").orEmpty(), p,
         seg?.optInt("antall", 0) ?: 0, seg?.optInt("ferdig", 0) ?: 0, o.s89("meta").orEmpty(), o.s89("start"), o.s89("slutt"), st, acts, o.s89("url"),
+        Regel89.phase(o.s89("fase")),
     )
 }
 
@@ -161,7 +164,8 @@ object Live89 {
     private fun progressStyle36(b: Notification.Builder, a: Akt89, color: Int, pct: Int?): Boolean {
         if (Build.VERSION.SDK_INT < 36) return false
         val lengths = if (a.type == "pakke") Regel89.segLengths(a.segAntall) else emptyList()
-        if (lengths.isEmpty() && pct == null) return false
+        val unknown = Regel89.indeterminate(a.fase)
+        if (lengths.isEmpty() && pct == null && !unknown) return false
         return runCatching {
             val cls = Class.forName("android.app.Notification\$ProgressStyle")
             val segCls = Class.forName("android.app.Notification\$ProgressStyle\$Segment")
@@ -172,6 +176,8 @@ object Live89 {
             cls.getMethod("setProgressSegments", java.util.List::class.java).invoke(style, segs)
             cls.getMethod("setProgress", intT).invoke(style, if (lengths.isNotEmpty()) Regel89.segProgress(a.segAntall, a.segFerdig) else pct ?: 0)
             cls.getMethod("setStyledByProgress", Boolean::class.javaPrimitiveType).invoke(style, true)
+            // I kø / komprimerer: ubestemt linje (animert), ingen prosent.
+            if (unknown) cls.getMethod("setProgressIndeterminate", Boolean::class.javaPrimitiveType).invoke(style, true)
             cls.getMethod("setProgressTrackerIcon", Icon::class.java).invoke(style, Icon.createWithBitmap(tracker(a.type, a.status, color)))
             b.setStyle(style as Notification.Style)
             true
@@ -185,7 +191,7 @@ object Live89 {
         channel(ctx)
         val color = Regel89.accent(a.type)
         val done = a.status == "ferdig"
-        val chip = Regel89.chip(a.verdi, a.status)
+        val chip = Regel89.chip(a.verdi, a.status, a.fase)
         val text = listOf(a.undertittel, a.meta).filter { it.isNotBlank() }.joinToString(" · ")
         val b = Notification.Builder(ctx, CH)
             .setSmallIcon(R.drawable.ic_launcher_monochrome)
@@ -207,10 +213,11 @@ object Live89 {
         if (!done) a.handlinger.take(3).forEachIndexed { i, (hid, t) ->
             b.addAction(Notification.Action.Builder(null, colored(t, color), action(ctx, a, hid, i)).build())
         }
-        val pct = Regel89.pct(a.progress)
+        val pct = Regel89.shownPct(a.progress, a.fase)
         if (!done && !progressStyle36(b, a, color, pct)) {
             val l = if (a.type == "pakke") Regel89.segLengths(a.segAntall) else emptyList()
             if (l.isNotEmpty()) b.setProgress(100, Regel89.segProgress(a.segAntall, a.segFerdig), false)
+            else if (Regel89.indeterminate(a.fase)) b.setProgress(0, 0, true)
             else if (pct != null) b.setProgress(100, pct, false)
         }
         // Samsung One UI 7+ (Now Bar) leser disse feltene; Android 16 leser «promoted ongoing».
