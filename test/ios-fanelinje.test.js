@@ -148,3 +148,11 @@ test('2) pillen står like over home-indikatoren: safe area legges ikke til to g
   assert.match(shell, /\.environment\(\\\.shellKlassiskHoyde, pill \? over : 0\)/);
   assert.match(shell, /PapirModulRutenett\(over: over\)/);
 });
+
+test('3) ingen merke med antall kvitteringer på Økonomi-fanen (begge fanelinjene)', () => {
+  const tabs = code('ShellTabs.swift');
+  const i = tabs.indexOf('static func badge(');
+  const blokk = tabs.slice(i, tabs.indexOf('\n    }\n', i));
+  assert.doesNotMatch(blokk, /reviewCount|review\.count|"finans"/);
+  assert.match(blokk, /return 0/);
+});
