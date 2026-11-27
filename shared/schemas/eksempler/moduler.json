@@ -92,21 +92,23 @@
       "undersider": []
     },
     {
-      "id": "smarthjem",
-      "navn": "Smarthjem",
-      "gruppe": "hjemme",
+      "id": "helse",
+      "navn": "Helse",
+      "gruppe": "idag",
       "ikon": {
-        "tegn": "⌂",
-        "sf": "house",
-        "material": "home"
+        "tegn": "♥",
+        "sf": "heart.text.square",
+        "material": "monitor_heart"
       },
       "plattformer": [
-        "web"
+        "web",
+        "ios"
       ],
       "adminOnly": false,
-      "rute": "#/hjem",
+      "rute": "#/helse",
       "aliaser": [
-        "#/smarthjem"
+        "#/health",
+        "#/minhelse"
       ],
       "undersider": []
     }

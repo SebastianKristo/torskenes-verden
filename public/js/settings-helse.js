@@ -18,7 +18,7 @@ const SENS = {
   respiratory_rate: 'Pustefrekvens', blood_glucose: 'Blodsukker', vo2_max: 'VO₂ maks', average_active_pace: 'Tempo', activity: 'Aktivitet',
 };
 const DEF_SENS = ['steps', 'heart_rate', 'resting_heart_rate', 'sleep_duration', 'active_calories_burned', 'activity'];
-const SHARE = [['steps', 'Skritt'], ['sleep', 'Søvn'], ['hr', 'Puls'], ['restingHr', 'Hvilepuls'], ['activeKcal', 'Aktivitet'], ['week', 'Siste 7 dager']];
+const SHARE = [['steps', 'Skritt'], ['sleep', 'Søvn'], ['hr', 'Puls'], ['restingHr', 'Hvilepuls'], ['activeKcal', 'Aktivitet'], ['workouts', 'Trening'], ['weight', 'Vekt'], ['week', 'Siste 7 dager']]; // prompt 57: Trening og Vekt
 
 const ago = (ts) => {
   const t = typeof ts === 'number' ? ts : Date.parse(ts ?? '');
@@ -86,9 +86,9 @@ export function fam42View(H, sub) {
         row({ t: 'Apple Health', s: ap.s, v: ap.on ? '✓ Koblet' : 'Koble til', vc: ap.on ? '#2f7a4f' : '', act: 'data-f42="apple"', btn: false, k: 'healthkit iphone helse apple' }),
         row({ t: 'Health Connect', s: hc.s, v: hc.on ? '✓ Koblet' : 'Koble til', vc: hc.on ? '#2f7a4f' : '', act: 'data-f42="hc"', btn: false, k: 'android helse google' }),
         row({ t: 'Home Assistant · Mobilapp', s: haS, v: linked ? `${linked} koblet` : '', btn: 'Velg', go: 'familie|hahealth', k: 'home assistant ha companion sensorer skritt puls søvn' }),
-        row({ t: 'Hva deles med familien', s: 'Skritt, søvn, puls og aktivitet. Hver person velger selv i sin app eller her.', k: 'deling helse personvern' }),
+        row({ t: 'Hva deles med familien', s: 'Skritt, søvn, puls, aktivitet, trening og vekt. Hver person velger selv i sin app eller her. Trening og vekt er av til du slår dem på.', k: 'deling helse personvern trening vekt' }),
         chips,
-      ], 'Apple Health og Health Connect kan bare leses av Homelab-appen på telefonen. Den sender et sammendrag hit hvert 15. minutt, og bare det du har valgt å dele.'),
+      ], 'Apple Health og Health Connect kan bare leses av Homelab-appen på telefonen. Den sender dataene dine hit omtrent hvert 15. minutt til din egen Helse-side. Familien ser bare det du har valgt å dele.'),
       devRows.length ? group('Dine enheter', devRows) : null,
     ].filter(Boolean),
   };

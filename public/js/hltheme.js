@@ -187,6 +187,7 @@ const HEAD = {
   familiekalender: () => ['Kalender · hvem kjører? · henting og bringing', 'Familie'], // prompt 51 (MEDFAM51); Fase 6 (Q5): filteret Familie i Kalender
   mediakveld: () => ['Eget bibliotek · hvem er hjemme', 'I kveld'], // prompt 51 (MEDFAM51)
   skjold: () => ['Deler · skuffer · skap', 'Skjold Lab'], // prompt 76 (SKJWEB)
+  helse: () => ['Søvn · trening · vekt · bare for deg', 'Helse'], // prompt 57
 };
 
 /** Det lave fotovinduet øverst på alle sider unntatt Dashboard. */

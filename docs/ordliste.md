@@ -86,6 +86,17 @@ Når du finner et begrep som mangler eller brukes ulikt, legg det til her i samm
 | **API-nøkkel** | api-nøkkel | |
 | **Mangler API-nøkkel for Mybring** | Mangler posten/bring: mybring api-nøkkel | Samme mønster for andre tjenester |
 
+## Helse
+
+| Bruk | Ikke bruk | Merknad |
+|---|---|---|
+| **Helse** (modulen, `#/helse`: brukerens egen side med søvn, trening, vekt og trender) | Min helse, Helsedata (som sidenavn) | Prompt 57. Fanen **Helse** i Familie er familiens delte tall; Innstillinger → Husstand → **Helse** er oppsettet |
+| **Søvn i natt** (natten som sluttet i dag), **Siste natt**, **Snitt siste 7 netter** | Søvn i går, I natt (om natten før) | Serveren regner «i natt» i Oslo-tid |
+| Søvnstadiene **Dyp**, **Kjerne**, **REM**, **Våken** | Deep, Core, Lett søvn | Som i Apple Helse på norsk |
+| **Trening** (delingskategori: økter og distanse), **Siste økt**, **Distanse gått og løpt** | Workout, Aktivitet (om økter) | «Aktive kalorier» og «Aktivitet» er fortsatt energi og treningstid |
+| **Vekt** | Kroppsvekt, Weight | |
+| **Aktiv energi** (kcal, på Helse-siden som i Apple Helse) | | Familie bruker «Aktive kalorier» som før (samme tall) |
+
 ## Skjold Lab
 
 | Bruk | Ikke bruk | Merknad |

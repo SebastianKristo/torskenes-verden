@@ -50,6 +50,7 @@ const MODS = {
   chat: () => import('./chat.js'),
   media: () => import('./media-side.js'), // prompt 43: Media (Sonarr, Radarr, qBittorrent, Prowlarr)
   domener: () => import('./domains.js'),
+  helse: () => import('./helse.js'), // prompt 57: egen Helse-side (#/helse, #/helse/maned)
   net: () => import('./net.js'),
 };
 // Modulene som kobler lyttere til visningen (#view) gjør det én gang, når de lastes.
@@ -58,7 +59,7 @@ const r0 = (m) => m.render();
 // Nøklene er visningene på web (body[data-route]); adressen oversettes til dem i moduler.js (viewOf): #/oversikt → dash,
 // #/kalender/bursdager → bursdager, #/kalender/familie → familiekalender, #/reise/kart → kart. Gamle adresser (#/dash, #/huskeliste,
 // #/bursdager, #/familiekalender, #/kart …) videresendes etter aliasene i modullisten (aliasTil).
-const ROUTES = { dash: ['dash', r0], studie: ['studie', r0], rom: ['rom', r0], hjem: ['hjem', r0], matplan: ['matplan', r0], sporing: ['sporing', r0], familie: ['familie', r0], gjoremal: ['tasks', r0], vaer: ['vaer', r0], bursdager: ['bursdager', (m) => subtabs('kalender', 'bursdager', 'filter') + m.render()], kalender: ['kalender', r0], chat: ['chat', r0], media: ['media', r0], reise: ['reise', r0], kart: ['reise', (m) => m.kartTabs() + renderKart()], familiekalender: [null, () => subtabs('kalender', 'familie', 'filter') + renderFam51()], mediakveld: [null, renderMedia51], skjold: [null, renderSkjold76], domener: ['domener', r0], nettverk: ['net', r0], mer: ['net', (m) => m.renderMore()] };
+const ROUTES = { dash: ['dash', r0], studie: ['studie', r0], rom: ['rom', r0], hjem: ['hjem', r0], matplan: ['matplan', r0], sporing: ['sporing', r0], familie: ['familie', r0], gjoremal: ['tasks', r0], vaer: ['vaer', r0], bursdager: ['bursdager', (m) => subtabs('kalender', 'bursdager', 'filter') + m.render()], kalender: ['kalender', r0], chat: ['chat', r0], media: ['media', r0], reise: ['reise', r0], kart: ['reise', (m) => m.kartTabs() + renderKart()], familiekalender: [null, () => subtabs('kalender', 'familie', 'filter') + renderFam51()], mediakveld: [null, renderMedia51], skjold: [null, renderSkjold76], domener: ['domener', r0], helse: ['helse', r0], nettverk: ['net', r0], mer: ['net', (m) => m.renderMore()] };
 const mods = {}, loading = {};
 function loadMod(k) {
   if (!k || mods[k]) return Promise.resolve(mods[k]);
